@@ -136,7 +136,8 @@ class SensorInfo(object):
         self.equations = \
             {'ARVI': '(array03 - (array02 - y*(array01 - array02))) / (array03 + (array02 - y*(array01 - array02)))',
              'CBI': '(array02 - array01) / (array02 + array01)',
-             'EVI2': '((array02 - array01) / ((array02 + (c1 * array01)) + c2)) * c3',
+             'EVI': 'g * ((array03 - array02) / (array03 + c1 * array02 - c2 * array01 + L))',
+             'EVI2': 'g * ((array02 - array01) / (array02 + c1 * array01 + L))',
              'IPVI': 'array02 / (array02 + array01)',
              'MSAVI': '((2 * array02 + 1) - ((((2 * array02 + 1)**2) - (8 * (array02 - array01)))**.5)) / 2',
              'GNDVI': '(array02 - array01) / (array02 + array01)',
@@ -164,7 +165,8 @@ class SensorInfo(object):
         #   equal to 'float32'.
         self.data_ranges = {'ARVI': (),
                             'CBI': (-1., 1.),
-                            'EVI2': (-1., 2.),
+                            'EVI': (0., 1.),
+                            'EVI2': (0., 1.),
                             'IPVI': (),
                             'MSAVI': (),
                             'GNDVI': (-1., 1.),
@@ -369,7 +371,13 @@ class VegIndicesEquations(SensorInfo):
             else:
                 return vi_function()
 
-    def run_index(self, y=1., c1=2.4, c2=1., c3=2.5, L=.5, min_ndvi=-1, max_ndvi=1):
+    def run_index(self, y=1., g=2.5, L=1., min_ndvi=-1, max_ndvi=1, **kwargs):
+
+        if self.index2compute.upper() == 'EVI' and not kwargs:
+            c1 = 6.
+            c2 = 7.5
+        elif self.index2compute.upper() == 'EVI2' and not kwargs:
+            c1 = 2.4
 
         no_data = self.no_data
         pi = np.pi
@@ -468,7 +476,7 @@ class VegIndicesEquations(SensorInfo):
 
         return cbi
 
-    def EVI(self, C1=6., C2=7.5, L=1.):
+    def EVI(self, g=2.5, c1=6., c2=7.5, L=1.):
 
         """
         Enhanced Vegetation Index (EVI)
@@ -493,12 +501,12 @@ class VegIndicesEquations(SensorInfo):
             raise ValueError('\nThe input array should have {:d} dimensions.\n'.format(self.n_bands))
 
         top = np.subtract(nir, red)
-        red_c1 = np.multiply(C1, red)
-        blue_c2 = np.multiply(C2, blue)
+        red_c1 = np.multiply(c1, red)
+        blue_c2 = np.multiply(c2, blue)
         bottom = np.add(np.add(np.subtract(red_c1, blue_c2), nir), L)
 
         evi = np.divide(top, bottom)
-        evi = np.multiply(evi, 2.5)
+        evi = np.multiply(evi, g)
 
         evi[(blue == 0) | (red == 0) | (nir == 0)] = self.no_data
 
@@ -509,7 +517,7 @@ class VegIndicesEquations(SensorInfo):
 
         return evi
 
-    def EVI2(self, c1=2.4, c2=1., c3=2.5):
+    def EVI2(self, g=2.5, c1=2.4, L=1.):
 
         """
         Enhanced Vegetation Index (EVI2)
@@ -532,17 +540,16 @@ class VegIndicesEquations(SensorInfo):
             raise ValueError('\nThe input array should have {:d} dimensions.\n'.format(self.n_bands))
 
         top = np.subtract(nir, red)
-        bottom = np.add(np.add(np.multiply(red, c1), nir), c2)
+        bottom = np.add(np.add(np.multiply(red, c1), nir), L)
 
-        evi2 = np.divide(top, bottom)
-        evi2 = np.multiply(evi2, c3)
+        evi2 = np.multiply(np.divide(top, bottom), g)
 
         evi2[(red == 0) | (nir == 0)] = self.no_data
 
         evi2[np.isinf(evi2) | np.isnan(evi2)] = self.no_data
 
         if self.out_type > 1:
-            evi2 = self.rescale_range(evi2, in_range=(-1., 2.))
+            evi2 = self.rescale_range(evi2)
 
         return evi2
 
