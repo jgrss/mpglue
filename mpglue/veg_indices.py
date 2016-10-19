@@ -17,7 +17,10 @@ import argparse
 import fnmatch
 from collections import OrderedDict
 
+# MapPy
 import raster_tools
+from helpers import _iteration_parameters
+# from mappy.utilities import composite
 
 # Numpy    
 try:
@@ -93,8 +96,9 @@ class SensorInfo(object):
                             'Landsat-thermal': {'blue': 1, 'green': 2, 'red': 3, 'nir': 4, 'midir': 5, 'farir': 7},
                             'MODIS': {'blue': 3, 'green': 4, 'red': 1, 'nir': 2, 'midir': 6, 'farir': 7},
                             'RapidEye': {'blue': 1, 'green': 2, 'red': 3, 'rededge': 4, 'nir': 5},
-                            'Sentinel2': {'cblue': 1, 'blue': 2, 'green': 3, 'red': 4, 'rededge': 5, 'niredge': 8,
-                                          'nir': 9, 'midir': 12, 'farir': 13},
+                            'Sentinel2': {'cblue': 1, 'blue': 2, 'green': 3, 'red': 4, 'rededge': 5,
+                                          'rededge2': 6, 'rededge3': 7, 'niredge': 8,
+                                          'nir': 9, 'wv': 10, 'cirrus': 11, 'midir': 12, 'farir': 13},
                             'Sentinel2-10m': {'blue': 1, 'green': 2, 'red': 3, 'nir': 4},
                             'Sentinel2-20m': {'rededge': 1, 'niredge': 4, 'midir': 5, 'farir': 6},
                             'RGB': {'blue': 3, 'green': 2, 'red': 1},
@@ -106,6 +110,7 @@ class SensorInfo(object):
         #   ``self.equations``.
         self.wavelength_lists = {'ARVI': ['blue', 'red', 'nir'],
                                  'CBI': ['cblue', 'blue'],
+                                 'CIre': ['rededge', 'rededge3'],
                                  'EVI': ['blue', 'red', 'nir'],
                                  'EVI2': ['red', 'nir'],
                                  'IPVI': ['red', 'nir'],
@@ -136,6 +141,7 @@ class SensorInfo(object):
         self.equations = \
             {'ARVI': '(array03 - (array02 - y*(array01 - array02))) / (array03 + (array02 - y*(array01 - array02)))',
              'CBI': '(array02 - array01) / (array02 + array01)',
+             'CIre': '(array02 / array01) - 1.',
              'EVI': 'g * ((array03 - array02) / (array03 + c1 * array02 - c2 * array01 + L))',
              'EVI2': 'g * ((array02 - array01) / (array02 + c1 * array01 + L))',
              'IPVI': 'array02 / (array02 + array01)',
@@ -165,7 +171,8 @@ class SensorInfo(object):
         #   equal to 'float32'.
         self.data_ranges = {'ARVI': (),
                             'CBI': (-1., 1.),
-                            'EVI': (0., 1.),
+                            'CIre': (-1., 1.),
+                            'EVI': (0., 1),
                             'EVI2': (0., 1.),
                             'IPVI': (),
                             'MSAVI': (),
@@ -337,6 +344,7 @@ class VegIndicesEquations(SensorInfo):
 
             vi_functions = {'ARVI': self.ARVI,
                             'CBI': self.CBI,
+                            'CIre': self.CIre,
                             'EVI': self.EVI,
                             'EVI2': self.EVI2,
                             'IPVI': self.IPVI,
@@ -405,8 +413,15 @@ class VegIndicesEquations(SensorInfo):
 
         index_array = ne.evaluate(self.equations[self.index2compute.upper()])
 
-        if self.data_ranges[self.index2compute.upper()] == (-1, 1):
+        # Clip lower and upper, standardized bounds.
+        if self.data_ranges[self.index2compute.upper()] == (-1., 1.):
+
             index_array = ne.evaluate('where(index_array < -1, -1, index_array)')
+            index_array = ne.evaluate('where(index_array > 1, 1, index_array)')
+
+        elif self.data_ranges[self.index2compute.upper()] == (0., 1.):
+
+            index_array = ne.evaluate('where(index_array < 0, 0, index_array)')
             index_array = ne.evaluate('where(index_array > 1, 1, index_array)')
 
         index_array = ne.evaluate(mask_equation)
@@ -476,21 +491,53 @@ class VegIndicesEquations(SensorInfo):
 
         return cbi
 
-    def EVI(self, g=2.5, c1=6., c2=7.5, L=1.):
+    def CIre(self):
+
+        """
+        Chlorophyll Index red-edge (CIre)
+
+        References:
+            Clevers, J.G.P.W. & Gitelson, A.A. (2013) Remote estimation of crop and grass chlorophyll and
+                nitrogen content using red-edge bands on Sentinel-2 and -3. International Journal of Applied
+                Earth Observation and Geoinformation, 23, 344-351.
+        """
+
+        try:
+            rededge = self.image_array[0]
+            rededge3 = self.image_array[1]
+        except:
+            raise ValueError('\nThe input array should have {:d} dimensions.\n'.format(self.n_bands))
+
+        ci_re = np.subtract(np.divide(rededge3, rededge), 1.)
+
+        ci_re[(rededge == 0) | (rededge3 == 0)] = self.no_data
+
+        ci_re[np.isinf(ci_re) | np.isnan(ci_re)] = self.no_data
+
+        if self.out_type > 1:
+            ci_re = self.rescale_range(ci_re, in_range=(0., 1.))
+
+        return ci_re
+
+    def EVI(self, c1=6., c2=7.5, g=2.5, L=1.):
 
         """
         Enhanced Vegetation Index (EVI)
 
         Equation:
-            2.5 * [         nir - Red
-                    ------------------------------
-                    nir + C1 * Red - C2 * Blue + L
-
-                    ]
+            g * [         nir - Red
+                 ------------------------------
+                 nir + C1 * Red - C2 * Blue + L
+                ]
 
                     C1 = 6
                     C2 = 7.5
                     L = 1
+                    g = 2.5
+
+        References:
+            Huete et al. (2002) Overview of the radiometric and biophysical performance of the
+                MODIS vegetation indices. Remote Sensing of Environment, 83, 195-213.
         """
 
         try:
@@ -513,11 +560,11 @@ class VegIndicesEquations(SensorInfo):
         evi[np.isinf(evi) | np.isnan(evi)] = self.no_data
 
         if self.out_type > 1:
-            evi = self.rescale_range(evi)
+            evi = self.rescale_range(evi, in_range=(0., 1.))
 
         return evi
 
-    def EVI2(self, g=2.5, c1=2.4, L=1.):
+    def EVI2(self, c1=2.4, g=2.5, L=1.):
 
         """
         Enhanced Vegetation Index (EVI2)
@@ -527,10 +574,13 @@ class VegIndicesEquations(SensorInfo):
                 two-band enhanced vegetation index without a blue band." Remote Sensing of Environment 112: 3833-3845.
 
         Equation:
-            2.5 * [         nir - Red
-                    ---------------------
-                    nir + (2.4 * Red) + 1
-                    ]
+            g * [      nir - Red
+                 ---------------------
+                 nir + (C1 * Red) + 1
+                ]
+
+                    c1 = 2.4
+                    g = 2.5
         """
 
         try:
@@ -542,14 +592,15 @@ class VegIndicesEquations(SensorInfo):
         top = np.subtract(nir, red)
         bottom = np.add(np.add(np.multiply(red, c1), nir), L)
 
-        evi2 = np.multiply(np.divide(top, bottom), g)
+        evi2 = np.divide(top, bottom)
+        evi2 = np.multiply(evi2, g)
 
         evi2[(red == 0) | (nir == 0)] = self.no_data
 
         evi2[np.isinf(evi2) | np.isnan(evi2)] = self.no_data
 
         if self.out_type > 1:
-            evi2 = self.rescale_range(evi2)
+            evi2 = self.rescale_range(evi2, in_range=(0., 1.))
 
         return evi2
 
@@ -1467,6 +1518,7 @@ class VegIndices(BandHandler):
                         out_rst.write_array(veg_indice_array, i=self.i, j=self.j)
 
             out_rst.close_all()
+            out_rst = None
 
             if self.k > 0:
 
@@ -1489,6 +1541,12 @@ class VegIndices(BandHandler):
             v_info = raster_tools.rinfo(output_image)
             v_info.build_overviews()
             v_info.close()
+
+        self.meta_info.close()
+        o_info.close()
+
+        self.meta_info = None
+        o_info = None
 
 
 def _compute_as_list(img, out_img, sensor, k, storage, no_data, chunk_size,
@@ -1713,30 +1771,30 @@ def _examples():
     sys.exit("""\
 
     # List vegetation index options for a sensor.
-    veg_indices --sensor Landsat --options
+    veg_indices.py --sensor Landsat --options
 
     # List the expected band order for a sensor.
-    veg_indices --sensor Landsat --band_order
-    veg_indices --sensor Landsat8 --band_order
-    veg_indices --sensor Landsat-thermal --band_order
-    veg_indices --sensor Sentinel2 --band_order
-    veg_indices --sensor Quickbird --band_order
-    veg_indices --sensor RGB --band_order
+    veg_indices.py --sensor Landsat --band_order
+    veg_indices.py --sensor Landsat8 --band_order
+    veg_indices.py --sensor Landsat-thermal --band_order
+    veg_indices.py --sensor Sentinel2 --band_order
+    veg_indices.py --sensor Quickbird --band_order
+    veg_indices.py --sensor RGB --band_order
 
     # Compute NDVI for a Landsat image.
-    veg_indices -i /some_image.tif -o /ndvi.tif --index ndvi --sensor Landsat
+    veg_indices.py -i /some_image.tif -o /ndvi.tif --index ndvi --sensor Landsat
 
     # Compute NDVI for a Landsat8 image.
-    veg_indices -i /some_image.tif -o /ndvi.tif --index ndvi --sensor Landsat8
+    veg_indices.py -i /some_image.tif -o /ndvi.tif --index ndvi --sensor Landsat8
 
     # Compute NDVI for a Sentinel 2 image.
-    veg_indices -i /some_image.tif -o /ndvi.tif --index ndvi --sensor Sentinel2
+    veg_indices.py -i /some_image.tif -o /ndvi.tif --index ndvi --sensor Sentinel2
 
     # Compute NDWI for a Landsat image and save as Byte (0-255) storage.
-    veg_indices -i /some_image.tif -o /ndwi.tif --index ndwi --sensor Landsat --storage byte --overviews
+    veg_indices.py -i /some_image.tif -o /ndwi.tif --index ndwi --sensor Landsat --storage byte --overviews
 
     # Compute NDSI for a Landsat image, save as float32 storage, and set 'no data' pixels to -999.
-    veg_indices -i /some_image.tif -o /ndsi.tif --index ndsi --sensor Landsat --overviews --no_data -999
+    veg_indices.py -i /some_image.tif -o /ndsi.tif --index ndsi --sensor Landsat --overviews --no_data -999
 
     # Compute NDVI and SAVI for a Landsat image. The --chunk -1 parameter tells the
     #   system to use 'numexpr' for calculations.
@@ -1745,10 +1803,10 @@ def _examples():
     #   a VRT multi-band image will be saved as /output_STACK.vrt. Unlike single index
     #   triggers, if --index is a list of more than one index, the --overviews parameter
     #   will only build overviews for the VRT file.
-    veg_indices -i /some_image.tif -o /output.tif --index ndvi savi --sensor Landsat --overviews --chunk -1
+    veg_indices.py -i /some_image.tif -o /output.tif --index ndvi savi --sensor Landsat --overviews --chunk -1
 
     # Compute all available indices for Landsat.
-    veg_indices -i /some_image.tif -o /output.tif --index all --sensor Landsat
+    veg_indices.py -i /some_image.tif -o /output.tif --index all --sensor Landsat
     """)
 
 
