@@ -34,7 +34,23 @@ def get_packages():
 
 
 def get_package_data():
-    return {'': ['*.md', '*.txt']}
+    return {'': ['*.md',
+                 '*.txt'],
+            'mpglue': ['stats/*.pyx',
+                       'stats/*.c',
+                       'stats/*.so',
+                       'stats/*.pyd']}
+
+
+def get_console_dict():
+
+    return {'console_scripts': ['classify=mpglue.classify:main',
+                                'sample_raster=mpglue.sample_raster:main',
+                                'veg_indices=mpglue.veg_indices:main']}
+
+
+def get_pyx_list():
+    return ['mpglue/stats/*.pyx']
 
 
 def setup_package():
@@ -49,8 +65,10 @@ def setup_package():
                     author=author_file,
                     packages=get_packages(),
                     package_data=get_package_data(),
+                    zip_safe=False,
                     download_url=git_url,
-                    install_requires=required_packages)
+                    install_requires=required_packages,
+                    entry_points=get_console_dict())
 
     setup(**metadata)
 
