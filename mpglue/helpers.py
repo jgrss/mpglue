@@ -42,6 +42,10 @@ def random_float(low, high):
     return random.random() * (high - low) + low
 
 
+def euclidean_distance(lons, lats):
+    return np.sqrt(((lons[0] - lons[1])**2.) + ((lats[0] - lats[1])**2.))
+
+
 def get_time_stamp(the_file):
 
     """

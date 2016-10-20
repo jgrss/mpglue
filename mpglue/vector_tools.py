@@ -17,6 +17,7 @@ import fnmatch
 import atexit
 
 import raster_tools
+from _gdal import ogr2ogr
 
 # GDAL
 try:
@@ -507,8 +508,6 @@ def merge_vectors(shps2merge, merged_shapefile):
     for shp2merge in shps2merge[1:]:
 
         print 'Merging {} ...'.format(shp2merge)
-
-        from mappy.helpers.other import ogr2ogr
 
         ogr2ogr.main(['', '-f', 'ESRI Shapefile', '-update', '-append', merged_shapefile, shp2merge, '-nln', of_base])
 
@@ -1179,10 +1178,6 @@ def list_field_names(in_shapefile, be_quiet=False, epsg=None):
         print df_fields
 
     return df_fields
-
-
-def euclidean_distance(lons, lats):
-    return np.sqrt(((lons[0] - lons[1])**2.) + ((lats[0] - lats[1])**2.))
 
 
 def buffer_vector(file_name, out_vector, distance=None, epsg=None, field_name=None):
