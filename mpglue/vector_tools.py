@@ -22,6 +22,7 @@ from _gdal import ogr2ogr
 # GDAL
 try:
     from osgeo import ogr, osr
+    from osgeo.gdalconst import GA_ReadOnly, GA_Update
 except ImportError:
     raise ImportError('GDAL must be installed')
 
