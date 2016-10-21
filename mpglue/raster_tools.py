@@ -17,6 +17,10 @@ import atexit
 from joblib import Parallel, delayed
 import ast
 
+import ctypes
+GDAL_LIBRARY_PATH = '/usr/local/lib/libgdal.dylib'
+ctypes.CDLL(GDAL_LIBRARY_PATH)
+
 from .helpers import random_float, overwrite_file, check_and_create_dir, _iteration_parameters
 from .vector_tools import vinfo, get_xy_offsets, intersects_boundary
 from .errors import LenError, RinfoError

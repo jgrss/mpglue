@@ -17,7 +17,6 @@ import fnmatch
 import atexit
 
 import raster_tools
-from _gdal import ogr2ogr
 
 # GDAL
 try:
@@ -481,6 +480,8 @@ def merge_vectors(shps2merge, merged_shapefile):
     Returns:
         None, writes to ``merged_shapefile``.
     """
+
+    from ._gdal import ogr2ogr
 
     # First copy any of the shapefiles in
     # the list so that we have something
