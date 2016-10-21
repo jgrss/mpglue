@@ -11,15 +11,17 @@ import copy
 import fnmatch
 import time
 import argparse
-import subprocess
 import inspect
 import atexit
 from joblib import Parallel, delayed
-import ast
+import platform
 
 import ctypes
-GDAL_LIBRARY_PATH = '/usr/local/lib/libgdal.dylib'
-ctypes.CDLL(GDAL_LIBRARY_PATH)
+
+if platform.system() == 'Darwin':
+
+    GDAL_LIBRARY_PATH = '/usr/local/lib/libgdal.dylib'
+    ctypes.CDLL(GDAL_LIBRARY_PATH)
 
 from .helpers import random_float, overwrite_file, check_and_create_dir, _iteration_parameters
 from .vector_tools import vinfo, get_xy_offsets, intersects_boundary
