@@ -25,12 +25,14 @@ with open('LICENSE.txt') as f:
 with open('AUTHORS.txt') as f:
     author_file = f.read()
 
-required_packages = ['numpy>=1.11.0', 'scipy>=0.17.1', 'scikit-learn>=0.17.1', 'scikit-image>=0.12.3',
-                     'tables>=3.2.2', 'pandas>=0.18.1', 'matplotlib', 'statsmodels',
-                     'joblib', 'BeautifulSoup4']
+required_packages = ['numpy>=1.11.0', 'scipy>=0.17.1', 'scikit-learn>=0.17.1',
+                     'scikit-image>=0.12.3', 'tables>=3.2.2', 'pandas>=0.18.1',
+                     'matplotlib', 'joblib', 'BeautifulSoup4']
 
 if platform.system() == 'Darwin':
+
     required_packages.append('gdal>=2.1')
+    required_packages.append('statsmodels>=0.8.0')
 
 
 def get_packages():
