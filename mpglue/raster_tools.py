@@ -26,6 +26,7 @@ if platform.system() == 'Darwin':
 from .helpers import random_float, overwrite_file, check_and_create_dir, _iteration_parameters
 from .vector_tools import vinfo, get_xy_offsets, intersects_boundary
 from .errors import LenError, RinfoError
+from mpglue.veg_indices import BandHandler, VegIndicesEquations
 
 # GDAL
 try:
@@ -1296,8 +1297,6 @@ class rinfo(FileManager, LandsatParser, SentinelParser):
 
         if compute_index != 'none':
 
-            from features.veg_indices import BandHandler
-
             bh = BandHandler(sensor)
 
             bh.get_band_order()
@@ -1386,8 +1385,6 @@ class rinfo(FileManager, LandsatParser, SentinelParser):
                 self._reshape2predictions(len(bands2open))
 
         if compute_index != 'none':
-
-            from features import VegIndicesEquations
 
             vie = VegIndicesEquations(self.array, chunk_size=-1)
 
