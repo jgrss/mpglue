@@ -1027,7 +1027,7 @@ class SentinelParser(object):
         granule_list = product_info['Product_Organisation']['Granule_List']
 
         self.granule_dict = {}
-
+        
         for granule in granule_list:
 
             tile = granule['Granules']
