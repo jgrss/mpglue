@@ -381,6 +381,7 @@ class VegIndicesEquations(SensorInfo):
 
     def run_index(self, y=1., g=2.5, L=1., min_ndvi=-1, max_ndvi=1, **kwargs):
 
+        # EVI defaults
         if self.index2compute.upper() == 'EVI' and not kwargs:
             c1 = 6.
             c2 = 7.5
