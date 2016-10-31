@@ -31,8 +31,8 @@ required_packages = ['numpy>=1.11.0', 'scipy>=0.17.1', 'scikit-learn>=0.17.1',
 
 if platform.system() == 'Darwin':
 
-    required_packages.append('gdal>=2.1')
-    required_packages.append('statsmodels>=0.8.0')
+    for pkg in ['gdal>=2.1', 'statsmodels>=0.8.0']:
+        required_packages.append(pkg)
 
 
 def get_packages():
