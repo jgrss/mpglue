@@ -419,10 +419,10 @@ class VegIndicesEquations(SensorInfo):
             index_array = ne.evaluate('where(index_array < -1, -1, index_array)')
             index_array = ne.evaluate('where(index_array > 1, 1, index_array)')
 
-        elif self.data_ranges[self.index2compute.upper()] == (0., 1.):
-
-            index_array = ne.evaluate('where(index_array < 0, 0, index_array)')
-            index_array = ne.evaluate('where(index_array > 1, 1, index_array)')
+        # elif self.data_ranges[self.index2compute.upper()] == (0., 1.):
+        #
+        #     index_array = ne.evaluate('where(index_array < 0, 0, index_array)')
+        #     index_array = ne.evaluate('where(index_array > 1, 1, index_array)')
 
         index_array = ne.evaluate(mask_equation)
 
