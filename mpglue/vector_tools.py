@@ -62,6 +62,14 @@ try:
 except:
     print('PyTables is not installed')
 
+# Pickle
+try:
+    import cPickle as pickle
+except:
+    from six.moves import cPickle as pickle
+else:
+   import pickle
+
 
 class RegisterDriver(object):
 
@@ -761,6 +769,75 @@ def create_point(coordinate_pair, projection_file):
     add_point(coordinate_pair[0], coordinate_pair[1], cv, 'Value', 1)
 
     return cv
+
+
+def intersects_shapefile(shapefile2intersect, base_shapefile=None, rtree_file=None, rtree_info=None):
+
+    # Rtree
+    try:
+        import rtree
+    except ImportError:
+        raise ImportError('Rtree must be installed')
+
+    # Setup RTree index
+    rtree_index = rtree.index.Index(interleaved=False)
+
+    with vinfo('/Users/Dill/Documents/scripts/Python/git_repos/mappy/mappy/utilities/sentinel/data/mgrs_region.shp') as bdy_info:
+
+        for f in xrange(0, bdy_info.n_feas):
+
+            bdy_feature = bdy_info.lyr.GetFeature(f)
+            bdy_geometry = bdy_feature.GetGeometryRef()
+            en = bdy_geometry.GetEnvelope()
+            rtree_index.insert(f, (en[0], en[1], en[2], en[3]))
+
+    # Open the base shapefile
+    with vinfo(shapefile2intersect) as bdy_info:
+
+        bdy_feature = bdy_info.lyr.GetFeature(0)
+
+        bdy_geometry = bdy_feature.GetGeometryRef()
+
+        bdy_envelope = bdy_geometry.GetEnvelope()
+
+        if isinstance(rtree_file, str):
+
+            # Load the RTree index object
+            # rtree_index = pickle.load(file(rtree_file, 'rb'))
+
+            # Load the UTM grid information.
+            field_dict = pickle.load(file(rtree_info, 'rb'))
+
+            grid_infos = []
+
+            # Intersect the base shapefile bounding box
+            #   with the UTM grids.
+            for n in rtree_index.intersection([bdy_envelope[0], bdy_envelope[1], bdy_envelope[2], bdy_envelope[3]]):
+
+                grid_info = field_dict[n]
+
+                # Create a polygon object from the coordinates.
+                # 0:left, 1:right, 2:bottom, 3:top
+                coord_wkt = 'POLYGON (({:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}))'.format(
+                    grid_info[4][0],
+                    grid_info[4][3],
+                    grid_info[4][1],
+                    grid_info[4][3],
+                    grid_info[4][1],
+                    grid_info[4][2],
+                    grid_info[4][0],
+                    grid_info[4][2],
+                    grid_info[4][0],
+                    grid_info[4][3])
+
+                coord_poly = ogr.CreateGeometryFromWkt(coord_wkt)
+
+                # Check if the feature intersects
+                #   the base shapefile.
+                if not bdy_geometry.Intersection(coord_poly).IsEmpty():
+                    grid_infos.append(grid_info)
+
+            return grid_infos
 
 
 def intersects_boundary(meta_dict, boundary_file):
