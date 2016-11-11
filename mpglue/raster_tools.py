@@ -66,6 +66,18 @@ try:
 except ImportError:
     raise ImportError('SciPy must be installed')
 
+# Pandas
+try:
+    import pandas as pd
+except ImportError:
+    raise ImportError('Pandas must be installed to parse metadata')
+
+# BeautifulSoup4
+try:
+    from bs4 import BeautifulSoup
+except:
+    raise ImportError('BeautifulSoup4 must be installed to parse metadata')
+
 
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
@@ -826,18 +838,6 @@ class LandsatParser(object):
             raise NameError('Parser type not supported')
 
     def parse_mtl(self, metadata):
-
-        # Pandas
-        try:
-            import pandas as pd
-        except ImportError:
-            raise ImportError('Pandas must be installed to parse metadata')
-
-        # BeautifulSoup4
-        try:
-            from bs4 import BeautifulSoup
-        except:
-            raise ImportError('BeautifulSoup4 must be installed to parse metadata')
 
         df = pd.read_table(metadata, header=None, sep='=')
         df.rename(columns={0: 'Variable', 1: 'Value'}, inplace=True)
