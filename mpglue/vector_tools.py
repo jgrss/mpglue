@@ -16,7 +16,10 @@ import copy
 import fnmatch
 import atexit
 
+from .paths import get_main_path
 import raster_tools
+
+MAIN_PATH = get_main_path()
 
 # GDAL
 try:
@@ -773,6 +776,8 @@ def create_point(coordinate_pair, projection_file):
 
 def intersects_shapefile(shapefile2intersect, base_shapefile=None, rtree_file=None, rtree_info=None):
 
+    import tarfile
+
     # Rtree
     try:
         import rtree
@@ -782,7 +787,13 @@ def intersects_shapefile(shapefile2intersect, base_shapefile=None, rtree_file=No
     # Setup RTree index
     rtree_index = rtree.index.Index(interleaved=False)
 
-    with vinfo('/Users/Dill/Documents/scripts/Python/git_repos/mappy/mappy/utilities/sentinel/data/mgrs_region.shp') as bdy_info:
+    utm_shp_path = '{}/utilities/sentinel'.format(MAIN_PATH.replace('mpglue', 'mappy'))
+
+    # Unzip the UTM shapefile
+    with tarfile.open('{}/utm_shp.tar.gz2'.format(utm_shp_path), mode='r:bz2') as tar:
+        tar.extractall(path=utm_shp_path)
+
+    with vinfo('{}/mgrs_region.shp'.format(utm_shp_path)) as bdy_info:
 
         for f in xrange(0, bdy_info.n_feas):
 
@@ -790,6 +801,10 @@ def intersects_shapefile(shapefile2intersect, base_shapefile=None, rtree_file=No
             bdy_geometry = bdy_feature.GetGeometryRef()
             en = bdy_geometry.GetEnvelope()
             rtree_index.insert(f, (en[0], en[1], en[2], en[3]))
+
+    # Delete the UTM shapefile
+    for utm_file in fnmatch.filter(os.listdir(utm_shp_path), 'mgrs_region*'):
+        os.remove('{}/{}'.format(utm_shp_path, utm_file))
 
     # Open the base shapefile
     with vinfo(shapefile2intersect) as bdy_info:
