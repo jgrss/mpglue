@@ -774,7 +774,7 @@ def create_point(coordinate_pair, projection_file):
     return cv
 
 
-def intersects_shapefile(shapefile2intersect, base_shapefile=None, rtree_file=None, rtree_info=None):
+def intersects_shapefile(shapefile2intersect, base_shapefile=None, rtree_info=None):
 
     import tarfile
 
@@ -789,11 +789,17 @@ def intersects_shapefile(shapefile2intersect, base_shapefile=None, rtree_file=No
 
     utm_shp_path = '{}/utilities/sentinel'.format(MAIN_PATH.replace('mpglue', 'mappy'))
 
-    # Unzip the UTM shapefile
-    with tarfile.open('{}/utm_shp.tar.gz2'.format(utm_shp_path), mode='r:bz2') as tar:
-        tar.extractall(path=utm_shp_path)
+    if isinstance(base_shapefile, str):
+        base_shapefile_ = base_shapefile
+    else:
 
-    with vinfo('{}/mgrs_region.shp'.format(utm_shp_path)) as bdy_info:
+        # Unzip the UTM shapefile
+        with tarfile.open('{}/utm_shp.tar.gz2'.format(utm_shp_path), mode='r:bz2') as tar:
+            tar.extractall(path=utm_shp_path)
+
+        base_shapefile_ = '{}/mgrs_region.shp'.format(utm_shp_path)
+
+    with vinfo(base_shapefile_) as bdy_info:
 
         for f in xrange(0, bdy_info.n_feas):
 
@@ -802,9 +808,11 @@ def intersects_shapefile(shapefile2intersect, base_shapefile=None, rtree_file=No
             en = bdy_geometry.GetEnvelope()
             rtree_index.insert(f, (en[0], en[1], en[2], en[3]))
 
-    # Delete the UTM shapefile
-    for utm_file in fnmatch.filter(os.listdir(utm_shp_path), 'mgrs_region*'):
-        os.remove('{}/{}'.format(utm_shp_path, utm_file))
+    if isinstance(base_shapefile, str):
+
+        # Delete the UTM shapefile
+        for utm_file in fnmatch.filter(os.listdir(utm_shp_path), 'mgrs_region*'):
+            os.remove('{}/{}'.format(utm_shp_path, utm_file))
 
     # Open the base shapefile
     with vinfo(shapefile2intersect) as bdy_info:
@@ -815,44 +823,39 @@ def intersects_shapefile(shapefile2intersect, base_shapefile=None, rtree_file=No
 
         bdy_envelope = bdy_geometry.GetEnvelope()
 
-        if isinstance(rtree_file, str):
+        # Load the UTM grid information.
+        field_dict = pickle.load(file(rtree_info, 'rb'))
 
-            # Load the RTree index object
-            # rtree_index = pickle.load(file(rtree_file, 'rb'))
+        grid_infos = []
 
-            # Load the UTM grid information.
-            field_dict = pickle.load(file(rtree_info, 'rb'))
+        # Intersect the base shapefile bounding box
+        #   with the UTM grids.
+        for n in rtree_index.intersection([bdy_envelope[0], bdy_envelope[1], bdy_envelope[2], bdy_envelope[3]]):
 
-            grid_infos = []
+            grid_info = field_dict[n]
 
-            # Intersect the base shapefile bounding box
-            #   with the UTM grids.
-            for n in rtree_index.intersection([bdy_envelope[0], bdy_envelope[1], bdy_envelope[2], bdy_envelope[3]]):
+            # Create a polygon object from the coordinates.
+            # 0:left, 1:right, 2:bottom, 3:top
+            coord_wkt = 'POLYGON (({:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}))'.format(
+                grid_info[4][0],
+                grid_info[4][3],
+                grid_info[4][1],
+                grid_info[4][3],
+                grid_info[4][1],
+                grid_info[4][2],
+                grid_info[4][0],
+                grid_info[4][2],
+                grid_info[4][0],
+                grid_info[4][3])
 
-                grid_info = field_dict[n]
+            coord_poly = ogr.CreateGeometryFromWkt(coord_wkt)
 
-                # Create a polygon object from the coordinates.
-                # 0:left, 1:right, 2:bottom, 3:top
-                coord_wkt = 'POLYGON (({:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}))'.format(
-                    grid_info[4][0],
-                    grid_info[4][3],
-                    grid_info[4][1],
-                    grid_info[4][3],
-                    grid_info[4][1],
-                    grid_info[4][2],
-                    grid_info[4][0],
-                    grid_info[4][2],
-                    grid_info[4][0],
-                    grid_info[4][3])
+            # Check if the feature intersects
+            #   the base shapefile.
+            if not bdy_geometry.Intersection(coord_poly).IsEmpty():
+                grid_infos.append(grid_info)
 
-                coord_poly = ogr.CreateGeometryFromWkt(coord_wkt)
-
-                # Check if the feature intersects
-                #   the base shapefile.
-                if not bdy_geometry.Intersection(coord_poly).IsEmpty():
-                    grid_infos.append(grid_info)
-
-            return grid_infos
+    return grid_infos
 
 
 def intersects_boundary(meta_dict, boundary_file):
