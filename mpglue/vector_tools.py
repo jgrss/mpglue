@@ -560,7 +560,7 @@ def add_point(x, y, layer_object, field, value2write):
     feat.Destroy()
 
 
-def add_polygon(vector_object, xy_pairs=None, field_vals={}, geometry=None):
+def add_polygon(vector_object, xy_pairs=None, field_vals=None, geometry=None):
 
     """
     Args:
@@ -577,7 +577,7 @@ def add_polygon(vector_object, xy_pairs=None, field_vals={}, geometry=None):
     poly_geom = ogr.Geometry(ogr.wkbLinearRing)
 
     # Add the points
-    if isinstance(xy_pairs, tuple):
+    if isinstance(xy_pairs, tuple) or isinstance(xy_pairs, list):
 
         for pair in xy_pairs:
             poly_geom.AddPoint(float(pair[0]), float(pair[1]))
@@ -774,6 +774,62 @@ def create_point(coordinate_pair, projection_file):
     return cv
 
 
+def get_intersecting_features(rtree_index, rtree_info=None, field_dict=None, shapefile2intersect=None, envelope=None):
+
+    if isinstance(shapefile2intersect, str):
+
+        # Open the base shapefile
+        with vinfo(shapefile2intersect) as bdy_info:
+
+            bdy_feature = bdy_info.lyr.GetFeature(0)
+
+            bdy_geometry = bdy_feature.GetGeometryRef()
+
+            bdy_envelope = bdy_geometry.GetEnvelope()
+
+        # left, right, bottom, top
+        envelope = [bdy_envelope[0], bdy_envelope[1], bdy_envelope[2], bdy_envelope[3]]
+
+    # Load the UTM grid information.
+    if not isinstance(field_dict, dict):
+
+        if not isinstance(rtree_info, str):
+            raise TypeError('Either field_dict or rtree_info must be given.')
+
+        field_dict = pickle.load(file(rtree_info, 'rb'))
+
+    grid_infos = []
+
+    # Intersect the base shapefile bounding box
+    #   with the UTM grids.
+    for n in rtree_index.intersection(envelope):
+
+        grid_info = field_dict[n]
+
+        # Create a polygon object from the coordinates.
+        # 0:left, 1:right, 2:bottom, 3:top
+        coord_wkt = 'POLYGON (({:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}))'.format(
+            grid_info['extent']['left'],
+            grid_info['extent']['top'],
+            grid_info['extent']['right'],
+            grid_info['extent']['top'],
+            grid_info['extent']['right'],
+            grid_info['extent']['bottom'],
+            grid_info['extent']['left'],
+            grid_info['extent']['bottom'],
+            grid_info['extent']['left'],
+            grid_info['extent']['top'])
+
+        coord_poly = ogr.CreateGeometryFromWkt(coord_wkt)
+
+        # Check if the feature intersects
+        #   the base shapefile.
+        if not bdy_geometry.Intersection(coord_poly).IsEmpty():
+            grid_infos.append(grid_info)
+
+    return grid_infos
+
+
 def intersects_shapefile(shapefile2intersect, base_shapefile=None, rtree_info=None):
 
     import tarfile
@@ -797,7 +853,7 @@ def intersects_shapefile(shapefile2intersect, base_shapefile=None, rtree_info=No
         with tarfile.open('{}/utm_shp.tar.gz2'.format(utm_shp_path), mode='r:bz2') as tar:
             tar.extractall(path=utm_shp_path)
 
-        base_shapefile_ = '{}/mgrs_region.shp'.format(utm_shp_path)
+        base_shapefile_ = '{}/sentinel2_grid.shp'.format(utm_shp_path)
 
     with vinfo(base_shapefile_) as bdy_info:
 
@@ -811,51 +867,10 @@ def intersects_shapefile(shapefile2intersect, base_shapefile=None, rtree_info=No
     if isinstance(base_shapefile, str):
 
         # Delete the UTM shapefile
-        for utm_file in fnmatch.filter(os.listdir(utm_shp_path), 'mgrs_region*'):
+        for utm_file in fnmatch.filter(os.listdir(utm_shp_path), 'sentinel2_grid*'):
             os.remove('{}/{}'.format(utm_shp_path, utm_file))
 
-    # Open the base shapefile
-    with vinfo(shapefile2intersect) as bdy_info:
-
-        bdy_feature = bdy_info.lyr.GetFeature(0)
-
-        bdy_geometry = bdy_feature.GetGeometryRef()
-
-        bdy_envelope = bdy_geometry.GetEnvelope()
-
-        # Load the UTM grid information.
-        field_dict = pickle.load(file(rtree_info, 'rb'))
-
-        grid_infos = []
-
-        # Intersect the base shapefile bounding box
-        #   with the UTM grids.
-        for n in rtree_index.intersection([bdy_envelope[0], bdy_envelope[1], bdy_envelope[2], bdy_envelope[3]]):
-
-            grid_info = field_dict[n]
-
-            # Create a polygon object from the coordinates.
-            # 0:left, 1:right, 2:bottom, 3:top
-            coord_wkt = 'POLYGON (({:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}))'.format(
-                grid_info[4][0],
-                grid_info[4][3],
-                grid_info[4][1],
-                grid_info[4][3],
-                grid_info[4][1],
-                grid_info[4][2],
-                grid_info[4][0],
-                grid_info[4][2],
-                grid_info[4][0],
-                grid_info[4][3])
-
-            coord_poly = ogr.CreateGeometryFromWkt(coord_wkt)
-
-            # Check if the feature intersects
-            #   the base shapefile.
-            if not bdy_geometry.Intersection(coord_poly).IsEmpty():
-                grid_infos.append(grid_info)
-
-    return grid_infos
+    return get_intersecting_features(rtree_index, rtree_info, shapefile2intersect=shapefile2intersect)
 
 
 def intersects_boundary(meta_dict, boundary_file):
