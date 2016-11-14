@@ -850,7 +850,7 @@ def intersects_shapefile(shapefile2intersect, base_shapefile=None, rtree_info=No
     else:
 
         # Unzip the UTM shapefile
-        with tarfile.open('{}/utm_shp.tar.gz2'.format(utm_shp_path), mode='r:bz2') as tar:
+        with tarfile.open('{}/utm_shp.tar.bz2'.format(utm_shp_path), mode='r:bz2') as tar:
             tar.extractall(path=utm_shp_path)
 
         base_shapefile_ = '{}/sentinel2_grid.shp'.format(utm_shp_path)
