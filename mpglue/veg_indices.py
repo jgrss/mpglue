@@ -142,7 +142,7 @@ class SensorInfo(object):
             {'ARVI': '(array03 - (array02 - y*(array01 - array02))) / (array03 + (array02 - y*(array01 - array02)))',
              'CBI': '(array02 - array01) / (array02 + array01)',
              'CIre': '(array02 / array01) - 1.',
-             'EVI': 'g * ((array03 - array02) / (array03 + c1 * array02 - c2 * array01 + L))',
+             'EVI': 'g * ((array03 - array02) / (array03 + (c1 * array02) - (c2 * array01) + L))',
              'EVI2': 'g * ((array02 - array01) / (array02 + c1 * array01 + L))',
              'IPVI': 'array02 / (array02 + array01)',
              'MSAVI': '((2 * array02 + 1) - ((((2 * array02 + 1)**2) - (8 * (array02 - array01)))**.5)) / 2',
@@ -257,13 +257,15 @@ class VegIndicesEquations(SensorInfo):
             Default is 0.
         chunk_size (Optional[int]): The chunk size to determine whether to use ``ne.evaluate``. Default is -1, or
             use ``numexpr``.
+        mask_array (Optional[2d array]): A mask where anything equal to 255 is background. Default is None.
     """
 
-    def __init__(self, image_array, no_data=0, chunk_size=-1):
+    def __init__(self, image_array, no_data=0, chunk_size=-1, mask_array=None):
 
         self.image_array = image_array
         self.no_data = no_data
         self.chunk_size = chunk_size
+        self.mask_array = mask_array
 
         SensorInfo.__init__(self)
 
@@ -391,6 +393,11 @@ class VegIndicesEquations(SensorInfo):
         no_data = self.no_data
         pi = np.pi
 
+        # Setup a mask
+        if isinstance(self.mask_array, np.ndarray):
+            mask_array = self.mask_array
+            mask_equation = 'where(mask_array == 255, no_data, index_array)'
+
         if self.n_bands == 2:
 
             try:
@@ -399,7 +406,8 @@ class VegIndicesEquations(SensorInfo):
             except:
                 raise ValueError('\nThe input array should have {:d} dimensions.\n'.format(self.n_bands))
 
-            mask_equation = 'where((array01 == 0) | (array02 == 0), no_data, index_array)'
+            if not isinstance(self.mask_array, np.ndarray):
+                mask_equation = 'where((array01 == 0) | (array02 == 0), no_data, index_array)'
 
         elif self.n_bands == 3:
 
@@ -410,7 +418,8 @@ class VegIndicesEquations(SensorInfo):
             except:
                 raise ValueError('\nThe input array should have {:d} dimensions.\n'.format(self.n_bands))
 
-            mask_equation = 'where((array01 == 0) | (array02 == 0) | (array03 == 0), no_data, index_array)'
+            if not isinstance(self.mask_array, np.ndarray):
+                mask_equation = 'where((array01 == 0) | (array02 == 0) | (array03 == 0), no_data, index_array)'
 
         index_array = ne.evaluate(self.equations[self.index2compute.upper()])
 
@@ -1317,11 +1326,13 @@ class VegIndices(BandHandler):
         input_image (str)
         input_indice (str)
         sensor (str)
+        mask_band (Optional[int])
     """
 
-    def __init__(self, input_image, input_indice, sensor):
+    def __init__(self, input_image, input_indice, sensor, mask_band=None):
 
         self.input_indice = input_indice
+        self.mask_band = mask_band
 
         # Get the sensor band order.
         BandHandler.__init__(self, sensor)
@@ -1459,8 +1470,16 @@ class VegIndices(BandHandler):
                     except:
                         raise NameError('{} cannot be computed for {}.'.format(self.input_indice.upper(), self.sensor))
 
+                    if isinstance(self.mask_band, int):
+
+                        mask_array = self.meta_info.mparray(bands2open=self.mask_band, i=self.i, j=self.j,
+                                                            rows=self.n_rows, cols=self.n_cols, d_type='byte')
+
                     # Setup the vegetation index object.
-                    vie = VegIndicesEquations(image_stack, chunk_size=self.chunk_size, no_data=self.no_data)
+                    vie = VegIndicesEquations(image_stack,
+                                              chunk_size=self.chunk_size,
+                                              no_data=self.no_data,
+                                              mask_array=mask_array)
 
                     # Calculate the vegetation index.
                     veg_indice_array = vie.compute(self.input_indice, out_type=self.out_type)
@@ -1590,7 +1609,7 @@ def _compute_as_list(img, out_img, sensor, k, storage, no_data, chunk_size,
 
 
 def veg_indices(input_image, output_image, input_index, sensor, k=0., storage='float32', no_data=0,
-                chunk_size=1024, be_quiet=False, overwrite=False, overviews=False):
+                chunk_size=-1, be_quiet=False, overwrite=False, overviews=False, mask_band=None):
 
     """
     Computes vegetation indexes
@@ -1608,11 +1627,12 @@ def veg_indices(input_image, output_image, input_index, sensor, k=0., storage='f
         storage (Optional[str]): Storage type of ``output_image``. Default is 'float32'. Choices are
             ['byte', 'uint16', 'float32].
         no_data (Optional[int]): The output 'no data' value for ``output_image``. Default is 0.
-        chunk_size (Optional[int]): Size of image chunks. Default is 1024. *chunk_size=-1 will use Numexpr
+        chunk_size (Optional[int]): Size of image chunks. Default is -1. *chunk_size=-1 will use Numexpr
             threading. This should give faster results on larger imagery.
         be_quiet (Optional[bool]): Whether to print progress (False) or be quiet (True). Default is False.
         overwrite (Optional[bool]): Whether to overwrite an existing ``output_image`` file. Default is False.
         overviews (Optional[bool]): Whether to build pyramid overviews for ``output_image``. Default is False.
+        mask_band (Optional[int]): A mask band position to use. Default is None.
 
     Examples:
         >>> from mappy.features import veg_indices
@@ -1747,7 +1767,7 @@ def veg_indices(input_image, output_image, input_index, sensor, k=0., storage='f
 
         else:
 
-            vio = VegIndices(input_image, input_index, sensor)
+            vio = VegIndices(input_image, input_index, sensor, mask_band=mask_band)
 
             vio.run(output_image, k=k, storage=storage, no_data=no_data, chunk_size=chunk_size,
                     be_quiet=be_quiet, overwrite=overwrite, overviews=overviews)
@@ -1756,7 +1776,7 @@ def veg_indices(input_image, output_image, input_index, sensor, k=0., storage='f
 
         if (len(input_index) == 1) and (input_index[0].lower() != 'all'):
 
-            vio = VegIndices(input_image, input_index[0], sensor)
+            vio = VegIndices(input_image, input_index[0], sensor, mask_band=mask_band)
 
             vio.run(output_image, k=k, storage=storage, no_data=no_data, chunk_size=chunk_size,
                     be_quiet=be_quiet, overwrite=overwrite, overviews=overviews)

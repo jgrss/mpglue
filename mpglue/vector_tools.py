@@ -15,6 +15,7 @@ import ast
 import copy
 import fnmatch
 import atexit
+import tarfile
 
 from .paths import get_main_path
 import raster_tools
@@ -53,11 +54,11 @@ except:
     print('PySAL is not installed')
 
 # Rtree
-# try:
-#     import rtree
-#     rtree_installed = True
-# except:
-#     rtree_installed = False
+try:
+    import rtree
+    rtree_installed = True
+except:
+    rtree_installed = False
 
 # PyTables
 try:
@@ -774,103 +775,172 @@ def create_point(coordinate_pair, projection_file):
     return cv
 
 
-def get_intersecting_features(rtree_index, rtree_info=None, field_dict=None, shapefile2intersect=None, envelope=None):
+class Extent2UTM(object):
 
-    if isinstance(shapefile2intersect, str):
+    """
+    Converts an extent envelope from WGS84 to UTM
+    """
 
-        # Open the base shapefile
-        with vinfo(shapefile2intersect) as bdy_info:
+    def __init__(self, grid_envelope, utm_zone):
 
-            bdy_feature = bdy_info.lyr.GetFeature(0)
-
-            bdy_geometry = bdy_feature.GetGeometryRef()
-
-            bdy_envelope = bdy_geometry.GetEnvelope()
-
+        # Envelope
         # left, right, bottom, top
-        envelope = [bdy_envelope[0], bdy_envelope[1], bdy_envelope[2], bdy_envelope[3]]
 
-    # Load the UTM grid information.
-    if not isinstance(field_dict, dict):
+        # Northern hemisphere
+        if grid_envelope['top'] > 0:
+            self.utm_epsg = int('326{}'.format(utm_zone))
+        else:
+            self.utm_epsg = int('327{}'.format(utm_zone))
 
-        if not isinstance(rtree_info, str):
-            raise TypeError('Either field_dict or rtree_info must be given.')
+        ptr = Transform(grid_envelope['left'], grid_envelope['bottom'], 4326, self.utm_epsg)
 
-        field_dict = pickle.load(file(rtree_info, 'rb'))
+        self.left = copy.copy(ptr.x_transform)
+        self.bottom = copy.copy(ptr.y_transform)
 
-    grid_infos = []
+        ptr = Transform(grid_envelope['right'], grid_envelope['top'], 4326, self.utm_epsg)
 
-    # Intersect the base shapefile bounding box
-    #   with the UTM grids.
-    for n in rtree_index.intersection(envelope):
-
-        grid_info = field_dict[n]
-
-        # Create a polygon object from the coordinates.
-        # 0:left, 1:right, 2:bottom, 3:top
-        coord_wkt = 'POLYGON (({:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}))'.format(
-            grid_info['extent']['left'],
-            grid_info['extent']['top'],
-            grid_info['extent']['right'],
-            grid_info['extent']['top'],
-            grid_info['extent']['right'],
-            grid_info['extent']['bottom'],
-            grid_info['extent']['left'],
-            grid_info['extent']['bottom'],
-            grid_info['extent']['left'],
-            grid_info['extent']['top'])
-
-        coord_poly = ogr.CreateGeometryFromWkt(coord_wkt)
-
-        # Check if the feature intersects
-        #   the base shapefile.
-        if not bdy_geometry.Intersection(coord_poly).IsEmpty():
-            grid_infos.append(grid_info)
-
-    return grid_infos
+        self.right = copy.copy(ptr.x_transform)
+        self.top = copy.copy(ptr.y_transform)
 
 
-def intersects_shapefile(shapefile2intersect, base_shapefile=None, rtree_info=None):
+class Extent2WGS84(object):
 
-    import tarfile
+    """
+    Converts an extent envelope from UTM to WGS84
+    """
 
-    # Rtree
-    try:
-        import rtree
-    except ImportError:
-        raise ImportError('Rtree must be installed')
+    def __init__(self, grid_envelope, epsg):
 
-    # Setup RTree index
-    rtree_index = rtree.index.Index(interleaved=False)
+        # Envelope
+        # left, right, bottom, top
 
-    utm_shp_path = '{}/utilities/sentinel'.format(MAIN_PATH.replace('mpglue', 'mappy'))
+        self.utm_epsg = epsg
 
-    if isinstance(base_shapefile, str):
-        base_shapefile_ = base_shapefile
-    else:
+        ptr = Transform(grid_envelope['left'], grid_envelope['bottom'], self.utm_epsg, 4326)
 
-        # Unzip the UTM shapefile
-        with tarfile.open('{}/utm_shp.tar.bz2'.format(utm_shp_path), mode='r:bz2') as tar:
-            tar.extractall(path=utm_shp_path)
+        self.left = copy.copy(ptr.x_transform)
+        self.bottom = copy.copy(ptr.y_transform)
 
-        base_shapefile_ = '{}/sentinel2_grid.shp'.format(utm_shp_path)
+        ptr = Transform(grid_envelope['right'], grid_envelope['top'], self.utm_epsg, 4326)
 
-    with vinfo(base_shapefile_) as bdy_info:
+        self.right = copy.copy(ptr.x_transform)
+        self.top = copy.copy(ptr.y_transform)
 
-        for f in xrange(0, bdy_info.n_feas):
 
-            bdy_feature = bdy_info.lyr.GetFeature(f)
-            bdy_geometry = bdy_feature.GetGeometryRef()
-            en = bdy_geometry.GetEnvelope()
-            rtree_index.insert(f, (en[0], en[1], en[2], en[3]))
+class RTreeManager(object):
 
-    if isinstance(base_shapefile, str):
+    def __init__(self, base_shapefile=None):
 
-        # Delete the UTM shapefile
-        for utm_file in fnmatch.filter(os.listdir(utm_shp_path), 'sentinel2_grid*'):
-            os.remove('{}/{}'.format(utm_shp_path, utm_file))
+        self.rtree_index = rtree.index.Index(interleaved=False)
 
-    return get_intersecting_features(rtree_index, rtree_info, shapefile2intersect=shapefile2intersect)
+        self.utm_shp_path = '{}/utilities/sentinel'.format(MAIN_PATH.replace('mpglue', 'mappy'))
+
+        # Setup the UTM MGRS shapefile
+        if isinstance(base_shapefile, str):
+            self.base_shapefile_ = base_shapefile
+        else:
+
+            self.base_shapefile_ = '{}/sentinel2_grid.shp'.format(self.utm_shp_path)
+
+            if not os.path.isfile(self.base_shapefile_):
+
+                with tarfile.open('{}/utm_shp.tar.bz2'.format(self.utm_shp_path), mode='r:bz2') as tar:
+                    tar.extractall(path=self.utm_shp_path)
+
+        # Setup the RTree index
+        with vinfo(self.base_shapefile_) as bdy_info:
+
+            for f in xrange(0, bdy_info.n_feas):
+
+                bdy_feature = bdy_info.lyr.GetFeature(f)
+                bdy_geometry = bdy_feature.GetGeometryRef()
+                en = bdy_geometry.GetEnvelope()
+
+                self.rtree_index.insert(f, (en[0], en[1], en[2], en[3]))
+
+        # Load the RTree info
+        self.rtree_info = '{}/utilities/sentinel/utm_grid_info.txt'.format(MAIN_PATH.replace('mpglue', 'mappy'))
+
+        self.field_dict = pickle.load(file(self.rtree_info, 'rb'))
+
+    def get_intersecting_features(self, shapefile2intersect=None, envelope=None, epsg=None):
+
+        if isinstance(shapefile2intersect, str):
+
+            # Open the base shapefile
+            with vinfo(shapefile2intersect) as bdy_info:
+
+                bdy_feature = bdy_info.lyr.GetFeature(0)
+
+                bdy_geometry = bdy_feature.GetGeometryRef()
+
+                bdy_envelope = bdy_geometry.GetEnvelope()
+
+            # left, right, bottom, top
+            envelope = [bdy_envelope[0], bdy_envelope[1], bdy_envelope[2], bdy_envelope[3]]
+
+        # Transform the points from UTM to WGS84
+        if isinstance(epsg, int):
+
+            image_envelope = dict(left=envelope[0],
+                                  right=envelope[1],
+                                  bottom=envelope[2],
+                                  top=envelope[3])
+
+            e2w = Extent2WGS84(image_envelope, epsg)
+
+            envelope = [e2w.left, e2w.right, e2w.bottom, e2w.top]
+
+        self.grid_infos = []
+
+        # Intersect the base shapefile bounding box
+        #   with the UTM grids.
+        for n in self.rtree_index.intersection(envelope):
+
+            grid_info = self.field_dict[n]
+
+            # Create a polygon object from the coordinates.
+            # 0:left, 1:right, 2:bottom, 3:top
+            coord_wkt = 'POLYGON (({:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}))'.format(
+                grid_info['extent']['left'],
+                grid_info['extent']['top'],
+                grid_info['extent']['right'],
+                grid_info['extent']['top'],
+                grid_info['extent']['right'],
+                grid_info['extent']['bottom'],
+                grid_info['extent']['left'],
+                grid_info['extent']['bottom'],
+                grid_info['extent']['left'],
+                grid_info['extent']['top'])
+
+            coord_poly = ogr.CreateGeometryFromWkt(coord_wkt)
+
+            if isinstance(shapefile2intersect, str):
+
+                # Check if the feature intersects
+                #   the base shapefile.
+                if not bdy_geometry.Intersection(coord_poly).IsEmpty():
+                    self.grid_infos.append(grid_info)
+
+            else:
+                self.grid_infos.append(grid_info)
+
+    def _cleanup(self):
+
+        if isinstance(self.base_shapefile, str):
+
+            # Delete the UTM shapefile
+            for utm_file in fnmatch.filter(os.listdir(self.utm_shp_path), 'sentinel2_grid*'):
+                os.remove('{}/{}'.format(self.utm_shp_path, utm_file))
+
+
+def intersects_shapefile(shapefile2intersect, base_shapefile=None):
+
+    srt = RTreeManager(base_shapefile=base_shapefile)
+
+    srt.get_intersecting_features(shapefile2intersect=shapefile2intersect)
+
+    return srt.grid_infos
 
 
 def intersects_boundary(meta_dict, boundary_file):
