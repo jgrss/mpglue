@@ -15,6 +15,7 @@ import inspect
 import atexit
 from joblib import Parallel, delayed
 import platform
+import shutil
 
 import ctypes
 
@@ -836,6 +837,15 @@ class LandsatParser(object):
             self.parse_xml(metadata)
         else:
             raise NameError('Parser type not supported')
+
+    def _cleanup(self):
+
+        if os.path.isdir(self.temp_dir):
+
+            for landsat_file in os.listdir(self.temp_dir):
+                os.remove('{}/{}'.format(self.temp_dir, landsat_file))
+
+            shutil.rmtree(self.temp_dir)
 
     def parse_mtl(self, metadata):
 
