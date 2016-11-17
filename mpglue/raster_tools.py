@@ -165,6 +165,9 @@ class ImageInfo(object):
     def __init__(self):
         pass
 
+    def copy(self):
+        return copy.copy(self)
+
 
 class DataChecks(object):
 
@@ -252,19 +255,24 @@ class DataChecks(object):
             iinfo (object or dict): An image instance of ``rinfo`` to test.
         """
 
-        if isinstance(iinfo, rinfo):
-            iinfo = self._info2dict(iinfo)
+        if isinstance(iinfo, dict):
 
-        if (self.right < iinfo['left']) or (self.left > iinfo['right']) or \
-                (self.top < iinfo['bottom']) or (self.bottom > iinfo['top']):
+            iif = ImageInfo()
+
+            iif.left = iinfo['left']
+            iif.right = iinfo['right']
+            iif.top = iinfo['top']
+            iif.bottom = iinfo['bottom']
+
+            iinfo = iif.copy()
+
+        if (self.right < iinfo.left) or (self.left > iinfo.right) or \
+                (self.top < iinfo.bottom) or (self.bottom > iinfo.top):
 
             return True
 
         else:
             return False
-
-    def _info2dict(self, info_obect):
-        return dict(left=info_obect.left, right=info_obect.right, bottom=info_obect.bottom, top=info_obect.top)
 
     def check_clouds(self, cloud_band=7, clear_value=0, background_value=255):
 
