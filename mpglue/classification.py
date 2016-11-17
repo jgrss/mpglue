@@ -137,13 +137,7 @@ except ImportError:
 try:
     from retrying import retry
 except:
-    try:
-        print('retrying not found. Attempting to install ...')
-        subprocess.call('pip install retrying', shell=True)
-
-        from retrying import retry
-    except ImportError:
-        raise ImportError('retrying must be installed')
+    raise ImportError('retrying must be installed')
 
 # Rtree
 try:
