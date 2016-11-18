@@ -865,6 +865,10 @@ class RTreeManager(object):
 
     def get_intersecting_features(self, shapefile2intersect=None, envelope=None, epsg=None):
 
+        """
+        Intersects the RTree index with a shapefile or extent envelope.
+        """
+
         if isinstance(shapefile2intersect, str):
 
             # Open the base shapefile

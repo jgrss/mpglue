@@ -283,24 +283,23 @@ class VegIndicesEquations(SensorInfo):
 
             if in_range:
 
-                array2rescale_ = rescale_intensity(array2rescale,
-                                                   in_range=in_range,
-                                                   out_range=(0, 254)).astype(np.uint8)
+                array2rescale_ = np.uint8(rescale_intensity(array2rescale,
+                                                            in_range=in_range,
+                                                            out_range=(0, 254)))
 
             else:
-                array2rescale_ = rescale_intensity(array2rescale, out_range=(0, 254)).astype(np.uint8)
+                array2rescale_ = np.uint8(rescale_intensity(array2rescale, out_range=(0, 254)))
 
         elif self.out_type == 3:
 
             if in_range:
 
-                array2rescale_ = rescale_intensity(array2rescale,
-                                                   in_range=in_range,
-                                                   out_range=(0, 9999)).astype(np.uint16)
+                array2rescale_ = np.uint16(rescale_intensity(array2rescale,
+                                                             in_range=in_range,
+                                                             out_range=(0, 10000)))
 
             else:
-
-                array2rescale_ = rescale_intensity(array2rescale, out_range=(0, 9999)).astype(np.uint16)
+                array2rescale_ = np.uint16(rescale_intensity(array2rescale, out_range=(0, 10000)))
 
         return np.where(array2rescale == self.no_data, self.no_data, array2rescale_)
 
@@ -1375,8 +1374,10 @@ class VegIndices(BandHandler):
             if (self.no_data < 0) or (self.no_data > 255):
 
                 raise ValueError("""
+
                 The 'no data' value cannot be less than 0 or
                 greater than 255 with Byte storage.
+
                 """)
 
             self.out_type = 2
@@ -1386,8 +1387,10 @@ class VegIndices(BandHandler):
             if self.no_data < 0:
 
                 raise ValueError("""
+
                 The 'no data' value cannot be less than 0
                 with UInt16 storage.
+
                 """)
 
             self.out_type = 3
