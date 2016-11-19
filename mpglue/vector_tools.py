@@ -1967,7 +1967,7 @@ def _examples():
 
     # Add an ordered id field
     vector_tools.py -i /in_vector.shp --method field-id --field-names id
-
+'
     # Add an area field
     vector_tools.py -i /in_vector.shp --method field-area --field-names Area
 
