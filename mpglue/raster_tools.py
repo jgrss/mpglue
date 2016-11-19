@@ -886,6 +886,7 @@ class LandsatParser(object):
             self.row = df.loc[df['Variable'] == 'STARTING_ROW', 'Value'].astype(int).astype(str).values[0].strip()
 
         self.elev = df.loc[df['Variable'] == 'SUN_ELEVATION', 'Value'].astype(float).values[0]
+        self.zenith = 90. - self.elev
         self.azimuth = df.loc[df['Variable'] == 'SUN_AZIMUTH', 'Value'].astype(float).values[0]
         self.cloudCover = df.loc[df['Variable'] == 'CLOUD_COVER', 'Value'].astype(float).astype(str).values[0].strip()
 
