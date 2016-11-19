@@ -995,8 +995,8 @@ class LandsatParser(object):
 
             solar_angles = soup.find('solar_angles')
 
-            self.elev = solar_angles['zenith']
-
+            self.zenith = solar_angles['zenith']
+            self.elev = 90. - self.zenith
             self.azimuth = solar_angles['azimuth']
 
 
