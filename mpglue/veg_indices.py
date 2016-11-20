@@ -172,7 +172,7 @@ class SensorInfo(object):
         self.data_ranges = {'ARVI': (),
                             'CBI': (-1., 1.),
                             'CIre': (-1., 1.),
-                            'EVI': (0., 1),
+                            'EVI': (-1., 1.),
                             'EVI2': (0., 1.),
                             'IPVI': (),
                             'MSAVI': (),
