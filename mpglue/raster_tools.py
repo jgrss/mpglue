@@ -1161,7 +1161,7 @@ class rinfo(FileManager, LandsatParser, SentinelParser):
     def __init__(self, file_name='none', open2read=True, metadata=None, sensor='Landsat',
                  hdf_band=1, check_corrupted=False, **kwargs):
 
-        self.file_name = file_name
+        self.file_name = os.path.normpath(file_name)
 
         passed = True
 
