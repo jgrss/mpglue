@@ -4,10 +4,10 @@
 @author: Jordan Graesser
 """
 
-# import cython
+import cython
 cimport cython
 
-# import numpy as np
+import numpy as np
 cimport numpy as np
 
 from cython.parallel import prange

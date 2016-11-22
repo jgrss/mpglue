@@ -12,7 +12,7 @@ cimport cython
 # from libc.math cimport isnan
 # from cython.parallel import prange, parallel
 
-# import numpy as np
+import numpy as np
 cimport numpy as np
 
 DTYPE_float32 = np.float32
