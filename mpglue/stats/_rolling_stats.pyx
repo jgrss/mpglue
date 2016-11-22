@@ -4,8 +4,6 @@
 @author: Jordan Graesser
 """
 
-from __future__ import division
-
 # import cython
 cimport cython
 

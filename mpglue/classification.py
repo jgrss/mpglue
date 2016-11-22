@@ -34,25 +34,13 @@ SPFEAS_PATH = get_path()
 # helpers
 try:
     from .stats import _lin_interp
-except:
-
-    os.chdir('{}/stats'.format(SPFEAS_PATH))
-
-    com = 'python setup_lin_interp.py build_ext --inplace'
-    subprocess.call(com, shell=True)
-
-    from .stats import _lin_interp
+except ImportError:
+    raise ImportError('Could not import _lin_interp')
 
 try:
     from .stats import _rolling_stats
-except:
-
-    os.chdir('{}/stats'.format(SPFEAS_PATH))
-
-    com = 'python setup_rolling_stats.py build_ext --inplace'
-    subprocess.call(com, shell=True)
-
-    from .stats import _rolling_stats
+except ImportError:
+    raise ImportError('Could not import _rolling_stats')
 
 # Pickle
 try:
