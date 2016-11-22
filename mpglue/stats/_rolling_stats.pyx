@@ -4,24 +4,25 @@
 @author: Jordan Graesser
 """
 
-import cython
+from __future__ import division
+
+# import cython
 cimport cython
 
+# import numpy as np
+cimport numpy as np
+
 from cython.parallel import prange
-
-import numpy as np
-cimport numpy as cnp
-
 from libc.math cimport pow
 
 DTYPE_uint64 = np.uint64
-ctypedef cnp.uint64_t DTYPE_uint64_t
+ctypedef np.uint64_t DTYPE_uint64_t
 
 DTYPE_float32 = np.float32
-ctypedef cnp.float32_t DTYPE_float32_t
+ctypedef np.float32_t DTYPE_float32_t
 
 DTYPE_float64 = np.float64
-ctypedef cnp.float64_t DTYPE_float64_t
+ctypedef np.float64_t DTYPE_float64_t
 
 cdef extern from 'numpy/npy_math.h':
     bint npy_isnan(DTYPE_float32_t x)
@@ -276,8 +277,8 @@ cdef DTYPE_float32_t[:, :] _rolling_median(DTYPE_float32_t[:, :] arr, int window
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef cnp.ndarray[DTYPE_float32_t, ndim=3, mode='c'] _rolling_window(cnp.ndarray[DTYPE_float32_t, ndim=2, mode='c'] a,
-                                                                    int window):
+cdef np.ndarray[DTYPE_float32_t, ndim=3, mode='c'] _rolling_window(np.ndarray[DTYPE_float32_t, ndim=2, mode='c'] a,
+                                                                   int window):
 
     cdef:
         tuple shape, strides
@@ -290,13 +291,13 @@ cdef cnp.ndarray[DTYPE_float32_t, ndim=3, mode='c'] _rolling_window(cnp.ndarray[
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef cnp.ndarray[DTYPE_float32_t, ndim=2, mode='c'] _rolling_median_v(cnp.ndarray[DTYPE_float32_t, ndim=2, mode='c'] arr, int window_size):
+cdef np.ndarray[DTYPE_float32_t, ndim=2, mode='c'] _rolling_median_v(np.ndarray[DTYPE_float32_t, ndim=2, mode='c'] arr, int window_size):
 
     cdef:
         int cols = arr.shape[1]
         int window_half1 = window_size / 2
-        cnp.ndarray[DTYPE_float32_t, ndim=3] arr_strides, arr_strides_sorted
-        cnp.ndarray[DTYPE_float32_t, ndim=2] results
+        np.ndarray[DTYPE_float32_t, ndim=3] arr_strides, arr_strides_sorted
+        np.ndarray[DTYPE_float32_t, ndim=2] results
 
     # get window strides
     arr_strides = _rolling_window(arr, window_size)
@@ -343,7 +344,7 @@ cdef DTYPE_float32_t[:, :] _rolling_mean(DTYPE_float32_t[:, :] arr, int window_s
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def rolling_stats(cnp.ndarray[DTYPE_float32_t, ndim=2] image_array, str stat='median', int window_size=3):
+def rolling_stats(np.ndarray[DTYPE_float32_t, ndim=2] image_array, str stat='median', int window_size=3):
 
     """
     Computes rolling statistics

@@ -39,6 +39,7 @@ def get_package_data():
     return {'': ['*.md',
                  '*.txt'],
             'mpglue': ['stats/*.so',
+                       'stats/*.pyx'
                        'stats/*.pyd']}
 
 
