@@ -2,11 +2,6 @@ import setuptools
 from distutils.core import setup
 import platform
 
-try:
-     from Cython.distutils import build_ext
-except ImportError:
-     from distutils.command import build_ext
-
 
 __version__ = '0.0.1'
 
@@ -43,9 +38,7 @@ def get_package_data():
 
     return {'': ['*.md',
                  '*.txt'],
-            'mpglue': ['stats/*.pyx',
-                       'stats/*.c',
-                       'stats/*.so',
+            'mpglue': ['stats/*.so',
                        'stats/*.pyd']}
 
 
@@ -56,8 +49,8 @@ def get_console_dict():
                                 'veg_indices=mpglue.veg_indices:main']}
 
 
-def get_pyx_list():
-    return ['mpglue/stats/*.pyx']
+# def get_pyx_list():
+#     return ['mpglue/stats/*.pyx']
 
 
 def setup_package():

@@ -264,14 +264,14 @@ class VRTBuilder(object):
         f_base, f_ext = os.path.splitext(f_name)
 
         if isinstance(self.base_name, str):
-            sub_directory = '{}/{}/subs'.format(d_name, self.base_name)
+            sub_directory = os.path.join(d_name, self.base_name, 'subs')
         else:
-            sub_directory = '{}/subs'.format(d_name)
+            sub_directory = os.path.join(d_name, 'subs')
 
         if not os.path.isdir(sub_directory):
             os.makedirs(sub_directory)
 
-        out_sub = '{}/{}_sub.tif'.format(sub_directory, f_base)
+        out_sub = os.path.join(sub_directory, '{}_sub.tif'.format(f_base))
 
         if not os.path.isfile(out_sub):
 
@@ -299,13 +299,20 @@ class VRTBuilder(object):
                 return None, sub_directory
             else:
 
-                # -te [xmin ymin xmax ymax]
-                com = 'gdalwarp -q -te {:f} {:f} {:f} {:f} -multi -wo NUM_THREADS=ALL_CPUS \
-                -wm 256 --config GDAL_CACHEMAX 256 \
-                -wo USE_OPENCL=TRUE -co COMPRESS=DEFLATE -co TILED=YES {} {}'.format(sub_left, sub_bottom, sub_right,
-                                                                                     sub_top, image_name, out_sub)
+                # minX, minY, maxX, maxY
+                raster_tools.warp(image_name, out_sub,
+                                  outputBounds=[sub_left, sub_bottom, sub_right, sub_top],
+                                  multithread=True,
+                                  warpMemoryLimit=256,
+                                  creationOptions=['COMPRESS=YES'])
 
-                subprocess.call(com, shell=True)
+                # -te [xmin ymin xmax ymax]
+                # com = 'gdalwarp -q -te {:f} {:f} {:f} {:f} -multi -wo NUM_THREADS=ALL_CPUS \
+                # -wm 256 --config GDAL_CACHEMAX 256 \
+                # -wo USE_OPENCL=TRUE -co COMPRESS=DEFLATE -co TILED=YES {} {}'.format(sub_left, sub_bottom, sub_right,
+                #                                                                      sub_top, image_name, out_sub)
+                #
+                # subprocess.call(com, shell=True)
 
         return out_sub, sub_directory
 
