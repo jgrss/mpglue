@@ -49,28 +49,36 @@ Image handling:
 Installation
 ------------
 #### Dependencies
-- Python third-party libraries (see /notebooks/01_installation.pynb)
+- Python third-party libraries see [**the notebooks installation guide**](https://github.com/jgrss/mpglue/tree/master/mpglue/notebooks/01_installation.pynb).
 
 **Install stable release with pip**
 
 1) Update setuptools:
 
-    > pip install -U setuptools
+```
+pip install -U setuptools
+```
 
 2) [Acquire the latest MpGlue tarball](https://github.com/jgrss/mpglue/releases)
 
 3) To install:
 
-    > pip install MpGlue-<version>.tar.gz
-    > e.g., pip install MpGlue-0.0.1.tar.gz
+```
+pip install MpGlue-<version>.tar.gz
+e.g., pip install MpGlue-0.0.1.tar.gz
+```
 
 4) To update:
 
-    > pip install -U MpGlue-<new version>.tar.gz
+```
+pip install -U MpGlue-<new version>.tar.gz
+```
 
 5) To uninstall:
 
-    > pip uninstall mpglue
+```
+pip uninstall mpglue
+```
 
 Development
 -----------
