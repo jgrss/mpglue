@@ -523,10 +523,10 @@ class Samples(object):
                       sample_weight=None, ignore_feas=[], use_xy=False, stratified=False, spacing=1000.,
                       x_label='X', y_label='Y', response_label='response'):
 
-        if platform.system() == 'Windows':
-            self.file_name = file_name.replace('\\', '/')
-        else:
-            self.file_name = file_name
+        # if platform.system() == 'Windows':
+        #     self.file_name = file_name.replace('\\', '/')
+        # else:
+        #     self.file_name = file_name
 
         self.labels_test = None
         self.p_vars = None
@@ -813,7 +813,7 @@ class Samples(object):
             d_name, f_name = os.path.split(self.file_name)
             f_base, f_ext = os.path.splitext(f_name)
 
-            scaler_file = '{}/{}_scaler.txt'.format(d_name, f_base)
+            scaler_file = os.path.join(d_name, '{}_scaler.txt'.format(f_base))
 
             self.scaler = StandardScaler().fit(self.p_vars)
 
@@ -1017,7 +1017,7 @@ class EndMembers(object):
         except ImportError:
             raise ImportError('Pysptools needs to be installed to extract endmembers')
 
-        map_methods = {'fcls': amp.FCLS(), 'nnls': amp.NNLS(), 'ucls': amp.UCLS()}
+        map_methods = dict(fcls=amp.FCLS(), nnls=amp.NNLS(), ucls=amp.UCLS())
 
         try:
             mapper = map_methods[method]
@@ -1049,7 +1049,7 @@ class EndMembers(object):
             d_name, f_name = os.path.split(out_image)
             f_base, f_ext = os.path.splitext(f_name)
 
-            out_img_not_masked = '{}/{}_not_masked{}'.format(d_name, f_base, f_ext)
+            out_img_not_masked = os.path.join(d_name, '{}_not_masked{}'.format(f_base, f_ext))
 
             raster_tools.write2raster(self.abundance_maps[1], out_img_not_masked, o_info=o_info, flush_final=True)
 
@@ -1983,9 +1983,9 @@ class Preprocessing(object):
             method (Optional[str]): The distance method to use. Default is 'mahalanobis'.
         """
 
-        dist_methods = {'mahalanobis': sci_dist.mahalanobis,
-                        'correlation': sci_dist.correlation,
-                        'euclidean': sci_dist.euclidean}
+        dist_methods = dict(mahalanobis=sci_dist.mahalanobis,
+                            correlation=sci_dist.correlation,
+                            euclidean=sci_dist.euclidean)
 
         if method == 'mahalanobis':
 
@@ -2334,19 +2334,19 @@ class Preprocessing(object):
 
         if classifier_info['classifier'] == 'RF':
 
-            label_spread = RandomForestClassifier(max_depth=classifier_info['max_depth'],
-                                                  n_estimators=classifier_info['trees'],
-                                                  max_features=classifier_info['rand_vars'],
-                                                  min_samples_split=classifier_info['min_samps'],
-                                                  n_jobs=-1)
+            label_spread = ensemble.RandomForestClassifier(max_depth=classifier_info['max_depth'],
+                                                           n_estimators=classifier_info['trees'],
+                                                           max_features=classifier_info['rand_vars'],
+                                                           min_samples_split=classifier_info['min_samps'],
+                                                           n_jobs=-1)
 
         elif classifier_info['classifier'] == 'EX_RF':
 
-            label_spread = ExtraTreesClassifier(max_depth=classifier_info['max_depth'],
-                                                n_estimators=classifier_info['trees'],
-                                                max_features=classifier_info['rand_vars'],
-                                                min_samples_split=classifier_info['min_samps'],
-                                                n_jobs=-1)
+            label_spread = ensemble.ExtraTreesClassifier(max_depth=classifier_info['max_depth'],
+                                                         n_estimators=classifier_info['trees'],
+                                                         max_features=classifier_info['rand_vars'],
+                                                         min_samples_split=classifier_info['min_samps'],
+                                                         n_jobs=-1)
 
         labeled_vars_idx = np.where(self.labels != -1)
         labeled_vars = self.p_vars[labeled_vars_idx]
@@ -2367,7 +2367,6 @@ class Preprocessing(object):
         self.classes = list(np.delete(self.classes, 0))
         self.class_counts = {}
         for indv_class in self.classes:
-
             self.class_counts[indv_class] = len(np.where(self.labels == indv_class)[0])
 
         self.n_classes = len(self.classes)
@@ -2595,7 +2594,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
             d_name, f_name = os.path.split(self.output_model)
             f_base, f_ext = os.path.splitext(f_name)
 
-            self.out_acc = '{}/{}_acc.txt'.format(d_name, f_base)
+            self.out_acc = os.path.join(d_name, '{}_acc.txt'.format(f_base))
 
             if os.path.isfile(self.out_acc):
                 os.remove(self.out_acc)
@@ -3495,8 +3494,8 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
         d_name, f_name = os.path.split(self.out_image)
         f_base, f_ext = os.path.splitext(f_name)
 
-        self.out_image_temp = '{}/{}_temp.tif'.format(d_name, f_base)
-        self.temp_model_file = '{}/temp_model_file.txt'.format(d_name)
+        self.out_image_temp = os.path.join(d_name, '{}_temp.tif'.format(f_base))
+        self.temp_model_file = os.path.join(d_name, 'temp_model_file.txt')
 
         if not os.path.isdir(d_name):
             os.makedirs(d_name)
@@ -3555,7 +3554,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
             self.i_info = raster_tools.rinfo(self.input_image)
 
             # Block record keeping.
-            self.record_keeping = '{}/{}_record.txt'.format(d_name, f_base)
+            self.record_keeping = os.path.join(d_name, '{}_record.txt'.format(f_base))
 
             if os.path.isfile(self.record_keeping):
                 self.record_list = pickle.load(file(self.record_keeping, 'rb'))
@@ -3937,7 +3936,6 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
         os.remove(image2mask)
 
     def _num_rows_cols(self, pix, rows_cols, samp_in):
-
         return rows_cols if (pix + rows_cols < samp_in) else samp_in - pix
 
     def _get_feas(self, img_obj_list, i, j, n_rows, n_cols):
@@ -4171,7 +4169,9 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
                 indices.append(s)
 
-                self.split_samples(self.file_name, perc_samp_each=perc_samp_each, ignore_feas=indices,
+                self.split_samples(self.file_name,
+                                   perc_samp_each=perc_samp_each,
+                                   ignore_feas=indices,
                                    use_xy=self.use_xy)
 
                 print '{:d} features ...'.format(self.n_feas)
@@ -5178,7 +5178,7 @@ class classification_r(classification):
                     print 'Writing the model summary to file ...'
 
                     # Write the Cubist model summary to file.
-                    with open('{}/{}_summary.txt'.format(self.model_dir, self.model_base), 'wb') as out_tree:
+                    with open(os.path.join(self.model_dir, '{}_summary.txt'.format(self.model_base)), 'wb') as out_tree:
                         out_tree.write(str(Cubist.print_summary_cubist(self.model)))
 
         elif 'C5' in self.classifier_info['classifier']:
@@ -5226,7 +5226,7 @@ class classification_r(classification):
                     print 'Writing the model summary to file (this may take a few minutes with large trees) ...'
 
                     # Write the C5 model summary to file.
-                    with open('{}/{}_summary.txt'.format(self.model_dir, self.model_base), 'wb') as out_imp:
+                    with open(os.path.join(self.model_dir, '{}_summary.txt'.format(self.model_base)), 'wb') as out_imp:
                         out_imp.write(str(C50.print_summary_C5_0(self.model)))
 
     def predict_c5_cubist(self, input_image, out_image, input_model=None, in_samps=None,
@@ -5264,8 +5264,8 @@ class classification_r(classification):
         d_name, f_name = os.path.split(self.out_image)
         f_base, f_ext = os.path.splitext(f_name)
 
-        self.out_image_temp = '{}/{}_temp.tif'.format(d_name, f_base)
-        self.record_keeping = '{}/{}_record.txt'.format(d_name, f_base)
+        self.out_image_temp = os.path.join(d_name, '{}_temp.tif'.format(f_base))
+        self.record_keeping = os.path.join(d_name, '{}_record.txt'.format(f_base))
 
         if os.path.isfile(self.record_keeping):
             self.record_list = pickle.load(file(self.record_keeping, 'rb'))
@@ -5277,10 +5277,10 @@ class classification_r(classification):
 
         if self.OS_SYSTEM == 'Windows':
 
-            input_model = input_model.replace('\\', '/')
-            in_samps = in_samps.replace('\\', '/')
-            input_image = input_image.replace('\\', '/')
-            out_image = out_image.replace('\\', '/')
+            # input_model = input_model.replace('\\', '/')
+            # in_samps = in_samps.replace('\\', '/')
+            # input_image = input_image.replace('\\', '/')
+            # out_image = out_image.replace('\\', '/')
 
             out_image_dir, f_name = os.path.split(out_image)
             out_image_base, f_ext = os.path.splitext(f_name)
@@ -5313,7 +5313,7 @@ class classification_r(classification):
 
             # self.mapC5_dir = os.path.realpath('../helpers/mapC5')
             # python_home = 'C:/Python27/ArcGIS10.1/Lib/site-packages'
-            self.mapC5_dir = '{}/helpers/mapC5'.format(SPFEAS_PATH)
+            self.mapC5_dir = os.path.join(SPFEAS_PATH, 'helpers/mapC5')
 
             # copy the mapC5 files to the model directory
             self._copy_mapC5(tree_model)
@@ -5324,14 +5324,19 @@ class classification_r(classification):
             # execute mapC5
             if tree_model == 'Cubist':
 
-                com = '{}\mapCubist_v202.exe {} {} {}\{}'.format(self.model_dir, self.model_base,
-                                                                 out_type, out_image_dir, out_image_base)
+                com = os.path.join(self.model_dir, 'mapCubist_v202.exe {} {} {}\{}'.format(self.model_base,
+                                                                                           out_type,
+                                                                                           out_image_dir,
+                                                                                           out_image_base))
 
             elif tree_model == 'C5':
 
-                com = '{}\mapC5_v202.exe {} {} {}\{} {}\{}_error'.format(self.model_dir, self.model_base, out_type,
-                                                                         out_image_dir, out_image_base, out_image_dir,
-                                                                         out_image_base)
+                com = os.path.join(self.model_dir, 'mapC5_v202.exe {} {} {}\{} {}\{}_error'.format(self.model_base,
+                                                                                                   out_type,
+                                                                                                   out_image_dir,
+                                                                                                   out_image_base,
+                                                                                                   out_image_dir,
+                                                                                                   out_image_base))
 
             subprocess.call(com, shell=True)
 
@@ -5484,7 +5489,7 @@ class classification_r(classification):
             tree_model (str): 'C5' or 'Cubist'
         """
 
-        icases_txt = '{}/{}.icases'.format(self.model_dir, self.model_base)
+        icases_txt = os.path.join(self.model_dir, '{}.icases'.format(self.model_base))
 
         # the output icases file
         if os.path.isfile(icases_txt):
@@ -5516,8 +5521,8 @@ class classification_r(classification):
             in_samps (str): The samples used to train the model.
         """
 
-        names_txt = '{}/{}.names'.format(self.model_dir, self.model_base)
-        data_txt = '{}/{}.data'.format(self.model_dir, self.model_base)
+        names_txt = os.path.join(self.model_dir, '{}.names'.format(self.model_base))
+        data_txt = os.path.join(self.model_dir, '{}.data'.format(self.model_base))
 
         # the output .names file
         if os.path.isfile(names_txt):
@@ -5564,8 +5569,8 @@ class classification_r(classification):
 
         for mapC5_item in mapC5_list:
 
-            full_item = '{}/{}'.format(self.mapC5_dir, mapC5_item)
-            out_item = '{}/{}'.format(self.model_dir, mapC5_item)
+            full_item = os.path.join(self.mapC5_dir, mapC5_item)
+            out_item = os.path.join(self.model_dir, mapC5_item)
 
             if not os.path.isfile(out_item):
                 shutil.copy2(full_item, out_item)
@@ -5586,7 +5591,7 @@ class classification_r(classification):
 
         for mapC5_item in mapC5_list:
 
-            full_item = '{}/{}'.format(self.model_dir, mapC5_item)
+            full_item = os.path.join(self.model_dir, mapC5_item)
 
             if os.path.isfile(full_item):
                 os.remove(full_item)

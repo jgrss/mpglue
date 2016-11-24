@@ -112,7 +112,8 @@ def main():
               labs_type=args.labs_type, recode_dict=ast.literal_eval(args.recode_dict),
               classes2remove=args.classes2remove, sample_weight=args.sample_weight,
               ignore_feas=args.ignore_feas, use_xy=args.use_xy, stratified=args.stratified,
-              spacing=args.spacing, x_label=args.x_label, y_label=args.y_label, response_label=args.response_label)
+              spacing=args.spacing, x_label=args.x_label, y_label=args.y_label,
+              response_label=args.response_label)
 
     clo.construct(input_model=args.input_model, output_model=args.output_model,
                   classifier_info=ast.literal_eval(args.classifier_info),
