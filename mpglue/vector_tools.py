@@ -1084,13 +1084,13 @@ def get_xy_offsets(image_info=None, image_list=[], x=None, y=None, feature=None,
         >>> from mappy import vector_tools
         >>>
         >>> # With an image and x, y coordinates.
-        >>> x, y, x_offset, y_offset = vector_tools.get_xy_coordinates(image_info=i_info, x=x, y=y)
+        >>> x, y, x_offset, y_offset = vector_tools.get_xy_offsets(image_info=i_info, x=x, y=y)
         >>>
         >>> # With an image and a feature object.
-        >>> x, y, x_offset, y_offset = vector_tools.get_xy_coordinates(image_info=i_info, feature=feature)
+        >>> x, y, x_offset, y_offset = vector_tools.get_xy_offsets(image_info=i_info, feature=feature)
         >>>
         >>> # With an image and a ``rinfo`` or ``vinfo` instance.
-        >>> x, y, x_offset, y_offset = vector_tools.get_xy_coordinates(image_info=i_info, xy_info=v_info)
+        >>> x, y, x_offset, y_offset = vector_tools.get_xy_offsets(image_info=i_info, xy_info=v_info)
 
     Returns:
         X coordinate, Y coordinate, X coordinate offset, Y coordinate offset

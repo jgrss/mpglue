@@ -156,7 +156,19 @@ def get_sensor_dict():
             'lt8': 'oli_tirs'}
 
 
-class ImageInfo(object):
+class UpdateInfo(object):
+
+    """
+    A class for updating attributes
+    """
+
+    def update_info(self, **kwargs):
+
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
+
+
+class ImageInfo(UpdateInfo):
 
     """
     An empty class for passing image information
@@ -1070,7 +1082,7 @@ class SentinelParser(object):
         self.saturated = int(general_info['Product_Image_Characteristics']['Special_Values'][1]['SPECIAL_VALUE_INDEX'])
 
 
-class rinfo(FileManager, LandsatParser, SentinelParser):
+class rinfo(FileManager, LandsatParser, SentinelParser, UpdateInfo):
 
     """
     Gets image information and a file pointer object.
@@ -1206,11 +1218,6 @@ class rinfo(FileManager, LandsatParser, SentinelParser):
             SentinelParser.__init__(self, metadata)
         else:
             raise NameError('The {} sensor is not an option.'.format(sensor))
-
-    def update_info(self, **kwargs):
-
-        for k, v in kwargs.iteritems():
-            setattr(self, k, v)
 
     def copy(self):
 
@@ -2153,7 +2160,7 @@ class BlockFunc(object):
         write_array (Optional[bool]): Whether to write the output array to file. Default is True.
         boundary_file (Optional[str]): A file to use for block intersection. Default is None.
             Skip blocks that do not intersect ``boundary_file``.
-        mask_file (Optional[str]): An file to use for block masking. Default is None.
+        mask_file (Optional[str]): A file to use for block masking. Default is None.
             Recode blocks to binary 1 and 0 that intersect ``mask_file``.
         n_jobs (Optional[int]): The number of blocks to process in parallel. Default is 1.
         kwargs (Optional[dict]): Function specific parameters.
@@ -3054,7 +3061,7 @@ def write2raster(out_arr, out_name, o_info=None, x=0, y=0, out_rst=None, write2b
         out_rst.close_file()
 
 
-class GetMinExtent(object):
+class GetMinExtent(UpdateInfo):
 
     """
     Args:
@@ -3082,8 +3089,6 @@ class GetMinExtent(object):
 
         for attribute in attributes:
             setattr(self, attribute[0], attribute[1])
-
-        setattr(self, 'update_info', info1.update_info)
 
         self.get_overlap_info(info2)
 

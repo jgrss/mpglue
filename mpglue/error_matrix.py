@@ -240,6 +240,71 @@ class error_matrix(object):
             # get the r squared
             self.r_squared = metrics.r2_score(y, X)
 
+    def sample_bias(self, class_area):
+
+        """
+        Calculates the area adjusted sampling bias
+
+        Args:
+            class_area (list): A list of class areas.
+
+        References:
+            Olofsson et al. (2013) Note that the model assessment on 30% of the withheld
+                samples was conducted post-parameter optimization (section 3.4) on the final
+                parameter set, and not on cross-validated samples. Remote Sensing of Environment 129, 122-131.
+
+        Test:
+            emat = error_matrix()
+            class_area = [22353, 1122543, 610228]
+            emat.e_matrix = np.array([[97, 0, 3],[3, 279, 18], [2, 1, 97]], dtype='float32')
+            emat.sample_bias(class_area)
+
+            print emat.stratified_estimate
+            print emat.standard_errors
+        """
+
+        e_matrix_float = np.float32(self.e_matrix)
+
+        self.class_area = np.array(class_area, dtype='float32')
+
+        total_area = self.class_area.sum()
+
+        # Calculate the map area weights.
+        self.area_weights = self.class_area / total_area
+
+        emat_row_sum = e_matrix_float.sum(axis=1)
+
+        # Estimate the class proportions.
+        e_matrix_pr = np.array([self.area_weights * (e_matrix_float[:, ci] / emat_row_sum)
+                                for ci in xrange(e_matrix_float.shape[1])], dtype='float32')
+
+        # User and producer weights
+        # Equation 9
+        prd_weights = e_matrix_pr.sum(axis=0)
+        usr_weights = e_matrix_pr.sum(axis=1)
+
+        # Equation 10 (stratified error-adjusted area estimate)
+        self.stratified_estimate = usr_weights * total_area
+
+        self.standard_errors = []
+
+        for ci in xrange(e_matrix_float.shape[0]):
+
+            a = np.power(self.area_weights, 2)
+            b = e_matrix_float[:, ci] / emat_row_sum
+            c = 1. - (e_matrix_float[:, ci] / emat_row_sum)
+
+            self.standard_errors.append(((a * ((b * c) / (emat_row_sum - 1.))).sum() ** .5) * total_area)
+
+        # Equation 14
+        self.stratified_users = np.diagonal(e_matrix_pr) / prd_weights
+
+        # Equation 15
+        self.stratified_producers = np.diagonal(e_matrix_pr) / usr_weights
+
+        # Equation 16
+        self.stratified_overall = np.diagonal(e_matrix_pr).sum()
+
     def producers_accuracy(self):
 
         self.producers = np.zeros(self.n_classes, dtype='float32')
