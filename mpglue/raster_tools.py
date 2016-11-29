@@ -505,24 +505,24 @@ class FileManager(DataChecks, RegisterDriver):
 
         self.color_interpretation = self.datasource.GetRasterBand(1).GetRasterColorInterpretation()
 
-        try:
+        if 'PROJ' in self.projection[:4]:
 
-            if 'PROJ' in self.projection[:4]:
+            if self.sp_ref.GetAttrValue('PROJCS|AUTHORITY', 1):
+                self.epsg = self.sp_ref.GetAttrValue('PROJCS|AUTHORITY', 1)
+            else:
+                self.epsg = 'none'
 
-                try:
-                    self.epsg = int(self.sp_ref.GetAttrValue('PROJCS|AUTHORITY', 1))
-                except:
-                    pass
+        elif 'GEOG' in self.projection[:4]:
 
-            elif 'GEOG' in self.projection[:4]:
+            try:
+                self.epsg = int(self.sp_ref.GetAttrValue('GEOGCS|AUTHORITY', 1))
+            except:
 
-                try:
-                    self.epsg = int(self.sp_ref.GetAttrValue('GEOGCS|AUTHORITY', 1))
-                except:
-                    if 'WGS' in self.sp_ref.GetAttrValue('GEOGCS') and '84' in self.sp_ref.GetAttrValue('GEOGCS'):
-                        self.epsg = 4326  # WGS 1984
-
-        except:
+                if 'WGS' in self.sp_ref.GetAttrValue('GEOGCS') and '84' in self.sp_ref.GetAttrValue('GEOGCS'):
+                    self.epsg = 4326  # WGS 1984
+                else:
+                    self.epsg = 'none'
+        else:
             self.epsg = 'none'
 
         # Set georeference and projection.
