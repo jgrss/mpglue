@@ -59,6 +59,7 @@ class error_matrix(object):
         header (Optional[bool]): Whether ``file`` or ``predicted_observed`` contains a header. Default is False.
         class_list (Optional[list])
         discrete (Optional[bool])
+        e_matrix (Optional[ndarray])
 
     Attributes:
         n_classes (int): Number of unique classes.
@@ -151,94 +152,139 @@ class error_matrix(object):
 
         self.time_stamp = time.asctime(time.localtime(time.time()))
 
-    def get_stats(self, po_text=None, po_array=None, header=False, class_list=[], discrete=True):
+    def get_stats(self, po_text=None, po_array=None, header=False, class_list=[],
+                  discrete=True, e_matrix=None):
 
         self.discrete = discrete
 
-        if isinstance(po_text, str):
+        if isinstance(e_matrix, np.ndarray):
 
-            samples = np.genfromtxt(po_text, delimiter=',').astype(int)
+            self.e_matrix = e_matrix
+
+            self.n_classes = self.e_matrix.shape[0]
+            self.class_list = np.arange(1, self.n_classes+1)
+            self.n_samples = self.e_matrix.sum()
+
+            # Reverse the error matrix
+            self.X, self.y = self.error_matrix2xy()
 
         else:
 
-            try:
-                samples = po_array.copy()
-            except ValueError:
-                raise ValueError('Observed and predicted labels must be passed.')
+            if isinstance(po_text, str):
 
-        if header:
-            hdr_idx = 1
-        else:
-            hdr_idx = 0
+                samples = np.genfromtxt(po_text, delimiter=',').astype(int)
 
-        # observed (true)
-        y = np.asarray(samples[hdr_idx:, -1].astype(np.float32)).astype(int)
+            else:
 
-        # predicted
-        X = np.asarray(samples[hdr_idx:, -2].astype(np.float32)).astype(int)
+                try:
+                    samples = po_array.copy()
+                except ValueError:
+                    raise ValueError('Observed and predicted labels must be passed.')
 
-        self.n_samps = len(y)
+            if header:
+                hdr_idx = 1
+            else:
+                hdr_idx = 0
 
-        if not class_list:
-            # get unique class values
-            class_list1 = reduce(lambda X, y: X + y if y[0] not in X else X, map(lambda X: [X], y))
-            class_list2 = reduce(lambda y, X: y + X if X[0] not in y else y, map(lambda y: [y], X))
+            # observed (true)
+            self.y = np.asarray(samples[hdr_idx:, -1].astype(np.float32)).astype(int)
 
-            self.merge_lists(class_list1, class_list2)
-        else:
-            self.class_list = class_list
+            # predicted
+            self.X = np.asarray(samples[hdr_idx:, -2].astype(np.float32)).astype(int)
 
-        self.n_classes = len(self.class_list)
-        self.class_list = sorted(self.class_list)
-        self.n_samples = y.shape[0]
+            self.n_samps = len(y)
 
-        if self.discrete:
+            if not class_list:
+                # get unique class values
+                # class_list1 = reduce(lambda self.X, self.y: self.X + self.y if self.y[0] not in self.X else self.X,
+                #                                             map(lambda self.X: [self.X], self.y))
+                class_list1 = np.unique(self.X)
+                class_list2 = np.unique(self.y)
+
+                # class_list2 = reduce(lambda self.y, self.X: self.y + self.X if self.X[0] not in self.y else self.y,
+                #                                             map(lambda self.y: [self.y], self.X))
+
+                self.merge_lists(class_list1, class_list2)
+            else:
+                self.class_list = class_list
+
+            self.n_classes = len(self.class_list)
+            self.class_list = sorted(self.class_list)
+            self.n_samples = self.y.shape[0]
 
             # create the error matrix
             self.e_matrix = np.zeros((self.n_classes, self.n_classes)).astype(int)
 
             # add to error matrix
-            for predicted, observed in zip(X, y):
+            for predicted, observed in zip(self.X, self.y):
                 self.e_matrix[self.class_list.index(predicted), self.class_list.index(observed)] += 1
+
+        if self.discrete:
 
             # Producer's and User's accuracy
             self.producers_accuracy()
             self.users_accuracy()
 
             # overall accuracy
-            self.accuracy = metrics.accuracy_score(y, X) * 100.
+            self.accuracy = metrics.accuracy_score(self.y, self.X) * 100.
 
             # statistics report
-            self.report = metrics.classification_report(y, X)
+            self.report = metrics.classification_report(self.y, self.X)
 
             # get f scores for each class
-            self.f_scores = metrics.f1_score(y, X, average=None)
+            self.f_scores = metrics.f1_score(self.y, self.X, average=None)
 
             # get the weighted f beta score
-            self.f_beta = metrics.fbeta_score(y, X, beta=.5, labels=self.class_list, pos_label=self.class_list[1])
+            try:
+                self.f_beta = metrics.fbeta_score(self.y, self.X,
+                                                  beta=.5,
+                                                  labels=self.class_list,
+                                                  pos_label=self.class_list[1])
+            except:
+                self.f_beta = None
 
             # get the hamming loss score
-            self.hamming = metrics.hamming_loss(y, X)
+            self.hamming = metrics.hamming_loss(self.y, self.X)
 
             # get the Kappa score
-            self.kappa(y, X)
+            self.kappa(self.y, self.X)
 
         else:
 
             # get the mean absolute error
-            self.mae = metrics.mean_absolute_error(y, X)
+            self.mae = metrics.mean_absolute_error(self.y, self.X)
 
             # get the mean square error
-            self.mse = metrics.mean_squared_error(y, X)
+            self.mse = metrics.mean_squared_error(self.y, self.X)
 
             # get the median absolute error
-            self.medae = metrics.median_absolute_error(y, X)
+            self.medae = metrics.median_absolute_error(self.y, self.X)
 
             # get the root mean squared error
             self.rmse = np.sqrt(self.mse)
 
             # get the r squared
-            self.r_squared = metrics.r2_score(y, X)
+            self.r_squared = metrics.r2_score(self.y, self.X)
+
+    def error_matrix2xy(self):
+
+        """
+        Reverses the error matrix to predictions and observations
+        """
+
+        observed = []
+        predicted = []
+
+        for ei in xrange(0, self.e_matrix.shape[0]):
+            for ej in xrange(0, self.e_matrix.shape[1]):
+
+                n_ = self.e_matrix[ei, ej]
+
+                for n in xrange(0, n_):
+                    observed.append(ei+1)
+                    predicted.append(ej+1)
+
+        return np.array(observed).astype(int), np.array(predicted).astype(int)
 
     def sample_bias(self, class_area):
 
@@ -265,7 +311,10 @@ class error_matrix(object):
 
         e_matrix_float = np.float32(self.e_matrix)
 
-        self.class_area = np.array(class_area, dtype='float32')
+        if not isinstance(class_area, np.ndarray):
+            self.class_area = np.array(class_area, dtype='float32')
+        else:
+            self.class_area = class_area
 
         total_area = self.class_area.sum()
 
@@ -285,6 +334,8 @@ class error_matrix(object):
 
         # Equation 10 (stratified error-adjusted area estimate)
         self.stratified_estimate = usr_weights * total_area
+
+        self.area_difference = self.stratified_estimate - self.class_area
 
         self.standard_errors = []
 
