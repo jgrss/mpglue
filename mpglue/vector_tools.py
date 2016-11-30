@@ -973,8 +973,6 @@ def difference(shapefile2cut, overlap_shapefile, output_shp):
 
         diff_geometry = cut_geometry.Difference(over_geometry)
 
-        # diff_poly = ogr.CreateGeometryFromWkt(diff_geometry)
-        
         cv = create_vector(output_shp,
                            geom_type='polygon',
                            projection=cut_info.projection)
