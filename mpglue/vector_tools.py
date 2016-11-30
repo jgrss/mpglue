@@ -399,15 +399,20 @@ class create_vector(CreateDriver):
 
         elif isinstance(projection_from_file, str):
 
-            sp_ref = osr.SpatialReference()
-            sp_ref.ImportFromWkt(projection_from_file)
+            with vinfo(projection_from_file) as p_info:
+
+                sp_ref = osr.SpatialReference()
+                sp_ref.ImportFromWkt(p_info.projection)
 
             # create the point layer
             self.lyr = self.datasource.CreateLayer(self.f_base, geom_type=geom_type, srs=sp_ref)
 
         elif isinstance(projection, str):
 
-            self.lyr = self.datasource.CreateLayer(self.f_base, geom_type=geom_type, srs=projection)
+            sp_ref = osr.SpatialReference()
+            sp_ref.ImportFromWkt(projection)
+
+            self.lyr = self.datasource.CreateLayer(self.f_base, geom_type=geom_type, srs=sp_ref)
 
         else:
 
@@ -945,6 +950,42 @@ def intersects_shapefile(shapefile2intersect, base_shapefile=None):
     srt.get_intersecting_features(shapefile2intersect=shapefile2intersect)
 
     return srt.grid_infos
+
+
+def difference(shapefile2cut, overlap_shapefile, output_shp):
+
+    """
+    Computes the difference between two shapefiles
+
+    Args:
+        shapefile2cut (str): The shapefile to 'punch' a hole into.
+        overlap_shapefile (str): The shapefile that defines the hole.
+        output_shp (str): The output shapefile.
+    """
+
+    with vinfo(shapefile2cut) as cut_info, vinfo(overlap_shapefile) as over_info:
+
+        cut_feature = cut_info.lyr.GetFeature(0)
+        cut_geometry = cut_feature.GetGeometryRef()
+
+        over_feature = over_info.lyr.GetFeature(0)
+        over_geometry = over_feature.GetGeometryRef()
+
+        diff_geometry = cut_geometry.Difference(over_geometry)
+
+        # diff_poly = ogr.CreateGeometryFromWkt(diff_geometry)
+        
+        cv = create_vector(output_shp,
+                           geom_type='polygon',
+                           projection=cut_info.projection)
+
+        diff_feature = ogr.Feature(cv.lyr_def)
+
+        diff_feature.SetGeometry(diff_geometry)
+
+        cv.lyr.CreateFeature(diff_feature)
+
+        cv.close()
 
 
 def intersects_boundary(meta_dict, boundary_file):
