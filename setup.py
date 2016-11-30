@@ -36,17 +36,17 @@ def get_packages():
 
 def get_package_data():
 
-    return {'': ['*.md',
-                 '*.txt'],
-            'mpglue': ['stats/*.so',
+    return {'mpglue': ['*.md',
+                       '*.txt',
+                       'stats/*.so',
                        'stats/*.pyd']}
 
 
 def get_console_dict():
 
     return {'console_scripts': ['classify=mpglue.classify:main',
-                                'sample_raster=mpglue.sample_raster:main',
-                                'veg_indices=mpglue.veg_indices:main']}
+                                'sample-raster=mpglue.sample_raster:main',
+                                'veg-indices=mpglue.veg_indices:main']}
 
 
 # def get_pyx_list():

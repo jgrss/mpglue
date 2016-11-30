@@ -526,7 +526,7 @@ class Samples(object):
         # if platform.system() == 'Windows':
         #     self.file_name = file_name.replace('\\', '/')
         # else:
-        #     self.file_name = file_name
+        self.file_name = file_name
 
         self.labels_test = None
         self.p_vars = None
@@ -537,9 +537,6 @@ class Samples(object):
         self.perc_samp_each = perc_samp_each
         self.classes2remove = classes2remove
         self.sample_weight = sample_weight
-
-        if isinstance(self.sample_weight, list):
-            self.sample_weight = np.array(self.sample_weight, dtype='float32')
 
         # Open the data samples.
         df = pd.read_csv(self.file_name, sep=',')
@@ -620,6 +617,9 @@ class Samples(object):
 
         if isinstance(self.sample_weight, np.ndarray):
             assert len(self.sample_weight) == self.n_samps
+
+        if isinstance(self.sample_weight, list) and len(self.sample_weight) > 0:
+            self.sample_weight = np.array(self.sample_weight, dtype='float32')
 
         # Recode specified classes.
         if recode_dict:

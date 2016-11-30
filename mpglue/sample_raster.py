@@ -144,6 +144,9 @@ class SampleImage(object):
             self.out_dir = copy(self.d_name_points)
             print '\nNo output directory was given. Results will be saved to {}'.format(self.out_dir)
 
+        if not os.path.isdir(self.out_dir):
+            os.makedirs(self.out_dir)
+
         self.setup_names()
 
     def sql(self):
@@ -179,7 +182,7 @@ class SampleImage(object):
         File names and directories
         """
 
-        self.out_dir = self.out_dir.replace('\\', '/')
+        # self.out_dir = self.out_dir.replace('\\', '/')
 
         # Open the samples.
         self.shp_info = vector_tools.vinfo(self.points_file)
@@ -204,22 +207,20 @@ class SampleImage(object):
 
         self.get_class_count()
 
-        self.data_file = '{}/{}__{}_samples.txt'.format(self.out_dir, self.f_base_points, self.f_base_rst)
+        self.data_file = os.path.join(self.out_dir, '{}__{}_samples.txt'.format(self.f_base_points, self.f_base_rst))
 
         # samples file
         self.sample_writer = open(self.data_file, 'w')
 
         # number of samples file
-        self.n_samps = '{}/{}__{}_info.txt'.format(self.out_dir, self.f_base_points, self.f_base_rst)
-
-        self.n_sample_writer = open(self.n_samps, 'w')
+        self.n_samps = os.path.join(self.out_dir, '{}__{}_info.txt'.format(self.f_base_points, self.f_base_rst))
 
         # create array of zeros for the class counter
         self.count_arr = np.zeros(len(self.n_classes), dtype='uint8')
 
     def convert2points(self):
 
-        out_points = '{}/{}_points.shp'.format(self.d_name_points, self.f_base_points)
+        out_points = os.path.join(self.d_name_points, '{}_points.shp'.format(self.f_base_points))
 
         if not os.path.isfile(out_points):
 
@@ -269,6 +270,10 @@ class SampleImage(object):
 
         self.shp_info.close()
         self.m_info.close()
+
+        self.finish()
+
+        self.feature.Destroy()
 
     def write_headers(self):
 
@@ -418,7 +423,7 @@ class SampleImage(object):
 
             value_arr = np.zeros((feature_length*self.updater, self.m_info.bands+4)).astype(np.float32)
 
-            print '\nSampling {:d} samples from {:d} image layers ...\n'.format(feature_length, self.m_info.bands)
+            print '\nSampling {:,d} samples from {:d} image layers ...\n'.format(feature_length, self.m_info.bands)
 
             ctr, pbar = _iteration_parameters_values(self.m_info.bands, feature_length)
 
@@ -521,25 +526,34 @@ class SampleImage(object):
 
     def finish(self):
 
-        # Write the number of samples from
-        #   the counter array.
-        for nc in self.n_classes:
+        with open(self.n_samps, 'w') as n_sample_writer:
 
-            self.n_sample_writer.write('Class {:d}: {:d}\n'.format(int(nc),
-                                                                   int(self.count_arr[self.n_classes.index(nc)])))
+            # Write the number of samples from
+            #   the counter array.
+            for nc in self.n_classes:
 
-        # write the total number of samples
-        self.n_sample_writer.write('Total: {:d}'.format(np.sum(self.count_arr)))
+                n_sample_writer.write('Class {:d}: {:d}\n'.format(int(nc),
+                                                                  int(self.count_arr[self.n_classes.index(nc)])))
 
-        self.sample_writer.close()
-        self.n_sample_writer.close()
-
-        self.feature.Destroy()
-        self.shp_info.close()
+            # write the total number of samples
+            n_sample_writer.write('Total: {:d}'.format(np.sum(self.count_arr)))
 
         if max(self.count_arr) == 0:
-            os.remove(self.data_file)
-            os.remove(self.n_samps)
+
+            if os.path.isfile(self.data_file):
+
+                try:
+                    os.remove(self.data_file)
+                except:
+                    pass
+
+            if os.path.isfile(self.n_samps):
+
+                try:
+                    os.remove(self.n_samps)
+                except:
+                    pass
+
         else:
 
             if self.accuracy:
@@ -551,7 +565,7 @@ class SampleImage(object):
                 print
 
                 # Output confusion matrix text file.
-                error_file = '{}/{}__{}_acc.txt'.format(self.out_dir, self.f_base_points, self.f_base_rst)
+                error_file = os.path.join(self.out_dir, '{}__{}_acc.txt'.format(self.f_base_points, self.f_base_rst))
 
                 emat = error_matrix()
                 emat.get_stats(po_text=self.data_file)
@@ -609,7 +623,7 @@ def sample_raster(points, image, out_dir=None, option=1, class_id='Id', accuracy
 
         for im in image_list:
 
-            im_ = '{}/{}'.format(image, im)
+            im_ = os.path.join(image, im)
 
             si = SampleImage(points, im_, out_dir, class_id, accuracy=accuracy, n_jobs=n_jobs,
                              field_type=field_type, use_extent=use_extent, neighbors=neighbors,
@@ -624,7 +638,7 @@ def sample_raster(points, image, out_dir=None, option=1, class_id='Id', accuracy
 
         for pt in point_list:
 
-            pt_ = '{}/{}'.format(points, pt)
+            pt_ = os.path.join(points, pt)
 
             si = SampleImage(pt_, image, out_dir, class_id, accuracy=accuracy, n_jobs=n_jobs,
                              field_type=field_type, use_extent=use_extent, neighbors=neighbors,

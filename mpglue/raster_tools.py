@@ -508,7 +508,7 @@ class FileManager(DataChecks, RegisterDriver):
         if 'PROJ' in self.projection[:4]:
 
             if self.sp_ref.GetAttrValue('PROJCS|AUTHORITY', 1):
-                self.epsg = self.sp_ref.GetAttrValue('PROJCS|AUTHORITY', 1)
+                self.epsg = int(self.sp_ref.GetAttrValue('PROJCS|AUTHORITY', 1))
             else:
                 self.epsg = 'none'
 

@@ -101,6 +101,9 @@ def main():
     if args.examples:
         _examples()
 
+    if isinstance(args.class_subs, str):
+        args.class_subs = ast.literal_eval(args.class_subs)
+
     print('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
 
     start_time = time.time()
@@ -108,8 +111,8 @@ def main():
     clo = Classify()
 
     clo.split(args.lc_samples, perc_samp=args.perc_samp, perc_samp_each=args.perc_samp_each,
-              scale_data=args.scale_data, class_subs=ast.literal_eval(args.class_subs),
-              labs_type=args.labs_type, recode_dict=ast.literal_eval(args.recode_dict),
+              scale_data=args.scale_data, class_subs=args.class_subs,
+              labs_type=args.labs_type, recode_dict=args.recode_dict,
               classes2remove=args.classes2remove, sample_weight=args.sample_weight,
               ignore_feas=args.ignore_feas, use_xy=args.use_xy, stratified=args.stratified,
               spacing=args.spacing, x_label=args.x_label, y_label=args.y_label,
