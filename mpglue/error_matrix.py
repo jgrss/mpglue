@@ -192,7 +192,7 @@ class error_matrix(object):
             # predicted
             self.X = np.asarray(samples[hdr_idx:, -2].astype(np.float32)).astype(int)
 
-            self.n_samps = len(y)
+            self.n_samps = len(self.y)
 
             if not class_list:
                 # get unique class values
@@ -208,6 +208,9 @@ class error_matrix(object):
             else:
                 self.class_list = class_list
 
+            if 0 in self.class_list:
+                self.class_list.remove(0)
+
             self.n_classes = len(self.class_list)
             self.class_list = sorted(self.class_list)
             self.n_samples = self.y.shape[0]
@@ -217,6 +220,10 @@ class error_matrix(object):
 
             # add to error matrix
             for predicted, observed in zip(self.X, self.y):
+
+                if (predicted == 0) or (observed == 0):
+                    continue
+
                 self.e_matrix[self.class_list.index(predicted), self.class_list.index(observed)] += 1
 
         if self.discrete:
@@ -380,7 +387,7 @@ class error_matrix(object):
 
     def merge_lists(self, list1, list2):
 
-        self.class_list = copy(list1)
+        self.class_list = list(copy(list1))
 
         for value2 in list2:
 
