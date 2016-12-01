@@ -14,12 +14,13 @@ import argparse
 import fnmatch
 from joblib import Parallel, delayed
 
-from poly2points import poly2points
-from error_matrix import error_matrix
+from .poly2points import poly2points
+from .error_matrix import error_matrix
 
-import raster_tools
-import vector_tools
-from helpers import _iteration_parameters_values
+from . import raster_tools
+from . import vector_tools
+from .helpers import _iteration_parameters_values
+from .errors import ArrayOffsetError
 
 # NumPy
 try:
@@ -417,11 +418,8 @@ class SampleImage(object):
             # Combine all of the data.
             try:
                 value_arr = np.c_[xy_coordinates, value_arr, labels]
-            except:
-                print xy_coordinates.shape
-                print value_arr.shape
-                print labels.shape
-                sys.exit()
+            except ArrayOffsetError:
+                raise ArrayOffsetError('Check the projections and extents of the datasets.')
 
         else:
 
@@ -455,15 +453,16 @@ class SampleImage(object):
                     x_off = values[1][2]
                     y_off = values[1][3]
 
+                    if (x_off-1 > self.m_info.cols) or (y_off-1 > self.m_info.rows):
+                        raise ArrayOffsetError('Check the projections and extents of the datasets.')
+
                     # Get the image value.
-                    try:
-                        value = band.ReadAsArray(x_off, y_off, 1, 1).astype(np.float32)[0, 0]
-                    except:
-                        print f_bd
-                        print x_off, y_off
-                        band.Checksum()
-                        print gdal.GetLastErrorType()
-                        sys.exit()
+                    value = band.ReadAsArray(x_off, y_off, 1, 1)
+
+                    if isinstance(value, np.ndarray):
+                        value = np.float32(value[0, 0])
+                    else:
+                        continue
 
                     if not self.accuracy:
                         value = float(('{:.4f}'.format(value)))
