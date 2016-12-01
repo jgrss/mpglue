@@ -27,6 +27,12 @@ try:
 except ImportError:
     raise ImportError('NumPy is not installed')
 
+# Pandas
+try:
+    import pandas as pd
+except ImportError:
+    raise ImportError('Pandas is not installed')
+
 # GDAL
 try:
     from osgeo import gdal
@@ -114,6 +120,8 @@ class SampleImage(object):
         self.use_extent = use_extent
         self.sql_expression_attr = sql_expression_attr
         self.sql_expression_field = sql_expression_field
+
+        self.d_type = 'uint8' if self.field_type == 'int' else 'float32'
 
         if not os.path.isfile(self.points_file):
             raise IOError('\n{} does not exist. It should be a point shapefile.'.format(self.points_file))
@@ -210,13 +218,16 @@ class SampleImage(object):
         self.data_file = os.path.join(self.out_dir, '{}__{}_samples.txt'.format(self.f_base_points, self.f_base_rst))
 
         # samples file
-        self.sample_writer = open(self.data_file, 'w')
+        # self.sample_writer = open(self.data_file, 'w')
 
         # number of samples file
         self.n_samps = os.path.join(self.out_dir, '{}__{}_info.txt'.format(self.f_base_points, self.f_base_rst))
 
         # create array of zeros for the class counter
-        self.count_arr = np.zeros(len(self.n_classes), dtype='uint8')
+        # self.count_arr = np.zeros(len(self.n_classes), dtype='uint8')
+        self.count_dict = {}
+        for nc in self.class_list:
+            self.count_dict[nc] = 0
 
     def convert2points(self):
 
@@ -236,17 +247,21 @@ class SampleImage(object):
         """
 
         try:
-            self.n_classes = [self.shp_info.lyr.GetFeature(n).GetField(self.class_id)
-                              for n in xrange(0, self.shp_info.n_feas)]
+            self.class_list = [self.shp_info.lyr.GetFeature(n).GetField(self.class_id)
+                               for n in xrange(0, self.shp_info.n_feas)]
         except:
             raise IOError('\nField <{}> does not exist or there is a feature issue.\n'.format(self.class_id))
 
-        if 0 in self.n_classes:
+        if 0 in self.class_list:
             self.zs = True
         else:
             self.zs = False
 
-        self.n_classes = sorted(reduce(lambda x, y: x + y if y[0] not in x else x, map(lambda x: [x], self.n_classes)))
+        self.class_list = np.unique(np.array(self.class_list))
+
+        self.n_classes = len(self.class_list)
+
+        # self.n_classes = sorted(reduce(lambda x, y: x + y if y[0] not in x else x, map(lambda x: [x], self.n_classes)))
 
     def sample(self):
 
@@ -283,14 +298,12 @@ class SampleImage(object):
 
         if self.header:
 
-            # First, x,y
-            self.sample_writer.write('Id,X,Y,')
+            self.headers = ['Id', 'X', 'Y']
 
             # Then <image name.band position> format.
-            [self.sample_writer.write('{}.{:d},'.format(self.f_base_rst, b)) for b in xrange(1, self.m_info.bands+1)]
+            [self.headers.append('{}.{:d}'.format(self.f_base_rst, b)) for b in xrange(1, self.m_info.bands+1)]
 
-            # Last, response, or class id.
-            self.sample_writer.write('response\n')
+            self.headers.append('response')
 
     def write2file(self, value_array):
 
@@ -298,13 +311,8 @@ class SampleImage(object):
         Writes samples to file
         """
 
-        # Convert the data to strings and
-        #   write to text.
-        value_array = np.char.mod('%f', value_array)
-
-        value_array = ['{}\n'.format(','.join(val_a)) for val_a in value_array]
-
-        self.sample_writer.writelines(value_array)
+        df = pd.DataFrame(value_array, columns=self.headers)
+        df.to_csv(self.data_file, sep=',', index=False)
 
     def fill_dictionary(self):
 
@@ -348,7 +356,8 @@ class SampleImage(object):
                 x, y, x_off, y_off = vector_tools.get_xy_offsets(image_info=self.m_info, x=x, y=y)
 
                 # Update the counter array with the current label.
-                self.count_arr[self.n_classes.index(pt_id)] += self.updater
+                # self.count_arr[self.n_classes.index(pt_id)] += self.updater
+                self.count_dict[int(pt_id)] += self.updater
 
                 x = float('{:.6f}'.format(x))
                 y = float('{:.6f}'.format(y))
@@ -421,7 +430,7 @@ class SampleImage(object):
             #   label, two for the x, y coordinates.
             neighbor_offsets = [[0, -1], [1, 0], [0, 1], [-1, 0]]
 
-            value_arr = np.zeros((feature_length*self.updater, self.m_info.bands+4)).astype(np.float32)
+            value_arr = np.zeros((feature_length*self.updater, self.m_info.bands+4), dtype='float32')
 
             print '\nSampling {:,d} samples from {:d} image layers ...\n'.format(feature_length, self.m_info.bands)
 
@@ -528,17 +537,19 @@ class SampleImage(object):
 
         with open(self.n_samps, 'w') as n_sample_writer:
 
+            self.class_sum = sum(self.count_dict.values())
+
             # Write the number of samples from
             #   the counter array.
-            for nc in self.n_classes:
+            for nc in self.class_list:
 
                 n_sample_writer.write('Class {:d}: {:d}\n'.format(int(nc),
-                                                                  int(self.count_arr[self.n_classes.index(nc)])))
+                                                                  int(self.count_dict[nc])))
 
             # write the total number of samples
-            n_sample_writer.write('Total: {:d}'.format(np.sum(self.count_arr)))
+            n_sample_writer.write('Total: {:d}'.format(self.class_sum))
 
-        if max(self.count_arr) == 0:
+        if self.class_sum == 0:
 
             if os.path.isfile(self.data_file):
 
