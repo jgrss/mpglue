@@ -1,5 +1,4 @@
-
-s bar library for Python.
+Text progress bar library for Python.
 
 A text progress bar is typically used to display the progress of a long
 running operation, providing a visual cue that processing is underway.
@@ -17,4 +16,4 @@ of widgets:
    expands to fill the remaining width of the line.
 
 The progressbar module is very easy to use, yet very powerful. It will also
-automatically enable features like auto-resizing when the system supports it..so
+automatically enable features like auto-resizing when the system supports it.
