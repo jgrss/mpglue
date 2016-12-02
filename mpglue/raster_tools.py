@@ -2613,7 +2613,8 @@ def build_vrt(file_list, output_image, cell_size=0., **kwargs):
     out_ds = None
 
 
-def warp(input_image, output_image, epsg, in_epsg=None, resample='nearest', cell_size=0, **kwargs):
+def warp(input_image, output_image, epsg, in_epsg=None, resample='nearest',
+         cell_size=0, d_type=None, **kwargs):
 
     """
     Warp transforms a dataset
@@ -2625,6 +2626,7 @@ def warp(input_image, output_image, epsg, in_epsg=None, resample='nearest', cell
         in_epsg (Optional[int]): The input EPSG code. Default is None.
         resample (Optional[str]): The resampling method. Default is 'nearest'.N
         cell_size (Optional[float]): The output cell size. Default is 0.
+        d_type (Optional[str]): Data type to overwrite `outputType`. Default is None.
         kwargs:
             format=None, outputBounds=None, outputBoundsSRS=None, targetAlignedPixels=False,
              width=0, height=0, srcAlpha=False, dstAlpha=False, warpOptions=None,
@@ -2645,22 +2647,33 @@ def warp(input_image, output_image, epsg, in_epsg=None, resample='nearest', cell
     if isinstance(in_epsg, int):
         in_epsg = 'EPSG:{:d}'.format(in_epsg)
 
-    warp_options = gdal.WarpOptions(srcSRS=in_epsg, dstSRS='EPSG:{:d}'.format(epsg),
-                                    xRes=cell_size, yRes=cell_size, resampleAlg=RESAMPLE_DICT[resample],
-                                    **kwargs)
+    if isinstance(d_type, str):
+
+        warp_options = gdal.WarpOptions(srcSRS=in_epsg, dstSRS='EPSG:{:d}'.format(epsg),
+                                        xRes=cell_size, yRes=cell_size,
+                                        outputType=STORAGE_DICT_GDAL[d_type],
+                                        resampleAlg=RESAMPLE_DICT[resample],
+                                        **kwargs)
+
+    else:
+
+        warp_options = gdal.WarpOptions(srcSRS=in_epsg, dstSRS='EPSG:{:d}'.format(epsg),
+                                        xRes=cell_size, yRes=cell_size, resampleAlg=RESAMPLE_DICT[resample],
+                                        **kwargs)
 
     out_ds = gdal.Warp(output_image, input_image, options=warp_options)
 
     out_ds = None
 
 
-def translate(input_image, output_image, cell_size=0, **kwargs):
+def translate(input_image, output_image, cell_size=0, d_type=None, **kwargs):
 
     """
     Args:
         input_image (str): The image to translate.
         output_image (str): The output image.
         cell_size (Optional[float]): The output cell size. Default is 0.
+        d_type (Optional[str]): Data type to overwrite `outputType`. Default is None.
         kwargs:
             format='GTiff', outputType=0, bandList=None, maskBand=None, width=0, height=0,
             widthPct=0.0, heightPct=0.0, xRes=0.0, yRes=0.0, creationOptions=None, srcWin=None,
@@ -2668,9 +2681,22 @@ def translate(input_image, output_image, cell_size=0, **kwargs):
             exponents=None, outputBounds=None, metadataOptions=None, outputSRS=None, GCPs=None,
             noData=None, rgbExpand=None, stats=False, rat=True, resampleAlg=None,
             callback=None, callback_data=None
+
+        Examples:
+            >>> from mpglue import raster_tools
+            >>> raster_tools.translate('input.tif', 'output.tif',
+            >>>                        cell_size=30.,
+            >>>                        format='GTiff', d_type='byte',
+            >>>                        creationOptions=['GDAL_CACHEMAX=256', 'TILED=YES'])
     """
 
-    translate_options = gdal.TranslateOptions(xRes=cell_size, yRes=cell_size, **kwargs)
+    if isinstance(d_type, str):
+
+        translate_options = gdal.TranslateOptions(xRes=cell_size, yRes=cell_size,
+                                                  outputType=STORAGE_DICT_GDAL[d_type], **kwargs)
+
+    else:
+        translate_options = gdal.TranslateOptions(xRes=cell_size, yRes=cell_size, **kwargs)
 
     out_ds = gdal.Translate(output_image, input_image, options=translate_options)
 
