@@ -1796,30 +1796,30 @@ def _examples():
     sys.exit("""\
 
     # List vegetation index options for a sensor.
-    veg_indices.py --sensor Landsat --options
+    veg-indices --sensor Landsat --options
 
     # List the expected band order for a sensor.
-    veg_indices.py --sensor Landsat --band_order
-    veg_indices.py --sensor Landsat8 --band_order
-    veg_indices.py --sensor Landsat-thermal --band_order
-    veg_indices.py --sensor Sentinel2 --band_order
-    veg_indices.py --sensor Quickbird --band_order
-    veg_indices.py --sensor RGB --band_order
+    veg-indices --sensor Landsat --band_order
+    veg-indices --sensor Landsat8 --band_order
+    veg-indices --sensor Landsat-thermal --band_order
+    veg-indices --sensor Sentinel2 --band_order
+    veg-indices --sensor Quickbird --band_order
+    veg-indices --sensor RGB --band_order
 
     # Compute NDVI for a Landsat image.
-    veg_indices.py -i /some_image.tif -o /ndvi.tif --index ndvi --sensor Landsat
+    veg-indices -i /some_image.tif -o /ndvi.tif --index ndvi --sensor Landsat
 
     # Compute NDVI for a Landsat8 image.
-    veg_indices.py -i /some_image.tif -o /ndvi.tif --index ndvi --sensor Landsat8
+    veg-indices -i /some_image.tif -o /ndvi.tif --index ndvi --sensor Landsat8
 
     # Compute NDVI for a Sentinel 2 image.
-    veg_indices.py -i /some_image.tif -o /ndvi.tif --index ndvi --sensor Sentinel2
+    veg-indices -i /some_image.tif -o /ndvi.tif --index ndvi --sensor Sentinel2
 
     # Compute NDWI for a Landsat image and save as Byte (0-255) storage.
-    veg_indices.py -i /some_image.tif -o /ndwi.tif --index ndwi --sensor Landsat --storage byte --overviews
+    veg-indices -i /some_image.tif -o /ndwi.tif --index ndwi --sensor Landsat --storage byte --overviews
 
     # Compute NDSI for a Landsat image, save as float32 storage, and set 'no data' pixels to -999.
-    veg_indices.py -i /some_image.tif -o /ndsi.tif --index ndsi --sensor Landsat --overviews --no_data -999
+    veg-indices -i /some_image.tif -o /ndsi.tif --index ndsi --sensor Landsat --overviews --no_data -999
 
     # Compute NDVI and SAVI for a Landsat image. The --chunk -1 parameter tells the
     #   system to use 'numexpr' for calculations.
@@ -1828,10 +1828,10 @@ def _examples():
     #   a VRT multi-band image will be saved as /output_STACK.vrt. Unlike single index
     #   triggers, if --index is a list of more than one index, the --overviews parameter
     #   will only build overviews for the VRT file.
-    veg_indices.py -i /some_image.tif -o /output.tif --index ndvi savi --sensor Landsat --overviews --chunk -1
+    veg-indices -i /some_image.tif -o /output.tif --index ndvi savi --sensor Landsat --overviews --chunk -1
 
     # Compute all available indices for Landsat.
-    veg_indices.py -i /some_image.tif -o /output.tif --index all --sensor Landsat
+    veg-indices -i /some_image.tif -o /output.tif --index all --sensor Landsat
     """)
 
 

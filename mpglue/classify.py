@@ -34,7 +34,14 @@ def _examples():
 
     sys.exit("""\
 
+    # Classify an image with a Random Forest classifier
     classify -i /input_image.tif -o output_image.tif -s /samples.txt --classifier-info "{'classifier': 'RF'}"
+
+    # Classify an image with a Random Forest classifier, recoding the land cover classes prior to model training
+    classify -i /input_image.tif -o output_image.tif -s /samples.txt --recode-dict --classifier-info "{'classifier': 'RF'}"
+
+    # Classify an image with an AdaBoosted Extremely Random Forest classifier, sampling 70% from each class
+    classify -i /input_image.tif -o output_image.tif -s /samples.txt --perc-samp-each .7 --classifier-info "{'classifier': 'AB_EX_RF'}"
 
     """)
 
