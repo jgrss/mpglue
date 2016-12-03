@@ -787,7 +787,7 @@ class VegIndicesEquations(SensorInfo):
             NDBaI = (FarIR - MidIR) / (FarIR + MidIR)
 
         Reference:
-            Zhao, Hongmei, Chen, Xiaoling (1995) 'Use of Normalized
+            Zhao, Hongmei, Chen, Xiaoling (2005) 'Use of Normalized
                 Difference Bareness Index in Quickly Mapping Bare
                 Areas from TM/ETM+' IEEE.
         """

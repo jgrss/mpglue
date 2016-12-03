@@ -46,7 +46,8 @@ def get_console_dict():
 
     return {'console_scripts': ['classify=mpglue.classify:main',
                                 'sample-raster=mpglue.sample_raster:main',
-                                'veg-indices=mpglue.veg_indices:main']}
+                                'veg-indices=mpglue.veg_indices:main',
+                                'reclassify=mpglue.reclassify:main']}
 
 
 # def get_pyx_list():
