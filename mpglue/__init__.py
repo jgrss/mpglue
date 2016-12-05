@@ -13,4 +13,4 @@ __all__ = ['rinfo', 'mparray',
            'classification', 'classification_r', 'error_matrix', 'veg_indices', 'VegIndicesEquations',
            'vrt_builder']
 
-__version__ = '0.0.1'
+__version__ = '0.0.2'

@@ -4297,7 +4297,7 @@ def cumulative_plot_array(image_array, small2large=True, out_fig=None):
 
 
 def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None, storage='float32',
-                     match_raster=None, bigtiff='no', in_memory=False, **kwargs):
+                     match_raster=None, bigtiff='no', in_memory=False, initial_value=0, **kwargs):
 
     """
     Rasterizes a vector dataset
@@ -4397,6 +4397,9 @@ def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None, storag
                        rows=rows, cols=cols)
 
     orw = create_raster(out_raster, o_info, bigtiff=bigtiff, in_memory=in_memory)
+
+    orw.get_band(1)
+    orw.fill(initial_value)
 
     # raster dataset, band(s) to rasterize, vector layer to rasterize,
     # burn a specific value, or values, matching the bands :: burn_values=[100]

@@ -130,12 +130,14 @@ def main():
                   class_weight=args.class_weight, calibrate_proba=args.calibrate_proba,
                   be_quiet=args.be_quiet, n_jobs=args.n_jobs)
 
-    clo.predict(args.input_image, args.output_image, scale_data=args.scale_data,
-                band_check=args.band_check, ignore_feas=args.ignore_feas, use_xy=args.use_xy,
-                in_model=args.input_model, mask_background=args.mask_background,
-                background_band=args.background_band, background_value=args.background_value,
-                minimum_observations=args.minimum_observations, observation_band=args.observation_band,
-                row_block_size=1024, col_block_size=1024, n_jobs=args.n_jobs, gdal_cache=256)
+    if isinstance(args.output_image, str):
+
+        clo.predict(args.input_image, args.output_image, scale_data=args.scale_data,
+                    band_check=args.band_check, ignore_feas=args.ignore_feas, use_xy=args.use_xy,
+                    in_model=args.input_model, mask_background=args.mask_background,
+                    background_band=args.background_band, background_value=args.background_value,
+                    minimum_observations=args.minimum_observations, observation_band=args.observation_band,
+                    row_block_size=1024, col_block_size=1024, n_jobs=args.n_jobs, gdal_cache=256)
 
     print('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n'
           % (time.asctime(time.localtime(time.time())), (time.time() - start_time)))

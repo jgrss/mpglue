@@ -66,7 +66,7 @@ def _examples():
     sys.exit("""\
 
     # Reclassify class 1 to 1, 2 to 1, and 3 to 2
-    reclassify -i /some_image.tif -o /output_image.tif --recode "{1:1,2:1,3:2}"
+    reclassify -i /some_image.tif -o /output_image.tif -r "{2:1,3:2}"
 
     """)
 
