@@ -23,11 +23,11 @@ from collections import OrderedDict
 # import xml.etree.ElementTree as ET
 
 # MapPy
-import raster_tools
-import vector_tools
-import error_matrix
+from . import raster_tools
+from . import vector_tools
+from error_matrix import error_matrix
 # from mappy.helpers.other.progress_iter import _iteration_parameters
-from helpers import get_path
+from .helpers import get_path
 
 SPFEAS_PATH = get_path()
 
@@ -131,7 +131,8 @@ except:
 try:
     import rtree
 except:
-    print('Rtree must be installed to use spatial indexing')
+    # print('Rtree must be installed to use spatial indexing')
+    pass
 
 # from numba import jit as numba_jit
 # from parakeet import jit as para_jit
@@ -3799,8 +3800,12 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                                                                                               ip)
                                                                       for ip in indice_pairs)
 
-                                # Write the predictions to file.
-                                out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_cols, n_rows).T, i, j)
+                            else:
+                                m = self.model
+                                predicted = [predict_scikit(m, ip) for ip in indice_pairs]
+
+                            # Write the predictions to file.
+                            out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_cols, n_rows).T, i, j)
 
                         else:
 
@@ -3816,12 +3821,12 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                                 m = self.model
 
                             # Make the predictions and convert to a NumPy array.
-                            if isinstance(self.input_model, str):
+                            # if isinstance(self.input_model, str):
 
-                                predicted = [predict_scikit(m, ip) for ip in indice_pairs]
+                            predicted = [predict_scikit(m, ip) for ip in indice_pairs]
 
-                                # Write the predictions to file.
-                                out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_cols, n_rows).T, i, j)
+                            # Write the predictions to file.
+                            out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_cols, n_rows).T, i, j)
 
                 self.record_list.append(n_block)
 

@@ -11,7 +11,7 @@ import logging
 from copy import copy
 from six import string_types
 
-import raster_tools
+from . import raster_tools
 
 try:
     import numpy as np
@@ -666,7 +666,16 @@ class error_matrix(object):
                 write_txt.write('==========\n')
                 write_txt.write('\nOverall Accuracy (%): {:.2f}\n'.format(self.accuracy))
                 write_txt.write('Kappa: {:.2f}\n'.format(self.kappa_score))
-                write_txt.write('F-beta: {:.2f}\n'.format(self.f_beta))
+
+                if self.f_beta:
+
+                    for fi, fb in enumerate(self.f_beta):
+
+                        if fi == (len(self.f_beta)-1):
+                            write_txt.write('F-beta: {:.2f}\n'.format(fb))
+                        else:
+                            write_txt.write('F-beta: {:.2f},'.format(fb))
+
                 write_txt.write('Hamming loss: {:.2f}\n'.format(self.hamming))
 
                 write_txt.write('\n============\n')
