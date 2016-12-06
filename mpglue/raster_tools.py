@@ -2590,7 +2590,6 @@ def mparray(image2open=None, i_info=None, bands2open=1, i=0, j=0,
             #     i_info.close()
 
         else:
-
             return _mparray_parallel(image2open, i_info, bands2open, i, j, rows, cols, n_jobs, d_type, predictions)
 
 
