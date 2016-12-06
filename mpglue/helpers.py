@@ -46,6 +46,26 @@ def euclidean_distance(lons, lats):
     return np.sqrt(((lons[0] - lons[1])**2.) + ((lats[0] - lats[1])**2.))
 
 
+def build_path_input_file(input_file):
+
+    d_name, __ = os.path.split(input_file)
+
+    if os.path.isdir(d_name):
+        return input_file
+    else:
+        return os.path.join(os.path.dirname(os.path.realpath(__file__)), input_file)
+
+
+def build_path_output_dir(output_dir):
+
+    d_name, __ = os.path.split(output_dir)
+
+    if d_name:
+        return output_dir
+    else:
+        return os.path.join(os.path.dirname(os.path.realpath(__file__)), output_dir)
+
+
 def get_time_stamp(the_file):
 
     """

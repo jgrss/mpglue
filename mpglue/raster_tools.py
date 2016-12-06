@@ -2174,7 +2174,7 @@ class BlockFunc(object):
                  block_rows=2048, block_cols=2048, be_quiet=False,
                  d_type='byte', print_statement=None, out_attributes=[],
                  write_array=True, boundary_file=None, mask_file=None,
-                 n_jobs=1, **kwargs):
+                 n_jobs=1, close_files=True, **kwargs):
 
         self.func = func
         self.image_infos = image_infos
@@ -2194,6 +2194,7 @@ class BlockFunc(object):
         self.boundary_file = boundary_file
         self.mask_file = mask_file
         self.n_jobs = n_jobs
+        self.close_files = close_files
         self.kwargs = kwargs
 
         if not isinstance(self.out_image, str) and write_array:
@@ -2219,9 +2220,10 @@ class BlockFunc(object):
             else:
                 self.band_list = [1] * len(self.image_infos)
 
-        if not isinstance(self.out_info, rinfo):
-            if not isinstance(self.out_info, GetMinExtent):
-                raise RinfoError('The output image object is not a MapPy instance.')
+        if isinstance(out_image, str):
+            if not isinstance(self.out_info, rinfo):
+                if not isinstance(self.out_info, GetMinExtent):
+                    raise RinfoError('The output image object is not a `raster_tools` instance.')
 
         if not isinstance(self.image_infos, list):
             raise TypeError('The image infos must be given as a list.')
@@ -2386,8 +2388,10 @@ class BlockFunc(object):
         if not self.be_quiet:
             pbar.finish()
 
-        for imi in xrange(0, len(self.image_infos)):
-            self.image_infos[imi].close()
+        if self.close_files:
+
+            for imi in xrange(0, len(self.image_infos)):
+                self.image_infos[imi].close()
 
         if self.write_array:
             out_raster.close_all()
