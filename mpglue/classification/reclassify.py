@@ -13,10 +13,14 @@ import ast
 import argparse
 
 # MapPy
-from . import raster_tools
+from .. import raster_tools
 
 
 def reclassify_func(im, recode_dict=None):
+
+    """
+    The image block reclassification function
+    """
 
     out_img = im[0].copy()
 

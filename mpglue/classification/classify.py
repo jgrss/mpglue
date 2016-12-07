@@ -34,6 +34,9 @@ def _examples():
 
     sys.exit("""\
 
+    # Train and save a Random Forest classifier
+    classify -s /samples.txt --output-model /RF_model.txt --classifier-info "{'classifier': 'RF'}"
+
     # Classify an image with a Random Forest classifier
     classify -i /input_image.tif -o output_image.tif -s /samples.txt --classifier-info "{'classifier': 'RF'}"
 

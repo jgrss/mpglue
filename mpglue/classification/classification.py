@@ -23,22 +23,22 @@ from collections import OrderedDict
 # import xml.etree.ElementTree as ET
 
 # MapPy
-from . import raster_tools
-from . import vector_tools
-from error_matrix import error_matrix
+from .. import raster_tools
+from .. import vector_tools
+from .error_matrix import error_matrix
 # from mappy.helpers.other.progress_iter import _iteration_parameters
-from .helpers import get_path
+from ..helpers import get_path
 
 SPFEAS_PATH = get_path()
 
 # helpers
 try:
-    from .stats import _lin_interp
+    from ..stats import _lin_interp
 except ImportError:
     raise ImportError('Could not import _lin_interp')
 
 try:
-    from .stats import _rolling_stats
+    from ..stats import _rolling_stats
 except ImportError:
     raise ImportError('Could not import _rolling_stats')
 

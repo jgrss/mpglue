@@ -17,10 +17,10 @@ from joblib import Parallel, delayed
 from .poly2points import poly2points
 from .error_matrix import error_matrix
 
-from . import raster_tools
-from . import vector_tools
-from .helpers import _iteration_parameters_values
-from .errors import ArrayOffsetError
+from .. import raster_tools
+from .. import vector_tools
+from ..helpers import _iteration_parameters_values
+from ..errors import ArrayOffsetError
 
 # NumPy
 try:
@@ -133,11 +133,6 @@ class SampleImage(object):
         if self.neighbors and (self.n_jobs != 0):
             print('Cannot sample neighbors in parallel, so setting ``n_jobs`` to 0.')
             self.n_jobs = 0
-
-        if self.accuracy:
-            self.header = False
-        else:
-            self.header = True
 
         self.d_name_points, f_name_points = os.path.split(self.points_file)
         self.f_base_points, __ = os.path.splitext(f_name_points)
@@ -287,9 +282,10 @@ class SampleImage(object):
         self.shp_info.close()
         self.m_info.close()
 
-        self.finish()
+        self.shp_info = None
+        self.m_info = None
 
-        self.feature.Destroy()
+        self.finish()
 
     def write_headers(self):
 
@@ -297,14 +293,12 @@ class SampleImage(object):
         Writes text headers
         """
 
-        if self.header:
+        self.headers = ['Id', 'X', 'Y']
 
-            self.headers = ['Id', 'X', 'Y']
+        # Then <image name.band position> format.
+        [self.headers.append('{}.{:d}'.format(self.f_base_rst, b)) for b in xrange(1, self.m_info.bands+1)]
 
-            # Then <image name.band position> format.
-            [self.headers.append('{}.{:d}'.format(self.f_base_rst, b)) for b in xrange(1, self.m_info.bands+1)]
-
-            self.headers.append('response')
+        self.headers.append('response')
 
     def write2file(self, value_array):
 
@@ -325,7 +319,7 @@ class SampleImage(object):
         """
 
         # Dictionary to store sampled data.
-        self.coords_offsets = {}
+        self.coords_offsets = dict()
 
         if self.neighbors:
             self.updater = 5
@@ -366,6 +360,10 @@ class SampleImage(object):
                 # Add x, y coordinates, image offset indices,
                 #   and class value to the dictionary.
                 self.coords_offsets[n] = [x, y, x_off, y_off, pt_id]
+
+            self.feature.Destroy()
+
+        self.feature = None
 
     def sample_image(self):
 
@@ -568,17 +566,11 @@ class SampleImage(object):
 
             if self.accuracy:
 
-                s = '********************************'
-                print s
-                print '<Confusion matrix>'
-                print s
-                print
-
                 # Output confusion matrix text file.
                 error_file = os.path.join(self.out_dir, '{}__{}_acc.txt'.format(self.f_base_points, self.f_base_rst))
 
                 emat = error_matrix()
-                emat.get_stats(po_text=self.data_file)
+                emat.get_stats(po_text=self.data_file, header=True)
                 emat.write_stats(error_file)
 
 

@@ -556,8 +556,8 @@ class FileManager(DataChecks, RegisterDriver):
                           row_units='{:,.2f}'.format(self.rows * self.cellY),
                           col_units='{:,.2f}'.format(self.cols * self.cellY))
 
-        self.right = self.left + (float(self.cols) * float(self.cellY))  # get right extent
-        self.bottom = self.top - (float(self.rows) * float(self.cellY))  # get bottom extent
+        self.right = self.left + (self.cols * abs(self.cellY))  # get right extent
+        self.bottom = self.top - (self.rows * abs(self.cellX))  # get bottom extent
 
         self.extent = dict(left=self.left, right=self.right, bottom=self.bottom, top=self.top)
 
@@ -2392,6 +2392,8 @@ class BlockFunc(object):
 
             for imi in xrange(0, len(self.image_infos)):
                 self.image_infos[imi].close()
+
+            self.out_info.close()
 
         if self.write_array:
             out_raster.close_all()

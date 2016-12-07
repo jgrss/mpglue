@@ -9,11 +9,10 @@ import os
 import sys
 import time
 import argparse
-from copy import copy
 
-from . import raster_tools
-from . import vector_tools
-from .helpers import _iteration_parameters
+from .. import raster_tools
+from .. import vector_tools
+from ..helpers import _iteration_parameters
 
 # GDAL
 try:

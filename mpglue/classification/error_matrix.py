@@ -11,7 +11,7 @@ import logging
 from copy import copy
 from six import string_types
 
-from . import raster_tools
+from .. import raster_tools
 
 try:
     import numpy as np
@@ -660,7 +660,7 @@ class error_matrix(object):
 
                 write_txt.write('({:.2f}%)\n'.format(self.accuracy))
 
-                write_txt.write('\nSamples: {:d}\n'.format(self.n_samps))
+                write_txt.write('\nSamples: {:,d}\n'.format(self.n_samps))
                 write_txt.write('\n==========\n')
                 write_txt.write('Statistics\n')
                 write_txt.write('==========\n')
