@@ -99,7 +99,6 @@ cdef DTYPE_float32_t[:] _get_min(DTYPE_float32_t[:] val1, DTYPE_float32_t[:] val
     for c in xrange(0, cols):
 
         if val2[c] < val1[c]:
-
             val1[c] = val2[c]
 
     return val1
@@ -115,7 +114,6 @@ cdef DTYPE_float32_t[:] _get_max(DTYPE_float32_t[:] val1, DTYPE_float32_t[:] val
     for c in xrange(0, cols):
 
         if val2[c] > val1[c]:
-
             val1[c] = val2[c]
 
     return val1
@@ -207,8 +205,8 @@ cdef tuple _rolling_least_squares(DTYPE_float32_t[:, :] image_array, int window_
         # cdef Vector X = Vector(cols)
 
         DTYPE_float32_t[:] X = np.arange(window_size, dtype='float32')
-        DTYPE_float32_t[:] slopes_max = np.zeros(cols, dtype='float32')
-        DTYPE_float32_t[:] slopes_min = np.ones(cols, dtype='float32') * 1000.
+        DTYPE_float32_t[:] slopes_max = np.ones(cols, dtype='float32') * -100000.
+        DTYPE_float32_t[:] slopes_min = np.ones(cols, dtype='float32') * 100000.
         DTYPE_float32_t[:] slopes
 
     for w in xrange(0, rows-window_size):

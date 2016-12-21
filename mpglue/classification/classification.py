@@ -3405,7 +3405,8 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                 band_check=-1, ignore_feas=[], use_xy=False, in_stats=None,
                 in_model=None, mask_background=None, background_band=2,
                 background_value=0, minimum_observations=0, observation_band=0,
-                row_block_size=1024, col_block_size=1024, n_jobs=-1, gdal_cache=256):
+                row_block_size=1024, col_block_size=1024,
+                n_jobs=-1, n_jobs_vars=-1, gdal_cache=256):
 
         """
         Applies a model to predict class labels
@@ -3435,6 +3436,8 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
             col_block_size (Optional[int]): The column block size (pixels). Default is 1024.
             n_jobs (Optional[int]): The number of processors to use for parallel mapping. Default is -1, or all
                 available processors.
+            n_jobs_vars (Optional[int]): The number of processors to use for parallel band loading.
+                Default is -1, or all available processors.
             gdal_cache (Optional[int]). The GDAL cache (MB). Default is 256.
             
         Returns:
@@ -3483,6 +3486,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
         self.minimum_observations = minimum_observations
         self.observation_band = observation_band
         self.n_jobs = n_jobs
+        self.n_jobs_vars = n_jobs_vars
         self.chunk_size = (self.row_block_size * self.col_block_size) / 100
 
         if not hasattr(self, 'classifier_info'):
@@ -3702,10 +3706,11 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                 features = raster_tools.mparray(image2open=self.input_image,
                                                 bands2open=bands2open,
                                                 i=i, j=j,
-                                                rows=n_rows, cols=n_cols,
+                                                rows=n_rows,
+                                                cols=n_cols,
                                                 predictions=True,
                                                 d_type='float32',
-                                                n_jobs=-1)
+                                                n_jobs=self.n_jobs_vars)
 
                 n_samples = n_rows * n_cols
 

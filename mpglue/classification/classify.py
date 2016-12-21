@@ -46,6 +46,9 @@ def _examples():
     # Classify an image with an AdaBoosted Extremely Random Forest classifier, sampling 70% from each class
     classify -i /input_image.tif -o output_image.tif -s /samples.txt --perc-samp-each .7 --classifier-info "{'classifier': 'AB_EX_RF'}"
 
+    # Control size parameters for memory
+    classify -s /samples.txt --output-model /RF_model.txt --classifier-info "{'classifier': 'RF'}" --row-block 256 --col-block 256 --v-jobs 1
+
     """)
 
 
@@ -91,7 +94,9 @@ def main():
     parser.add_argument('--cal-proba', dest='calibrate_proba', help='Whether to calibrate posterior probabilities',
                         action='store_true')
     parser.add_argument('--be-quiet', dest='be_quiet', help='Whether to be quiet', action='store_true')
-    parser.add_argument('--jobs', dest='n_jobs', help='The number of parallel jobs', default=-1, type=int)
+    parser.add_argument('--jobs', dest='n_jobs', help='The number of parallel jobs for models', default=-1, type=int)
+    parser.add_argument('--v-jobs', dest='n_jobs_vars', help='The number of parallel jobs for loading image variables',
+                        default=-1, type=int)
     parser.add_argument('--band-check', dest='band_check', help='The band to check for no data', default=-1, type=int)
     parser.add_argument('--mask-background', dest='mask_background',
                         help='An image to use as a background mask, applied post-classification', default=None)
@@ -105,6 +110,8 @@ def main():
     parser.add_argument('--observation-band', dest='observation_band',
                         help='The band position in --mask-background of the --min-observations counts',
                         default=0, type=int)
+    parser.add_argument('--row-block', dest='row_block_size', help='The row block size', default=1024, type=int)
+    parser.add_argument('--col-block', dest='col_block_size', help='The column block size', default=1024, type=int)
 
     args = parser.parse_args()
 
@@ -140,7 +147,8 @@ def main():
                     in_model=args.input_model, mask_background=args.mask_background,
                     background_band=args.background_band, background_value=args.background_value,
                     minimum_observations=args.minimum_observations, observation_band=args.observation_band,
-                    row_block_size=1024, col_block_size=1024, n_jobs=args.n_jobs, gdal_cache=256)
+                    row_block_size=args.row_block_size, col_block_size=args.col_block_size,
+                    n_jobs=args.n_jobs, n_jobs_vars=args.n_jobs_vars)
 
     print('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n'
           % (time.asctime(time.localtime(time.time())), (time.time() - start_time)))
