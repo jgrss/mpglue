@@ -539,6 +539,9 @@ class Samples(object):
         self.classes2remove = classes2remove
         self.sample_weight = sample_weight
 
+        if not isinstance(self.file_name, str):
+            raise TypeError('The samples file must be a text file.')
+
         # Open the data samples.
         df = pd.read_csv(self.file_name, sep=',')
 
