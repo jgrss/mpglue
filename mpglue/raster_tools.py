@@ -1232,8 +1232,8 @@ class rinfo(FileManager, LandsatParser, SentinelParser, UpdateInfo):
         self.close_all()
 
     def mparray(self, bands2open=1, i=0, j=0, rows=-1, cols=-1, d_type=None,
-                compute_index='none', sensor='Landsat', sort_bands2open=True, predictions=False,
-                y=0., x=0., check_x=None, check_y=None):
+                compute_index='none', sensor='Landsat', sort_bands2open=True,
+                predictions=False, y=0., x=0., check_x=None, check_y=None):
 
         """
         Reads a raster as an array
@@ -2151,6 +2151,8 @@ class BlockFunc(object):
         proc_info (Optional[object]): An instance of ``rinfo``. Overrides image_infos[0]. Default is None.
         y_offset (Optional[list]): The row offset. Default is [0].
         x_offset (Optional[list]): The column offset. Default is [0].
+        y_pad (Optional[list]): The row padding. Default is [0].
+        x_pad (Optional[list]): The column padding. Default is [0].
         block_rows (Optional[int]): The block row chunk size. Default is 2048.
         block_cols (Optional[int]): The block column chunk size. Default is 2048.
         d_type (Optional[str]): The read data type. Default is 'byte'.
@@ -2170,10 +2172,11 @@ class BlockFunc(object):
     """
 
     def __init__(self, func, image_infos, out_image, out_info,
-                 band_list=[], proc_info=None, y_offset=[0], x_offset=[0],
-                 block_rows=2048, block_cols=2048, be_quiet=False,
-                 d_type='byte', print_statement=None, out_attributes=[],
-                 write_array=True, boundary_file=None, mask_file=None,
+                 band_list=None, proc_info=None, y_offset=None, x_offset=None,
+                 y_pad=None, x_pad=None, block_rows=2048, block_cols=2048,
+                 be_quiet=False, d_type='byte', print_statement=None,
+                 out_attributes=None, write_array=True,
+                 boundary_file=None, mask_file=None,
                  n_jobs=1, close_files=True, **kwargs):
 
         self.func = func
@@ -2184,6 +2187,8 @@ class BlockFunc(object):
         self.proc_info = proc_info
         self.y_offset = y_offset
         self.x_offset = x_offset
+        self.y_pad = y_pad
+        self.x_pad = x_pad
         self.block_rows = block_rows
         self.block_cols = block_cols
         self.d_type = d_type
@@ -2196,6 +2201,12 @@ class BlockFunc(object):
         self.n_jobs = n_jobs
         self.close_files = close_files
         self.kwargs = kwargs
+
+        if not self.y_offset:
+            self.y_offset = [0] * len(self.image_infos)
+
+        if not self.x_offset:
+            self.x_offset = [0] * len(self.image_infos)
 
         if not isinstance(self.out_image, str) and write_array:
             raise NameError('The output image was not given.')
@@ -2311,9 +2322,23 @@ class BlockFunc(object):
 
             n_rows = n_rows_cols(i, self.block_rows, self.proc_info.rows)
 
+            if isinstance(self.y_pad, int):
+                y_pad_minus = 0 if i == 0 else self.y_pad
+                y_pad_plus = 0 if i + n_rows + self.y_pad > self.proc_info.rows else self.proc_info.rows - (i + n_rows)
+            else:
+                y_pad_minus = 0
+                y_pad_plus = 0
+
             for j in xrange(0, self.proc_info.cols, self.block_cols):
 
                 n_cols = n_rows_cols(j, self.block_cols, self.proc_info.cols)
+
+                if isinstance(self.x_pad, int):
+                    x_pad_minus = 0 if j == 0 else self.x_pad
+                    x_pad_plus = 0 if j + n_cols + self.x_pad > self.proc_info.cols else self.proc_info.cols - (j + n_cols)
+                else:
+                    x_pad_minus = 0
+                    x_pad_plus = 0
 
                 if isinstance(self.boundary_file, str):
 
@@ -2335,9 +2360,10 @@ class BlockFunc(object):
                 #     n_block += 1
 
                 image_arrays = [self.image_infos[imi].mparray(bands2open=self.band_list[imi],
-                                                              i=i+self.y_offset[imi],
-                                                              j=j+self.x_offset[imi],
-                                                              rows=n_rows, cols=n_cols,
+                                                              i=i+self.y_offset[imi]-y_pad_minus,
+                                                              j=j+self.x_offset[imi]-x_pad_minus,
+                                                              rows=n_rows+y_pad_plus,
+                                                              cols=n_cols+x_pad_plus,
                                                               d_type=self.d_type)
                                 for imi in xrange(0, len(self.image_infos))]
 
@@ -3107,12 +3133,14 @@ class GetMinExtent(UpdateInfo):
 
         if not isinstance(info1, rinfo):
             if not isinstance(info1, GetMinExtent):
-                raise TypeError('The first info argument must be an instance of rinfo or GetMinExtent.')
+                if not isinstance(info1, ImageInfo):
+                    raise TypeError('The first info argument must be an instance of rinfo, GetMinExtent, or ImageInfo.')
 
         if not isinstance(info2, rinfo):
             if not isinstance(info2, GetMinExtent):
-                if not isinstance(info2, vinfo):
-                    raise TypeError('The second info argument must be an instance of rinfo, vinfo, or GetMinExtent.')
+                if not isinstance(info2, ImageInfo):
+                    if not isinstance(info2, vinfo):
+                        raise TypeError('The second info argument must be an instance of rinfo, vinfo, GetMinExtent, or ImageInfo.')
 
         # Pass the image info properties.
         attributes = inspect.getmembers(info1, lambda ia: not (inspect.isroutine(ia)))

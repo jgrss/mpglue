@@ -334,7 +334,21 @@ def check_and_create_dir(dir2create):
                 raise OSError('Could not create the directory {}'.format(dir2create))
 
 
-def _iteration_parameters(image_rows, image_cols, row_block_size, col_block_size, y_overlap=0, x_overlap=0, bands=1):
+def _iteration_parameters_1d(rows, marker='*'):
+
+    progress_widgets = [' Percent: ', widgets.Percentage(), ' ',
+                        widgets.Bar(marker=marker, left='[', right=']'), ' ', widgets.ETA(), ' ',
+                        widgets.FileTransferSpeed()]
+
+    progress_bar = ProgressBar(widgets=progress_widgets, maxval=rows)
+
+    progress_bar.start()
+
+    return 1, progress_bar
+
+
+def _iteration_parameters(image_rows, image_cols, row_block_size, col_block_size,
+                          y_overlap=0, x_overlap=0, bands=1, marker='*'):
 
     maximum_blocks = 0
 
@@ -348,8 +362,8 @@ def _iteration_parameters(image_rows, image_cols, row_block_size, col_block_size
             else:
                 maximum_blocks += 1
 
-    progress_widgets = [' Percent: ', widgets.Percentage(), ' ', \
-                        widgets.Bar(marker='*', left='[', right=']'), ' ', widgets.ETA(), ' ', \
+    progress_widgets = [' Percent: ', widgets.Percentage(), ' ',
+                        widgets.Bar(marker=marker, left='[', right=']'), ' ', widgets.ETA(), ' ',
                         widgets.FileTransferSpeed()]
 
     progress_bar = ProgressBar(widgets=progress_widgets, maxval=maximum_blocks)
@@ -359,11 +373,11 @@ def _iteration_parameters(image_rows, image_cols, row_block_size, col_block_size
     return 1, progress_bar
 
 
-def _iteration_parameters_values(value1, value2):
+def _iteration_parameters_values(value1, value2, marker='*'):
 
     # Set widget and pbar
-    progress_widgets = [' Perc: ', widgets.Percentage(), ' ', \
-                        widgets.Bar(marker='*', left='[', right=']'), ' ', \
+    progress_widgets = [' Perc: ', widgets.Percentage(), ' ',
+                        widgets.Bar(marker=marker, left='[', right=']'), ' ',
                         widgets.ETA(), ' ', widgets.FileTransferSpeed()]
 
     progress_bar = ProgressBar(widgets=progress_widgets, maxval=value1*value2)
