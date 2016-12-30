@@ -791,7 +791,7 @@ class TransformUTM(object):
         from_epsg (Optional[int])
     """
 
-    def __init__(self, grid_envelope, utm_zone, to_epsg=None, from_epsg=None):
+    def __init__(self, grid_envelope, utm_zone, to_epsg=None, from_epsg=None, hemisphere=None):
 
         # Envelope
         # left, right, bottom, top
@@ -800,19 +800,39 @@ class TransformUTM(object):
 
         if isinstance(self.to_epsg, int):
 
-            # Northern hemisphere
-            if grid_envelope['top'] > 0:
-                self.from_epsg = int('326{}'.format(str(utm_zone)))
+            if isinstance(hemisphere, str):
+
+                # Northern hemisphere
+                if hemisphere == 'N':
+                    self.from_epsg = int('326{}'.format(str(utm_zone)))
+                else:
+                    self.from_epsg = int('327{}'.format(str(utm_zone)))
+
             else:
-                self.from_epsg = int('327{}'.format(str(utm_zone)))
+
+                # Northern hemisphere
+                if grid_envelope['top'] > 0:
+                    self.from_epsg = int('326{}'.format(str(utm_zone)))
+                else:
+                    self.from_epsg = int('327{}'.format(str(utm_zone)))
 
         elif isinstance(self.from_epsg, int):
 
-            # Northern hemisphere
-            if grid_envelope['top'] > 0:
-                self.to_epsg = int('326{}'.format(str(utm_zone)))
+            if isinstance(hemisphere, str):
+
+                # Northern hemisphere
+                if hemisphere == 'N':
+                    self.to_epsg = int('326{}'.format(str(utm_zone)))
+                else:
+                    self.to_epsg = int('327{}'.format(str(utm_zone)))
+
             else:
-                self.to_epsg = int('327{}'.format(str(utm_zone)))
+
+                # Northern hemisphere
+                if grid_envelope['top'] > 0:
+                    self.to_epsg = int('326{}'.format(str(utm_zone)))
+                else:
+                    self.to_epsg = int('327{}'.format(str(utm_zone)))
 
         else:
             raise NameError('The to or from EPSG code must be given.')
