@@ -712,7 +712,7 @@ class Transform(object):
 
     Args:
         x (float): The source x coordinate.
-        y (float): The target y coordinate.
+        y (float): The source y coordinate.
         source_epsg (int): The source EPSG code.
         target_epsg (int): The target EPSG code.
 
@@ -780,53 +780,79 @@ def create_point(coordinate_pair, projection_file):
     return cv
 
 
-class Extent2UTM(object):
+class TransformUTM(object):
 
     """
-    Converts an extent envelope from WGS84 to UTM
+    Converts an extent envelope to UTM without requiring the UTM EPSG code
+
+    Args:
+        grid_envelope (list)
+        utm_zone (str or int)
+        from_epsg (Optional[int])
     """
 
-    def __init__(self, grid_envelope, utm_zone):
+    def __init__(self, grid_envelope, utm_zone, to_epsg=None, from_epsg=None):
 
         # Envelope
         # left, right, bottom, top
+        self.to_epsg = to_epsg
+        self.from_epsg = from_epsg
 
-        # Northern hemisphere
-        if grid_envelope['top'] > 0:
-            self.utm_epsg = int('326{}'.format(utm_zone))
+        if isinstance(self.to_epsg, int):
+
+            # Northern hemisphere
+            if grid_envelope['top'] > 0:
+                self.from_epsg = int('326{}'.format(str(utm_zone)))
+            else:
+                self.from_epsg = int('327{}'.format(str(utm_zone)))
+
+        elif isinstance(self.from_epsg, int):
+
+            # Northern hemisphere
+            if grid_envelope['top'] > 0:
+                self.to_epsg = int('326{}'.format(str(utm_zone)))
+            else:
+                self.to_epsg = int('327{}'.format(str(utm_zone)))
+
         else:
-            self.utm_epsg = int('327{}'.format(utm_zone))
+            raise NameError('The to or from EPSG code must be given.')
 
-        ptr = Transform(grid_envelope['left'], grid_envelope['bottom'], 4326, self.utm_epsg)
+        ptr = Transform(grid_envelope['left'], grid_envelope['bottom'], self.from_epsg, self.to_epsg)
 
         self.left = copy.copy(ptr.x_transform)
         self.bottom = copy.copy(ptr.y_transform)
 
-        ptr = Transform(grid_envelope['right'], grid_envelope['top'], 4326, self.utm_epsg)
+        ptr = Transform(grid_envelope['right'], grid_envelope['top'], self.from_epsg, self.to_epsg)
 
         self.right = copy.copy(ptr.x_transform)
         self.top = copy.copy(ptr.y_transform)
 
 
-class Extent2WGS84(object):
+class TransformExtent(object):
 
     """
-    Converts an extent envelope from UTM to WGS84
+    Converts an extent envelope
+
+    Args:
+        grid_envelope (list)
+        from_epsg (int)
+        to_epsg (Optional[int])
     """
 
-    def __init__(self, grid_envelope, epsg):
+    def __init__(self, grid_envelope, from_epsg, to_epsg=4326):
 
         # Envelope
         # left, right, bottom, top
 
-        self.utm_epsg = epsg
+        self.from_epsg = from_epsg
+        self.to_epsg = to_epsg
 
-        ptr = Transform(grid_envelope['left'], grid_envelope['bottom'], self.utm_epsg, 4326)
+        ptr = Transform(grid_envelope['left'], grid_envelope['bottom'], self.from_epsg, self.to_epsg)
 
         self.left = copy.copy(ptr.x_transform)
         self.bottom = copy.copy(ptr.y_transform)
 
-        ptr = Transform(grid_envelope['right'], grid_envelope['top'], self.utm_epsg, 4326)
+        ptr = Transform(grid_envelope['right'], grid_envelope['top'], self.from_epsg, self.to_epsg)
 
         self.right = copy.copy(ptr.x_transform)
         self.top = copy.copy(ptr.y_transform)
@@ -896,7 +922,7 @@ class RTreeManager(object):
                                   bottom=envelope[2],
                                   top=envelope[3])
 
-            e2w = Extent2WGS84(image_envelope, epsg)
+            e2w = TransformExtent(image_envelope, epsg)
 
             envelope = [e2w.left, e2w.right, e2w.bottom, e2w.top]
 
