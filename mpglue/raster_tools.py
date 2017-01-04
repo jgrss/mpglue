@@ -1220,7 +1220,6 @@ class rinfo(FileManager, LandsatParser, SentinelParser, UpdateInfo):
             raise NameError('The {} sensor is not an option.'.format(sensor))
 
     def copy(self):
-
         return copy.copy(self)
 
     def close(self):
