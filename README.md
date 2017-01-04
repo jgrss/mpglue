@@ -13,6 +13,7 @@ Opening an image:
 
     >>> # Load an image and get information.
     >>> i_info = gl.rinfo('/your/image.tif')
+    >>>
     >>> print(i_info.bands)
     >>> print(i_info.shape)
     >>>

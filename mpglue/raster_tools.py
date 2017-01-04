@@ -2687,7 +2687,7 @@ def warp(input_image, output_image, epsg, in_epsg=None, resample='nearest',
 
     if isinstance(in_epsg, int):
         in_epsg = 'EPSG:{:d}'.format(in_epsg)
-    print in_epsg
+
     if isinstance(d_type, str):
 
         if isinstance(in_epsg, str):
@@ -3007,6 +3007,12 @@ class create_raster(CreateDriver, FileManager):
             self.cols = out_cols
             self.bands = n_bands
             self.storage = storage_type
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close_band()
 
 
 def write2raster(out_arr, out_name, o_info=None, x=0, y=0, out_rst=None, write2bands=[], compress='lzw',
