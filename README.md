@@ -20,28 +20,38 @@ Opening an image:
     >>> i_info.close()
     >>>
     >>> # or
+    >>>
     >>> with gl.rinfo('/your/image.tif') as i_info:
     >>>     print(i_info.bands)
-    >>>
+    
+Getting an array:
+
     >>> # Open an image as an array.
-    >>> my_array = i_info.mparray()
+    >>> with gl.rinfo('/your/image.tif') as i_info:
+    >>>     my_array = i_info.mparray()
     >>>
     >>> # Open specific bands, starting indexes, and row/column dimensions.
-    >>> my_array = i_info.mparray(bands2open=[2, 3, 4], i=1000, j=2000, rows=500, cols=500)
+    >>> with gl.rinfo('/your/image.tif') as i_info:
+    >>>     my_array = i_info.mparray(bands2open=[2, 3, 4], i=1000, j=2000, rows=500, cols=500)
+    >>>
     >>> my_array[0]     # 1st index = band 2
     >>>
     >>> # Open all bands and index by map coordinates.
-    >>> my_array = i_info.mparray(bands2open=-1, y=1200000, x=4230000, rows=500, cols=500)
+    >>> with gl.rinfo('/your/image.tif') as i_info:
+    >>>     my_array = i_info.mparray(bands2open=-1, y=1200000, x=4230000, rows=500, cols=500)
     >>>
     >>> # Open image bands as arrays with dictionary mappings.
-    >>> my_band_dict = i_info.mparray(bands2open={'red': 2, 'green': 3, 'nir': 4})
+    >>> with gl.rinfo('/your/image.tif') as i_info:
+    >>>     my_band_dict = i_info.mparray(bands2open={'red': 2, 'green': 3, 'nir': 4})
+    >>>
     >>> my_band_dict['red']
     >>>
     >>> # Compute the NDVI.
-    >>> ndvi = i_info.mparray(compute_index='ndvi', sensor='Landsat')
-    >>>
-    >>> # Writing to file
-    >>>
+    >>> with gl.rinfo('/your/image.tif') as i_info:
+    >>>     ndvi = i_info.mparray(compute_index='ndvi', sensor='Landsat')
+    
+Writing to file:
+
     >>> # Copy an image info object and modify it.
     >>> o_info = i_info.copy()
     >>> o_info.update_info(bands=3, storage='float32')
