@@ -1196,6 +1196,17 @@ class rinfo(FileManager, LandsatParser, SentinelParser, UpdateInfo):
         # Check open files before closing.
         atexit.register(self.exit)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+
+        if hasattr(self, 'band_open') and self.band_open:
+            self.close_band()
+
+        if hasattr(self, 'file_open') and self.file_open:
+            self.close_file()
+
     def exit(self):
 
         if hasattr(self, 'band_open') and self.band_open:
@@ -2676,20 +2687,40 @@ def warp(input_image, output_image, epsg, in_epsg=None, resample='nearest',
 
     if isinstance(in_epsg, int):
         in_epsg = 'EPSG:{:d}'.format(in_epsg)
-
+    print in_epsg
     if isinstance(d_type, str):
 
-        warp_options = gdal.WarpOptions(srcSRS=in_epsg, dstSRS='EPSG:{:d}'.format(epsg),
-                                        xRes=cell_size, yRes=cell_size,
-                                        outputType=STORAGE_DICT_GDAL[d_type],
-                                        resampleAlg=RESAMPLE_DICT[resample],
-                                        **kwargs)
+        if isinstance(in_epsg, str):
+
+            warp_options = gdal.WarpOptions(srcSRS=in_epsg, dstSRS='EPSG:{:d}'.format(epsg),
+                                            xRes=cell_size, yRes=cell_size,
+                                            outputType=STORAGE_DICT_GDAL[d_type],
+                                            resampleAlg=RESAMPLE_DICT[resample],
+                                            **kwargs)
+
+        else:
+
+            warp_options = gdal.WarpOptions(dstSRS='EPSG:{:d}'.format(epsg),
+                                            xRes=cell_size, yRes=cell_size,
+                                            outputType=STORAGE_DICT_GDAL[d_type],
+                                            resampleAlg=RESAMPLE_DICT[resample],
+                                            **kwargs)
 
     else:
 
-        warp_options = gdal.WarpOptions(srcSRS=in_epsg, dstSRS='EPSG:{:d}'.format(epsg),
-                                        xRes=cell_size, yRes=cell_size, resampleAlg=RESAMPLE_DICT[resample],
-                                        **kwargs)
+        if isinstance(in_epsg, str):
+
+            warp_options = gdal.WarpOptions(srcSRS=in_epsg, dstSRS='EPSG:{:d}'.format(epsg),
+                                            xRes=cell_size, yRes=cell_size,
+                                            resampleAlg=RESAMPLE_DICT[resample],
+                                            **kwargs)
+
+        else:
+
+            warp_options = gdal.WarpOptions(dstSRS='EPSG:{:d}'.format(epsg),
+                                            xRes=cell_size, yRes=cell_size,
+                                            resampleAlg=RESAMPLE_DICT[resample],
+                                            **kwargs)
 
     out_ds = gdal.Warp(output_image, input_image, options=warp_options)
 

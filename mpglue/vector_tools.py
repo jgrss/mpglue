@@ -705,6 +705,31 @@ def is_within(x, y, image_info):
         return False
 
 
+def create_point(coordinate_pair, projection_file):
+
+    """
+    Creates a point in memory
+
+    Args:
+        coordinate_pair (list or tuple): The x, y coordinate pair.
+        projection_file (str): The file with the EPSG projection info.
+    """
+
+    rsn = '{:f}'.format(abs(np.random.randn(1)[0]))[-4:]
+
+    # Create a temporary point file. The
+    #   value field is created and called 'Value'.
+    cv = create_vector('temp_points_{}.mem'.format(rsn),
+                       field_names=['Value'],
+                       projection_from_file=projection_file,
+                       geom_type='point')
+
+    # Add a point.
+    add_point(coordinate_pair[0], coordinate_pair[1], cv, 'Value', 1)
+
+    return cv
+
+
 class Transform(object):
 
     """
@@ -753,31 +778,6 @@ class Transform(object):
 
     def close(self):
         self.point.Destroy()
-
-
-def create_point(coordinate_pair, projection_file):
-
-    """
-    Creates a point in memory
-
-    Args:
-        coordinate_pair (list or tuple): The x, y coordinate pair.
-        projection_file (str): The file with the EPSG projection info.
-    """
-
-    rsn = '{:f}'.format(abs(np.random.randn(1)[0]))[-4:]
-
-    # Create a temporary point file. The
-    #   value field is created and called 'Value'.
-    cv = create_vector('temp_points_{}.mem'.format(rsn),
-                       field_names=['Value'],
-                       projection_from_file=projection_file,
-                       geom_type='point')
-
-    # Add a point.
-    add_point(coordinate_pair[0], coordinate_pair[1], cv, 'Value', 1)
-
-    return cv
 
 
 class TransformUTM(object):
@@ -837,15 +837,15 @@ class TransformUTM(object):
         else:
             raise NameError('The to or from EPSG code must be given.')
 
-        ptr = Transform(grid_envelope['left'], grid_envelope['bottom'], self.from_epsg, self.to_epsg)
+        ptr = Transform(grid_envelope['left'], grid_envelope['top'], self.from_epsg, self.to_epsg)
 
         self.left = copy.copy(ptr.x_transform)
-        self.bottom = copy.copy(ptr.y_transform)
+        self.top = copy.copy(ptr.y_transform)
 
-        ptr = Transform(grid_envelope['right'], grid_envelope['top'], self.from_epsg, self.to_epsg)
+        ptr = Transform(grid_envelope['right'], grid_envelope['bottom'], self.from_epsg, self.to_epsg)
 
         self.right = copy.copy(ptr.x_transform)
-        self.top = copy.copy(ptr.y_transform)
+        self.bottom = copy.copy(ptr.y_transform)
 
 
 class TransformExtent(object):

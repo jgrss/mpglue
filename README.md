@@ -5,15 +5,23 @@ The **glue** of MapPy.
 
 Usage examples
 -----
-
-Image handling:
-
+Load the library:
+    
     >>> import mpglue as gl
-    >>>
+
+Opening an image:
+
     >>> # Load an image and get information.
     >>> i_info = gl.rinfo('/your/image.tif')
     >>> print(i_info.bands)
     >>> print(i_info.shape)
+    >>>
+    >>> # Close the dataset.
+    >>> i_info.close()
+    >>>
+    >>> # or
+    >>> with gl.rinfo('/your/image.tif') as i_info:
+    >>>     print(i_info.bands)
     >>>
     >>> # Open an image as an array.
     >>> my_array = i_info.mparray()
