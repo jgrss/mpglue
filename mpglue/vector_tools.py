@@ -882,8 +882,6 @@ class RTreeManager(object):
 
     def __init__(self, base_shapefile=None):
 
-        self.rtree_index = rtree.index.Index(interleaved=False)
-
         self.utm_shp_path = '{}/utilities/sentinel'.format(MAIN_PATH.replace('mpglue', 'mappy'))
 
         # Setup the UTM MGRS shapefile
@@ -898,6 +896,11 @@ class RTreeManager(object):
                 with tarfile.open('{}/utm_shp.tar.bz2'.format(self.utm_shp_path), mode='r:bz2') as tar:
                     tar.extractall(path=self.utm_shp_path)
 
+        if rtree_installed:
+            self.rtree_index = rtree.index.Index(interleaved=False)
+        else:
+            self.rtree_index = dict()
+
         # Setup the RTree index
         with vinfo(self.base_shapefile_) as bdy_info:
 
@@ -907,11 +910,17 @@ class RTreeManager(object):
                 bdy_geometry = bdy_feature.GetGeometryRef()
                 en = bdy_geometry.GetEnvelope()
 
-                self.rtree_index.insert(f, (en[0], en[1], en[2], en[3]))
+                if rtree_installed:
+                    self.rtree_index.insert(f, (en[0], en[1], en[2], en[3]))
+                else:
+                    self.rtree_index[f] = (en[0], en[1], en[2], en[3])
+
+                bdy_feature.Destroy()
+                bdy_feature = None
+                bdy_geometry = None
 
         # Load the RTree info
         self.rtree_info = '{}/utilities/sentinel/utm_grid_info.txt'.format(MAIN_PATH.replace('mpglue', 'mappy'))
-
         self.field_dict = pickle.load(file(self.rtree_info, 'rb'))
 
     def get_intersecting_features(self, shapefile2intersect=None, envelope=None, epsg=None):
@@ -926,9 +935,7 @@ class RTreeManager(object):
             with vinfo(shapefile2intersect) as bdy_info:
 
                 bdy_feature = bdy_info.lyr.GetFeature(0)
-
                 bdy_geometry = bdy_feature.GetGeometryRef()
-
                 bdy_envelope = bdy_geometry.GetEnvelope()
 
             # left, right, bottom, top
@@ -948,9 +955,14 @@ class RTreeManager(object):
 
         self.grid_infos = []
 
+        if rtree_installed:
+            index_iter = self.rtree_index.intersection(envelope)
+        else:
+            index_iter = xrange(0, len(self.field_dict))
+
         # Intersect the base shapefile bounding box
         #   with the UTM grids.
-        for n in self.rtree_index.intersection(envelope):
+        for n in index_iter:
 
             grid_info = self.field_dict[n]
 
@@ -979,6 +991,10 @@ class RTreeManager(object):
 
             else:
                 self.grid_infos.append(grid_info)
+
+        bdy_feature.Destroy()
+        bdy_feature = None
+        bdy_geometry = None
 
     def _cleanup(self):
 
