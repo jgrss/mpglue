@@ -915,9 +915,9 @@ class RTreeManager(object):
                 else:
                     self.rtree_index[f] = (en[0], en[1], en[2], en[3])
 
-                bdy_feature.Destroy()
-                bdy_feature = None
-                bdy_geometry = None
+                # bdy_feature.Destroy()
+                # bdy_feature = None
+                # bdy_geometry = None
 
         # Load the RTree info
         self.rtree_info = '{}/utilities/sentinel/utm_grid_info.txt'.format(MAIN_PATH.replace('mpglue', 'mappy'))
@@ -992,9 +992,9 @@ class RTreeManager(object):
             else:
                 self.grid_infos.append(grid_info)
 
-        bdy_feature.Destroy()
-        bdy_feature = None
-        bdy_geometry = None
+        # bdy_feature.Destroy()
+        # bdy_feature = None
+        # bdy_geometry = None
 
     def _cleanup(self):
 

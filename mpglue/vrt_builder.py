@@ -132,7 +132,7 @@ class VRTBuilder(object):
 
         self.xml_base = self.xml_base.replace('image_GeoTransform', self.geo_transform)
 
-    def add_bands(self, in_dict, bands2include=[], force_type=None, subset=False, base_name=None):
+    def add_bands(self, in_dict, bands2include=[], force_type=None, subset=False, base_name=None, be_quiet=False):
 
         """
         in_dict (OrderedDict): An ordered dictionary. The main bands should be first, followed by ancillary data.
@@ -153,7 +153,8 @@ class VRTBuilder(object):
 
         for bdk, bd in self.band_dict.iteritems():
 
-            print 'Building list {} ...'.format(bdk)
+            if not be_quiet:
+                print 'Building list {} ...'.format(bdk)
 
             image_list = in_dict[bdk]
 
@@ -339,7 +340,7 @@ class VRTBuilder(object):
         self.band_dict = OrderedDict(sorted(self.band_dict.items(), key=lambda t: t[0]))
 
 
-def vrt_builder(in_dict, out_vrt, bands2include=[], force_type=None, subset=False, base_name=None):
+def vrt_builder(in_dict, out_vrt, bands2include=[], force_type=None, subset=False, base_name=None, be_quiet=False):
 
     """
     Builds a VRT file, accepting raster files with different band counts.
@@ -368,7 +369,8 @@ def vrt_builder(in_dict, out_vrt, bands2include=[], force_type=None, subset=Fals
 
     vb.replace_main()
 
-    vb.add_bands(in_dict, bands2include=bands2include, force_type=force_type, subset=subset, base_name=base_name)
+    vb.add_bands(in_dict, bands2include=bands2include, force_type=force_type,
+                 subset=subset, base_name=base_name, be_quiet=be_quiet)
 
     d_name, f_name = os.path.split(out_vrt)
 
