@@ -763,7 +763,7 @@ class Transform(object):
         coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
 
         self.point = ogr.Geometry(ogr.wkbPoint)
-
+        
         self.point.AddPoint(self.x, self.y)
         self.point.Transform(coord_trans)
 
