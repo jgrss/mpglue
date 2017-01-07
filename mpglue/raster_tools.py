@@ -2654,7 +2654,15 @@ def build_vrt(file_list, output_image, cell_size=0., **kwargs):
     out_ds = None
 
 
-def warp(input_image, output_image, epsg, in_epsg=None, resample='nearest',
+def _merge_dicts(dict1, dict2):
+
+    dict3 = dict1.copy()
+    dict3.update(dict2)
+
+    return dict3
+
+
+def warp(input_image, output_image, out_epsg=None, in_epsg=None, resample='nearest',
          cell_size=0, d_type=None, **kwargs):
 
     """
@@ -2663,7 +2671,7 @@ def warp(input_image, output_image, epsg, in_epsg=None, resample='nearest',
     Args:
         input_image (str): The image to warp.
         output_image (str): The output image.
-        epsg (int): The output EPSG projection code.
+        out_epsg (Optional[int]): The output EPSG projection code.
         in_epsg (Optional[int]): The input EPSG code. Default is None.
         resample (Optional[str]): The resampling method. Default is 'nearest'.N
         cell_size (Optional[float]): The output cell size. Default is 0.
@@ -2681,46 +2689,33 @@ def warp(input_image, output_image, epsg, in_epsg=None, resample='nearest',
              metadataConflictValue=None, setColorInterpretation=False,
              callback=None, callback_data=None
 
+             E.g.,
+                creationOptions=['GDAL_CACHEMAX=256', 'TILED=YES']
+
     Returns:
         None, writes to `output_image'.
     """
+
+    if isinstance(out_epsg, int):
+        out_epsg = 'EPSG:{:d}'.format(out_epsg)
 
     if isinstance(in_epsg, int):
         in_epsg = 'EPSG:{:d}'.format(in_epsg)
 
     if isinstance(d_type, str):
 
-        if isinstance(in_epsg, str):
-
-            warp_options = gdal.WarpOptions(srcSRS=in_epsg, dstSRS='EPSG:{:d}'.format(epsg),
-                                            xRes=cell_size, yRes=cell_size,
-                                            outputType=STORAGE_DICT_GDAL[d_type],
-                                            resampleAlg=RESAMPLE_DICT[resample],
-                                            **kwargs)
-
-        else:
-
-            warp_options = gdal.WarpOptions(dstSRS='EPSG:{:d}'.format(epsg),
-                                            xRes=cell_size, yRes=cell_size,
-                                            outputType=STORAGE_DICT_GDAL[d_type],
-                                            resampleAlg=RESAMPLE_DICT[resample],
-                                            **kwargs)
+        awargs = _merge_dicts(dict(srcSRS=in_epsg, dstSRS=out_epsg,
+                                   xRes=cell_size, yRes=cell_size,
+                                   outputType=STORAGE_DICT_GDAL[d_type],
+                                   resampleAlg=RESAMPLE_DICT[resample]), kwargs)
 
     else:
 
-        if isinstance(in_epsg, str):
+        awargs = _merge_dicts(dict(srcSRS=in_epsg, dstSRS=out_epsg,
+                                   xRes=cell_size, yRes=cell_size,
+                                   resampleAlg=RESAMPLE_DICT[resample]), kwargs)
 
-            warp_options = gdal.WarpOptions(srcSRS=in_epsg, dstSRS='EPSG:{:d}'.format(epsg),
-                                            xRes=cell_size, yRes=cell_size,
-                                            resampleAlg=RESAMPLE_DICT[resample],
-                                            **kwargs)
-
-        else:
-
-            warp_options = gdal.WarpOptions(dstSRS='EPSG:{:d}'.format(epsg),
-                                            xRes=cell_size, yRes=cell_size,
-                                            resampleAlg=RESAMPLE_DICT[resample],
-                                            **kwargs)
+    warp_options = gdal.WarpOptions(**awargs)
 
     out_ds = gdal.Warp(output_image, input_image, options=warp_options)
 

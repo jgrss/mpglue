@@ -13,6 +13,10 @@ from collections import OrderedDict
 
 from . import raster_tools, vector_tools
 
+FORCE_TYPE_DICT = {'float32': 'Float32',
+                   'byte': 'Byte',
+                   'uint16': 'UInt16'}
+
 
 class VRTBuilder(object):
 
@@ -174,7 +178,8 @@ class VRTBuilder(object):
                     continue
 
                 if isinstance(force_type, str):
-                    self.xml_band_header_ = self.xml_band_header.replace('image_dataType', force_type.title())
+                    self.xml_band_header_ = self.xml_band_header.replace('image_dataType',
+                                                                         FORCE_TYPE_DICT[force_type.lower()])
                 else:
                     self.xml_band_header_ = self.xml_band_header.replace('image_dataType', self.storage)
 
@@ -213,7 +218,7 @@ class VRTBuilder(object):
                     self.xml_band_ = self.xml_band.replace('image_SourceFilename', image)
 
                     if isinstance(force_type, str):
-                        self.xml_band_ = self.xml_band_.replace('image_dataType', force_type.title())
+                        self.xml_band_ = self.xml_band_.replace('image_dataType', FORCE_TYPE_DICT[force_type.lower()])
                     else:
                         self.xml_band_ = self.xml_band_.replace('image_dataType', str(i_info.storage))
 
