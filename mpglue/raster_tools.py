@@ -297,7 +297,7 @@ class DataChecks(object):
             background_value (Optional[int]): The background pixel value. Default is 255.
         """
 
-        cloud_array = self.mparray(bands2open=cloud_band)
+        cloud_array = self.read(bands2open=cloud_band)
 
         clear_pixels = (cloud_array == clear_value).sum()
 
@@ -1082,7 +1082,7 @@ class SentinelParser(object):
         self.saturated = int(general_info['Product_Image_Characteristics']['Special_Values'][1]['SPECIAL_VALUE_INDEX'])
 
 
-class rinfo(FileManager, LandsatParser, SentinelParser, UpdateInfo):
+class open(FileManager, LandsatParser, SentinelParser, UpdateInfo):
 
     """
     Gets image information and a file pointer object.
@@ -1125,20 +1125,20 @@ class rinfo(FileManager, LandsatParser, SentinelParser, UpdateInfo):
         >>> # typical usage
         >>> import mappy as mp
         >>>
-        >>> i_info = mp.rinfo('/some_raster.tif')
+        >>> i_info = mp.open('/some_raster.tif')
         >>> # <rinfo> has its own array instance
-        >>> array = i_info.mparray()    # opens band 1, all rows and columns
+        >>> array = i_info.read()    # opens band 1, all rows and columns
         >>> print array
         >>>
         >>> # use the <mparray> function
         >>> # open specific rows and columns
-        >>> array = mp.mparray(i_info, \
+        >>> array = mp.read(i_info, \
         >>>                    bands2open=[-1], \
         >>>                    i=100, j=100, \
         >>>                    rows=500, cols=500)
         >>>
         >>> # compute the NDVI (for Landsat-like band channels only)
-        >>> i_info.mparray(compute_index='ndvi')
+        >>> i_info.read(compute_index='ndvi')
         >>> print i_info.ndvi
         >>> print i_info.array.shape    # note that the image array is a 2xrowsxcolumns array
         >>> # display the NDVI
@@ -1155,17 +1155,17 @@ class rinfo(FileManager, LandsatParser, SentinelParser, UpdateInfo):
         >>>                     o_info=i_info.copy(), storage='float32')
         >>>
         >>> # create info from scratch
-        >>> i_info = mp.rinfo('create', left=, right=, top=, bottom=, \
+        >>> i_info = mp.open('create', left=, right=, top=, bottom=, \
         >>>                   cellY=, cellX=, bands=, storage=, projection=, \
         >>>                   rows=, cols=)
         >>>
         >>> # build overviews
-        >>> i_info = mp.rinfo('/some_raster.tif')
+        >>> i_info = mp.open('/some_raster.tif')
         >>> i_info.build_overviews()
         >>> i_info.close()
         >>>
         >>> # remove overviews
-        >>> i_info = mp.rinfo('/some_raster.tif', open2read=False)
+        >>> i_info = mp.open('/some_raster.tif', open2read=False)
         >>> i_info.remove_overviews()
         >>> i_info.close()
     """
@@ -1241,7 +1241,7 @@ class rinfo(FileManager, LandsatParser, SentinelParser, UpdateInfo):
         
         self.close_all()
 
-    def mparray(self, bands2open=1, i=0, j=0, rows=-1, cols=-1, d_type=None,
+    def read(self, bands2open=1, i=0, j=0, rows=-1, cols=-1, d_type=None,
                 compute_index='none', sensor='Landsat', sort_bands2open=True,
                 predictions=False, y=0., x=0., check_x=None, check_y=None):
 
@@ -1287,24 +1287,24 @@ class rinfo(FileManager, LandsatParser, SentinelParser, UpdateInfo):
         Examples:
             >>> import mappy as mp
             >>>
-            >>> i_info = mp.rinfo('image.tif')
+            >>> i_info = mp.open('image.tif')
             >>>
             >>> # Open 1 band.
-            >>> array = i_info.mparray(bands2open=1)
+            >>> array = i_info.read(bands2open=1)
             >>>
             >>> # Open multiple bands.
-            >>> array = i_info.mparray(bands2open=[1, 2, 3])
+            >>> array = i_info.read(bands2open=[1, 2, 3])
             >>> band_1 = array[0]
             >>>
             >>> # Open as a dictionary of arrays.
-            >>> bands = i_info.mparray(bands2open={'blue': 1, 'red': 2, 'nir': 4})
+            >>> bands = i_info.read(bands2open={'blue': 1, 'red': 2, 'nir': 4})
             >>> red = bands['red']
             >>>
             >>> # Index an image by pixel positions.
-            >>> array = i_info.mparray(i=1000, j=4000, rows=500, cols=500)
+            >>> array = i_info.read(i=1000, j=4000, rows=500, cols=500)
             >>>
             >>> # Index an image by map coordinates.
-            >>> array = i_info.mparray(y=1200000., x=4230000., rows=500, cols=500)
+            >>> array = i_info.read(y=1200000., x=4230000., rows=500, cols=500)
         """
 
         self.i = i
@@ -1800,7 +1800,7 @@ class rinfo(FileManager, LandsatParser, SentinelParser, UpdateInfo):
 
         Examples:
             >>> import mappy as mp
-            >>> i_info = mp.rinfo('image')
+            >>> i_info = mp.open('image')
             >>>
             >>> # Plot a discrete map with specified colors
             >>> color_map = ['#000000', '#DF7401', '#AEB404', '#0B6121', '#610B0B', '#A9D0F5',
@@ -1809,15 +1809,15 @@ class rinfo(FileManager, LandsatParser, SentinelParser, UpdateInfo):
             >>>             class_list=[0,1,2,3,4,5,6,7,8,9,10])
             >>>
             >>> # Plot the NDVI
-            >>> i_info.mparray(compute_index='ndvi')
+            >>> i_info.read(compute_index='ndvi')
             >>> i_info.show(show_which='ndvi')
             >>>
             >>> # Plot a single band array as greyscale
-            >>> i_info.mparray(bands2open=4)
+            >>> i_info.read(bands2open=4)
             >>> i_info.show(color_map='Greys')
             >>>
             >>> # Plot a 3-band array as RGB true color
-            >>> i_info.mparray(bands2open=[3, 2, 1], sort_bands2open=False)
+            >>> i_info.read(bands2open=[3, 2, 1], sort_bands2open=False)
             >>> i_info.show(band='rgb')
 
         Returns:
@@ -2369,7 +2369,7 @@ class BlockFunc(object):
                 #
                 #     n_block += 1
 
-                image_arrays = [self.image_infos[imi].mparray(bands2open=self.band_list[imi],
+                image_arrays = [self.image_infos[imi].read(bands2open=self.band_list[imi],
                                                               i=i+self.y_offset[imi]-y_pad_minus,
                                                               j=j+self.x_offset[imi]-x_pad_minus,
                                                               rows=n_rows+y_pad_plus,
@@ -2497,7 +2497,7 @@ def _mparray_parallel(image, image_info, bands2open, y, x, rows2open, columns2op
         return np.array(band_arrays, dtype=d_type).reshape(len(bands2open), rows2open, columns2open)
 
 
-def mparray(image2open=None, i_info=None, bands2open=1, i=0, j=0,
+def read(image2open=None, i_info=None, bands2open=1, i=0, j=0,
             rows=-1, cols=-1, d_type=None, n_jobs=0,
             predictions=False, sort_bands2open=True, y=0., x=0.):
 
@@ -2533,12 +2533,12 @@ def mparray(image2open=None, i_info=None, bands2open=1, i=0, j=0,
     Examples:
         >>> import mappy as mp
         >>>
-        >>> array = mp.mparray('image.tif')
+        >>> array = mp.read('image.tif')
         >>>
-        >>> array = mp.mparray('image.tif', bands2open=[1, 2, 3])
+        >>> array = mp.read('image.tif', bands2open=[1, 2, 3])
         >>> print(a.shape)
         >>>
-        >>> array = mp.mparray('image.tif', bands2open={'green': 3, 'nir': 4})
+        >>> array = mp.read('image.tif', bands2open={'green': 3, 'nir': 4})
         >>> print(len(array))
         >>> print(array['nir'].shape)
     """
@@ -2548,14 +2548,14 @@ def mparray(image2open=None, i_info=None, bands2open=1, i=0, j=0,
     elif isinstance(i_info, rinfo) and isinstance(image2open, str):
         raise NameError('\nChoose either i_info or image2open, but not both.\n')
     elif not isinstance(i_info, rinfo) and isinstance(image2open, str):
-        i_info = rinfo(image2open)
+        i_info = open(image2open)
 
     if (n_jobs == 0) and not predictions:
 
         kwargs = dict(bands2open=bands2open, i=i, j=j, rows=rows, cols=cols, d_type=d_type,
                       sort_bands2open=sort_bands2open, y=y, x=x)
 
-        return i_info.mparray(**kwargs)
+        return i_info.read(**kwargs)
 
     else:
 
@@ -3037,7 +3037,7 @@ def write2raster(out_arr, out_name, o_info=None, x=0, y=0, out_rst=None, write2b
     Examples:
         >>> # Example
         >>> import mappy as mp
-        >>> i_info = mp.rinfo('/in_raster.tif')
+        >>> i_info = mp.open('/in_raster.tif')
         >>> out_array = np.random.randn(3, 100, 100).astype(np.float32)
         >>> mp.write2raster(out_array, '/out_name.tif', o_info=copy(i_info),
         >>>                 flush_final=True)
@@ -3536,7 +3536,7 @@ def pixel_stats(input_image, output_image, stat='mean', bands2process=-1,
     if stat not in ['min', 'max', 'mean', 'median', 'mode', 'var', 'std', 'cv', 'sum']:
         raise NameError('{} is not an option.'.format(stat))
 
-    i_info = rinfo(input_image)
+    i_info = open(input_image)
 
     info_list = [input_image]
 
@@ -3658,7 +3658,7 @@ def histogram_matching(image2adjust, reference_list, output_image, band2match=-1
     """
 
     # Open the images
-    match_info = rinfo(image2adjust)
+    match_info = open(image2adjust)
 
     if band2match == -1:
         bands = range(1, match_info.bands+1)
@@ -3680,12 +3680,12 @@ def histogram_matching(image2adjust, reference_list, output_image, band2match=-1
     # Match each band.
     for bi, band in enumerate(bands):
 
-        match_array = match_info.mparray(bands2open=band)
+        match_array = match_info.read(bands2open=band)
 
         for ri, reference_image in enumerate(reference_list):
 
-            ref_info = rinfo(reference_image)
-            ref_array = ref_info.mparray(bands2open=band)
+            ref_info = open(reference_image)
+            ref_array = ref_info.read(bands2open=band)
 
             if ri == 0:
                 h2 = fill_ref_histogram(ref_array, n_bins)
@@ -3775,8 +3775,8 @@ def quick_plot(image_arrays, titles=['Field estimates'], colorbar_labels=['ha'],
         >>> import mappy as mp
         >>> from mappy import raster_tools
         >>>
-        >>> i_info = mp.rinfo('/image.tif')
-        >>> arr = mp.mparray(i_info)
+        >>> i_info = mp.open('/image.tif')
+        >>> arr = mp.read(i_info)
         >>> raster_tools.quick_plot([arr], colorbar_labels=['Hectares'], color_maps=['gist_earth'])
     """
 
@@ -4400,7 +4400,7 @@ def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None, storag
 
     if match_raster:
 
-        o_info = rinfo(match_raster)
+        o_info = open(match_raster)
 
     elif kwargs:
 
@@ -4443,7 +4443,7 @@ def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None, storag
             elif (kwargs['right'] < 0) and (kwargs['left'] < 0):
                 kwargs['cols'] = int((abs(kwargs['left']) - abs(kwargs['right'])) / cell_size)
 
-        o_info = rinfo('create', left=kwargs['left'], right=kwargs['right'], top=kwargs['top'],
+        o_info = open('create', left=kwargs['left'], right=kwargs['right'], top=kwargs['top'],
                        bottom=kwargs['bottom'], projection=kwargs['projection'], storage=storage, bands=1,
                        cellY=cell_size, cellX=-cell_size, rows=kwargs['rows'], cols=kwargs['cols'])
 
@@ -4456,7 +4456,7 @@ def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None, storag
         rows = abs(int((abs(v_info.top) - abs(v_info.bottom)) / cell_size))
         cols = abs(int((abs(v_info.left) - abs(v_info.right)) / cell_size))
 
-        o_info = rinfo('create', left=v_info.left, right=v_info.right, top=v_info.top, bottom=v_info.bottom,
+        o_info = open('create', left=v_info.left, right=v_info.right, top=v_info.top, bottom=v_info.bottom,
                        proj=v_info.projection, storage=storage, bands=1, cellY=cell_size, cellX=-cell_size,
                        rows=rows, cols=cols)
 
@@ -4515,10 +4515,10 @@ def batch_manage_overviews(image_directory, build=True, image_extensions=['tif']
     for image in images_filtered:
 
         if build:
-            info = rinfo('{}/{}'.format(image_directory, image))
+            info = open('{}/{}'.format(image_directory, image))
             info.build_overviews()
         else:
-            info = rinfo('{}/{}'.format(image_directory, image), open2read=False)
+            info = open('{}/{}'.format(image_directory, image), open2read=False)
             info.remove_overviews()
 
         info.close()
@@ -4605,7 +4605,7 @@ def main():
 
     if args.method == 'info':
 
-        i_info = rinfo(args.input)
+        i_info = open(args.input)
 
         print '\nThe projection:\n'
         print i_info.projection

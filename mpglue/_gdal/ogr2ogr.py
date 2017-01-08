@@ -1476,7 +1476,7 @@ def SetupTargetLayer( poSrcDS, poSrcLayer, poDstDS, papszLCO, pszNewLayerName, \
     if pszZField is not None:
         iSrcZField = poSrcFDefn.GetFieldIndex(pszZField)
 
-    psInfo = TargetLayerInfo()
+    psInfo = TargetLayeopen()
     psInfo.poDstLayer = poDstLayer
     psInfo.poCT = poCT
     #psInfo.papszTransformOptions = papszTransformOptions

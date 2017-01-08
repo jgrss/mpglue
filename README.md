@@ -16,7 +16,7 @@ Opening an image:
 
 ```python
 >>> # Load an image and get information.
->>> i_info = gl.rinfo('/your/image.tif')
+>>> i_info = gl.open('/your/image.tif')
 >>>
 >>> print(i_info.bands)
 >>> print(i_info.shape)
@@ -26,7 +26,7 @@ Opening an image:
 >>>
 >>> # or
 >>>
->>> with gl.rinfo('/your/image.tif') as i_info:
+>>> with gl.open('/your/image.tif') as i_info:
 >>>     print(i_info.bands)
 ```
     
@@ -34,28 +34,28 @@ Getting an array:
 
 ```python
 >>> # Open an image as an array.
->>> with gl.rinfo('/your/image.tif') as i_info:
->>>     my_array = i_info.mparray()
+>>> with gl.open('/your/image.tif') as i_info:
+>>>     my_array = i_info.read()
 >>>
 >>> # Open specific bands, starting indexes, and row/column dimensions.
->>> with gl.rinfo('/your/image.tif') as i_info:
->>>     my_array = i_info.mparray(bands2open=[2, 3, 4], i=1000, j=2000, rows=500, cols=500)
+>>> with gl.open('/your/image.tif') as i_info:
+>>>     my_array = i_info.read(bands2open=[2, 3, 4], i=1000, j=2000, rows=500, cols=500)
 >>>
 >>> my_array[0]     # 1st index = band 2
 >>>
 >>> # Open all bands and index by map coordinates.
->>> with gl.rinfo('/your/image.tif') as i_info:
->>>     my_array = i_info.mparray(bands2open=-1, y=1200000, x=4230000, rows=500, cols=500)
+>>> with gl.open('/your/image.tif') as i_info:
+>>>     my_array = i_info.read(bands2open=-1, y=1200000, x=4230000, rows=500, cols=500)
 >>>
 >>> # Open image bands as arrays with dictionary mappings.
->>> with gl.rinfo('/your/image.tif') as i_info:
->>>     my_band_dict = i_info.mparray(bands2open={'red': 2, 'green': 3, 'nir': 4})
+>>> with gl.open('/your/image.tif') as i_info:
+>>>     my_band_dict = i_info.read(bands2open={'red': 2, 'green': 3, 'nir': 4})
 >>>
 >>> my_band_dict['red']
 >>>
 >>> # Compute the NDVI.
->>> with gl.rinfo('/your/image.tif') as i_info:
->>>     ndvi = i_info.mparray(compute_index='ndvi', sensor='Landsat')
+>>> with gl.open('/your/image.tif') as i_info:
+>>>     ndvi = i_info.read(compute_index='ndvi', sensor='Landsat')
 ```
     
 Writing to file:

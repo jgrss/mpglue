@@ -48,7 +48,7 @@ def _sample_parallel(band_position, image_name, c_list, accuracy, feature_length
 
     band_object = datasource.GetRasterBand(band_position)
 
-    # image_info = raster_tools.rinfo(image_name)
+    # image_info = raster_tools.open(image_name)
 
     # print 'Band {:d} of {:d} ...'.format(band_position, image_info.bands)
     print 'Band {:d} of {:d} ...'.format(band_position, datasource.RasterCount)
@@ -64,7 +64,7 @@ def _sample_parallel(band_position, image_name, c_list, accuracy, feature_length
         # values[1] = [x, y, x offset, y offset, label]
         # values[1][2] = x offset position
         # values[1][3] = y offset position
-        # pixel_value = image_info.mparray(i=values[1][3],
+        # pixel_value = image_info.read(i=values[1][3],
         #                                  j=values[1][2],
         #                                  rows=1,
         #                                  cols=1,
@@ -264,7 +264,7 @@ class SampleImage(object):
         print '  \nSampling {} ...\n'.format(self.f_name_rst)
 
         # Open the image.
-        self.m_info = raster_tools.rinfo(self.image_file)
+        self.m_info = raster_tools.open(self.image_file)
 
         self.write_headers()
 
