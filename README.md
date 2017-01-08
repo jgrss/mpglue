@@ -1,72 +1,81 @@
 MpGlue
-------
+---
 
 The **glue** of MapPy.
 
 Usage examples
------
+---
+
 Load the library:
     
-    >>> import mpglue as gl
+```python
+>>> import mpglue as gl
+```
 
 Opening an image:
 
-    >>> # Load an image and get information.
-    >>> i_info = gl.rinfo('/your/image.tif')
-    >>>
-    >>> print(i_info.bands)
-    >>> print(i_info.shape)
-    >>>
-    >>> # Close the dataset.
-    >>> i_info.close()
-    >>>
-    >>> # or
-    >>>
-    >>> with gl.rinfo('/your/image.tif') as i_info:
-    >>>     print(i_info.bands)
+```python
+>>> # Load an image and get information.
+>>> i_info = gl.rinfo('/your/image.tif')
+>>>
+>>> print(i_info.bands)
+>>> print(i_info.shape)
+>>>
+>>> # Close the dataset.
+>>> i_info.close()
+>>>
+>>> # or
+>>>
+>>> with gl.rinfo('/your/image.tif') as i_info:
+>>>     print(i_info.bands)
+```
     
 Getting an array:
 
-    >>> # Open an image as an array.
-    >>> with gl.rinfo('/your/image.tif') as i_info:
-    >>>     my_array = i_info.mparray()
-    >>>
-    >>> # Open specific bands, starting indexes, and row/column dimensions.
-    >>> with gl.rinfo('/your/image.tif') as i_info:
-    >>>     my_array = i_info.mparray(bands2open=[2, 3, 4], i=1000, j=2000, rows=500, cols=500)
-    >>>
-    >>> my_array[0]     # 1st index = band 2
-    >>>
-    >>> # Open all bands and index by map coordinates.
-    >>> with gl.rinfo('/your/image.tif') as i_info:
-    >>>     my_array = i_info.mparray(bands2open=-1, y=1200000, x=4230000, rows=500, cols=500)
-    >>>
-    >>> # Open image bands as arrays with dictionary mappings.
-    >>> with gl.rinfo('/your/image.tif') as i_info:
-    >>>     my_band_dict = i_info.mparray(bands2open={'red': 2, 'green': 3, 'nir': 4})
-    >>>
-    >>> my_band_dict['red']
-    >>>
-    >>> # Compute the NDVI.
-    >>> with gl.rinfo('/your/image.tif') as i_info:
-    >>>     ndvi = i_info.mparray(compute_index='ndvi', sensor='Landsat')
+```python
+>>> # Open an image as an array.
+>>> with gl.rinfo('/your/image.tif') as i_info:
+>>>     my_array = i_info.mparray()
+>>>
+>>> # Open specific bands, starting indexes, and row/column dimensions.
+>>> with gl.rinfo('/your/image.tif') as i_info:
+>>>     my_array = i_info.mparray(bands2open=[2, 3, 4], i=1000, j=2000, rows=500, cols=500)
+>>>
+>>> my_array[0]     # 1st index = band 2
+>>>
+>>> # Open all bands and index by map coordinates.
+>>> with gl.rinfo('/your/image.tif') as i_info:
+>>>     my_array = i_info.mparray(bands2open=-1, y=1200000, x=4230000, rows=500, cols=500)
+>>>
+>>> # Open image bands as arrays with dictionary mappings.
+>>> with gl.rinfo('/your/image.tif') as i_info:
+>>>     my_band_dict = i_info.mparray(bands2open={'red': 2, 'green': 3, 'nir': 4})
+>>>
+>>> my_band_dict['red']
+>>>
+>>> # Compute the NDVI.
+>>> with gl.rinfo('/your/image.tif') as i_info:
+>>>     ndvi = i_info.mparray(compute_index='ndvi', sensor='Landsat')
+```
     
 Writing to file:
 
-    >>> # Copy an image info object and modify it.
-    >>> o_info = i_info.copy()
-    >>> o_info.update_info(bands=3, storage='float32')
-    >>>
-    >>> # Create the raster object
-    >>> out_raster = gl.create_raster('/output_image.tif', o_info)
-    >>>
-    >>> # Write an array block to band 1
-    >>> array2write = <some 2d array data>
-    >>> out_raster.write_array(array2write, i=0, j=0, band=1)
-    >>> out_raster.close()
+```python
+>>> # Copy an image info object and modify it.
+>>> o_info = i_info.copy()
+>>> o_info.update_info(bands=3, storage='float32')
+>>>
+>>> # Create the raster object
+>>> out_raster = gl.create_raster('/output_image.tif', o_info)
+>>>
+>>> # Write an array block to band 1
+>>> array2write = <some 2d array data>
+>>> out_raster.write_array(array2write, i=0, j=0, band=1)
+>>> out_raster.close()
+```
 
 Installation
-------------
+---
 #### Dependencies
 - Python third-party libraries see [**the notebooks installation guide**](https://github.com/jgrss/mpglue/tree/master/mpglue/notebooks/01_installation.pynb).
 
@@ -74,7 +83,7 @@ Installation
 
 1) Update setuptools:
 
-```
+```text
 pip install -U setuptools
 ```
 
@@ -82,25 +91,25 @@ pip install -U setuptools
 
 3) To install:
 
-```
+```text
 pip install MpGlue-<version>.tar.gz
 e.g., pip install MpGlue-0.0.1.tar.gz
 ```
 
 4) To update:
 
-```
+```text
 pip install -U MpGlue-<new version>.tar.gz
 ```
 
 5) To uninstall:
 
-```
+```text
 pip uninstall mpglue
 ```
 
 Development
------------
+---
 For questions or bugs, contact Jordan Graesser (graesser@bu.edu).
 
 
