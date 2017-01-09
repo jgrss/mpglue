@@ -795,11 +795,11 @@ class Transform(object):
 
         try:
 
-            if isinstance(source_epsg, int):
+            if isinstance(target_epsg, int):
                 target_sr.ImportFromEPSG(target_epsg)
-            elif isinstance(source_epsg, str):
+            elif isinstance(target_epsg, str):
                 # target_sr.ImportFromProj4(source_epsg)
-                target_sr.ImportFromWkt(source_epsg)
+                target_sr.ImportFromWkt(target_epsg)
 
         except:
             logger.error(gdal.GetLastErrorMsg())
@@ -983,7 +983,7 @@ class RTreeManager(object):
         self.field_dict = pickle.load(file(self.rtree_info, 'rb'))
 
     def get_intersecting_features(self, shapefile2intersect=None, envelope=None,
-                                  epsg=None, proj4=None, proj=None):
+                                  epsg=None, proj4=None, proj=None, lat_lon=None):
 
         """
         Intersects the RTree index with a shapefile or extent envelope.
@@ -1016,15 +1016,15 @@ class RTreeManager(object):
             e2w = TransformExtent(image_envelope, proj4)
             envelope = [e2w.left, e2w.right, e2w.bottom, e2w.top]
         elif isinstance(proj, str):
-            e2w = TransformExtent(image_envelope, proj)
+            e2w = TransformExtent(image_envelope, proj, to_epsg=lat_lon)
             envelope = [e2w.left, e2w.right, e2w.bottom, e2w.top]
-
-        self.grid_infos = []
 
         if rtree_installed:
             index_iter = self.rtree_index.intersection(envelope)
         else:
             index_iter = xrange(0, len(self.field_dict))
+
+        self.grid_infos = []
 
         # Intersect the base shapefile bounding box
         #   with the UTM grids.
