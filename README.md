@@ -76,7 +76,7 @@ Writing to file:
 >>> # Create the raster object
 >>> out_raster = gl.create_raster('/output_image.tif', o_info)
 >>>
->>> # Write an array block to band 1
+>>> # Write an array block to band 1.
 >>> array2write = <some 2d array data>
 >>> out_raster.write_array(array2write, i=0, j=0, band=1)
 >>> out_raster.close()
@@ -85,27 +85,46 @@ Writing to file:
 Vegetation indices:
 
 ```python
+>>> # Compute the NDVI.
 >>> gl.veg_indices('/image.tif', '/out_index.tif', 'ndvi', 'Landsat')
 >>>
+>>> # Compute multiple indices.
 >>> gl.veg_indices('/image.tif', '/out_index.tif', ['ndvi', 'evi2'], 'Landsat')
+```
+
+Land cover sampling:
+
+```python
+>>> # Sample land cover data.
+>>> gl.sample_raster('/train_samples.shp', '/image_variables.tif',
+>>>                  class_id='Id')
 ```
 
 Image classification:
 
 ```python
->>> import mpglue as gl
->>>
->>> # Initiate the classification instance
+>>> # Initiate the classification object.
 >>> cl = gl.classification()
 >>>
->>> # Load and split all of the land cover samples
+>>> # Load and split land cover samples.
 >>> cl.split_samples('/land_cover_samples.shp', perc_samp=.7)
 >>> 
->>> # Train the classification model and save to file
+>>> # Train a classification model.
 >>> cl.construct_model(classifier_info={'classifier': 'RF', 'trees': 100})
+>>>
+>>> # Print the error matrix report.
+>>> print(cl.emat.report)
 >>>
 >>> # Predict class labels.
 >>> cl.predict('/input_image.tif', '/output_map.tif')
+```
+
+Thematic accuracy:
+
+```python
+>>> # Get map accuracy.
+>>> gl.sample_raster('/test_samples.shp', '/thematic_map.tif',
+>>>                  class_id='Id', accuracy=True)
 ```
 
 Installation

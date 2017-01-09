@@ -3,6 +3,7 @@ from .vector_tools import vopen
 
 from .classification.classification import classification, classification_r
 from .classification.error_matrix import error_matrix
+from .classification.sample_raster import sample_raster
 
 from .veg_indices import veg_indices, VegIndicesEquations
 from .vrt_builder import vrt_builder
