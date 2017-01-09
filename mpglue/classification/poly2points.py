@@ -40,7 +40,7 @@ def _add_points_from_raster(out_shp, class_id, field_type, in_rst,
     # create the geometry
     pt_geom = ogr.Geometry(ogr.wkbPoint)
 
-    m_info = raster_tools.rinfo(in_rst)
+    m_info = raster_tools.ropen(in_rst)
     m_info.update_info(storage='byte')
 
     # band = m_info.datasource.GetRasterBand(1)
@@ -65,7 +65,7 @@ def _add_points_from_raster(out_shp, class_id, field_type, in_rst,
 
             n_cols = raster_tools.n_rows_cols(j, block_size_cols, m_info.cols)
 
-            block = m_info.mparray(bands2open=1,
+            block = m_info.read(bands2open=1,
                                    i=i, j=j,
                                    rows=n_rows, cols=n_cols,
                                    d_type='int16')
@@ -167,7 +167,7 @@ def poly2points(poly, out_shp, targ_img, class_id='Id', cell_size=None,
         except:
             sys.exit('ERROR!! Could not delete the output raster.')
             
-    m_info = raster_tools.rinfo(targ_img)
+    m_info = raster_tools.ropen(targ_img)
 
     m_info.update_info(storage='int16')
 
@@ -210,7 +210,7 @@ def poly2points(poly, out_shp, targ_img, class_id='Id', cell_size=None,
     m_info.close()
 
     # get vector info
-    with vector_tools.vinfo(poly) as v_info:
+    with vector_tools.vopen(poly) as v_info:
 
         _add_points_from_raster(out_shp, class_id, field_type, out_rst,
                                 no_data_value=no_data_value,

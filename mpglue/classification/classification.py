@@ -1035,8 +1035,8 @@ class EndMembers(object):
             raise NameError('The {} method is not an option.'.format(method))
 
         # open the input image
-        i_info = raster_tools.rinfo(input_image)
-        arr = i_info.mparray(bands2open=-1)
+        i_info = raster_tools.ropen(input_image)
+        arr = i_info.read(bands2open=-1)
 
         if ignore_feas:
 
@@ -1069,11 +1069,11 @@ class EndMembers(object):
 
         if isinstance(mask, str):
 
-            a_info = raster_tools.rinfo(out_img_not_masked)
-            m_info = raster_tools.rinfo(mask)
+            a_info = raster_tools.ropen(out_img_not_masked)
+            m_info = raster_tools.ropen(mask)
 
-            a_arr = a_info.mparray()
-            m_arr = m_info.mparray()
+            a_arr = a_info.read()
+            m_arr = m_info.read()
 
             a_arr[m_arr != class2keep] = 0
 
@@ -1911,9 +1911,9 @@ class Visualization(object):
         """
 
         # open the image
-        i_info = raster_tools.rinfo(image)
+        i_info = raster_tools.ropen(image)
 
-        band_arrays = [zoom(i_info.mparray(bands2open=[bd], d_type='float32'), .5) for bd in bands2vis]
+        band_arrays = [zoom(i_info.read(bands2open=[bd], d_type='float32'), .5) for bd in bands2vis]
 
         rws, cls = band_arrays[0].shape[0], band_arrays[1].shape[1]
 
@@ -3054,7 +3054,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                 # except ImportError:
                 #     raise ImportError('Orfeo tooblox needs to be installed')
 
-                v_info = vector_tools.vinfo(self.in_shapefile)
+                v_info = vector_tools.vopen(self.in_shapefile)
 
                 if v_info.shp_geom_name.lower() == 'point':
                     sys.exit('\nThe input shapefile must be a polygon.\n')
@@ -3565,7 +3565,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
             self.open_image = False
 
-            self.i_info = raster_tools.rinfo(self.input_image)
+            self.i_info = raster_tools.ropen(self.input_image)
 
             # Block record keeping.
             self.record_keeping = os.path.join(d_name, '{}_record.txt'.format(f_base))
@@ -3669,10 +3669,10 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                 if self.band_check != -1:
 
                     if self.open_image:
-                        self.i_info = raster_tools.rinfo(self.input_image)
+                        self.i_info = raster_tools.ropen(self.input_image)
                         self.open_image = False
 
-                    max_check = self.i_info.mparray(bands2open=self.band_check,
+                    max_check = self.i_info.read(bands2open=self.band_check,
                                                     i=i,
                                                     j=j,
                                                     rows=n_rows,
@@ -3684,7 +3684,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                 if not self.open_image:
 
                     # Close the image information object because it
-                    #   needs to be reopened for parallel ``mparray``.
+                    #   needs to be reopened for parallel ``read``.
                     self.i_info.close()
                     self.open_image = True
 
@@ -3712,7 +3712,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
                 # Get all the bands for the tile. The shape
                 #   of the features is (features x rows x columns).
-                features = raster_tools.mparray(image2open=self.input_image,
+                features = raster_tools.read(image2open=self.input_image,
                                                 bands2open=bands2open,
                                                 i=i, j=j,
                                                 rows=n_rows,
@@ -3895,8 +3895,8 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
             None, writes to ``masked_image``.
         """
 
-        m_info = raster_tools.rinfo(image2mask)
-        b_info = raster_tools.rinfo(background_image)
+        m_info = raster_tools.ropen(image2mask)
+        b_info = raster_tools.ropen(background_image)
 
         m_info.get_band(1)
         m_info.storage = 'byte'
@@ -3919,12 +3919,12 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
                 n_cols = self._num_rows_cols(j, block_cols, b_cols)
 
-                m_array = m_info.mparray(i=i, j=j,
+                m_array = m_info.read(i=i, j=j,
                                          rows=n_rows, cols=n_cols,
                                          d_type='byte')
 
                 # Get the background array.
-                b_array = raster_tools.mparray(i_info=b_info,
+                b_array = raster_tools.read(i_info=b_info,
                                                bands2open=background_band,
                                                i=i, j=j,
                                                rows=n_rows, cols=n_cols,
@@ -3935,7 +3935,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                 if minimum_observations > 0:
 
                     # Get the observation counts array.
-                    observation_array = raster_tools.mparray(i_info=b_info,
+                    observation_array = raster_tools.read(i_info=b_info,
                                                              bands2open=observation_band,
                                                              i=i, j=j,
                                                              rows=n_rows, cols=n_cols,
@@ -4868,7 +4868,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
             self.predict(img, out_image_temp, scale_data=scale_data, ignore_feas=ignore_feas)
 
-        i_info = raster_tools.rinfo(map_list[0])
+        i_info = raster_tools.ropen(map_list[0])
         rows, cols = i_info.rows, i_info.cols
 
         i_info.bands = 1
@@ -4877,7 +4877,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
         out_rst.get_band(1)
 
-        rst_objs = [raster_tools.rinfo(img).datasource.GetRasterBand(1) for img in map_list]
+        rst_objs = [raster_tools.ropen(img).datasource.GetRasterBand(1) for img in map_list]
 
         if rows >= 512:
             blk_size_rows = 512
@@ -5319,7 +5319,7 @@ class classification_r(classification):
             self.input_image = input_image
 
             # get the number of features
-            self.i_info = raster_tools.rinfo(input_image)
+            self.i_info = raster_tools.ropen(input_image)
             self.n_feas = self.i_info.bands
 
             # build the icases file
@@ -5364,7 +5364,7 @@ class classification_r(classification):
         else:
 
             # Open the image.
-            self.i_info = raster_tools.rinfo(input_image)
+            self.i_info = raster_tools.ropen(input_image)
 
             if self.ignore_feas:
                 bands2open = sorted([bd for bd in xrange(1, self.i_info.bands + 1) if bd not in self.ignore_feas])
@@ -5426,7 +5426,7 @@ class classification_r(classification):
 
                     n_cols = self._num_rows_cols(j, block_cols, cols)
 
-                    features = raster_tools.mparray(image2open=input_image,
+                    features = raster_tools.read(image2open=input_image,
                                                     bands2open=bands2open,
                                                     i=i, j=j,
                                                     rows=n_rows, cols=n_cols,

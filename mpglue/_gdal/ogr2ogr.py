@@ -101,7 +101,7 @@ def TermProgress( dfComplete, pszMessage, pProgressArg ):
 
     return True
 
-class TargetLayerInfo:
+class TargetLayeropen:
     def __init__(self):
         self.poDstLayer = None
         self.poCT = None
@@ -1476,7 +1476,7 @@ def SetupTargetLayer( poSrcDS, poSrcLayer, poDstDS, papszLCO, pszNewLayerName, \
     if pszZField is not None:
         iSrcZField = poSrcFDefn.GetFieldIndex(pszZField)
 
-    psInfo = TargetLayerInfo()
+    psInfo = TargetLayeropen()
     psInfo.poDstLayer = poDstLayer
     psInfo.poCT = poCT
     #psInfo.papszTransformOptions = papszTransformOptions

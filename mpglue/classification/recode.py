@@ -76,11 +76,11 @@ def recode(input_poly, input_image, output_image, recode_dict, class_id='Id'):
         except:
             raise OSError('Could not delete the output raster.')
             
-    i_info = raster_tools.rinfo(input_image)
+    i_info = raster_tools.ropen(input_image)
     i_info.update_info(storage='int16')
 
     # get vector info 
-    # with vector_tools.vinfo(input_poly) as v_info:
+    # with vector_tools.vopen(input_poly) as v_info:
     #
     #     # Check if the shapefile is UTM North or South. gdal_rasterize has trouble with UTM South
     #     if 'S' in v_info.projection.GetAttrValue('PROJCS')[-1]: # GetUTMZone()
@@ -99,7 +99,7 @@ def recode(input_poly, input_image, output_image, recode_dict, class_id='Id'):
                                       initial_value=-1,
                                       storage=i_info.storage)
 
-    v_info = raster_tools.rinfo(out_vector_image)
+    v_info = raster_tools.ropen(out_vector_image)
 
     o_info = i_info.copy()
     o_info.update_info(storage='byte')

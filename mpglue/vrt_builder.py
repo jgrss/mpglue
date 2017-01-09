@@ -83,7 +83,7 @@ class VRTBuilder(object):
 
         for im, image in enumerate(image_list):
 
-            i_info = raster_tools.rinfo(image)
+            i_info = raster_tools.ropen(image)
 
             if im == 0:
 
@@ -191,7 +191,7 @@ class VRTBuilder(object):
 
                 for image in image_list:
 
-                    i_info = raster_tools.rinfo(image)
+                    i_info = raster_tools.ropen(image)
 
                     # Check if the image is outside the current frame.
                     if i_info.outside(self):
@@ -211,7 +211,7 @@ class VRTBuilder(object):
                                 continue
 
                             i_info.close()
-                            i_info = raster_tools.rinfo(image)
+                            i_info = raster_tools.ropen(image)
 
                     __, __, x_offset, y_offset = vector_tools.get_xy_offsets(image_info=self, xy_info=i_info,
                                                                              round_offset=True, check_position=False)
@@ -329,7 +329,7 @@ class VRTBuilder(object):
         # get first image from each list
         for k, v in in_dict.iteritems():
 
-            i_info = raster_tools.rinfo(v[0])
+            i_info = raster_tools.ropen(v[0])
 
             self.band_count += i_info.bands
 

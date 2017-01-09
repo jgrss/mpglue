@@ -112,7 +112,7 @@ class RegisterDriver(object):
         self.file_format = formats[file_extension]
 
 
-class vinfo(RegisterDriver):
+class vopen(RegisterDriver):
 
     """
     Gets vector information and file pointer object.
@@ -151,7 +151,7 @@ class vinfo(RegisterDriver):
 
         RegisterDriver.__init__(self, self.file_name)
 
-        self.open()
+        self.read()
     
         self.get_info()
 
@@ -163,7 +163,7 @@ class vinfo(RegisterDriver):
         if hasattr(self, 'file_open') and self.file_open:
             self.close()
 
-    def open(self):
+    def read(self):
 
         if self.open2read:
             self.shp = ogr.Open(self.file_name, GA_ReadOnly)
@@ -303,7 +303,7 @@ def copy_vector(file_name, output_file):
         None
     """
 
-    with vinfo(file_name) as v_info:
+    with vopen(file_name) as v_info:
         v_info.copy2(output_file)
 
 
@@ -319,7 +319,7 @@ def delete_vector(file_name):
         None
     """
 
-    with vinfo(file_name) as v_info:
+    with vopen(file_name) as v_info:
         v_info.delete()
 
 
@@ -399,7 +399,7 @@ class create_vector(CreateDriver):
 
         elif isinstance(projection_from_file, str):
 
-            with vinfo(projection_from_file) as p_info:
+            with vopen(projection_from_file) as p_info:
 
                 sp_ref = osr.SpatialReference()
                 sp_ref.ImportFromWkt(p_info.projection)
@@ -685,14 +685,14 @@ def is_within(x, y, image_info):
     Args:
         x (float): The x coordinate.
         y (float): The y coordinate.
-        image_info (object): Object of ``mappy.rinfo``.
+        image_info (object): Object of ``mappy.ropen``.
 
     Returns:
         ``True`` if ``x`` and ``y`` are within ``image_info``, otherwise ``False``.
     """
 
-    if not isinstance(image_info, raster_tools.rinfo):
-        raise TypeError('`image_info` must be an instance of `rinfo`.')
+    if not isinstance(image_info, raster_tools.ropen):
+        raise TypeError('`image_info` must be an instance of `ropen`.')
 
     if not hasattr(image_info, 'left') or not hasattr(image_info, 'right') \
             or not hasattr(image_info, 'bottom') or not hasattr(image_info, 'top'):
@@ -902,7 +902,7 @@ class RTreeManager(object):
             self.rtree_index = dict()
 
         # Setup the RTree index
-        with vinfo(self.base_shapefile_) as bdy_info:
+        with vopen(self.base_shapefile_) as bdy_info:
 
             for f in xrange(0, bdy_info.n_feas):
 
@@ -932,7 +932,7 @@ class RTreeManager(object):
         if isinstance(shapefile2intersect, str):
 
             # Open the base shapefile
-            with vinfo(shapefile2intersect) as bdy_info:
+            with vopen(shapefile2intersect) as bdy_info:
 
                 bdy_feature = bdy_info.lyr.GetFeature(0)
                 bdy_geometry = bdy_feature.GetGeometryRef()
@@ -1025,7 +1025,7 @@ def difference(shapefile2cut, overlap_shapefile, output_shp):
         output_shp (str): The output shapefile.
     """
 
-    with vinfo(shapefile2cut) as cut_info, vinfo(overlap_shapefile) as over_info:
+    with vopen(shapefile2cut) as cut_info, vopen(overlap_shapefile) as over_info:
 
         cut_feature = cut_info.lyr.GetFeature(0)
         cut_geometry = cut_feature.GetGeometryRef()
@@ -1062,7 +1062,7 @@ def intersects_boundary(meta_dict, boundary_file):
         True if ``meta_dict`` coordinates intersect ``boundary_shp``, otherwise False.
     """
 
-    with vinfo(boundary_file) as bdy_info:
+    with vopen(boundary_file) as bdy_info:
 
         bdy_feature = bdy_info.lyr.GetFeature(0)
 
@@ -1172,12 +1172,12 @@ def get_xy_offsets(image_info=None, image_list=None, x=None, y=None, feature=Non
     Get coordinate offsets
 
     Args:
-        image_info (object): Object of ``mappy.rinfo``.
+        image_info (object): Object of ``mappy.ropen``.
         image_list (Optional[list]): [left, top, right, bottom, cellx, celly]. Default is [].
         x (Optional[float]): An x coordinate. Default is None.
         y (Optional[float]): A y coordinate. Default is None.
         feature (Optional[object]): Object of ``ogr.Feature``. Default is None.
-        xy_info (Optional[object]): Object of ``mappy.vinfo`` or ``mappy.rinfo``. Default is None.
+        xy_info (Optional[object]): Object of ``mappy.vopen`` or ``mappy.ropen``. Default is None.
         round_offset (Optional[bool]): Whether to round offsets. Default is False.
         check_position (Optional[bool])
 
@@ -1190,7 +1190,7 @@ def get_xy_offsets(image_info=None, image_list=None, x=None, y=None, feature=Non
         >>> # With an image and a feature object.
         >>> x, y, x_offset, y_offset = vector_tools.get_xy_offsets(image_info=i_info, feature=feature)
         >>>
-        >>> # With an image and a ``rinfo`` or ``vinfo` instance.
+        >>> # With an image and a ``ropen`` or ``vopen` instance.
         >>> x, y, x_offset, y_offset = vector_tools.get_xy_offsets(image_info=i_info, xy_info=v_info)
 
     Returns:
@@ -1209,7 +1209,7 @@ def get_xy_offsets(image_info=None, image_list=None, x=None, y=None, feature=Non
 
     # The offset is from a vector or
     #   raster information object.
-    elif isinstance(xy_info, vinfo) or isinstance(xy_info, raster_tools.rinfo):
+    elif isinstance(xy_info, vopen) or isinstance(xy_info, raster_tools.ropen):
 
         x = xy_info.left
         y = xy_info.top
@@ -1254,7 +1254,7 @@ class get_xy_coordinates(object):
         j (int): The column index position.
         rows (int): The number of rows in the array.
         cols (int): The number of columns in the array.
-        image_info (object): An instance of ``raster_tools.rinfo``.
+        image_info (object): An instance of ``raster_tools.ropen``.
     """
 
     def __init__(self, i, j, rows, cols, image_info):
@@ -1306,7 +1306,7 @@ def spatial_intersection(select_shp, intersect_shp, output_shp, epsg=None):
     """
 
     # Open the files.
-    with vinfo(select_shp, epsg=epsg) as select_info, vinfo(intersect_shp, epsg=epsg) as intersect_info:
+    with vopen(select_shp, epsg=epsg) as select_info, vopen(intersect_shp, epsg=epsg) as intersect_info:
 
         tracker_list = []
 
@@ -1416,7 +1416,7 @@ def select_and_save(file_name, out_vector, select_field=None, select_value=None,
         os.makedirs(d_name)
 
     # Open the input shapefile.
-    with vinfo(file_name, epsg=epsg) as v_info:
+    with vopen(file_name, epsg=epsg) as v_info:
 
         # Select the attribute by an expression.
         if not isinstance(expression, str):
@@ -1449,7 +1449,7 @@ def list_field_names(in_shapefile, be_quiet=False, epsg=None):
     d_name, f_name = os.path.split(in_shapefile)
 
     # Open the input shapefile.
-    with vinfo(in_shapefile, epsg=epsg) as v_info:
+    with vopen(in_shapefile, epsg=epsg) as v_info:
 
         df_fields = pd.DataFrame(columns=['Name', 'Type', 'Length'])
 
@@ -1504,7 +1504,7 @@ def buffer_vector(file_name, out_vector, distance=None, epsg=None, field_name=No
         os.makedirs(d_name)
 
     # open the input shapefile
-    with vinfo(file_name, epsg=epsg) as v_info:
+    with vopen(file_name, epsg=epsg) as v_info:
 
         if isinstance(distance, float):
             print '\nBuffering {} by {:f} distance ...'.format(f_name, distance)
@@ -1573,7 +1573,7 @@ def convex_hull(in_shp, out_shp):
         None
     """
 
-    v_info = vinfo(in_shp)
+    v_info = vopen(in_shp)
 
     # output convex hull polygon
     cv = create_vector(out_shp, projection=v_info.projection, geom_type='polygon')
@@ -1662,7 +1662,7 @@ def create_fields(v_info, field_names, field_types, field_widths):
     Creates fields in an existing vector
 
     Args:
-        v_info (object): A ``vinfo`` object.
+        v_info (object): A ``vopen`` object.
         field_names (str list): A list of field names to create.
         field_types (str list): A list of field types to create. Choices are ['real', 'float', 'int', str'].
         field_widths (int list): A list of field widths.
@@ -1673,7 +1673,7 @@ def create_fields(v_info, field_names, field_types, field_widths):
         >>> vector_tools.create_fields(v_info, ['Id'], ['int'], [5])
 
     Returns:
-        The ``vinfo`` object.
+        The ``vopen`` object.
     """
 
     type_dict = {'float': ogr.OFTReal, 'Real': ogr.OFTReal,
@@ -1747,7 +1747,7 @@ def add_fields(input_vector, output_vector=None, field_names=['x', 'y'], method=
     f_base, __ = os.path.splitext(f_name)
 
     # First open the vector file.
-    v_info = vinfo(input_vector, open2read=False, epsg=epsg)
+    v_info = vopen(input_vector, open2read=False, epsg=epsg)
 
     # Create the new id field.
     field_names_ = [v_info.lyr_def.GetFieldDefn(i).GetName() for i in xrange(0, v_info.lyr_def.GetFieldCount())]
@@ -1964,7 +1964,7 @@ def add_fields(input_vector, output_vector=None, field_names=['x', 'y'], method=
 
         # Reopen the shapefile.
         v_info.close()
-        v_info = vinfo(input_vector, open2read=False, epsg=epsg)
+        v_info = vopen(input_vector, open2read=False, epsg=epsg)
 
         # Add the class values.
         for fi, feature in enumerate(v_info.lyr):
@@ -2130,7 +2130,7 @@ def main():
 
     if args.method == 'info':
 
-        v_info = vinfo(args.input, epsg=args.epsg)
+        v_info = vopen(args.input, epsg=args.epsg)
 
         print '\nThe projection:\n'
         print v_info.projection

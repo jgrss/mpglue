@@ -59,7 +59,7 @@ except ImportError:
 old_settings = np.seterr(all='ignore')
 
 
-class SensorInfo(object):
+class Sensoropen(object):
 
     """
     A class to hold sensor names, wavelengths, and equations.
@@ -247,7 +247,7 @@ class SensorInfo(object):
                 self.sensor_indices.append(veg_index)
 
 
-class VegIndicesEquations(SensorInfo):
+class VegIndicesEquations(Sensoropen):
 
     """
     A class to compute vegetation indices
@@ -268,7 +268,7 @@ class VegIndicesEquations(SensorInfo):
         self.chunk_size = chunk_size
         self.mask_array = mask_array
 
-        SensorInfo.__init__(self)
+        Sensoropen.__init__(self)
 
         try:
             self.array_dims, self.array_rows, self.array_cols = image_array.shape
@@ -1288,13 +1288,13 @@ class VegIndicesEquations(SensorInfo):
         return np.divide(top, bottom)
 
 
-class BandHandler(SensorInfo):
+class BandHandler(Sensoropen):
 
     def __init__(self, sensor):
 
         self.sensor = sensor
 
-        SensorInfo.__init__(self)
+        Sensoropen.__init__(self)
 
     def get_band_order(self):
 
@@ -1311,7 +1311,7 @@ class BandHandler(SensorInfo):
 
         band_positions = self.get_band_positions(band_list)
 
-        return self.meta_info.mparray(bands2open=band_positions, i=self.i, j=self.j,
+        return self.meta_info.read(bands2open=band_positions, i=self.i, j=self.j,
                                       rows=self.n_rows, cols=self.n_cols, d_type='float32')
 
     def get_band_positions(self, band_list):
@@ -1340,7 +1340,7 @@ class VegIndices(BandHandler):
         self.get_band_order()
 
         # Open the image.
-        self.meta_info = raster_tools.rinfo(input_image)
+        self.meta_info = raster_tools.ropen(input_image)
 
         self.rows, self.cols = self.meta_info.rows, self.meta_info.cols
 
@@ -1476,7 +1476,7 @@ class VegIndices(BandHandler):
 
                     if isinstance(self.mask_band, int):
 
-                        mask_array = self.meta_info.mparray(bands2open=self.mask_band, i=self.i, j=self.j,
+                        mask_array = self.meta_info.read(bands2open=self.mask_band, i=self.i, j=self.j,
                                                             rows=self.n_rows, cols=self.n_cols, d_type='byte')
 
                     # Setup the vegetation index object.
@@ -1562,7 +1562,7 @@ class VegIndices(BandHandler):
 
             print '\nComputing overviews ...\n'
 
-            v_info = raster_tools.rinfo(output_image)
+            v_info = raster_tools.ropen(output_image)
             v_info.build_overviews()
             v_info.close()
 
@@ -1578,7 +1578,7 @@ def _compute_as_list(img, out_img, sensor, k, storage, no_data, chunk_size,
 
     if (len(veg_indice_list) == 1) and (veg_indice_list[0].lower() == 'all'):
 
-        si = SensorInfo()
+        si = Sensoropen()
         si.list_indice_options(sensor)
 
         veg_indice_list = si.sensor_indices
@@ -1845,7 +1845,7 @@ def main():
     parser.add_argument('-o', '--output', dest='output', help='The output image', default=None)
     parser.add_argument('--index', dest='index', help='The vegetation index to compute', default=['ndvi'], nargs='+')
     parser.add_argument('--sensor', dest='sensor', help='The input sensor', default='Landsat',
-                        choices=SensorInfo().sensors)
+                        choices=Sensoropen().sensors)
     parser.add_argument('-k', '--resample', dest='resample', help='Resample cell size', default=0., type=float)
     parser.add_argument('-s', '--storage', dest='storage', help='The storage type', default='float32')
     parser.add_argument('-n', '--no_data', dest='no_data', help='The output "no data" value', default=0, type=int)
@@ -1866,7 +1866,7 @@ def main():
 
     if args.options:
 
-        si = SensorInfo()
+        si = Sensoropen()
         si.list_indice_options(args.sensor)
 
         sys.exit("""\
@@ -1878,7 +1878,7 @@ def main():
 
     if args.band_order:
 
-        si = SensorInfo()
+        si = Sensoropen()
 
         sys.exit(si.list_expected_band_order(args.sensor))
 

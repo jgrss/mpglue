@@ -25,8 +25,8 @@ if platform.system() == 'Darwin':
     ctypes.CDLL(GDAL_LIBRARY_PATH)
 
 from .helpers import random_float, overwrite_file, check_and_create_dir, _iteration_parameters
-from .vector_tools import vinfo, get_xy_offsets, intersects_boundary
-from .errors import LenError, RinfoError
+from .vector_tools import vopen, get_xy_offsets, intersects_boundary
+from .errors import LenError, ropenError, logger
 from mpglue.veg_indices import BandHandler, VegIndicesEquations
 
 # GDAL
@@ -80,6 +80,7 @@ except:
     raise ImportError('BeautifulSoup4 must be installed to parse metadata')
 
 
+gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
 DRIVER_DICT = {'.tif': 'GTiff',
@@ -193,7 +194,7 @@ class DataChecks(object):
         Test whether the open image contains another image.
 
         Args:
-            iinfo (object): An image instance of ``rinfo`` to test.
+            iinfo (object): An image instance of ``ropen`` to test.
         """
 
         if (iinfo.left > self.left) and (iinfo.right < self.right) \
@@ -221,7 +222,7 @@ class DataChecks(object):
         Test whether the open image intersects another image.
 
         Args:
-            iinfo (object): An image instance of ``rinfo`` to test.
+            iinfo (object): An image instance of ``ropen`` to test.
         """
 
         image_intersects = False
@@ -244,10 +245,10 @@ class DataChecks(object):
         Test whether the open image falls within another image.
 
         Args:
-            iinfo (object or dict): An image instance of ``rinfo`` to test.
+            iinfo (object or dict): An image instance of ``ropen`` to test.
         """
 
-        if isinstance(iinfo, rinfo):
+        if isinstance(iinfo, ropen):
             iinfo = self._info2dict(iinfo)
 
         if (self.left > iinfo['left']) and (self.right < iinfo['right']) \
@@ -264,7 +265,7 @@ class DataChecks(object):
         Test whether the open image falls outside coordinates
 
         Args:
-            iinfo (object or dict): An image instance of ``rinfo`` to test.
+            iinfo (object or dict): An image instance of ``ropen`` to test.
         """
 
         if isinstance(iinfo, dict):
@@ -297,7 +298,7 @@ class DataChecks(object):
             background_value (Optional[int]): The background pixel value. Default is 255.
         """
 
-        cloud_array = self.mparray(bands2open=cloud_band)
+        cloud_array = self.read(bands2open=cloud_band)
 
         clear_pixels = (cloud_array == clear_value).sum()
 
@@ -438,6 +439,7 @@ class FileManager(DataChecks, RegisterDriver):
             self.file_open = True
 
         except:
+            logger.error(gdal.GetLastErrorMsg())
             print '\nCould not open {}.\n'.format(self.file_name)
             return
 
@@ -480,6 +482,7 @@ class FileManager(DataChecks, RegisterDriver):
         try:
             self.meta_dict = self.datasource.GetMetadata_Dict()
         except:
+            logger.error(gdal.GetLastErrorMsg())
             self.meta_dict = 'none'
 
         try:
@@ -517,6 +520,8 @@ class FileManager(DataChecks, RegisterDriver):
             try:
                 self.epsg = int(self.sp_ref.GetAttrValue('GEOGCS|AUTHORITY', 1))
             except:
+
+                logger.error(gdal.GetLastErrorMsg())
 
                 if 'WGS' in self.sp_ref.GetAttrValue('GEOGCS') and '84' in self.sp_ref.GetAttrValue('GEOGCS'):
                     self.epsg = 4326  # WGS 1984
@@ -567,6 +572,9 @@ class FileManager(DataChecks, RegisterDriver):
             self.block_x = self.datasource.GetRasterBand(1).GetBlockSize()[0]
             self.block_y = self.datasource.GetRasterBand(1).GetBlockSize()[1]
         except:
+
+            logger.error(gdal.GetLastErrorMsg())
+            
             self.block_x = 'none'
             self.block_y = 'none'
 
@@ -635,6 +643,7 @@ class FileManager(DataChecks, RegisterDriver):
         try:
             self.datasource.BuildOverviews(sampling_method.upper(), overviewlist=levels)
         except:
+            logger.error(gdal.GetLastErrorMsg())
             raise ValueError('\nFailed to build overviews.\n')
 
     def get_band(self, band_position):
@@ -655,6 +664,7 @@ class FileManager(DataChecks, RegisterDriver):
             self.band_open = True
 
         except:
+            logger.error(gdal.GetLastErrorMsg())
             raise ValueError('\nFailed to load the band.\n')
 
     def check_corrupted_bands(self):
@@ -699,6 +709,8 @@ class FileManager(DataChecks, RegisterDriver):
             self.band.WriteArray(array2write, j, i)
         except:
 
+            logger.error(gdal.GetLastErrorMsg())
+
             if (array2write.shape[0] > self.rows) or (array2write.shape[1] > self.cols):
                 raise ValueError('\nThe array is larger than the file size.\n')
             else:
@@ -716,12 +728,14 @@ class FileManager(DataChecks, RegisterDriver):
                 self.band.SetColorInterpretation(self.color_interpretation)
                 self.band.SetRasterColorInterpretation(self.color_interpretation)
             except:
+                logger.error(gdal.GetLastErrorMsg())
                 pass
 
             try:
                 self.band.GetStatistics(0, 1)
                 self.band.FlushCache()
             except:
+                logger.error(gdal.GetLastErrorMsg())
                 pass
 
         self.band = None
@@ -749,6 +763,7 @@ class FileManager(DataChecks, RegisterDriver):
                 try:
                     self.datasource.FlushCache()
                 except:
+                    logger.error(gdal.GetLastErrorMsg())
                     pass
 
         self.datasource = None
@@ -834,6 +849,8 @@ class FileManager(DataChecks, RegisterDriver):
             return True
 
         except:
+
+            logger.error(gdal.GetLastErrorMsg())
 
             if not use_exceptions:
                 gdal.DontUseExceptions()
@@ -1033,7 +1050,7 @@ class SentinelParser(object):
         # xmltodict
         try:
             import xmltodict
-        except:
+        except ImportError:
             raise ImportError('xmltodict must be installed to parse Sentinel data')
 
         with open(metadata) as xml_tree:
@@ -1082,7 +1099,7 @@ class SentinelParser(object):
         self.saturated = int(general_info['Product_Image_Characteristics']['Special_Values'][1]['SPECIAL_VALUE_INDEX'])
 
 
-class rinfo(FileManager, LandsatParser, SentinelParser, UpdateInfo):
+class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo):
 
     """
     Gets image information and a file pointer object.
@@ -1125,20 +1142,20 @@ class rinfo(FileManager, LandsatParser, SentinelParser, UpdateInfo):
         >>> # typical usage
         >>> import mappy as mp
         >>>
-        >>> i_info = mp.rinfo('/some_raster.tif')
-        >>> # <rinfo> has its own array instance
-        >>> array = i_info.mparray()    # opens band 1, all rows and columns
+        >>> i_info = mp.ropen('/some_raster.tif')
+        >>> # <ropen> has its own array instance
+        >>> array = i_info.read()    # opens band 1, all rows and columns
         >>> print array
         >>>
-        >>> # use the <mparray> function
+        >>> # use the <read> function
         >>> # open specific rows and columns
-        >>> array = mp.mparray(i_info, \
+        >>> array = mp.read(i_info, \
         >>>                    bands2open=[-1], \
         >>>                    i=100, j=100, \
         >>>                    rows=500, cols=500)
         >>>
         >>> # compute the NDVI (for Landsat-like band channels only)
-        >>> i_info.mparray(compute_index='ndvi')
+        >>> i_info.read(compute_index='ndvi')
         >>> print i_info.ndvi
         >>> print i_info.array.shape    # note that the image array is a 2xrowsxcolumns array
         >>> # display the NDVI
@@ -1155,17 +1172,17 @@ class rinfo(FileManager, LandsatParser, SentinelParser, UpdateInfo):
         >>>                     o_info=i_info.copy(), storage='float32')
         >>>
         >>> # create info from scratch
-        >>> i_info = mp.rinfo('create', left=, right=, top=, bottom=, \
+        >>> i_info = mp.ropen('create', left=, right=, top=, bottom=, \
         >>>                   cellY=, cellX=, bands=, storage=, projection=, \
         >>>                   rows=, cols=)
         >>>
         >>> # build overviews
-        >>> i_info = mp.rinfo('/some_raster.tif')
+        >>> i_info = mp.ropen('/some_raster.tif')
         >>> i_info.build_overviews()
         >>> i_info.close()
         >>>
         >>> # remove overviews
-        >>> i_info = mp.rinfo('/some_raster.tif', open2read=False)
+        >>> i_info = mp.ropen('/some_raster.tif', open2read=False)
         >>> i_info.remove_overviews()
         >>> i_info.close()
     """
@@ -1241,7 +1258,7 @@ class rinfo(FileManager, LandsatParser, SentinelParser, UpdateInfo):
         
         self.close_all()
 
-    def mparray(self, bands2open=1, i=0, j=0, rows=-1, cols=-1, d_type=None,
+    def read(self, bands2open=1, i=0, j=0, rows=-1, cols=-1, d_type=None,
                 compute_index='none', sensor='Landsat', sort_bands2open=True,
                 predictions=False, y=0., x=0., check_x=None, check_y=None):
 
@@ -1287,24 +1304,24 @@ class rinfo(FileManager, LandsatParser, SentinelParser, UpdateInfo):
         Examples:
             >>> import mappy as mp
             >>>
-            >>> i_info = mp.rinfo('image.tif')
+            >>> i_info = mp.ropen('image.tif')
             >>>
             >>> # Open 1 band.
-            >>> array = i_info.mparray(bands2open=1)
+            >>> array = i_info.read(bands2open=1)
             >>>
             >>> # Open multiple bands.
-            >>> array = i_info.mparray(bands2open=[1, 2, 3])
+            >>> array = i_info.read(bands2open=[1, 2, 3])
             >>> band_1 = array[0]
             >>>
             >>> # Open as a dictionary of arrays.
-            >>> bands = i_info.mparray(bands2open={'blue': 1, 'red': 2, 'nir': 4})
+            >>> bands = i_info.read(bands2open={'blue': 1, 'red': 2, 'nir': 4})
             >>> red = bands['red']
             >>>
             >>> # Index an image by pixel positions.
-            >>> array = i_info.mparray(i=1000, j=4000, rows=500, cols=500)
+            >>> array = i_info.read(i=1000, j=4000, rows=500, cols=500)
             >>>
             >>> # Index an image by map coordinates.
-            >>> array = i_info.mparray(y=1200000., x=4230000., rows=500, cols=500)
+            >>> array = i_info.read(y=1200000., x=4230000., rows=500, cols=500)
         """
 
         self.i = i
@@ -1604,7 +1621,7 @@ class rinfo(FileManager, LandsatParser, SentinelParser, UpdateInfo):
 
         Args:
             out_name (str): Output image name.
-            o_info (Optional[object]): Output image information, instance of ``rinfo``.
+            o_info (Optional[object]): Output image information, instance of ``ropen``.
                 Needed if <out_rst> not given. Default is None.
             x (Optional[int]): Column starting position. Default is 0.
             y (Optional[int]): Row starting position. Default is 0.
@@ -1800,7 +1817,7 @@ class rinfo(FileManager, LandsatParser, SentinelParser, UpdateInfo):
 
         Examples:
             >>> import mappy as mp
-            >>> i_info = mp.rinfo('image')
+            >>> i_info = mp.ropen('image')
             >>>
             >>> # Plot a discrete map with specified colors
             >>> color_map = ['#000000', '#DF7401', '#AEB404', '#0B6121', '#610B0B', '#A9D0F5',
@@ -1809,15 +1826,15 @@ class rinfo(FileManager, LandsatParser, SentinelParser, UpdateInfo):
             >>>             class_list=[0,1,2,3,4,5,6,7,8,9,10])
             >>>
             >>> # Plot the NDVI
-            >>> i_info.mparray(compute_index='ndvi')
+            >>> i_info.read(compute_index='ndvi')
             >>> i_info.show(show_which='ndvi')
             >>>
             >>> # Plot a single band array as greyscale
-            >>> i_info.mparray(bands2open=4)
+            >>> i_info.read(bands2open=4)
             >>> i_info.show(color_map='Greys')
             >>>
             >>> # Plot a 3-band array as RGB true color
-            >>> i_info.mparray(bands2open=[3, 2, 1], sort_bands2open=False)
+            >>> i_info.read(bands2open=[3, 2, 1], sort_bands2open=False)
             >>> i_info.show(band='rgb')
 
         Returns:
@@ -2006,6 +2023,7 @@ def gdal_close_band(band_object_c):
     try:
         band_object_c.FlushCache()
     except:
+        logger.error(gdal.GetLastErrorMsg())
         pass
 
     del band_object_c
@@ -2020,6 +2038,7 @@ def gdal_close_datasource(datasource_d):
     try:
         datasource_d.FlushCache()
     except:
+        logger.error(gdal.GetLastErrorMsg())
         pass
 
     del datasource_d
@@ -2154,11 +2173,11 @@ class BlockFunc(object):
 
     Args:
         func
-        image_infos (list): A list of ``rinfo`` instances.
+        image_infos (list): A list of ``ropen`` instances.
         out_image (str): The output image.
-        out_info (object): An instance of ``rinfo``.
+        out_info (object): An instance of ``ropen``.
         band_list (Optional[list]): A list of band positions. Default is [].
-        proc_info (Optional[object]): An instance of ``rinfo``. Overrides image_infos[0]. Default is None.
+        proc_info (Optional[object]): An instance of ``ropen``. Overrides image_infos[0]. Default is None.
         y_offset (Optional[list]): The row offset. Default is [0].
         x_offset (Optional[list]): The column offset. Default is [0].
         y_pad (Optional[list]): The row padding. Default is [0].
@@ -2227,9 +2246,9 @@ class BlockFunc(object):
                 self.proc_info = self.image_infos[0]
 
             for imi in xrange(0, len(self.image_infos)):
-                if not isinstance(self.image_infos[imi], rinfo):
+                if not isinstance(self.image_infos[imi], ropen):
                     if not isinstance(self.image_infos[imi], GetMinExtent):
-                        raise RinfoError('The image info list should be instances of rinfo or GetMinExtent.')
+                        raise ropenError('The image info list should be instances of ropen or GetMinExtent.')
 
         if not isinstance(self.band_list, list) and isinstance(self.band_list, int):
             self.band_list = [self.band_list] * len(self.image_infos)
@@ -2242,9 +2261,9 @@ class BlockFunc(object):
                 self.band_list = [1] * len(self.image_infos)
 
         if isinstance(out_image, str):
-            if not isinstance(self.out_info, rinfo):
+            if not isinstance(self.out_info, ropen):
                 if not isinstance(self.out_info, GetMinExtent):
-                    raise RinfoError('The output image object is not a `raster_tools` instance.')
+                    raise ropenError('The output image object is not a `raster_tools` instance.')
 
         if not isinstance(self.image_infos, list):
             raise TypeError('The image infos must be given as a list.')
@@ -2369,7 +2388,7 @@ class BlockFunc(object):
                 #
                 #     n_block += 1
 
-                image_arrays = [self.image_infos[imi].mparray(bands2open=self.band_list[imi],
+                image_arrays = [self.image_infos[imi].read(bands2open=self.band_list[imi],
                                                               i=i+self.y_offset[imi]-y_pad_minus,
                                                               j=j+self.x_offset[imi]-x_pad_minus,
                                                               rows=n_rows+y_pad_plus,
@@ -2388,7 +2407,7 @@ class BlockFunc(object):
                                         storage='byte')
 
                     # Rasterize the vector at the current block.
-                    with vinfo(self.mask_file) as v_info:
+                    with vopen(self.mask_file) as v_info:
 
                         gdal.RasterizeLayer(orw.datasource, [1], v_info.lyr, burn_values=[1])
                         block_array = orw.datasource.GetRasterBand(1).ReadAsArray(0, 0, n_cols, n_rows)
@@ -2447,7 +2466,7 @@ class BlockFunc(object):
                             'LR': [adj_right, adj_bottom]}
 
 
-def _mparray_parallel(image, image_info, bands2open, y, x, rows2open, columns2open, n_jobs, d_type, predictions):
+def _read_parallel(image, image_info, bands2open, y, x, rows2open, columns2open, n_jobs, d_type, predictions):
 
     """
     Opens image bands into arrays using multiple processes
@@ -2497,7 +2516,7 @@ def _mparray_parallel(image, image_info, bands2open, y, x, rows2open, columns2op
         return np.array(band_arrays, dtype=d_type).reshape(len(bands2open), rows2open, columns2open)
 
 
-def mparray(image2open=None, i_info=None, bands2open=1, i=0, j=0,
+def read(image2open=None, i_info=None, bands2open=1, i=0, j=0,
             rows=-1, cols=-1, d_type=None, n_jobs=0,
             predictions=False, sort_bands2open=True, y=0., x=0.):
 
@@ -2506,7 +2525,7 @@ def mparray(image2open=None, i_info=None, bands2open=1, i=0, j=0,
 
     Args:
         image2open (Optional[str]): An image to open. Default is None.
-        i_info (Optional[object]): An instance of ``rinfo``. Default is None
+        i_info (Optional[object]): An instance of ``ropen``. Default is None
         bands2open (Optional[int list or int]: Band position to open or list of bands to open. Default is 1.
             Examples:
                 bands2open = 1        (open band 1)
@@ -2533,29 +2552,29 @@ def mparray(image2open=None, i_info=None, bands2open=1, i=0, j=0,
     Examples:
         >>> import mappy as mp
         >>>
-        >>> array = mp.mparray('image.tif')
+        >>> array = mp.read('image.tif')
         >>>
-        >>> array = mp.mparray('image.tif', bands2open=[1, 2, 3])
+        >>> array = mp.read('image.tif', bands2open=[1, 2, 3])
         >>> print(a.shape)
         >>>
-        >>> array = mp.mparray('image.tif', bands2open={'green': 3, 'nir': 4})
+        >>> array = mp.read('image.tif', bands2open={'green': 3, 'nir': 4})
         >>> print(len(array))
         >>> print(array['nir'].shape)
     """
 
-    if not isinstance(i_info, rinfo) and not isinstance(image2open, str):
+    if not isinstance(i_info, ropen) and not isinstance(image2open, str):
         raise NameError('\nEither i_info or image2open must be declared.\n')
-    elif isinstance(i_info, rinfo) and isinstance(image2open, str):
+    elif isinstance(i_info, ropen) and isinstance(image2open, str):
         raise NameError('\nChoose either i_info or image2open, but not both.\n')
-    elif not isinstance(i_info, rinfo) and isinstance(image2open, str):
-        i_info = rinfo(image2open)
+    elif not isinstance(i_info, ropen) and isinstance(image2open, str):
+        i_info = ropen(image2open)
 
     if (n_jobs == 0) and not predictions:
 
         kwargs = dict(bands2open=bands2open, i=i, j=j, rows=rows, cols=cols, d_type=d_type,
                       sort_bands2open=sort_bands2open, y=y, x=x)
 
-        return i_info.mparray(**kwargs)
+        return i_info.read(**kwargs)
 
     else:
 
@@ -2628,7 +2647,7 @@ def mparray(image2open=None, i_info=None, bands2open=1, i=0, j=0,
             #     i_info.close()
 
         else:
-            return _mparray_parallel(image2open, i_info, bands2open, i, j, rows, cols, n_jobs, d_type, predictions)
+            return _read_parallel(image2open, i_info, bands2open, i, j, rows, cols, n_jobs, d_type, predictions)
 
 
 def build_vrt(file_list, output_image, cell_size=0., **kwargs):
@@ -2766,7 +2785,7 @@ class create_raster(CreateDriver, FileManager):
 
     Args:
         out_name (str): Output raster name.
-        o_info (object): Instance of ``rinfo``.
+        o_info (object): Instance of ``ropen``.
         compress (Optional[str]): The type of compression to use. Default is 'lzw'.
             Choices are ['none' 'lzw', 'packbits', 'deflate'].
         bigtiff (Optional[str]): How to manage large TIFF files. Default is 'no'.
@@ -3037,7 +3056,7 @@ def write2raster(out_arr, out_name, o_info=None, x=0, y=0, out_rst=None, write2b
     Examples:
         >>> # Example
         >>> import mappy as mp
-        >>> i_info = mp.rinfo('/in_raster.tif')
+        >>> i_info = mp.ropen('/in_raster.tif')
         >>> out_array = np.random.randn(3, 100, 100).astype(np.float32)
         >>> mp.write2raster(out_array, '/out_name.tif', o_info=copy(i_info),
         >>>                 flush_final=True)
@@ -3153,8 +3172,8 @@ class GetMinExtent(UpdateInfo):
 
     """
     Args:
-        info1 (rinfo or GetMinExtent object)
-        info2 (rinfo or GetMinExtent object)
+        info1 (ropen or GetMinExtent object)
+        info2 (ropen or GetMinExtent object)
 
     Attributes:
         Inherits from ``info1``.
@@ -3162,16 +3181,16 @@ class GetMinExtent(UpdateInfo):
 
     def __init__(self, info1, info2):
 
-        if not isinstance(info1, rinfo):
+        if not isinstance(info1, ropen):
             if not isinstance(info1, GetMinExtent):
                 if not isinstance(info1, ImageInfo):
-                    raise TypeError('The first info argument must be an instance of rinfo, GetMinExtent, or ImageInfo.')
+                    raise TypeError('The first info argument must be an instance of ropen, GetMinExtent, or ImageInfo.')
 
-        if not isinstance(info2, rinfo):
+        if not isinstance(info2, ropen):
             if not isinstance(info2, GetMinExtent):
                 if not isinstance(info2, ImageInfo):
-                    if not isinstance(info2, vinfo):
-                        raise TypeError('The second info argument must be an instance of rinfo, vinfo, GetMinExtent, or ImageInfo.')
+                    if not isinstance(info2, vopen):
+                        raise TypeError('The second info argument must be an instance of ropen, vopen, GetMinExtent, or ImageInfo.')
 
         # Pass the image info properties.
         attributes = inspect.getmembers(info1, lambda ia: not (inspect.isroutine(ia)))
@@ -3266,7 +3285,7 @@ def get_min_extent(image1, image2):
         List as [left, right, top, bottom].
     """
 
-    if isinstance(image1, rinfo):
+    if isinstance(image1, ropen):
         left1 = image1.left
         top1 = image1.top
         right1 = image1.right
@@ -3277,7 +3296,7 @@ def get_min_extent(image1, image2):
         right1 = image1['right']
         bottom1 = image1['bottom']
 
-    if isinstance(image2, rinfo):
+    if isinstance(image2, ropen):
         left2 = image2.left
         top2 = image2.top
         right2 = image2.right
@@ -3536,7 +3555,7 @@ def pixel_stats(input_image, output_image, stat='mean', bands2process=-1,
     if stat not in ['min', 'max', 'mean', 'median', 'mode', 'var', 'std', 'cv', 'sum']:
         raise NameError('{} is not an option.'.format(stat))
 
-    i_info = rinfo(input_image)
+    i_info = ropen(input_image)
 
     info_list = [input_image]
 
@@ -3658,7 +3677,7 @@ def histogram_matching(image2adjust, reference_list, output_image, band2match=-1
     """
 
     # Open the images
-    match_info = rinfo(image2adjust)
+    match_info = ropen(image2adjust)
 
     if band2match == -1:
         bands = range(1, match_info.bands+1)
@@ -3680,12 +3699,12 @@ def histogram_matching(image2adjust, reference_list, output_image, band2match=-1
     # Match each band.
     for bi, band in enumerate(bands):
 
-        match_array = match_info.mparray(bands2open=band)
+        match_array = match_info.read(bands2open=band)
 
         for ri, reference_image in enumerate(reference_list):
 
-            ref_info = rinfo(reference_image)
-            ref_array = ref_info.mparray(bands2open=band)
+            ref_info = ropen(reference_image)
+            ref_array = ref_info.read(bands2open=band)
 
             if ri == 0:
                 h2 = fill_ref_histogram(ref_array, n_bins)
@@ -3775,8 +3794,8 @@ def quick_plot(image_arrays, titles=['Field estimates'], colorbar_labels=['ha'],
         >>> import mappy as mp
         >>> from mappy import raster_tools
         >>>
-        >>> i_info = mp.rinfo('/image.tif')
-        >>> arr = mp.mparray(i_info)
+        >>> i_info = mp.ropen('/image.tif')
+        >>> arr = mp.read(i_info)
         >>> raster_tools.quick_plot([arr], colorbar_labels=['Hectares'], color_maps=['gist_earth'])
     """
 
@@ -4396,11 +4415,11 @@ def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None, storag
         None, writes to ``out_raster``.
     """
 
-    v_info = vinfo(in_vector)
+    v_info = vopen(in_vector)
 
     if match_raster:
 
-        o_info = rinfo(match_raster)
+        o_info = ropen(match_raster)
 
     elif kwargs:
 
@@ -4443,7 +4462,7 @@ def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None, storag
             elif (kwargs['right'] < 0) and (kwargs['left'] < 0):
                 kwargs['cols'] = int((abs(kwargs['left']) - abs(kwargs['right'])) / cell_size)
 
-        o_info = rinfo('create', left=kwargs['left'], right=kwargs['right'], top=kwargs['top'],
+        o_info = ropen('create', left=kwargs['left'], right=kwargs['right'], top=kwargs['top'],
                        bottom=kwargs['bottom'], projection=kwargs['projection'], storage=storage, bands=1,
                        cellY=cell_size, cellX=-cell_size, rows=kwargs['rows'], cols=kwargs['cols'])
 
@@ -4456,7 +4475,7 @@ def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None, storag
         rows = abs(int((abs(v_info.top) - abs(v_info.bottom)) / cell_size))
         cols = abs(int((abs(v_info.left) - abs(v_info.right)) / cell_size))
 
-        o_info = rinfo('create', left=v_info.left, right=v_info.right, top=v_info.top, bottom=v_info.bottom,
+        o_info = ropen('create', left=v_info.left, right=v_info.right, top=v_info.top, bottom=v_info.bottom,
                        proj=v_info.projection, storage=storage, bands=1, cellY=cell_size, cellX=-cell_size,
                        rows=rows, cols=cols)
 
@@ -4515,10 +4534,10 @@ def batch_manage_overviews(image_directory, build=True, image_extensions=['tif']
     for image in images_filtered:
 
         if build:
-            info = rinfo('{}/{}'.format(image_directory, image))
+            info = ropen('{}/{}'.format(image_directory, image))
             info.build_overviews()
         else:
-            info = rinfo('{}/{}'.format(image_directory, image), open2read=False)
+            info = ropen('{}/{}'.format(image_directory, image), open2read=False)
             info.remove_overviews()
 
         info.close()
@@ -4605,7 +4624,7 @@ def main():
 
     if args.method == 'info':
 
-        i_info = rinfo(args.input)
+        i_info = ropen(args.input)
 
         print '\nThe projection:\n'
         print i_info.projection
