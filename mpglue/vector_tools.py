@@ -1001,10 +1001,10 @@ class RTreeManager(object):
         # Transform the points from UTM to WGS84
         if isinstance(epsg, int):
             e2w = TransformExtent(image_envelope, epsg)
+            envelope = [e2w.left, e2w.right, e2w.bottom, e2w.top]
         elif isinstance(proj4, str):
             e2w = TransformExtent(image_envelope, proj4)
-
-        envelope = [e2w.left, e2w.right, e2w.bottom, e2w.top]
+            envelope = [e2w.left, e2w.right, e2w.bottom, e2w.top]
 
         self.grid_infos = []
 
