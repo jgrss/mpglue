@@ -308,10 +308,12 @@ def copy_vector(file_name, output_file):
         None
     """
 
-    with vopen(file_name) as v_info:
-        v_info.copy2(output_file)
+    if os.path.isfile(file_name):
 
-    v_info = None
+        with vopen(file_name) as v_info:
+            v_info.copy2(output_file)
+
+        v_info = None
 
 
 def delete_vector(file_name):
@@ -326,10 +328,12 @@ def delete_vector(file_name):
         None
     """
 
-    with vopen(file_name) as v_info:
-        v_info.delete()
+    if os.path.isfile(file_name):
 
-    v_info = None
+        with vopen(file_name) as v_info:
+            v_info.delete()
+
+        v_info = None
 
 
 class CreateDriver(RegisterDriver):
@@ -783,6 +787,10 @@ class Transform(object):
             logger.error(gdal.GetLastErrorMsg())
             print('EPSG:{:d}'.format(target_epsg))
             raise ValueError('The target EPSG code could not be read.')
+
+        print source_epsg, target_epsg
+        print
+        print
 
         try:
             coord_trans = osr.CoordinateTransformation(source_sr, target_sr)

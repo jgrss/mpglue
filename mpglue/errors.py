@@ -25,4 +25,4 @@ class ArrayOffsetError(TypeError):
 
 
 class TransformError(ValueError):
-    """Raised when coordinates cannot be transfomed via ogr"""
+    """Raised when coordinates cannot be transformed via ogr"""
