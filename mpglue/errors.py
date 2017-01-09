@@ -5,7 +5,9 @@ _formatter = logging.Formatter(_FORMAT, '%H:%M:%S')
 _handler = logging.StreamHandler()
 _handler.setFormatter(_formatter)
 
-logger = logging.getLogger('mpglue')
+logging.basicConfig(filename='mpglue.log', filemode='w', level=logging.DEBUG)
+
+logger = logging.getLogger(__name__)
 logger.addHandler(_handler)
 logger.setLevel(logging.INFO)
 

@@ -1562,10 +1562,8 @@ class VegIndices(BandHandler):
 
             print '\nComputing overviews ...\n'
 
-            v_info = raster_tools.ropen(output_image)
-
-            v_info.build_overviews()
-            v_info.close()
+            with raster_tools.ropen(output_image) as v_info:
+                v_info.build_overviews()
 
         self.meta_info.close()
         o_info.close()

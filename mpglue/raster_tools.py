@@ -722,19 +722,21 @@ class FileManager(DataChecks, RegisterDriver):
         Closes a band object
         """
 
-        if hasattr(self, 'band'):
+        if hasattr(self, 'band') and self.band_open:
 
-            try:
-                self.band.SetColorInterpretation(self.color_interpretation)
-                self.band.SetRasterColorInterpretation(self.color_interpretation)
-            except:
-                logger.error(gdal.GetLastErrorMsg())
-                pass
+            # try:
+            #     self.band.SetColorInterpretation(self.color_interpretation)
+            #     self.band.SetRasterColorInterpretation(self.color_interpretation)
+            # except:
+            #     logger.warning('The band color could not be set.')
+            #     logger.error(gdal.GetLastErrorMsg())
+            #     pass
 
             try:
                 self.band.GetStatistics(0, 1)
                 self.band.FlushCache()
             except:
+                logger.warning('The band statistics could not be flushed.')
                 logger.error(gdal.GetLastErrorMsg())
                 pass
 
@@ -763,6 +765,7 @@ class FileManager(DataChecks, RegisterDriver):
                 try:
                     self.datasource.FlushCache()
                 except:
+                    logger.warning('The dataset could not be flushed.')
                     logger.error(gdal.GetLastErrorMsg())
                     pass
 
@@ -1960,12 +1963,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo):
         return self
 
     def __exit__(self, type, value, traceback):
-
-        if hasattr(self, 'band_open') and self.band_open:
-            self.close_band()
-
-        if hasattr(self, 'file_open') and self.file_open:
-            self.close_file()
+        self.close()
 
     def exit(self):
         self.close()
