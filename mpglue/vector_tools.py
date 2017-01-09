@@ -771,26 +771,31 @@ class Transform(object):
         self.y = y
 
         source_sr = osr.SpatialReference()
+        target_sr = osr.SpatialReference()
 
         try:
-            source_sr.ImportFromEPSG(source_epsg)
+
+            if isinstance(source_epsg, int):
+                source_sr.ImportFromEPSG(source_epsg)
+            elif isinstance(source_epsg, str):
+                source_sr.ImportFromProj4(source_epsg)
+
         except:
             logger.error(gdal.GetLastErrorMsg())
             print('EPSG:{:d}'.format(source_epsg))
             raise ValueError('The source EPSG code could not be read.')
 
-        target_sr = osr.SpatialReference()
-
         try:
-            target_sr.ImportFromEPSG(target_epsg)
+
+            if isinstance(source_epsg, int):
+                target_sr.ImportFromEPSG(target_epsg)
+            elif isinstance(source_epsg, str):
+                target_sr.ImportFromProj4(source_epsg)
+
         except:
             logger.error(gdal.GetLastErrorMsg())
             print('EPSG:{:d}'.format(target_epsg))
             raise ValueError('The target EPSG code could not be read.')
-
-        print source_epsg, target_epsg
-        print
-        print
 
         try:
             coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
@@ -968,7 +973,7 @@ class RTreeManager(object):
         self.rtree_info = '{}/utilities/sentinel/utm_grid_info.txt'.format(MAIN_PATH.replace('mpglue', 'mappy'))
         self.field_dict = pickle.load(file(self.rtree_info, 'rb'))
 
-    def get_intersecting_features(self, shapefile2intersect=None, envelope=None, epsg=None):
+    def get_intersecting_features(self, shapefile2intersect=None, envelope=None, epsg=None, proj4=None):
 
         """
         Intersects the RTree index with a shapefile or extent envelope.
@@ -988,17 +993,18 @@ class RTreeManager(object):
             # left, right, bottom, top
             envelope = [bdy_envelope[0], bdy_envelope[1], bdy_envelope[2], bdy_envelope[3]]
 
+        image_envelope = dict(left=envelope[0],
+                              right=envelope[1],
+                              bottom=envelope[2],
+                              top=envelope[3])
+
         # Transform the points from UTM to WGS84
         if isinstance(epsg, int):
-
-            image_envelope = dict(left=envelope[0],
-                                  right=envelope[1],
-                                  bottom=envelope[2],
-                                  top=envelope[3])
-
             e2w = TransformExtent(image_envelope, epsg)
+        elif isinstance(proj4, str):
+            e2w = TransformExtent(image_envelope, proj4)
 
-            envelope = [e2w.left, e2w.right, e2w.bottom, e2w.top]
+        envelope = [e2w.left, e2w.right, e2w.bottom, e2w.top]
 
         self.grid_infos = []
 
