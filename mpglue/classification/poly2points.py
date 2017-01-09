@@ -116,6 +116,7 @@ def _add_points_from_raster(out_shp, class_id, field_type, in_rst,
 
     # band = None
     m_info.close()
+    m_info = None
 
     pt_geom.Destroy()
     mpc.close()
@@ -209,6 +210,7 @@ def poly2points(poly, out_shp, targ_img, class_id='Id', cell_size=None,
     # subprocess.call(com, shell=True)
 
     m_info.close()
+    m_info = None
 
     # get vector info
     with vector_tools.vopen(poly) as v_info:

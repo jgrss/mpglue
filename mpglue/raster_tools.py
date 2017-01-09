@@ -3030,7 +3030,7 @@ class create_raster(CreateDriver, FileManager):
         return self
 
     def __exit__(self, type, value, traceback):
-        self.close_band()
+        self.close_all()
 
 
 def write2raster(out_arr, out_name, o_info=None, x=0, y=0, out_rst=None, write2bands=[], compress='lzw',
@@ -3560,42 +3560,44 @@ def pixel_stats(input_image, output_image, stat='mean', bands2process=-1,
     if stat not in ['min', 'max', 'mean', 'median', 'mode', 'var', 'std', 'cv', 'sum']:
         raise NameError('{} is not an option.'.format(stat))
 
-    i_info = ropen(input_image)
+    with ropen(input_image) as i_info:
 
-    info_list = [input_image]
+        info_list = [input_image]
 
-    if isinstance(bands2process, list):
-        bands2process = [bands2process]
-    elif isinstance(bands2process, int):
-
-        if bands2process == -1:
-            bands2process = [range(1, i_info.bands+1)]
-        else:
+        if isinstance(bands2process, list):
             bands2process = [bands2process]
+        elif isinstance(bands2process, int):
 
-    if i_info.bands <= 1:
-        raise ValueError('The input image only has {:d} band. It should have at least 2.'.format(i_info.bands))
+            if bands2process == -1:
+                bands2process = [range(1, i_info.bands+1)]
+            else:
+                bands2process = [bands2process]
 
-    # Copy the input information.
-    o_info = i_info.copy()
-    o_info.update_info(bands=1, storage=out_storage)
+        if i_info.bands <= 1:
+            raise ValueError('The input image only has {:d} band. It should have at least 2.'.format(i_info.bands))
 
-    stats_functions = dict(nanmean=bn.nanmean, nanmedian=bn.nanmedian, nanvar=bn.nanvar,
-                           nanstd=bn.nanstd, nanmin=bn.nanmin, nanmax=bn.nanmax,
-                           nansum=bn.nansum, median=np.median, mode=sci_mode)
+        # Copy the input information.
+        o_info = i_info.copy()
+        o_info.update_info(bands=1, storage=out_storage)
 
-    params = dict(ignore_value=ignore_value, stat=stat,
-                  stats_functions=stats_functions, set_below=set_below,
-                  set_above=set_above, set_common=set_common,
-                  no_data_value=no_data_value)
+        stats_functions = dict(nanmean=bn.nanmean, nanmedian=bn.nanmedian, nanvar=bn.nanvar,
+                               nanstd=bn.nanstd, nanmin=bn.nanmin, nanmax=bn.nanmax,
+                               nansum=bn.nansum, median=np.median, mode=sci_mode)
 
-    bp = BlockFunc(stats_func, info_list, output_image, o_info,
-                   proc_info=i_info,
-                   print_statement='\nGetting pixel stats for {} ...\n'.format(input_image),
-                   d_type='float32', be_quiet=be_quiet, band_list=bands2process,
-                   n_jobs=n_jobs, block_rows=block_rows, block_cols=block_cols, **params)
+        params = dict(ignore_value=ignore_value, stat=stat,
+                      stats_functions=stats_functions, set_below=set_below,
+                      set_above=set_above, set_common=set_common,
+                      no_data_value=no_data_value)
 
-    bp.run()
+        bp = BlockFunc(stats_func, info_list, output_image, o_info,
+                       proc_info=i_info,
+                       print_statement='\nGetting pixel stats for {} ...\n'.format(input_image),
+                       d_type='float32', be_quiet=be_quiet, band_list=bands2process,
+                       n_jobs=n_jobs, block_rows=block_rows, block_cols=block_cols, **params)
+
+        bp.run()
+
+    i_info = None
 
 
 # def hist_equalization(img, n_bins=256):
@@ -3682,58 +3684,53 @@ def histogram_matching(image2adjust, reference_list, output_image, band2match=-1
     """
 
     # Open the images
-    match_info = ropen(image2adjust)
+    with ropen(image2adjust) as match_info:
 
-    if band2match == -1:
-        bands = range(1, match_info.bands+1)
-    else:
-        bands = [band2match]
+        if band2match == -1:
+            bands = range(1, match_info.bands+1)
+        else:
+            bands = [band2match]
 
-    # Copy the input information.
-    o_info = match_info.copy()
-    o_info.bands = len(bands)
+        # Copy the input information.
+        o_info = match_info.copy()
+        o_info.bands = len(bands)
 
-    if overwrite:
-        overwrite_file(output_image)
+        if overwrite:
+            overwrite_file(output_image)
 
-    # Create the output.
-    out_rst = create_raster(output_image, o_info)
+        # Create the output.
+        with create_raster(output_image, o_info) as out_rst:
 
-    color_list = ['r', 'g', 'b', 'o', 'c', 'k', 'y']
+            color_list = ['r', 'g', 'b', 'o', 'c', 'k', 'y']
 
-    # Match each band.
-    for bi, band in enumerate(bands):
+            # Match each band.
+            for bi, band in enumerate(bands):
 
-        match_array = match_info.read(bands2open=band)
+                match_array = match_info.read(bands2open=band)
 
-        for ri, reference_image in enumerate(reference_list):
+                for ri, reference_image in enumerate(reference_list):
 
-            ref_info = ropen(reference_image)
+                    with ropen(reference_image) as ref_info:
+                        ref_array = ref_info.read(bands2open=band)
 
-            ref_array = ref_info.read(bands2open=band)
+                    ref_info = None
 
-            if ri == 0:
-                h2 = fill_ref_histogram(ref_array, n_bins)
-            else:
-                h2 += fill_ref_histogram(ref_array, n_bins)
+                    if ri == 0:
+                        h2 = fill_ref_histogram(ref_array, n_bins)
+                    else:
+                        h2 += fill_ref_histogram(ref_array, n_bins)
 
-        adjusted_array, h1 = match_histograms(match_array, h2, n_bins)
+                adjusted_array, h1 = match_histograms(match_array, h2, n_bins)
 
-        out_rst.write_array(adjusted_array, band=band)
+                out_rst.write_array(adjusted_array, band=band)
 
-        out_rst.close_band()
+                out_rst.close_band()
 
-        if vis_hist:
-            plt.plot(range(len(h1+1)), [0]+h1, color=color_list[bi], linestyle='-')
-            plt.plot(range(len(h2+1)), [0]+h2, color=color_list[bi], linestyle='--')
+                if vis_hist:
+                    plt.plot(range(len(h1+1)), [0]+h1, color=color_list[bi], linestyle='-')
+                    plt.plot(range(len(h2+1)), [0]+h2, color=color_list[bi], linestyle='--')
 
-    # Close the input image.
-    ref_info.close()
-    match_info.close()
-
-    # Close the output drivers.
-    out_rst.close_all()
-
+    match_info = None
     out_rst = None
 
     if vis_hist:
@@ -4423,11 +4420,7 @@ def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None, storag
 
     v_info = vopen(in_vector)
 
-    if match_raster:
-
-        o_info = ropen(match_raster)
-
-    elif kwargs:
+    if kwargs:
 
         if not isinstance(cell_size, float):
             raise ValueError('The cell size must be given.')
@@ -4468,9 +4461,9 @@ def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None, storag
             elif (kwargs['right'] < 0) and (kwargs['left'] < 0):
                 kwargs['cols'] = int((abs(kwargs['left']) - abs(kwargs['right'])) / cell_size)
 
-        o_info = ropen('create', left=kwargs['left'], right=kwargs['right'], top=kwargs['top'],
-                       bottom=kwargs['bottom'], projection=kwargs['projection'], storage=storage, bands=1,
-                       cellY=cell_size, cellX=-cell_size, rows=kwargs['rows'], cols=kwargs['cols'])
+        create_dict = dict(left=kwargs['left'], right=kwargs['right'], top=kwargs['top'],
+                           bottom=kwargs['bottom'], projection=kwargs['projection'], storage=storage, bands=1,
+                           cellY=cell_size, cellX=-cell_size, rows=kwargs['rows'], cols=kwargs['cols'])
 
     else:
 
@@ -4481,14 +4474,33 @@ def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None, storag
         rows = abs(int((abs(v_info.top) - abs(v_info.bottom)) / cell_size))
         cols = abs(int((abs(v_info.left) - abs(v_info.right)) / cell_size))
 
-        o_info = ropen('create', left=v_info.left, right=v_info.right, top=v_info.top, bottom=v_info.bottom,
-                       proj=v_info.projection, storage=storage, bands=1, cellY=cell_size, cellX=-cell_size,
-                       rows=rows, cols=cols)
+        create_dict = dict(left=v_info.left, right=v_info.right, top=v_info.top, bottom=v_info.bottom,
+                           proj=v_info.projection, storage=storage, bands=1, cellY=cell_size, cellX=-cell_size,
+                           rows=rows, cols=cols)
 
-    orw = create_raster(out_raster, o_info, bigtiff=bigtiff, in_memory=in_memory)
+    if match_raster and not kwargs:
 
-    orw.get_band(1)
-    orw.fill(initial_value)
+        with ropen(match_raster) as o_info:
+
+            with create_raster(out_raster, o_info, bigtiff=bigtiff, in_memory=in_memory) as orw:
+
+                orw.get_band(1)
+                orw.fill(initial_value)
+
+            orw = None
+
+    else:
+
+        with ropen('create', **create_dict) as o_info:
+
+            with create_raster(out_raster, o_info, bigtiff=bigtiff, in_memory=in_memory) as orw:
+
+                orw.get_band(1)
+                orw.fill(initial_value)
+
+            orw = None
+
+    o_info = None
 
     # raster dataset, band(s) to rasterize, vector layer to rasterize,
     # burn a specific value, or values, matching the bands :: burn_values=[100]

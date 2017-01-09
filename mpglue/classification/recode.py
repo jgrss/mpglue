@@ -76,41 +76,46 @@ def recode(input_poly, input_image, output_image, recode_dict, class_id='Id'):
         except:
             raise OSError('Could not delete the output raster.')
 
-    i_info = raster_tools.ropen(input_image)
+    with raster_tools.ropen(input_image) as i_info:
 
-    i_info.update_info(storage='int16')
+        i_info.update_info(storage='int16')
 
-    # get vector info 
-    # with vector_tools.vopen(input_poly) as v_info:
-    #
-    #     # Check if the shapefile is UTM North or South. gdal_rasterize has trouble with UTM South
-    #     if 'S' in v_info.projection.GetAttrValue('PROJCS')[-1]: # GetUTMZone()
-    #         raise ValueError('\nThe shapefile should be projected to UTM North (even for the Southern Hemisphere).\n')
+        # get vector info
+        # with vector_tools.vopen(input_poly) as v_info:
+        #
+        #     # Check if the shapefile is UTM North or South. gdal_rasterize has trouble with UTM South
+        #     if 'S' in v_info.projection.GetAttrValue('PROJCS')[-1]: # GetUTMZone()
+        #         raise ValueError('\nThe shapefile should be projected to UTM North (even for the Southern Hemisphere).\n')
 
-    if not os.path.isfile(out_vector_image):
-    
-        print '\nRasterizing {} ...\n'.format(f_name)
+        if not os.path.isfile(out_vector_image):
 
-        raster_tools.rasterize_vector(input_poly, out_vector_image,
-                                      burn_id=class_id,
-                                      cell_size=i_info.cellY,
-                                      top=i_info.top, bottom=i_info.bottom,
-                                      left=i_info.left, right=i_info.right,
-                                      projection=i_info.projection,
-                                      initial_value=-1,
-                                      storage=i_info.storage)
+            print '\nRasterizing {} ...\n'.format(f_name)
 
-    v_info = raster_tools.ropen(out_vector_image)
+            raster_tools.rasterize_vector(input_poly, out_vector_image,
+                                          burn_id=class_id,
+                                          cell_size=i_info.cellY,
+                                          top=i_info.top, bottom=i_info.bottom,
+                                          left=i_info.left, right=i_info.right,
+                                          projection=i_info.projection,
+                                          initial_value=-1,
+                                          storage=i_info.storage)
 
-    o_info = i_info.copy()
-    o_info.update_info(storage='byte')
+        with raster_tools.ropen(out_vector_image) as v_info:
 
-    bp = raster_tools.BlockFunc(recode_func, [i_info, v_info], output_image, o_info,
-                                y_offset=[0, 0], x_offset=[0, 0],
-                                print_statement='\nRecoding {} ...\n'.format(input_image),
-                                recode_dict=recode_dict)
+            o_info = i_info.copy()
+            o_info.update_info(storage='byte')
 
-    bp.run()
+            bp = raster_tools.BlockFunc(recode_func, [i_info, v_info], output_image, o_info,
+                                        y_offset=[0, 0], x_offset=[0, 0],
+                                        print_statement='\nRecoding {} ...\n'.format(input_image),
+                                        recode_dict=recode_dict)
+
+            bp.run()
+
+        v_info = None
+        o_info = None
+
+    i_info = None
 
     if os.path.isfile(out_vector_image):
 

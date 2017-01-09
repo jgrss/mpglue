@@ -3894,58 +3894,57 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
             None, writes to ``masked_image``.
         """
 
-        m_info = raster_tools.ropen(image2mask)
-        b_info = raster_tools.ropen(background_image)
+        with raster_tools.ropen(image2mask) as m_info, raster_tools.ropen(background_image) as b_info:
 
-        m_info.get_band(1)
-        m_info.storage = 'byte'
+            m_info.get_band(1)
+            m_info.storage = 'byte'
 
-        out_rst_object = raster_tools.create_raster(masked_image, m_info, compress='none', tile=False)
+            out_rst_object = raster_tools.create_raster(masked_image, m_info, compress='none', tile=False)
 
-        out_rst_object.get_band(1)
+            out_rst_object.get_band(1)
 
-        b_rows, b_cols = m_info.rows, m_info.cols
+            b_rows, b_cols = m_info.rows, m_info.cols
 
-        block_rows, block_cols = raster_tools.block_dimensions(b_rows, b_cols,
-                                                               row_block_size=self.row_block_size,
-                                                               col_block_size=self.col_block_size)
+            block_rows, block_cols = raster_tools.block_dimensions(b_rows, b_cols,
+                                                                   row_block_size=self.row_block_size,
+                                                                   col_block_size=self.col_block_size)
 
-        for i in xrange(0, b_rows, block_rows):
+            for i in xrange(0, b_rows, block_rows):
 
-            n_rows = self._num_rows_cols(i, block_rows, b_rows)
+                n_rows = self._num_rows_cols(i, block_rows, b_rows)
 
-            for j in xrange(0, b_cols, block_cols):
+                for j in xrange(0, b_cols, block_cols):
 
-                n_cols = self._num_rows_cols(j, block_cols, b_cols)
+                    n_cols = self._num_rows_cols(j, block_cols, b_cols)
 
-                m_array = m_info.read(i=i, j=j,
-                                         rows=n_rows, cols=n_cols,
-                                         d_type='byte')
+                    m_array = m_info.read(i=i, j=j,
+                                          rows=n_rows, cols=n_cols,
+                                          d_type='byte')
 
-                # Get the background array.
-                b_array = raster_tools.read(i_info=b_info,
-                                               bands2open=background_band,
-                                               i=i, j=j,
-                                               rows=n_rows, cols=n_cols,
-                                               d_type='byte')
+                    # Get the background array.
+                    b_array = raster_tools.read(i_info=b_info,
+                                                bands2open=background_band,
+                                                i=i, j=j,
+                                                rows=n_rows, cols=n_cols,
+                                                d_type='byte')
 
-                m_array[b_array == background_value] = 0
+                    m_array[b_array == background_value] = 0
 
-                if minimum_observations > 0:
+                    if minimum_observations > 0:
 
-                    # Get the observation counts array.
-                    observation_array = raster_tools.read(i_info=b_info,
-                                                             bands2open=observation_band,
-                                                             i=i, j=j,
-                                                             rows=n_rows, cols=n_cols,
-                                                             d_type='byte')
+                        # Get the observation counts array.
+                        observation_array = raster_tools.read(i_info=b_info,
+                                                                 bands2open=observation_band,
+                                                                 i=i, j=j,
+                                                                 rows=n_rows, cols=n_cols,
+                                                                 d_type='byte')
 
-                    m_array[observation_array < minimum_observations] = 0
+                        m_array[observation_array < minimum_observations] = 0
 
-                out_rst_object.write_array(m_array, i, j)
+                    out_rst_object.write_array(m_array, i, j)
 
-        m_info.close()
-        b_info.close()
+        m_info = None
+        b_info = None
 
         out_rst_object.close_all()
 
@@ -4867,44 +4866,50 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
             self.predict(img, out_image_temp, scale_data=scale_data, ignore_feas=ignore_feas)
 
-        i_info = raster_tools.ropen(map_list[0])
+        with raster_tools.ropen(map_list[0]) as i_info:
 
-        rows, cols = i_info.rows, i_info.cols
+            rows, cols = i_info.rows, i_info.cols
 
-        i_info.bands = 1
+            i_info.bands = 1
 
-        out_rst = raster_tools.create_raster(out_img, i_info, bigtiff='yes')
+            with raster_tools.create_raster(out_img, i_info, bigtiff='yes') as out_rst:
 
-        out_rst.get_band(1)
+                out_rst.get_band(1)
 
-        rst_objs = [raster_tools.ropen(img).datasource.GetRasterBand(1) for img in map_list]
+                rst_objs = [raster_tools.ropen(img).datasource.GetRasterBand(1) for img in map_list]
 
-        if rows >= 512:
-            blk_size_rows = 512
-        else:
-            blk_size_rows = copy(rows)
+                if rows >= 512:
+                    blk_size_rows = 512
+                else:
+                    blk_size_rows = copy(rows)
 
-        if cols >= 1024:
-            block_size_cls = 1024
-        else:
-            block_size_cls = copy(cols)
+                if cols >= 1024:
+                    block_size_cls = 1024
+                else:
+                    block_size_cls = copy(cols)
 
-        for i in xrange(0, rows, blk_size_rows):
+                for i in xrange(0, rows, blk_size_rows):
 
-            n_rows = self._num_rows_cols(i, blk_size_rows, rows)
+                    n_rows = self._num_rows_cols(i, blk_size_rows, rows)
 
-            for j in xrange(0, cols, block_size_cls):
+                    for j in xrange(0, cols, block_size_cls):
 
-                n_cols = self._num_rows_cols(j, block_size_cls, cols)
+                        n_cols = self._num_rows_cols(j, block_size_cls, cols)
 
-                mode_img = np.vstack(([obj.ReadAsArray(j, i, n_cols, n_rows)
-                                       for obj in rst_objs])).reshape(len(map_list), n_rows, n_cols)
+                        mode_img = np.vstack(([obj.ReadAsArray(j, i, n_cols, n_rows)
+                                               for obj in rst_objs])).reshape(len(map_list), n_rows, n_cols)
 
-                out_mode = stats.mode(mode_img)[0]
+                        out_mode = stats.mode(mode_img)[0]
 
-                out_rst.write_array(out_mode, i=i, j=j)
+                        out_rst.write_array(out_mode, i=i, j=j)
 
-        out_rst.close_all()
+                for rst_obj in rst_objs:
+                    rst_obj.close()
+                    rst_obj = None
+
+            out_rst = None
+
+        i_info = None
 
 
 class classification_r(classification):

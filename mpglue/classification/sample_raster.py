@@ -264,23 +264,22 @@ class SampleImage(object):
         print '  \nSampling {} ...\n'.format(self.f_name_rst)
 
         # Open the image.
-        self.m_info = raster_tools.ropen(self.image_file)
+        with raster_tools.ropen(self.image_file) as self.m_info:
 
-        self.write_headers()
+            self.write_headers()
 
-        self.fill_dictionary()
+            self.fill_dictionary()
 
-        # Return if no samples were within
-        #   the raster frame.
-        if len(self.coords_offsets) == 0:
-            self.finish()
+            # Return if no samples were within
+            #   the raster frame.
+            if len(self.coords_offsets) == 0:
+                self.finish()
 
-        value_array = self.sample_image()
+            value_array = self.sample_image()
 
-        self.write2file(value_array)
+            self.write2file(value_array)
 
         self.shp_info.close()
-        self.m_info.close()
 
         self.shp_info = None
         self.m_info = None

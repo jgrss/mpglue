@@ -83,23 +83,23 @@ class VRTBuilder(object):
 
         for im, image in enumerate(image_list):
 
-            i_info = raster_tools.ropen(image)
+            with raster_tools.ropen(image) as i_info:
 
-            if im == 0:
+                if im == 0:
 
-                self.cell_size = i_info.cellY
-                self.cellY = i_info.cellY
-                self.cellX = i_info.cellX
-                self.projection = i_info.projection
-                self.storage = i_info.storage
-                self.geo_transform = list(i_info.geo_transform)
+                    self.cell_size = i_info.cellY
+                    self.cellY = i_info.cellY
+                    self.cellX = i_info.cellX
+                    self.projection = i_info.projection
+                    self.storage = i_info.storage
+                    self.geo_transform = list(i_info.geo_transform)
 
-            self.left = min(i_info.left, self.left)
-            self.right = max(i_info.right, self.right)
-            self.top = max(i_info.top, self.top)
-            self.bottom = min(i_info.bottom, self.bottom)
+                self.left = min(i_info.left, self.left)
+                self.right = max(i_info.right, self.right)
+                self.top = max(i_info.top, self.top)
+                self.bottom = min(i_info.bottom, self.bottom)
 
-            i_info.close()
+            i_info = None
 
         self.geo_transform[0] = self.left
         self.geo_transform[3] = self.top
@@ -196,6 +196,7 @@ class VRTBuilder(object):
                     # Check if the image is outside the current frame.
                     if i_info.outside(self):
                         i_info.close()
+                        i_info = None
                         continue
 
                     # Subset the current image to
@@ -208,9 +209,12 @@ class VRTBuilder(object):
 
                             if not image:
                                 i_info.close()
+                                i_info = None
                                 continue
 
                             i_info.close()
+                            i_info = None
+
                             i_info = raster_tools.ropen(image)
 
                     __, __, x_offset, y_offset = vector_tools.get_xy_offsets(image_info=self, xy_info=i_info,
@@ -233,6 +237,7 @@ class VRTBuilder(object):
                         self.xml_band_ = self.xml_band_.replace(rep, str(wit))
 
                     i_info.close()
+                    i_info = None
 
                     # add to the XML string
                     self.xml_base = '{}{}'.format(self.xml_base, self.xml_band_)
@@ -329,13 +334,13 @@ class VRTBuilder(object):
         # get first image from each list
         for k, v in in_dict.iteritems():
 
-            i_info = raster_tools.ropen(v[0])
+            with raster_tools.ropen(v[0]) as i_info:
 
-            self.band_count += i_info.bands
+                self.band_count += i_info.bands
 
-            self.band_dict[k] = i_info.bands
+                self.band_dict[k] = i_info.bands
 
-            i_info.close()
+            i_info = None
 
         self.band_dict = OrderedDict(sorted(self.band_dict.items(), key=lambda t: t[0]))
 

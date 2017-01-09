@@ -54,16 +54,18 @@ def reclassify(input_image, output_image, recode_dict):
 
     # Get image information
 
-    i_info = raster_tools.ropen(input_image)
+    with raster_tools.ropen(input_image) as i_info:
 
-    o_info = i_info.copy()
-    o_info.update_info(bands=1, storage='byte')
+        o_info = i_info.copy()
+        o_info.update_info(bands=1, storage='byte')
 
-    bp = raster_tools.BlockFunc(reclassify_func, [i_info], output_image, o_info,
-                                print_statement='\nReclassifying {} ...\n'.format(input_image),
-                                recode_dict=recode_dict)
+        bp = raster_tools.BlockFunc(reclassify_func, [i_info], output_image, o_info,
+                                    print_statement='\nReclassifying {} ...\n'.format(input_image),
+                                    recode_dict=recode_dict)
 
-    bp.run()
+        bp.run()
+
+    i_info = None
 
 
 def _examples():
