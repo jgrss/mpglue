@@ -1400,7 +1400,7 @@ def select_and_save(file_name, out_vector, select_field=None, select_value=None,
         None
 
     Examples:
-        >>> import mappy as mp
+        >>> import mpglue as gl
         >>>
         >>> # Save features where 'Id' is equal to 1.
         >>> mp.select_and_save('/in_shapefile.shp', '/out_shapefile.shp', 'Id', '1')
@@ -1483,7 +1483,7 @@ def buffer_vector(file_name, out_vector, distance=None, epsg=None, field_name=No
         None
 
     Examples:
-        >>> import mappy as mp
+        >>> import mpglue as gl
         >>>
         >>> # 10 km buffer
         >>> mp.buffer_vector('/in_shapefile.shp', '/out_buffer.shp', distance=10000.)

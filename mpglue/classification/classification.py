@@ -1035,55 +1035,52 @@ class EndMembers(object):
             raise NameError('The {} method is not an option.'.format(method))
 
         # open the input image
-        i_info = raster_tools.ropen(input_image)
+        with raster_tools.ropen(input_image) as i_info:
 
-        arr = i_info.read(bands2open=-1)
+            arr = i_info.read(bands2open=-1)
 
-        if ignore_feas:
+            if ignore_feas:
 
-            ignore_feas = map(int, ignore_feas)
-            arr = np.delete(arr, ignore_feas, axis=0)
+                ignore_feas = map(int, ignore_feas)
+                arr = np.delete(arr, ignore_feas, axis=0)
 
-        arr_dims, arr_rows, arr_cols = arr.shape
+            arr_dims, arr_rows, arr_cols = arr.shape
 
-        self.abundance_maps = mapper.map(arr.T.reshape(arr_rows, arr_cols, arr_dims), self.endmembers, normalize=True)
+            self.abundance_maps = mapper.map(arr.T.reshape(arr_rows, arr_cols, arr_dims), self.endmembers, normalize=True)
 
-        r, c, b = self.abundance_maps.shape
+            r, c, b = self.abundance_maps.shape
 
-        self.abundance_maps = self.abundance_maps.reshape(c, r, b).T
+            self.abundance_maps = self.abundance_maps.reshape(c, r, b).T
 
-        o_info = i_info.copy()
-        o_info.update_info(storage='float32', bands=1)
+            o_info = i_info.copy()
+            o_info.update_info(storage='float32', bands=1)
 
-        if isinstance(mask, str):
+            if isinstance(mask, str):
 
-            d_name, f_name = os.path.split(out_image)
-            f_base, f_ext = os.path.splitext(f_name)
+                d_name, f_name = os.path.split(out_image)
+                f_base, f_ext = os.path.splitext(f_name)
 
-            out_img_not_masked = os.path.join(d_name, '{}_not_masked{}'.format(f_base, f_ext))
+                out_img_not_masked = os.path.join(d_name, '{}_not_masked{}'.format(f_base, f_ext))
 
-            raster_tools.write2raster(self.abundance_maps[1], out_img_not_masked, o_info=o_info, flush_final=True)
+                raster_tools.write2raster(self.abundance_maps[1], out_img_not_masked, o_info=o_info, flush_final=True)
 
-        else:
+            else:
 
-            raster_tools.write2raster(self.abundance_maps[1], out_image, o_info=o_info, flush_final=True)
+                raster_tools.write2raster(self.abundance_maps[1], out_image, o_info=o_info, flush_final=True)
 
-        if isinstance(mask, str):
+            if isinstance(mask, str):
 
-            a_info = raster_tools.ropen(out_img_not_masked)
-            m_info = raster_tools.ropen(mask)
+                with raster_tools.ropen(out_img_not_masked) as a_info, raster_tools.ropen(mask) as m_info:
 
-            a_arr = a_info.read()
-            m_arr = m_info.read()
+                    a_arr = a_info.read()
+                    m_arr = m_info.read()
 
-            a_arr[m_arr != class2keep] = 0
+                a_arr[m_arr != class2keep] = 0
 
-            raster_tools.write2raster(a_arr, out_image, o_info=o_info, flush_final=True)
+                raster_tools.write2raster(a_arr, out_image, o_info=o_info, flush_final=True)
 
-        # plt.imshow(amaps.reshape(c, r, b).T[1])
-        # plt.show()
-
-        i_info.close()
+            # plt.imshow(amaps.reshape(c, r, b).T[1])
+            # plt.show()
 
 
 class Visualization(object):
@@ -1912,9 +1909,8 @@ class Visualization(object):
         """
 
         # open the image
-        i_info = raster_tools.ropen(image)
-
-        band_arrays = [zoom(i_info.read(bands2open=[bd], d_type='float32'), .5) for bd in bands2vis]
+        with raster_tools.ropen(image) as i_info:
+            band_arrays = [zoom(i_info.read(bands2open=[bd], d_type='float32'), .5) for bd in bands2vis]
 
         rws, cls = band_arrays[0].shape[0], band_arrays[1].shape[1]
 

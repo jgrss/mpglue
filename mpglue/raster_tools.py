@@ -1140,7 +1140,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo):
 
     Examples:
         >>> # typical usage
-        >>> import mappy as mp
+        >>> import mpglue as gl
         >>>
         >>> i_info = mp.ropen('/some_raster.tif')
         >>> # <ropen> has its own array instance
@@ -1151,10 +1151,10 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo):
         >>>
         >>> # use the <read> function
         >>> # open specific rows and columns
-        >>> array = mp.read(i_info, \
-        >>>                    bands2open=[-1], \
-        >>>                    i=100, j=100, \
-        >>>                    rows=500, cols=500)
+        >>> array = mp.read(i_info,
+        >>>                 bands2open=[-1],
+        >>>                 i=100, j=100,
+        >>>                 rows=500, cols=500)
         >>>
         >>> # compute the NDVI (for Landsat-like band channels only)
         >>> i_info.read(compute_index='ndvi')
@@ -1217,25 +1217,6 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo):
 
         # Check open files before closing.
         atexit.register(self.exit)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type, value, traceback):
-
-        if hasattr(self, 'band_open') and self.band_open:
-            self.close_band()
-
-        if hasattr(self, 'file_open') and self.file_open:
-            self.close_file()
-
-    def exit(self):
-
-        if hasattr(self, 'band_open') and self.band_open:
-            self.close_band()
-
-        if hasattr(self, 'file_open') and self.file_open:
-            self.close_file()
 
     def get_metadata(self, metadata, sensor):
 
@@ -1307,7 +1288,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo):
             ``ndarray``, where shape is (rows x cols) if 1 band or (bands x rows x cols) if more than 1 band.
 
         Examples:
-            >>> import mappy as mp
+            >>> import mpglue as gl
             >>>
             >>> i_info = mp.ropen('image.tif')
             >>> i_info = mp.open('image.tif')
@@ -1822,7 +1803,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo):
             sigmoid (Optional[float list]): A list of sigmoid contrast and gain values. Default is [].
 
         Examples:
-            >>> import mappy as mp
+            >>> import mpglue as gl
             >>> i_info = mp.ropen('image')
             >>> i_info = mp.open('image')
             >>>
@@ -1974,6 +1955,23 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo):
 
         plt.clf()
         plt.close(fig)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+
+        if hasattr(self, 'band_open') and self.band_open:
+            self.close_band()
+
+        if hasattr(self, 'file_open') and self.file_open:
+            self.close_file()
+
+    def exit(self):
+        self.close()
+
+    def __del__(self):
+        self.__exit__(None, None, None)
 
 
 def gdal_open(image2open, band):
@@ -2557,7 +2555,7 @@ def read(image2open=None, i_info=None, bands2open=1, i=0, j=0,
         Ndarray where [rows, cols] if 1 band and [bands, rows, cols] if more than 1 band
 
     Examples:
-        >>> import mappy as mp
+        >>> import mpglue as gl
         >>>
         >>> array = mp.read('image.tif')
         >>>
@@ -3063,7 +3061,7 @@ def write2raster(out_arr, out_name, o_info=None, x=0, y=0, out_rst=None, write2b
 
     Examples:
         >>> # Example
-        >>> import mappy as mp
+        >>> import mpglue as gl
         >>> i_info = mp.ropen('/in_raster.tif')
         >>>
         >>> out_array = np.random.randn(3, 100, 100).astype(np.float32)
@@ -3540,7 +3538,7 @@ def pixel_stats(input_image, output_image, stat='mean', bands2process=-1,
         n_jobs (Optional[int]): The number of blocks to process in parallel. Default is 1.
 
     Examples:
-        >>> import mappy as mp
+        >>> import mpglue as gl
         >>>
         >>> # Coefficient of variation on all dimensions.
         >>> mp.pixel_stats('/image.tif', '/output.tif', stat='cv')
@@ -3801,7 +3799,7 @@ def quick_plot(image_arrays, titles=['Field estimates'], colorbar_labels=['ha'],
         clip_limit (Optional[float]): The clip percentage limit for CLAHE. Default is 1.
 
     Examples:
-        >>> import mappy as mp
+        >>> import mpglue as gl
         >>> from mappy import raster_tools
         >>>
         >>> i_info = mp.ropen('/image.tif')
@@ -4518,7 +4516,7 @@ def batch_manage_overviews(image_directory, build=True, image_extensions=['tif']
         wildcard (Optional[str]): A wildcard search parameter to limit the search to. Default is None.
 
     Examples:
-        >>> import mappy as mp
+        >>> import mpglue as gl
         >>>
         >>> # build overviews
         >>> mp.batch_manage_overviews('/image_directory', wildcard='p224*')
