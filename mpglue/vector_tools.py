@@ -335,6 +335,13 @@ def delete_vector(file_name):
 
         v_info = None
 
+    # Delete QGIS files.
+    d_name, f_name = os.path.split(file_name)
+    f_base, f_ext = os.path.splitext(f_name)
+
+    for f in fnmatch.filter(os.listdir(d_name), '{}*.qpj'.format(f_base)):
+        os.remove('{}/{}'.format(d_name, f))
+
 
 class CreateDriver(RegisterDriver):
 
