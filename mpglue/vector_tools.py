@@ -19,12 +19,13 @@ import tarfile
 
 from .paths import get_main_path
 import raster_tools
+from .errors import TransformError, logger
 
 MAIN_PATH = get_main_path()
 
 # GDAL
 try:
-    from osgeo import ogr, osr
+    from osgeo import gdal, ogr, osr
     from osgeo.gdalconst import GA_ReadOnly, GA_Update
 except ImportError:
     raise ImportError('GDAL must be installed')
@@ -73,6 +74,10 @@ except:
     from six.moves import cPickle as pickle
 else:
    import pickle
+
+
+gdal.UseExceptions()
+gdal.PushErrorHandler('CPLQuietErrorHandler')
 
 
 class RegisterDriver(object):
@@ -156,12 +161,7 @@ class vopen(RegisterDriver):
         self.get_info()
 
         # Check open files before closing.
-        atexit.register(self.exit)
-
-    def exit(self):
-
-        if hasattr(self, 'file_open') and self.file_open:
-            self.close()
+        atexit.register(self.close)
 
     def read(self):
 
@@ -175,12 +175,6 @@ class vopen(RegisterDriver):
 
         self.file_open = True
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type, value, traceback):
-        self.close()
-    
     def get_info(self):
 
         # get the layer
@@ -211,14 +205,14 @@ class vopen(RegisterDriver):
                 self.spatial_reference.ImportFromEPSG(self.epsg)
 
             except:
-                print('Could not get the spatial reference')
+                logger.warning('Could not get the spatial reference')
 
         else:
 
             try:
                 self.spatial_reference = self.lyr.GetSpatialRef()
             except:
-                print('Could not get the spatial reference')
+                logger.warning('Could not get the spatial reference')
 
         self.projection = self.spatial_reference.ExportToWkt()
 
@@ -256,7 +250,8 @@ class vopen(RegisterDriver):
 
     def close(self):
 
-        self.shp.Destroy()
+        if hasattr(self, 'file_open') and self.file_open:
+            self.shp.Destroy()
 
         self.file_open = False
 
@@ -272,6 +267,7 @@ class vopen(RegisterDriver):
         try:
             self.driver.DeleteDataSource(self.file_name)
         except IOError:
+            logger.error(gdal.GetLastErrorMsg())
             raise IOError('\n{} could not be deleted. Check for a file lock.\n'.format(self.file_name))
 
         self._cleanup()
@@ -288,6 +284,15 @@ class vopen(RegisterDriver):
 
             for rf in file_list:
                 os.remove('{}/{}'.format(self.d_name, rf))
+
+    def exit(self):
+        self.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
 
 
 def copy_vector(file_name, output_file):
@@ -306,6 +311,8 @@ def copy_vector(file_name, output_file):
     with vopen(file_name) as v_info:
         v_info.copy2(output_file)
 
+    v_info = None
+
 
 def delete_vector(file_name):
 
@@ -321,6 +328,8 @@ def delete_vector(file_name):
 
     with vopen(file_name) as v_info:
         v_info.delete()
+
+    v_info = None
 
 
 class CreateDriver(RegisterDriver):
@@ -404,6 +413,8 @@ class create_vector(CreateDriver):
                 sp_ref = osr.SpatialReference()
                 sp_ref.ImportFromWkt(p_info.projection)
 
+            p_info = None
+
             # create the point layer
             self.lyr = self.datasource.CreateLayer(self.f_base, geom_type=geom_type, srs=sp_ref)
 
@@ -477,6 +488,7 @@ def rename_vector(input_file, output_file):
             try:
                 os.rename('{}/{}'.format(d_name, associated_file), '{}/{}{}'.format(od_name, of_base, a_ext))
             except OSError:
+                logger.error(gdal.GetLastErrorMsg())
                 raise OSError('Could not write {} to file.'.format(of_base))
 
 
@@ -755,12 +767,28 @@ class Transform(object):
         self.y = y
 
         source_sr = osr.SpatialReference()
-        source_sr.ImportFromEPSG(source_epsg)
+
+        try:
+            source_sr.ImportFromEPSG(source_epsg)
+        except:
+            logger.error(gdal.GetLastErrorMsg())
+            print('EPSG:{:d}'.format(source_epsg))
+            raise ValueError('The source EPSG code could not be read.')
 
         target_sr = osr.SpatialReference()
-        target_sr.ImportFromEPSG(target_epsg)
 
-        coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
+        try:
+            target_sr.ImportFromEPSG(target_epsg)
+        except:
+            logger.error(gdal.GetLastErrorMsg())
+            print('EPSG:{:d}'.format(target_epsg))
+            raise ValueError('The target EPSG code could not be read.')
+
+        try:
+            coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
+        except:
+            logger.error(gdal.GetLastErrorMsg())
+            raise TransformError('The coordinates could not be transformed.')
 
         self.point = ogr.Geometry(ogr.wkbPoint)
         
@@ -778,6 +806,9 @@ class Transform(object):
 
     def close(self):
         self.point.Destroy()
+
+    def __del__(self):
+        self.__exit__(None, None, None)
 
 
 class TransformUTM(object):
@@ -864,6 +895,10 @@ class TransformExtent(object):
         # Envelope
         # left, right, bottom, top
 
+        if not grid_envelope:
+            logger.error('The grid envelope list must be set.')
+            raise TypeError('The grid envelope list must be set.')
+
         self.from_epsg = from_epsg
         self.to_epsg = to_epsg
 
@@ -919,6 +954,8 @@ class RTreeManager(object):
                 # bdy_feature = None
                 # bdy_geometry = None
 
+        bdy_info = None
+
         # Load the RTree info
         self.rtree_info = '{}/utilities/sentinel/utm_grid_info.txt'.format(MAIN_PATH.replace('mpglue', 'mappy'))
         self.field_dict = pickle.load(file(self.rtree_info, 'rb'))
@@ -937,6 +974,8 @@ class RTreeManager(object):
                 bdy_feature = bdy_info.lyr.GetFeature(0)
                 bdy_geometry = bdy_feature.GetGeometryRef()
                 bdy_envelope = bdy_geometry.GetEnvelope()
+
+            bdy_info = None
 
             # left, right, bottom, top
             envelope = [bdy_envelope[0], bdy_envelope[1], bdy_envelope[2], bdy_envelope[3]]
@@ -996,13 +1035,12 @@ class RTreeManager(object):
         # bdy_feature = None
         # bdy_geometry = None
 
+        self._cleanup()
+
     def _cleanup(self):
 
-        if isinstance(self.base_shapefile, str):
-
-            # Delete the UTM shapefile
-            for utm_file in fnmatch.filter(os.listdir(self.utm_shp_path), 'sentinel2_grid*'):
-                os.remove('{}/{}'.format(self.utm_shp_path, utm_file))
+        if isinstance(self.base_shapefile_, str):
+            delete_vector(self.base_shapefile_)
 
 
 def intersects_shapefile(shapefile2intersect, base_shapefile=None):

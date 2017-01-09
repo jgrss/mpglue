@@ -22,3 +22,7 @@ class ropenError(TypeError):
 
 class ArrayOffsetError(TypeError):
     """Raised when indices are outside the bounds of an array"""
+
+
+class TransformError(ValueError):
+    """Raised when coordinates cannot be transfomed via ogr"""

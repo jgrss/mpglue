@@ -1219,7 +1219,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo):
                 print('\nNo image or metadata file was given.\n')
 
         # Check open files before closing.
-        atexit.register(self.exit)
+        atexit.register(self.close)
 
     def get_metadata(self, metadata, sensor):
 
@@ -1963,9 +1963,6 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo):
         return self
 
     def __exit__(self, type, value, traceback):
-        self.close()
-
-    def exit(self):
         self.close()
 
     def __del__(self):

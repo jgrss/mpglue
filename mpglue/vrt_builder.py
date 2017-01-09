@@ -120,7 +120,7 @@ class VRTBuilder(object):
         elif (self.top > 0) and (self.bottom < 0):
             self.rows = int(round((abs(self.top) + abs(self.bottom)) / self.cell_size))
 
-    def replace_main(self):
+    def replace_main(self, no_data=None):
 
         self.xml_base = self.xml_base.replace('full_rasterXSize', str(self.columns))
         self.xml_base = self.xml_base.replace('full_rasterYSize', str(self.rows))
@@ -131,6 +131,13 @@ class VRTBuilder(object):
         self.geo_transform = self.geo_transform.replace(']', '')
 
         self.xml_base = self.xml_base.replace('image_GeoTransform', self.geo_transform)
+
+        if isinstance(no_data, int):
+            self.xml_band_header = self.xml_band_header.replace('<NoDataValue>0', '<NoDataValue>{:d}'.format(no_data))
+            self.xml_band = self.xml_band.replace('<NODATA>0', '<NODATA>{:d}'.format(no_data))
+        elif isinstance(no_data, float):
+            self.xml_band_header = self.xml_band_header.replace('<NoDataValue>0', '<NoDataValue>{:f}'.format(no_data))
+            self.xml_band = self.xml_band.replace('<NODATA>0', '<NODATA>{:f}'.format(no_data))
 
     def add_bands(self, in_dict, bands2include=[], force_type=None, subset=False, base_name=None, be_quiet=False):
 
@@ -345,7 +352,8 @@ class VRTBuilder(object):
         self.band_dict = OrderedDict(sorted(self.band_dict.items(), key=lambda t: t[0]))
 
 
-def vrt_builder(in_dict, out_vrt, bands2include=[], force_type=None, subset=False, base_name=None, be_quiet=False):
+def vrt_builder(in_dict, out_vrt, bands2include=[], force_type=None,
+                subset=False, base_name=None, no_data=None, be_quiet=False):
 
     """
     Builds a VRT file, accepting raster files with different band counts.
@@ -357,6 +365,8 @@ def vrt_builder(in_dict, out_vrt, bands2include=[], force_type=None, subset=Fals
         force_type (Optional[str]): Force the output storage type. Default is None.
         subset (Optional[bool]): Whether to subset ``in_dict`` >= '2' to '1'. Default is False.
         base_name (Optional[str]): A base name to prepend to the /subs directory. Default is None.
+        no_data (Optional[int or float]):
+        be_quiet (Optional[bool])
 
     Examples:
         >>> vrt_builder({'1': ['image1.tif', 'imag2.tif'],
@@ -372,7 +382,7 @@ def vrt_builder(in_dict, out_vrt, bands2include=[], force_type=None, subset=Fals
 
     vb.get_full_extent(in_dict)
 
-    vb.replace_main()
+    vb.replace_main(no_data=no_data)
 
     vb.add_bands(in_dict, bands2include=bands2include, force_type=force_type,
                  subset=subset, base_name=base_name, be_quiet=be_quiet)
