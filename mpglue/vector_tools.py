@@ -785,7 +785,8 @@ class Transform(object):
             if isinstance(source_epsg, int):
                 source_sr.ImportFromEPSG(source_epsg)
             elif isinstance(source_epsg, str):
-                source_sr.ImportFromProj4(source_epsg)
+                # source_sr.ImportFromProj4(source_epsg)
+                source_sr.ImportFromWkt(source_epsg)
 
         except:
             logger.error(gdal.GetLastErrorMsg())
@@ -797,7 +798,8 @@ class Transform(object):
             if isinstance(source_epsg, int):
                 target_sr.ImportFromEPSG(target_epsg)
             elif isinstance(source_epsg, str):
-                target_sr.ImportFromProj4(source_epsg)
+                # target_sr.ImportFromProj4(source_epsg)
+                target_sr.ImportFromWkt(source_epsg)
 
         except:
             logger.error(gdal.GetLastErrorMsg())
@@ -980,7 +982,8 @@ class RTreeManager(object):
         self.rtree_info = '{}/utilities/sentinel/utm_grid_info.txt'.format(MAIN_PATH.replace('mpglue', 'mappy'))
         self.field_dict = pickle.load(file(self.rtree_info, 'rb'))
 
-    def get_intersecting_features(self, shapefile2intersect=None, envelope=None, epsg=None, proj4=None):
+    def get_intersecting_features(self, shapefile2intersect=None, envelope=None,
+                                  epsg=None, proj4=None, proj=None):
 
         """
         Intersects the RTree index with a shapefile or extent envelope.
@@ -1011,6 +1014,9 @@ class RTreeManager(object):
             envelope = [e2w.left, e2w.right, e2w.bottom, e2w.top]
         elif isinstance(proj4, str):
             e2w = TransformExtent(image_envelope, proj4)
+            envelope = [e2w.left, e2w.right, e2w.bottom, e2w.top]
+        elif isinstance(proj, str):
+            e2w = TransformExtent(image_envelope, proj)
             envelope = [e2w.left, e2w.right, e2w.bottom, e2w.top]
 
         self.grid_infos = []
