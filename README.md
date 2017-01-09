@@ -39,11 +39,19 @@ Getting an array:
 >>>
 >>> # Open specific bands, starting indexes, and row/column dimensions.
 >>> with gl.ropen('/your/image.tif') as i_info:
+>>>     my_array = i_info.read()
+>>>
+>>> # Open specific bands, starting indexes, and row/column dimensions.
+>>> with gl.open('/your/image.tif') as i_info:
 >>>     my_array = i_info.read(bands2open=[2, 3, 4], i=1000, j=2000, rows=500, cols=500)
 >>>
 >>> my_array[0]     # 1st index = band 2
 >>>
 >>> # Open all bands and index by map coordinates.
+>>> with gl.ropen('/your/image.tif') as i_info:
+>>>     my_array = i_info.read(bands2open=-1, y=1200000, x=4230000, rows=500, cols=500)
+>>>
+>>> # Open image bands as arrays with dictionary mappings.
 >>> with gl.ropen('/your/image.tif') as i_info:
 >>>     my_array = i_info.read(bands2open=-1, y=1200000, x=4230000, rows=500, cols=500)
 >>>
@@ -72,6 +80,32 @@ Writing to file:
 >>> array2write = <some 2d array data>
 >>> out_raster.write_array(array2write, i=0, j=0, band=1)
 >>> out_raster.close()
+```
+
+Vegetation indices:
+
+```python
+>>> gl.veg_indices('/image.tif', '/out_index.tif', 'ndvi', 'Landsat')
+>>>
+>>> gl.veg_indices('/image.tif', '/out_index.tif', ['ndvi', 'evi2'], 'Landsat')
+```
+
+Image classification:
+
+```python
+>>> import mpglue as gl
+>>>
+>>> # Initiate the classification instance
+>>> cl = gl.classification()
+>>>
+>>> # Load and split all of the land cover samples
+>>> cl.split_samples('/land_cover_samples.shp', perc_samp=.7)
+>>> 
+>>> # Train the classification model and save to file
+>>> cl.construct_model(classifier_info={'classifier': 'RF', 'trees': 100})
+>>>
+>>> # Predict class labels.
+>>> cl.predict('/input_image.tif', '/output_map.tif')
 ```
 
 Installation

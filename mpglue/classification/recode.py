@@ -75,8 +75,9 @@ def recode(input_poly, input_image, output_image, recode_dict, class_id='Id'):
             os.remove(out_vector_image)
         except:
             raise OSError('Could not delete the output raster.')
-            
+
     i_info = raster_tools.ropen(input_image)
+
     i_info.update_info(storage='int16')
 
     # get vector info 

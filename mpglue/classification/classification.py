@@ -1036,6 +1036,7 @@ class EndMembers(object):
 
         # open the input image
         i_info = raster_tools.ropen(input_image)
+
         arr = i_info.read(bands2open=-1)
 
         if ignore_feas:
@@ -3669,7 +3670,9 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                 if self.band_check != -1:
 
                     if self.open_image:
+
                         self.i_info = raster_tools.ropen(self.input_image)
+
                         self.open_image = False
 
                     max_check = self.i_info.read(bands2open=self.band_check,
@@ -4869,6 +4872,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
             self.predict(img, out_image_temp, scale_data=scale_data, ignore_feas=ignore_feas)
 
         i_info = raster_tools.ropen(map_list[0])
+
         rows, cols = i_info.rows, i_info.cols
 
         i_info.bands = 1
@@ -5320,6 +5324,7 @@ class classification_r(classification):
 
             # get the number of features
             self.i_info = raster_tools.ropen(input_image)
+
             self.n_feas = self.i_info.bands
 
             # build the icases file

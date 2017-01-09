@@ -59,7 +59,7 @@ except ImportError:
 old_settings = np.seterr(all='ignore')
 
 
-class Sensoropen(object):
+class SensorInfo(object):
 
     """
     A class to hold sensor names, wavelengths, and equations.
@@ -247,7 +247,7 @@ class Sensoropen(object):
                 self.sensor_indices.append(veg_index)
 
 
-class VegIndicesEquations(Sensoropen):
+class VegIndicesEquations(SensorInfo):
 
     """
     A class to compute vegetation indices
@@ -268,7 +268,7 @@ class VegIndicesEquations(Sensoropen):
         self.chunk_size = chunk_size
         self.mask_array = mask_array
 
-        Sensoropen.__init__(self)
+        SensorInfo.__init__(self)
 
         try:
             self.array_dims, self.array_rows, self.array_cols = image_array.shape
@@ -1288,13 +1288,13 @@ class VegIndicesEquations(Sensoropen):
         return np.divide(top, bottom)
 
 
-class BandHandler(Sensoropen):
+class BandHandler(SensorInfo):
 
     def __init__(self, sensor):
 
         self.sensor = sensor
 
-        Sensoropen.__init__(self)
+        SensorInfo.__init__(self)
 
     def get_band_order(self):
 
@@ -1563,6 +1563,7 @@ class VegIndices(BandHandler):
             print '\nComputing overviews ...\n'
 
             v_info = raster_tools.ropen(output_image)
+
             v_info.build_overviews()
             v_info.close()
 
@@ -1578,7 +1579,8 @@ def _compute_as_list(img, out_img, sensor, k, storage, no_data, chunk_size,
 
     if (len(veg_indice_list) == 1) and (veg_indice_list[0].lower() == 'all'):
 
-        si = Sensoropen()
+        si = SensorInfo()
+
         si.list_indice_options(sensor)
 
         veg_indice_list = si.sensor_indices
@@ -1845,7 +1847,7 @@ def main():
     parser.add_argument('-o', '--output', dest='output', help='The output image', default=None)
     parser.add_argument('--index', dest='index', help='The vegetation index to compute', default=['ndvi'], nargs='+')
     parser.add_argument('--sensor', dest='sensor', help='The input sensor', default='Landsat',
-                        choices=Sensoropen().sensors)
+                        choices=SensorInfo().sensors)
     parser.add_argument('-k', '--resample', dest='resample', help='Resample cell size', default=0., type=float)
     parser.add_argument('-s', '--storage', dest='storage', help='The storage type', default='float32')
     parser.add_argument('-n', '--no_data', dest='no_data', help='The output "no data" value', default=0, type=int)
@@ -1866,7 +1868,8 @@ def main():
 
     if args.options:
 
-        si = Sensoropen()
+        si = SensorInfo()
+
         si.list_indice_options(args.sensor)
 
         sys.exit("""\
@@ -1878,7 +1881,7 @@ def main():
 
     if args.band_order:
 
-        si = Sensoropen()
+        si = SensorInfo()
 
         sys.exit(si.list_expected_band_order(args.sensor))
 

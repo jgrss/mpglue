@@ -53,6 +53,7 @@ def reclassify(input_image, output_image, recode_dict):
     """
 
     # Get image information
+
     i_info = raster_tools.ropen(input_image)
 
     o_info = i_info.copy()

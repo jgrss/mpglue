@@ -1144,6 +1144,8 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo):
         >>>
         >>> i_info = mp.ropen('/some_raster.tif')
         >>> # <ropen> has its own array instance
+        >>> i_info = mp.open('/some_raster.tif')
+        >>> # <rinfo> has its own array instance
         >>> array = i_info.read()    # opens band 1, all rows and columns
         >>> print array
         >>>
@@ -1173,16 +1175,19 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo):
         >>>
         >>> # create info from scratch
         >>> i_info = mp.ropen('create', left=, right=, top=, bottom=, \
+        >>> i_info = mp.open('create', left=, right=, top=, bottom=, \
         >>>                   cellY=, cellX=, bands=, storage=, projection=, \
         >>>                   rows=, cols=)
         >>>
         >>> # build overviews
         >>> i_info = mp.ropen('/some_raster.tif')
+        >>> i_info = mp.open('/some_raster.tif')
         >>> i_info.build_overviews()
         >>> i_info.close()
         >>>
         >>> # remove overviews
         >>> i_info = mp.ropen('/some_raster.tif', open2read=False)
+        >>> i_info = mp.open('/some_raster.tif', open2read=False)
         >>> i_info.remove_overviews()
         >>> i_info.close()
     """
@@ -1305,6 +1310,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo):
             >>> import mappy as mp
             >>>
             >>> i_info = mp.ropen('image.tif')
+            >>> i_info = mp.open('image.tif')
             >>>
             >>> # Open 1 band.
             >>> array = i_info.read(bands2open=1)
@@ -1818,6 +1824,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo):
         Examples:
             >>> import mappy as mp
             >>> i_info = mp.ropen('image')
+            >>> i_info = mp.open('image')
             >>>
             >>> # Plot a discrete map with specified colors
             >>> color_map = ['#000000', '#DF7401', '#AEB404', '#0B6121', '#610B0B', '#A9D0F5',
@@ -2566,6 +2573,7 @@ def read(image2open=None, i_info=None, bands2open=1, i=0, j=0,
         raise NameError('\nEither i_info or image2open must be declared.\n')
     elif isinstance(i_info, ropen) and isinstance(image2open, str):
         raise NameError('\nChoose either i_info or image2open, but not both.\n')
+
     elif not isinstance(i_info, ropen) and isinstance(image2open, str):
         i_info = ropen(image2open)
 
@@ -3057,6 +3065,7 @@ def write2raster(out_arr, out_name, o_info=None, x=0, y=0, out_rst=None, write2b
         >>> # Example
         >>> import mappy as mp
         >>> i_info = mp.ropen('/in_raster.tif')
+        >>>
         >>> out_array = np.random.randn(3, 100, 100).astype(np.float32)
         >>> mp.write2raster(out_array, '/out_name.tif', o_info=copy(i_info),
         >>>                 flush_final=True)
@@ -3704,6 +3713,7 @@ def histogram_matching(image2adjust, reference_list, output_image, band2match=-1
         for ri, reference_image in enumerate(reference_list):
 
             ref_info = ropen(reference_image)
+
             ref_array = ref_info.read(bands2open=band)
 
             if ri == 0:
