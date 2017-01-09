@@ -1,7 +1,7 @@
 MpGlue
 ---
 
-The **glue** of MapPy.
+The **glue** of [MapPy](https://github.com/jgrss/mappy).
 
 Usage examples
 ---
