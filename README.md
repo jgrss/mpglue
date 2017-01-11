@@ -127,6 +127,16 @@ Thematic accuracy:
 >>>                  class_id='Id', accuracy=True)
 ```
 
+Build mixed-type VRT files:
+
+```python
+>>> # Fill a dictionary with image names.
+>>> comp_dict = dict(zip(map(str, range(1, 3)), ['/im1.tif', 'im2.tif']))
+>>>
+>>> # Stack the images.
+>>> vrt_builder(comp_dict, '/out_image.vrt', force_type='float32')
+```
+
 Installation
 ---
 #### Dependencies
