@@ -94,7 +94,8 @@ DRIVER_DICT = {'.tif': 'GTiff',
                '.kea': 'KEA',
                '.sid': 'MrSID',
                '.jp2': 'JPEG2000',
-               '.mem': 'MEM'}
+               '.mem': 'MEM',
+               '.til': 'TIL'}
 
 FORMAT_DICT = dict((v, k) for k, v in DRIVER_DICT.iteritems())
 
