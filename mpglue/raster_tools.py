@@ -4509,7 +4509,10 @@ def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None, storag
     if in_memory:
         return orw
     else:
+
         orw.close_file()
+        orw = None
+
         return None
 
 
