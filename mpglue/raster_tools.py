@@ -16,6 +16,7 @@ import atexit
 from joblib import Parallel, delayed
 import platform
 import shutil
+import itertools
 
 import ctypes
 
@@ -2186,7 +2187,7 @@ class BlockFunc(object):
         x_pad (Optional[list]): The column padding. Default is [0].
         block_rows (Optional[int]): The block row chunk size. Default is 2048.
         block_cols (Optional[int]): The block column chunk size. Default is 2048.
-        d_type (Optional[str]): The read data type. Default is 'byte'.
+        d_types (Optional[str list]): A list of read data types. Default is None.
         be_quiet (Optional[bool]): Whether to be quiet and do not print progress. Default is False.
         print_statement (Optional[str]): A string to print. Default is None.
         out_attributes (Optional[list]): A list of output attribute names. Default is [].
@@ -2196,6 +2197,7 @@ class BlockFunc(object):
         mask_file (Optional[str]): A file to use for block masking. Default is None.
             Recode blocks to binary 1 and 0 that intersect ``mask_file``.
         n_jobs (Optional[int]): The number of blocks to process in parallel. Default is 1.
+        no_data_values (Optional[list]): A list of no data values for each image. Default is None.
         kwargs (Optional[dict]): Function specific parameters.
 
     Returns:
@@ -2203,12 +2205,16 @@ class BlockFunc(object):
     """
 
     def __init__(self, func, image_infos, out_image, out_info,
-                 band_list=None, proc_info=None, y_offset=None, x_offset=None,
-                 y_pad=None, x_pad=None, block_rows=2048, block_cols=2048,
-                 be_quiet=False, d_type='byte', print_statement=None,
+                 band_list=None, proc_info=None,
+                 y_offset=None, x_offset=None,
+                 y_pad=None, x_pad=None,
+                 block_rows=2048, block_cols=2048,
+                 be_quiet=False, d_types=None,
+                 print_statement=None,
                  out_attributes=None, write_array=True,
                  boundary_file=None, mask_file=None,
-                 n_jobs=1, close_files=True, **kwargs):
+                 n_jobs=1, close_files=True,
+                 no_data_values=None, **kwargs):
 
         self.func = func
         self.image_infos = image_infos
@@ -2222,7 +2228,7 @@ class BlockFunc(object):
         self.x_pad = x_pad
         self.block_rows = block_rows
         self.block_cols = block_cols
-        self.d_type = d_type
+        self.d_types = d_types
         self.be_quiet = be_quiet
         self.print_statement = print_statement
         self.out_attributes = out_attributes
@@ -2231,7 +2237,11 @@ class BlockFunc(object):
         self.mask_file = mask_file
         self.n_jobs = n_jobs
         self.close_files = close_files
+        self.no_data_values = no_data_values
         self.kwargs = kwargs
+
+        if not isinstance(self.d_types, list):
+            self.d_types = ['byte'] * len(self.image_infos)
 
         if not self.y_offset:
             self.y_offset = [0] * len(self.image_infos)
@@ -2294,7 +2304,7 @@ class BlockFunc(object):
 
             dn, __ = os.path.split(self.out_image)
 
-            check_and_create_dir('{}/temp'.format(dn))
+            check_and_create_dir(os.path.join(dn, 'temp'))
 
             driver_pp = gdal_register(self.out_image)
 
@@ -2391,12 +2401,26 @@ class BlockFunc(object):
                 #     n_block += 1
 
                 image_arrays = [self.image_infos[imi].read(bands2open=self.band_list[imi],
-                                                              i=i+self.y_offset[imi]-y_pad_minus,
-                                                              j=j+self.x_offset[imi]-x_pad_minus,
-                                                              rows=n_rows+y_pad_plus,
-                                                              cols=n_cols+x_pad_plus,
-                                                              d_type=self.d_type)
+                                                           i=i+self.y_offset[imi]-y_pad_minus,
+                                                           j=j+self.x_offset[imi]-x_pad_minus,
+                                                           rows=n_rows+y_pad_plus,
+                                                           cols=n_cols+x_pad_plus,
+                                                           d_type=self.d_types[imi])
                                 for imi in xrange(0, len(self.image_infos))]
+
+                skip_block = False
+
+                # Check for no data values.
+                if isinstance(self.no_data_values, list):
+
+                    for no_data, im_block in itertools.izip(self.no_data_values, image_arrays):
+
+                        if im_block.max() == no_data:
+                            skip_block = True
+                            break
+
+                if skip_block:
+                    continue
 
                 if isinstance(self.mask_file, str):
 
@@ -2418,6 +2442,8 @@ class BlockFunc(object):
 
                             image_array[block_array == 0] = 0
                             image_arrays[imib] = image_array
+
+                    v_info = None
 
                 output = self.func(image_arrays, **self.kwargs)
 
