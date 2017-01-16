@@ -171,7 +171,7 @@ class vopen(RegisterDriver):
             self.shp = ogr.Open(self.file_name, GA_Update)
 
         if self.shp is None:
-            raise NameError('\nUnable to open {}.\n'.format(self.file_name))
+            raise NameError('Unable to open {}.'.format(self.file_name))
 
         self.file_open = True
 
@@ -268,7 +268,7 @@ class vopen(RegisterDriver):
             self.driver.DeleteDataSource(self.file_name)
         except IOError:
             logger.error(gdal.GetLastErrorMsg())
-            raise IOError('\n{} could not be deleted. Check for a file lock.\n'.format(self.file_name))
+            raise IOError('{} could not be deleted. Check for a file lock.'.format(self.file_name))
 
         self._cleanup()
 
@@ -1472,7 +1472,7 @@ def select_and_save(file_name, out_vector, select_field=None, select_value=None,
     """
 
     if not os.path.isfile(file_name):
-        raise NameError('\n{} does not exist'.format(file_name))
+        raise NameError('{} does not exist'.format(file_name))
 
     d_name, f_name = os.path.split(out_vector)
     f_base, f_ext = os.path.splitext(f_name)
@@ -1558,7 +1558,7 @@ def buffer_vector(file_name, out_vector, distance=None, epsg=None, field_name=No
     """
 
     if not os.path.isfile(file_name):
-        raise NameError('\n{} does not exist'.format(file_name))
+        raise NameError('{} does not exist'.format(file_name))
 
     if not isinstance(distance, float) and not isinstance(field_name, str):
         raise ValueError('Either the distance or field name must be given.')
