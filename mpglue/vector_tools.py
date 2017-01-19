@@ -1496,6 +1496,8 @@ def select_and_save(file_name, out_vector, select_field=None, select_value=None,
 
         out_lyr = None
 
+    v_info = None
+
 
 def list_field_names(in_shapefile, be_quiet=False, epsg=None):
 

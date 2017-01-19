@@ -160,30 +160,445 @@ def get_sensor_dict():
             'lt8': 'oli_tirs'}
 
 
-class UpdateInfo(object):
+class ReadWrite(object):
 
-    """
-    A class for updating attributes
-    """
+    def read(self, bands2open=1, i=0, j=0, rows=-1, cols=-1, d_type=None,
+             compute_index='none', sensor='Landsat', sort_bands2open=True,
+             predictions=False, y=0., x=0., check_x=None, check_y=None):
 
-    def update_info(self, **kwargs):
+        """
+        Reads a raster as an array
 
-        for k, v in kwargs.iteritems():
-            setattr(self, k, v)
+        Args:
+            bands2open (Optional[int or int list or dict]: Band position to open, list of bands to open, or a
+                dictionary of name-band pairs. Default is 1.
 
+                Examples:
+                    bands2open = 1        (open band 1)
+                    bands2open = [1,2,3]  (open first three bands)
+                    bands2open = [4,3,2]  (open bands in a specific order)
+                        *When opening bands in a specific order, be sure to set ``sort_bands2open`` as ``False``.
+                    bands2open = -1       (open all bands)
+                    bands2open = {'blue': 1, 'green': 2, 'nir': 4}  (open bands 1, 2, and 4)
 
-class ImageInfo(UpdateInfo):
+            i (Optional[int]): Starting row position. Default is 0, or first row.
+            j (Optional[int]): Starting column position. Default is 0, or first column.
+            rows (Optional[int]): Number of rows to extract. Default is -1, or all rows.
+            cols (Optional[int]): Number of columns to extract. Default is -1, or all columns.
+            d_type (Optional[str]): Type of array to return. Choices are ['byte', 'int16', 'uint16',
+                'int32', 'uint32', 'int64', 'uint64', 'float32', 'float64']. Default is None, or gathered
+                from <i_info>.
+            compute_index (Optional[str]): A spectral index to compute. Default is 'none'.
+            sensor (Optional[str]): The input sensor type (used with ``compute_index``). Default is 'Landsat'.
+            sort_bands2open (Optional[bool]): Whether to sort ``bands2open``. Default is True.
+            predictions (Optional[bool]): Whether to return reshaped array for predictions.
+            y (Optional[float]): A y index coordinate (latitude, in map units). Default is 0.
+                If greater than 0, overrides ``i``.
+            x (Optional[float]): A x index coordinate (longitude, in map units). Default is 0.
+                If greater than 0, overrides ``j``.
+            check_x (Optional[float]): Check the x offset against ``check_x``. Default is None.
+            check_y (Optional[float]): Check the y offset against ``check_y``. Default is None.
 
-    """
-    An empty class for passing image information
-    """
+        Attributes:
+            array (ndarray)
 
-    def __init__(self):
-        pass
+        Returns:
+            ``ndarray``, where shape is (rows x cols) if 1 band or (bands x rows x cols) if more than 1 band.
 
-    def copy(self):
-        return copy.copy(self)
+        Examples:
+            >>> import mpglue as gl
+            >>>
+            >>> i_info = mp.ropen('image.tif')
+            >>> i_info = mp.open('image.tif')
+            >>>
+            >>> # Open 1 band.
+            >>> array = i_info.read(bands2open=1)
+            >>>
+            >>> # Open multiple bands.
+            >>> array = i_info.read(bands2open=[1, 2, 3])
+            >>> band_1 = array[0]
+            >>>
+            >>> # Open as a dictionary of arrays.
+            >>> bands = i_info.read(bands2open={'blue': 1, 'red': 2, 'nir': 4})
+            >>> red = bands['red']
+            >>>
+            >>> # Index an image by pixel positions.
+            >>> array = i_info.read(i=1000, j=4000, rows=500, cols=500)
+            >>>
+            >>> # Index an image by map coordinates.
+            >>> array = i_info.read(y=1200000., x=4230000., rows=500, cols=500)
+        """
 
+        self.i = i
+        self.j = j
+
+        # `self.rows` and `self.cols` are the
+        #   image dimension info, so don't overwrite.
+        self.rrows = rows
+        self.ccols = cols
+
+        self.sort_bands2open = sort_bands2open
+
+        if isinstance(bands2open, dict):
+
+            if isinstance(d_type, str):
+                self.d_type = STORAGE_DICT_NUMPY[d_type]
+            else:
+                self.d_type = STORAGE_DICT_NUMPY[self.storage.lower()]
+
+        else:
+
+            if isinstance(d_type, str):
+                self.d_type = STORAGE_DICT[d_type]
+            else:
+                self.d_type = STORAGE_DICT[self.storage.lower()]
+
+        if compute_index != 'none':
+
+            bh = BandHandler(sensor)
+
+            bh.get_band_order()
+
+            bands2open = bh.get_band_positions(bh.wavelength_lists[compute_index.upper()])
+
+            self.d_type = 'float32'
+
+        if self.rrows == -1:
+            self.rrows = self.rows
+        else:
+            if self.rrows > self.rows:
+                raise ValueError('\nThe requested rows cannot be larger than the image rows.\n')
+
+        if self.ccols == -1:
+            self.ccols = self.cols
+        else:
+            if self.ccols > self.cols:
+                raise ValueError('\nThe requested columns cannot be larger than the image columns.\n')
+
+        # Index the image by x, y coordinates (in map units).
+        if abs(y) > 0:
+            __, __, __, self.i = get_xy_offsets(self, x=x, y=y)
+
+        if abs(x) > 0:
+            __, __, self.j, __ = get_xy_offsets(self, x=x, y=y)
+
+        if isinstance(check_x, float) and isinstance(check_y, float):
+
+            __, __, x_offset, y_offset = get_xy_offsets(self, x=check_x, y=check_y, check_position=False)
+
+            self.i += y_offset
+            self.j += x_offset
+
+        #################
+        # Bounds checking
+        #################
+
+        # Row indices
+        if self.i < 0:
+            self.i = 0
+
+        if self.i >= self.rows:
+            self.i = self.rows - 1
+
+        # Number of rows
+        self.rrows = n_rows_cols(self.i, self.rrows, self.rows)
+
+        # Column indices
+        if self.j < 0:
+            self.j = 0
+
+        if self.j >= self.cols:
+            self.j = self.cols - 1
+
+        # Number of columns
+        self.ccols = n_rows_cols(self.j, self.ccols, self.cols)
+
+        #################
+
+        # format_dict = {'byte': 'B', 'int16': 'i', 'uint16': 'I', 'float32': 'f', 'float64': 'd'}
+        # values = struct.unpack('%d%s' % ((rows * cols * len(bands2open)), format_dict[i_info.storage.lower()]),
+        #     i_info.datasource.ReadRaster(yoff=i, xoff=j, xsize=cols, ysize=rows, band_list=bands2open))
+
+        if hasattr(self, 'band'):
+
+            self.array = self.band.ReadAsArray(self.j,
+                                               self.i,
+                                               self.ccols,
+                                               self.rrows).astype(self.d_type)
+
+            self.array_shape = [1, self.rrows, self.ccols]
+
+            if predictions:
+                self._reshape2predictions(1)
+
+        else:
+
+            # Check ``bands2open`` type.
+            bands2open = self._check_band_list(bands2open)
+
+            # Open the array.
+            self._open_array(bands2open)
+
+            if predictions:
+                self._reshape2predictions(len(bands2open))
+
+        if compute_index != 'none':
+
+            vie = VegIndicesEquations(self.array, chunk_size=-1)
+
+            exec 'self.{} = vie.compute(compute_index.upper())'.format(compute_index)
+
+        return self.array
+
+    def _open_array(self, bands2open):
+
+        # Open the image as a dictionary of arrays.
+        if isinstance(bands2open, dict):
+
+            self.array = {}
+
+            for band_name, band_position in bands2open.iteritems():
+
+                if self.hdf_file:
+
+                    self.array[band_name] = self.hdf_datasources[band_position-1].ReadAsArray(self.j,
+                                                                                              self.i,
+                                                                                              self.ccols,
+                                                                                              self.rrows).astype(self.d_type)
+
+                else:
+
+                    self.array[band_name] = self.datasource.GetRasterBand(band_position).ReadAsArray(self.j,
+                                                                                                     self.i,
+                                                                                                     self.ccols,
+                                                                                                     self.rrows).astype(self.d_type)
+
+        # Open the image as an array.
+        else:
+
+            if self.hdf_file:
+
+                self.array = np.asarray([self.hdf_datasources[band-1].ReadAsArray(self.j,
+                                                                                  self.i,
+                                                                                  self.ccols,
+                                                                                  self.rrows)
+                                         for band in bands2open], dtype=self.d_type)
+
+            else:
+
+                self.array = np.asarray([self.datasource.GetRasterBand(band).ReadAsArray(self.j,
+                                                                                         self.i,
+                                                                                         self.ccols,
+                                                                                         self.rrows)
+                                         for band in bands2open], dtype=self.d_type)
+
+            self.array = self._reshape(self.array, bands2open)
+
+    def predictions2norm(self):
+
+        """
+        Reshapes predictions back to 2d array
+        """
+
+        self.array = self.array.reshape(self.ccols, self.rrows).T
+
+    def _reshape2predictions(self, n_bands):
+
+        if n_bands == 1:
+
+            self.array = self.array.reshape(self.rrows,
+                                            self.ccols).T.reshape(self.rrows * self.ccols, n_bands)
+
+        else:
+
+            self.array = self.array.reshape(n_bands,
+                                            self.rrows,
+                                            self.ccols).T.reshape(self.rrows * self.ccols, n_bands)
+
+        self.array_shape = [1, self.rrows*self.ccols, n_bands]
+
+    def _reshape(self, array2reshape, band_list):
+
+        if len(band_list) == 1:
+            array2reshape = array2reshape.reshape(self.rrows, self.ccols)
+        else:
+            array2reshape = array2reshape.reshape(len(band_list), self.rrows, self.ccols)
+
+        self.array_shape = [len(band_list), self.rrows, self.ccols]
+
+        return array2reshape
+
+    def _check_band_list(self, bands2open):
+
+        if isinstance(bands2open, dict):
+
+            return bands2open
+
+        elif isinstance(bands2open, list):
+
+            if len(bands2open) == 0:
+                raise ValueError('\nA band list must be declared.\n')
+
+            if not self.hdf_file:
+                if max(bands2open) > self.bands:
+                    raise ValueError('\nThe requested band position cannot be greater than the image bands.\n')
+
+        elif isinstance(bands2open, int):
+
+            if not self.hdf_file:
+                if bands2open > self.bands:
+                    raise ValueError('\nThe requested band position cannot be greater than the image bands.\n')
+
+            if bands2open == -1:
+                bands2open = range(1, self.bands+1)
+            else:
+                bands2open = [bands2open]
+
+        else:
+            raise TypeError('The ``bands2open`` parameter must be a dict, list, or int.')
+
+        if self.sort_bands2open and not isinstance(bands2open, dict):
+            bands2open = sorted(bands2open)
+
+        return bands2open
+
+    def write2raster(self, out_name, write_which='array', o_info=None, x=0, y=0, out_rst=None, write2bands=[],
+                     compress='LZW', tile=False, close_band=True, flush_final=False, write_chunks=False, **kwargs):
+
+        """
+        Writes array to file
+
+        Args:
+            out_name (str): Output image name.
+            o_info (Optional[object]): Output image information, instance of ``ropen``.
+                Needed if <out_rst> not given. Default is None.
+            x (Optional[int]): Column starting position. Default is 0.
+            y (Optional[int]): Row starting position. Default is 0.
+            out_rst (Optional[object]): GDAL object to right to, otherwise created. Default is None.
+            write2bands (Optional[int or int list]): Band positions to write to, otherwise takes the order of the input
+                array dimensions. Default is None.
+            compress (Optional[str]): Needed if <out_rst> not given. Default is 'LZW'.
+            tile (Optional[bool]): Needed if <out_rst> not given. Default is False.
+            close_band (Optional[bool]): Whether to flush the band cache. Default is True.
+            flush_final (Optional[bool]): Whether to flush the raster cache. Default is False.
+            write_chunks (Optional[bool]): Whether to write to file in <write_chunks> chunks. Default is False.
+
+        Returns:
+            None, writes <out_name>.
+        """
+
+        if isinstance(write_which, str):
+
+            if write_which == 'ndvi':
+                out_arr = self.ndvi
+            elif write_which == 'evi2':
+                out_arr = self.evi2
+            elif write_which == 'pca':
+                out_arr = self.pca_components
+            else:
+                out_arr = self.array
+
+        elif isinstance(write_which, np.ndarray):
+            out_arr = write_which
+
+        gdal.SetCacheMax(2.56e+8)
+
+        d_name, f_name = os.path.split(out_name)
+
+        if not os.path.isdir(d_name):
+            os.makedirs(d_name)
+
+        array_shape = out_arr.shape
+
+        if len(array_shape) == 2:
+
+            out_rows, out_cols = out_arr.shape
+            out_dims = 1
+
+        else:
+
+            out_dims, out_rows, out_cols = out_arr.shape
+
+        new_file = False
+
+        if not out_rst:
+
+            new_file = True
+
+            if kwargs:
+
+                try:
+                    o_info.storage = kwargs['storage']
+                except:
+                    pass
+
+                try:
+                    o_info.bands = kwargs['bands']
+                except:
+                    o_info.bands = out_dims
+
+            o_info.rows = out_rows
+            o_info.cols = out_cols
+
+            out_rst = create_raster(out_name, o_info, compress=compress, tile=tile)
+
+        # Specify a band to write to.
+        if isinstance(write2bands, int) or isinstance(write2bands, list):
+
+            if isinstance(write2bands, int):
+                write2bands = [write2bands]
+
+            for n_band in write2bands:
+
+                out_rst.get_band(n_band)
+
+                if write_chunks:
+
+                    out_rst.get_chunk_size()
+
+                    for i in xrange(0, out_rst.rows, out_rst.chunk_size):
+
+                        n_rows = n_rows_cols(i, out_rst.chunk_size, out_rst.rows)
+
+                        for j in xrange(0, out_rst.cols, out_rst.chunk_size):
+
+                            n_cols = n_rows_cols(j, out_rst.chunk_size, out_rst.cols)
+
+                            out_rst.write_array(out_arr[i:i+n_rows, j:j+n_cols], i=i, j=j)
+
+                else:
+
+                    out_rst.write_array(out_arr, i=y, j=x)
+
+                if close_band:
+                    out_rst.close_band()
+
+        # Write in order of the 3rd array dimension.
+        else:
+
+            arr_shape = out_arr.shape
+
+            if len(arr_shape) > 2:
+
+                out_bands = arr_shape[0]
+
+                for n_band in xrange(1, out_bands+1):
+
+                    out_rst.write_array(out_arr[n_band-1], i=y, j=x, band=n_band)
+
+                    if close_band:
+                        out_rst.close_band()
+
+            else:
+
+                out_rst.write_array(out_arr, i=y, j=x, band=1)
+
+                if close_band:
+                    out_rst.close_band()
+
+        # close the dataset if it was created or prompted by <flush_final>
+        if flush_final or new_file:
+            out_rst.close_file()
 
 class DataChecks(object):
 
@@ -391,96 +806,16 @@ class CreateDriver(RegisterDriver):
             self.datasource = self.driver.Create(out_name, out_cols, out_rows, n_bands, storage_type, parameters)
 
 
-class FileManager(DataChecks, RegisterDriver):
+class DatasourceInfo(object):
 
-    """
-    Class for file handling
-
-    Args:
-        raster_object (object)
-
-    Attributes:
-        band (object)
-        chunk_size (int)
-
-    Methods:
-        build_overviews
-        get_band
-        write_array
-        close_band
-        close_file
-        close_all
-        get_chunk_size
-        remove_overviews
-
-    Returns:
-        None
-    """
-
-    def get_image_info(self, open2read, hdf_band, check_corrupted):
-
-        self.hdf_file = False
-
-        if not os.path.isfile(self.file_name):
-            raise IOError('\n{} does not exist.\n'.format(self.file_name))
-
-        self._get_file_format(self.file_name)
-
-        # Open input raster.
-        try:
-
-            if open2read:
-
-                self.datasource = gdal.Open(self.file_name, GA_ReadOnly)
-                self.image_mode = 'read only'
-
-            else:
-
-                self.datasource = gdal.Open(self.file_name, GA_Update)
-                self.image_mode = 'update'
-
-            self.file_open = True
-
-        except:
-            logger.error(gdal.GetLastErrorMsg())
-            print '\nCould not open {}.\n'.format(self.file_name)
-            return
-
-        if self.file_name.lower().endswith('.hdf'):
-
-            self.hdf_file = True
-
-            if self.datasource is None:
-                print '\n1) {} appears to be empty.\n'.format(self.file_name)
-                return
-
-            # self.hdf_layers = self.datasource.GetSubDatasets()
-            self.hdf_layers = self.datasource.GetMetadata('SUBDATASETS')
-            self.hdf_key_list = [k for k in self.hdf_layers.keys() if '_NAME' in k]
-
-            self.hdf_name_list = dict()
-
-            for hdf_str in self.hdf_key_list:
-
-                str_digit = hdf_str[hdf_str.find('_')+1:len(hdf_str)-hdf_str[::-1].find('_')-1]
-
-                if len(str_digit) == 1:
-                    self.hdf_name_list[hdf_str.replace(str_digit, '0{}'.format(str_digit))] = self.hdf_layers[hdf_str]
-                else:
-                    self.hdf_name_list[hdf_str] = self.hdf_layers[hdf_str]
-
-            self.hdf_name_list = [self.hdf_name_list[k] for k in sorted(self.hdf_name_list)]
-
-            # self.hdf_name_list = [self.hdf_layers[k] for k in self.hdf_layers.keys() if '_NAME' in k]
-
-            self.hdf_datasources = [self._open_dataset(hdf_name, True) for hdf_name in self.hdf_name_list]
-
-            self.datasource = self.hdf_datasources[hdf_band-1]
-
-            # self.datasource = gdal.Open(self.datasource.GetSubDatasets()[hdf_band - 1][0], GA_ReadOnly)
+    def datasource_info(self):
 
         if self.datasource is None:
-            raise OSError('2) {} appears to be empty.'.format(self.file_name))
+
+            if hasattr(self, 'file_name'):
+                raise OSError('2) {} appears to be empty.'.format(self.file_name))
+            else:
+                raise OSError('2) The datasource appears to be empty.')
 
         try:
             self.meta_dict = self.datasource.GetMetadata_Dict()
@@ -493,7 +828,8 @@ class FileManager(DataChecks, RegisterDriver):
         except:
             self.storage = 'none'
 
-        self.directory, self.filename = os.path.split(self.file_name)
+        if hasattr(self, 'file_name'):
+            self.directory, self.filename = os.path.split(self.file_name)
 
         self.bands = self.datasource.RasterCount
 
@@ -501,13 +837,16 @@ class FileManager(DataChecks, RegisterDriver):
         # DataChecks.__init__(self)
 
         # Check if any of the bands are corrupted.
-        if check_corrupted:
-            self.check_corrupted_bands()
+        if hasattr(self, 'check_corrupted'):
+
+            if self.check_corrupted:
+                self.check_corrupted_bands()
 
         self.projection = self.datasource.GetProjection()
 
         self.sp_ref = osr.SpatialReference()
         self.sp_ref.ImportFromWkt(self.projection)
+        self.proj4 = self.sp_ref.ExportToProj4()
 
         self.color_interpretation = self.datasource.GetRasterBand(1).GetRasterColorInterpretation()
 
@@ -577,9 +916,109 @@ class FileManager(DataChecks, RegisterDriver):
         except:
 
             logger.error(gdal.GetLastErrorMsg())
-            
+
             self.block_x = 'none'
             self.block_y = 'none'
+
+
+class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
+
+    """
+    Class for file handling
+
+    Args:
+        raster_object (object)
+
+    Attributes:
+        band (object)
+        chunk_size (int)
+
+    Methods:
+        build_overviews
+        get_band
+        write_array
+        close_band
+        close_file
+        close_all
+        get_chunk_size
+        remove_overviews
+
+    Returns:
+        None
+    """
+
+    def get_image_info(self, open2read, hdf_band, check_corrupted):
+
+        self.hdf_file = False
+        self.check_corrupted = check_corrupted
+
+        # HDF subdatasets given as files in `vrt_builder`.
+        #   Find the file name in the subdataset name.
+        if '.hdf' in self.file_name.lower() and not self.file_name.lower().endswith('.hdf'):
+
+            stris = [stri for stri, strt in enumerate(self.file_name) if strt == ':']
+            self.file_name = self.file_name[stris[1]+2:stris[2]-1]
+
+        if not os.path.isfile(self.file_name):
+            raise IOError('\n{} does not exist.\n'.format(self.file_name))
+
+        self._get_file_format(self.file_name)
+
+        # Open input raster.
+        try:
+
+            if open2read:
+
+                self.datasource = gdal.Open(self.file_name, GA_ReadOnly)
+                self.image_mode = 'read only'
+
+            else:
+
+                self.datasource = gdal.Open(self.file_name, GA_Update)
+                self.image_mode = 'update'
+
+            self.file_open = True
+
+        except:
+            logger.error(gdal.GetLastErrorMsg())
+            print '\nCould not open {}.\n'.format(self.file_name)
+            return
+
+        if self.file_name.lower().endswith('.hdf'):
+
+            self.hdf_file = True
+
+            if self.datasource is None:
+                print '\n1) {} appears to be empty.\n'.format(self.file_name)
+                return
+
+            # self.hdf_layers = self.datasource.GetSubDatasets()
+            self.hdf_layers = self.datasource.GetMetadata('SUBDATASETS')
+
+            self.hdf_key_list = [k for k in self.hdf_layers.keys() if '_NAME' in k]
+
+            self.hdf_name_list = dict()
+
+            for hdf_str in self.hdf_key_list:
+
+                str_digit = hdf_str[hdf_str.find('_')+1:len(hdf_str)-hdf_str[::-1].find('_')-1]
+
+                if len(str_digit) == 1:
+                    self.hdf_name_list[hdf_str.replace(str_digit, '0{}'.format(str_digit))] = self.hdf_layers[hdf_str]
+                else:
+                    self.hdf_name_list[hdf_str] = self.hdf_layers[hdf_str]
+
+            self.hdf_name_list = [self.hdf_name_list[k] for k in sorted(self.hdf_name_list)]
+
+            # self.hdf_name_list = [self.hdf_layers[k] for k in self.hdf_layers.keys() if '_NAME' in k]
+
+            self.hdf_datasources = [self._open_dataset(hdf_name, True) for hdf_name in self.hdf_name_list]
+
+            self.datasource = self.hdf_datasources[hdf_band-1]
+
+            # self.datasource = gdal.Open(self.datasource.GetSubDatasets()[hdf_band - 1][0], GA_ReadOnly)
+
+        self.datasource_info()
 
     def _open_dataset(self, image_name, open2read):
 
@@ -755,22 +1194,17 @@ class FileManager(DataChecks, RegisterDriver):
         if hasattr(self, 'datasource'):
 
             if hasattr(self, 'hdf_file'):
-
-                if self.hdf_file:
-
-                    if hasattr(self, 'hdf_datasources'):
-
-                        for hdf_datasource in self.hdf_datasources:
-                            hdf_datasource = None
-
+                self.hdf_datasources = None
             else:
 
-                try:
-                    self.datasource.FlushCache()
-                except:
-                    logger.warning('The dataset could not be flushed.')
-                    logger.error(gdal.GetLastErrorMsg())
-                    pass
+                if hasattr(self.datasource, 'FlushCache'):
+
+                    try:
+                        self.datasource.FlushCache()
+                    except:
+                        logger.warning('The dataset could not be flushed.')
+                        logger.error(gdal.GetLastErrorMsg())
+                        pass
 
         self.datasource = None
         self.hdf_datasources = None
@@ -862,6 +1296,31 @@ class FileManager(DataChecks, RegisterDriver):
                 gdal.DontUseExceptions()
 
             return False
+
+
+class UpdateInfo(object):
+
+    """
+    A class for updating attributes
+    """
+
+    def update_info(self, **kwargs):
+
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
+
+
+class ImageInfo(UpdateInfo, ReadWrite, FileManager, DatasourceInfo):
+
+    """
+    An empty class for passing image information
+    """
+
+    def __init__(self):
+        pass
+
+    def copy(self):
+        return copy.copy(self)
 
 
 class LandsatParser(object):
@@ -1105,7 +1564,7 @@ class SentinelParser(object):
         self.saturated = int(general_info['Product_Image_Characteristics']['Special_Values'][1]['SPECIAL_VALUE_INDEX'])
 
 
-class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo):
+class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
 
     """
     Gets image information and a file pointer object.
@@ -1250,246 +1709,6 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo):
         
         self.close_all()
 
-    def read(self, bands2open=1, i=0, j=0, rows=-1, cols=-1, d_type=None,
-                compute_index='none', sensor='Landsat', sort_bands2open=True,
-                predictions=False, y=0., x=0., check_x=None, check_y=None):
-
-        """
-        Reads a raster as an array
-
-        Args:
-            bands2open (Optional[int or int list or dict]: Band position to open, list of bands to open, or a
-                dictionary of name-band pairs. Default is 1.
-
-                Examples:
-                    bands2open = 1        (open band 1)
-                    bands2open = [1,2,3]  (open first three bands)
-                    bands2open = [4,3,2]  (open bands in a specific order)
-                        *When opening bands in a specific order, be sure to set ``sort_bands2open`` as ``False``.
-                    bands2open = -1       (open all bands)
-                    bands2open = {'blue': 1, 'green': 2, 'nir': 4}  (open bands 1, 2, and 4)
-
-            i (Optional[int]): Starting row position. Default is 0, or first row.
-            j (Optional[int]): Starting column position. Default is 0, or first column.
-            rows (Optional[int]): Number of rows to extract. Default is -1, or all rows.
-            cols (Optional[int]): Number of columns to extract. Default is -1, or all columns.
-            d_type (Optional[str]): Type of array to return. Choices are ['byte', 'int16', 'uint16',
-                'int32', 'uint32', 'int64', 'uint64', 'float32', 'float64']. Default is None, or gathered
-                from <i_info>.
-            compute_index (Optional[str]): A spectral index to compute. Default is 'none'.
-            sensor (Optional[str]): The input sensor type (used with ``compute_index``). Default is 'Landsat'.
-            sort_bands2open (Optional[bool]): Whether to sort ``bands2open``. Default is True.
-            predictions (Optional[bool]): Whether to return reshaped array for predictions.
-            y (Optional[float]): A y index coordinate (latitude, in map units). Default is 0.
-                If greater than 0, overrides ``i``.
-            x (Optional[float]): A x index coordinate (longitude, in map units). Default is 0.
-                If greater than 0, overrides ``j``.
-            check_x (Optional[float]): Check the x offset against ``check_x``. Default is None.
-            check_y (Optional[float]): Check the y offset against ``check_y``. Default is None.
-
-        Attributes:
-            array (ndarray)
-
-        Returns:
-            ``ndarray``, where shape is (rows x cols) if 1 band or (bands x rows x cols) if more than 1 band.
-
-        Examples:
-            >>> import mpglue as gl
-            >>>
-            >>> i_info = mp.ropen('image.tif')
-            >>> i_info = mp.open('image.tif')
-            >>>
-            >>> # Open 1 band.
-            >>> array = i_info.read(bands2open=1)
-            >>>
-            >>> # Open multiple bands.
-            >>> array = i_info.read(bands2open=[1, 2, 3])
-            >>> band_1 = array[0]
-            >>>
-            >>> # Open as a dictionary of arrays.
-            >>> bands = i_info.read(bands2open={'blue': 1, 'red': 2, 'nir': 4})
-            >>> red = bands['red']
-            >>>
-            >>> # Index an image by pixel positions.
-            >>> array = i_info.read(i=1000, j=4000, rows=500, cols=500)
-            >>>
-            >>> # Index an image by map coordinates.
-            >>> array = i_info.read(y=1200000., x=4230000., rows=500, cols=500)
-        """
-
-        self.i = i
-        self.j = j
-
-        # `self.rows` and `self.cols` are the
-        #   image dimension info, so don't overwrite.
-        self.rrows = rows
-        self.ccols = cols
-
-        self.sort_bands2open = sort_bands2open
-
-        if isinstance(bands2open, dict):
-
-            if isinstance(d_type, str):
-                self.d_type = STORAGE_DICT_NUMPY[d_type]
-            else:
-                self.d_type = STORAGE_DICT_NUMPY[self.storage.lower()]
-
-        else:
-
-            if isinstance(d_type, str):
-                self.d_type = STORAGE_DICT[d_type]
-            else:
-                self.d_type = STORAGE_DICT[self.storage.lower()]
-
-        if compute_index != 'none':
-
-            bh = BandHandler(sensor)
-
-            bh.get_band_order()
-
-            bands2open = bh.get_band_positions(bh.wavelength_lists[compute_index.upper()])
-
-            self.d_type = 'float32'
-
-        if self.rrows == -1:
-            self.rrows = self.rows
-        else:
-            if self.rrows > self.rows:
-                raise ValueError('\nThe requested rows cannot be larger than the image rows.\n')
-
-        if self.ccols == -1:
-            self.ccols = self.cols
-        else:
-            if self.ccols > self.cols:
-                raise ValueError('\nThe requested columns cannot be larger than the image columns.\n')
-
-        # Index the image by x, y coordinates (in map units).
-        if abs(y) > 0:
-            __, __, __, self.i = get_xy_offsets(self, x=x, y=y)
-
-        if abs(x) > 0:
-            __, __, self.j, __ = get_xy_offsets(self, x=x, y=y)
-
-        if isinstance(check_x, float) and isinstance(check_y, float):
-
-            __, __, x_offset, y_offset = get_xy_offsets(self, x=check_x, y=check_y, check_position=False)
-
-            self.i += y_offset
-            self.j += x_offset
-
-        #################
-        # Bounds checking
-        #################
-
-        # Row indices
-        if self.i < 0:
-            self.i = 0
-
-        if self.i >= self.rows:
-            self.i = self.rows - 1
-
-        # Number of rows
-        self.rrows = n_rows_cols(self.i, self.rrows, self.rows)
-
-        # Column indices
-        if self.j < 0:
-            self.j = 0
-
-        if self.j >= self.cols:
-            self.j = self.cols - 1
-
-        # Number of columns
-        self.ccols = n_rows_cols(self.j, self.ccols, self.cols)
-
-        #################
-
-        # format_dict = {'byte': 'B', 'int16': 'i', 'uint16': 'I', 'float32': 'f', 'float64': 'd'}
-        # values = struct.unpack('%d%s' % ((rows * cols * len(bands2open)), format_dict[i_info.storage.lower()]),
-        #     i_info.datasource.ReadRaster(yoff=i, xoff=j, xsize=cols, ysize=rows, band_list=bands2open))
-
-        if hasattr(self, 'band'):
-
-            self.array = self.band.ReadAsArray(self.j,
-                                               self.i,
-                                               self.ccols,
-                                               self.rrows).astype(self.d_type)
-
-            self.array_shape = [1, self.rrows, self.ccols]
-
-            if predictions:
-                self._reshape2predictions(1)
-
-        else:
-
-            # Check ``bands2open`` type.
-            bands2open = self._check_band_list(bands2open)
-
-            # Open the array.
-            self._open_array(bands2open)
-
-            if predictions:
-                self._reshape2predictions(len(bands2open))
-
-        if compute_index != 'none':
-
-            vie = VegIndicesEquations(self.array, chunk_size=-1)
-
-            exec 'self.{} = vie.compute(compute_index.upper())'.format(compute_index)
-
-        return self.array
-
-    def _open_array(self, bands2open):
-
-        # Open the image as a dictionary of arrays.
-        if isinstance(bands2open, dict):
-
-            self.array = {}
-
-            for band_name, band_position in bands2open.iteritems():
-
-                if self.hdf_file:
-
-                    self.array[band_name] = self.hdf_datasources[band_position-1].ReadAsArray(self.j,
-                                                                                              self.i,
-                                                                                              self.ccols,
-                                                                                              self.rrows).astype(self.d_type)
-
-                else:
-
-                    self.array[band_name] = self.datasource.GetRasterBand(band_position).ReadAsArray(self.j,
-                                                                                                     self.i,
-                                                                                                     self.ccols,
-                                                                                                     self.rrows).astype(self.d_type)
-
-        # Open the image as an array.
-        else:
-
-            if self.hdf_file:
-
-                self.array = np.asarray([self.hdf_datasources[band-1].ReadAsArray(self.j,
-                                                                                  self.i,
-                                                                                  self.ccols,
-                                                                                  self.rrows)
-                                         for band in bands2open], dtype=self.d_type)
-
-            else:
-
-                self.array = np.asarray([self.datasource.GetRasterBand(band).ReadAsArray(self.j,
-                                                                                         self.i,
-                                                                                         self.ccols,
-                                                                                         self.rrows)
-                                         for band in bands2open], dtype=self.d_type)
-
-            self.array = self._reshape(self.array, bands2open)
-
-    def predictions2norm(self):
-
-        """
-        Reshapes predictions back to 2d array
-        """
-
-        self.array = self.array.reshape(self.ccols, self.rrows).T
-
     def warp(self, output_image, epsg, resample='nearest', cell_size=0., **kwargs):
 
         """
@@ -1545,204 +1764,6 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo):
         out_ds = gdal.Translate(output_image, self.file_name, options=translate_options)
 
         out_ds = None
-
-    def _reshape2predictions(self, n_bands):
-
-        if n_bands == 1:
-
-            self.array = self.array.reshape(self.rrows,
-                                            self.ccols).T.reshape(self.rrows * self.ccols, n_bands)
-
-        else:
-
-            self.array = self.array.reshape(n_bands,
-                                            self.rrows,
-                                            self.ccols).T.reshape(self.rrows * self.ccols, n_bands)
-
-        self.array_shape = [1, self.rrows*self.ccols, n_bands]
-
-    def _reshape(self, array2reshape, band_list):
-
-        if len(band_list) == 1:
-            array2reshape = array2reshape.reshape(self.rrows, self.ccols)
-        else:
-            array2reshape = array2reshape.reshape(len(band_list), self.rrows, self.ccols)
-
-        self.array_shape = [len(band_list), self.rrows, self.ccols]
-
-        return array2reshape
-
-    def _check_band_list(self, bands2open):
-
-        if isinstance(bands2open, dict):
-
-            return bands2open
-
-        elif isinstance(bands2open, list):
-
-            if len(bands2open) == 0:
-                raise ValueError('\nA band list must be declared.\n')
-
-            if not self.hdf_file:
-                if max(bands2open) > self.bands:
-                    raise ValueError('\nThe requested band position cannot be greater than the image bands.\n')
-
-        elif isinstance(bands2open, int):
-
-            if not self.hdf_file:
-                if bands2open > self.bands:
-                    raise ValueError('\nThe requested band position cannot be greater than the image bands.\n')
-
-            if bands2open == -1:
-                bands2open = range(1, self.bands+1)
-            else:
-                bands2open = [bands2open]
-
-        else:
-            raise TypeError('The ``bands2open`` parameter must be a dict, list, or int.')
-
-        if self.sort_bands2open and not isinstance(bands2open, dict):
-            bands2open = sorted(bands2open)
-
-        return bands2open
-
-    def write2raster(self, out_name, write_which='array', o_info=None, x=0, y=0, out_rst=None, write2bands=[],
-                     compress='LZW', tile=False, close_band=True, flush_final=False, write_chunks=False, **kwargs):
-
-        """
-        Writes array to file
-
-        Args:
-            out_name (str): Output image name.
-            o_info (Optional[object]): Output image information, instance of ``ropen``.
-                Needed if <out_rst> not given. Default is None.
-            x (Optional[int]): Column starting position. Default is 0.
-            y (Optional[int]): Row starting position. Default is 0.
-            out_rst (Optional[object]): GDAL object to right to, otherwise created. Default is None.
-            write2bands (Optional[int or int list]): Band positions to write to, otherwise takes the order of the input
-                array dimensions. Default is None.
-            compress (Optional[str]): Needed if <out_rst> not given. Default is 'LZW'.
-            tile (Optional[bool]): Needed if <out_rst> not given. Default is False.
-            close_band (Optional[bool]): Whether to flush the band cache. Default is True.
-            flush_final (Optional[bool]): Whether to flush the raster cache. Default is False.
-            write_chunks (Optional[bool]): Whether to write to file in <write_chunks> chunks. Default is False.
-
-        Returns:
-            None, writes <out_name>.
-        """
-
-        if isinstance(write_which, str):
-
-            if write_which == 'ndvi':
-                out_arr = self.ndvi
-            elif write_which == 'evi2':
-                out_arr = self.evi2
-            elif write_which == 'pca':
-                out_arr = self.pca_components
-            else:
-                out_arr = self.array
-
-        elif isinstance(write_which, np.ndarray):
-            out_arr = write_which
-
-        gdal.SetCacheMax(2.56e+8)
-
-        d_name, f_name = os.path.split(out_name)
-
-        if not os.path.isdir(d_name):
-            os.makedirs(d_name)
-
-        array_shape = out_arr.shape
-
-        if len(array_shape) == 2:
-
-            out_rows, out_cols = out_arr.shape
-            out_dims = 1
-
-        else:
-
-            out_dims, out_rows, out_cols = out_arr.shape
-
-        new_file = False
-
-        if not out_rst:
-
-            new_file = True
-
-            if kwargs:
-
-                try:
-                    o_info.storage = kwargs['storage']
-                except:
-                    pass
-
-                try:
-                    o_info.bands = kwargs['bands']
-                except:
-                    o_info.bands = out_dims
-
-            o_info.rows = out_rows
-            o_info.cols = out_cols
-
-            out_rst = create_raster(out_name, o_info, compress=compress, tile=tile)
-
-        # Specify a band to write to.
-        if isinstance(write2bands, int) or isinstance(write2bands, list):
-
-            if isinstance(write2bands, int):
-                write2bands = [write2bands]
-
-            for n_band in write2bands:
-
-                out_rst.get_band(n_band)
-
-                if write_chunks:
-
-                    out_rst.get_chunk_size()
-
-                    for i in xrange(0, out_rst.rows, out_rst.chunk_size):
-
-                        n_rows = n_rows_cols(i, out_rst.chunk_size, out_rst.rows)
-
-                        for j in xrange(0, out_rst.cols, out_rst.chunk_size):
-
-                            n_cols = n_rows_cols(j, out_rst.chunk_size, out_rst.cols)
-
-                            out_rst.write_array(out_arr[i:i+n_rows, j:j+n_cols], i=i, j=j)
-
-                else:
-
-                    out_rst.write_array(out_arr, i=y, j=x)
-
-                if close_band:
-                    out_rst.close_band()
-
-        # Write in order of the 3rd array dimension.
-        else:
-
-            arr_shape = out_arr.shape
-
-            if len(arr_shape) > 2:
-
-                out_bands = arr_shape[0]
-
-                for n_band in xrange(1, out_bands+1):
-
-                    out_rst.write_array(out_arr[n_band-1], i=y, j=x, band=n_band)
-
-                    if close_band:
-                        out_rst.close_band()
-
-            else:
-
-                out_rst.write_array(out_arr, i=y, j=x, band=1)
-
-                if close_band:
-                    out_rst.close_band()
-
-        # close the dataset if it was created or prompted by <flush_final>
-        if flush_final or new_file:
-            out_rst.close_file()
 
     def pca(self, n_components=3):
 
@@ -2260,7 +2281,8 @@ class BlockFunc(object):
             for imi in xrange(0, len(self.image_infos)):
                 if not isinstance(self.image_infos[imi], ropen):
                     if not isinstance(self.image_infos[imi], GetMinExtent):
-                        raise ropenError('The image info list should be instances of ropen or GetMinExtent.')
+                        if not isinstance(self.image_infos[imi], ImageInfo):
+                            raise ropenError('The image info list should be instances of `ropen`, `GetMinExtent`, or `ImageInfo`.')
 
         if not isinstance(self.band_list, list) and isinstance(self.band_list, int):
             self.band_list = [self.band_list] * len(self.image_infos)
@@ -2399,7 +2421,6 @@ class BlockFunc(object):
                 #         print 'Block {:,d}--{:,d} of {:,d} ...'.format(n_block, n_block_, n_blocks)
                 #
                 #     n_block += 1
-
                 image_arrays = [self.image_infos[imi].read(bands2open=self.band_list[imi],
                                                            i=i+self.y_offset[imi]-y_pad_minus,
                                                            j=j+self.x_offset[imi]-x_pad_minus,
@@ -2415,9 +2436,11 @@ class BlockFunc(object):
 
                     for no_data, im_block in itertools.izip(self.no_data_values, image_arrays):
 
-                        if im_block.max() == no_data:
-                            skip_block = True
-                            break
+                        if isinstance(no_data, int) or isinstance(no_data, float):
+
+                            if im_block.max() == no_data:
+                                skip_block = True
+                                break
 
                 if skip_block:
                     continue
@@ -2471,15 +2494,17 @@ class BlockFunc(object):
         if not self.be_quiet:
             pbar.finish()
 
-        if self.close_files:
+        if isinstance(self.out_image, str):
 
-            for imi in xrange(0, len(self.image_infos)):
-                self.image_infos[imi].close()
+            if self.close_files:
 
-            self.out_info.close()
+                for imi in xrange(0, len(self.image_infos)):
+                    self.image_infos[imi].close()
 
-        if self.write_array:
-            out_raster.close_all()
+                self.out_info.close()
+
+            if self.write_array:
+                out_raster.close_all()
 
     def get_block_extent(self, ii, jj, nn_rows, nn_cols):
 
@@ -2711,7 +2736,7 @@ def _merge_dicts(dict1, dict2):
 
 
 def warp(input_image, output_image, out_epsg=None, in_epsg=None, resample='nearest',
-         cell_size=0, d_type=None, **kwargs):
+         cell_size=0, d_type=None, return_datasource=False, **kwargs):
 
     """
     Warp transforms a dataset
@@ -2724,6 +2749,7 @@ def warp(input_image, output_image, out_epsg=None, in_epsg=None, resample='neare
         resample (Optional[str]): The resampling method. Default is 'nearest'.N
         cell_size (Optional[float]): The output cell size. Default is 0.
         d_type (Optional[str]): Data type to overwrite `outputType`. Default is None.
+        return_datasource (Optional[bool])
         kwargs:
             format=None, outputBounds=None, outputBoundsSRS=None, targetAlignedPixels=False,
              width=0, height=0, srcAlpha=False, dstAlpha=False, warpOptions=None,
@@ -2767,7 +2793,19 @@ def warp(input_image, output_image, out_epsg=None, in_epsg=None, resample='neare
 
     out_ds = gdal.Warp(output_image, input_image, options=warp_options)
 
-    out_ds = None
+    if return_datasource:
+
+        i_info = ImageInfo()
+
+        i_info.update_info(datasource=out_ds,
+                           hdf_file=False)
+
+        i_info.datasource_info()
+
+        return i_info
+
+    else:
+        out_ds = None
 
 
 def translate(input_image, output_image, cell_size=0, d_type=None, **kwargs):
@@ -2929,7 +2967,7 @@ class create_raster(CreateDriver, FileManager):
         # Create driver for output image.
         if create_tiles > 0:
 
-            d_name_tiles = '{}/{}_tiles'.format(d_name, f_base)
+            d_name_tiles = os.path.join(d_name, '{}_tiles'.format(f_base))
 
             if not os.path.isdir(d_name_tiles):
                 os.makedirs(d_name_tiles)
@@ -4407,8 +4445,10 @@ def cumulative_plot_array(image_array, small2large=True, out_fig=None):
     plt.close()
 
 
-def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None, storage='float32',
-                     match_raster=None, bigtiff='no', in_memory=False, initial_value=0, **kwargs):
+def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None,
+                     storage='float32', match_raster=None, bigtiff='no',
+                     in_memory=False, initial_value=0, where_clause=None,
+                     return_array=False, **kwargs):
 
     """
     Rasterizes a vector dataset
@@ -4419,9 +4459,13 @@ def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None, storag
         burn_id (Optional[str]): The attribute id of ``in_vector`` to burn into ``out_raster``. Default is 'Id'.
         cell_size (Optional[float]): The output raster cell size. Default is None. *Needs to be given if
             ``match_raster``=None.
+        storage (Optional[str])
         match_raster (Optional[str]): A raster to match cell size. Default is None.
         bigtiff (Optional[str]): How to handle big TIFF creation option. Default is 'no'.
         in_memory (Optional[bool]): Whether to build ``out_raster`` in memory. Default is False.
+        initial_value (Optional[int])
+        where_clause (Optional[str])
+        return_array (Optional[bool])
 
     Examples:
         >>> # rasterize to the extent of the matching raster
@@ -4443,102 +4487,114 @@ def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None, storag
         None, writes to ``out_raster``.
     """
 
-    v_info = vopen(in_vector)
+    with vopen(in_vector) as v_info:
 
-    if kwargs:
+        if kwargs:
 
-        if not isinstance(cell_size, float):
-            raise ValueError('The cell size must be given.')
+            if not isinstance(cell_size, float):
+                raise ValueError('The cell size must be given.')
 
-        if 'projection' not in kwargs:
-            raise ValueError('The projection must be given.')
+            if 'projection' not in kwargs:
+                raise ValueError('The projection must be given.')
 
-        if 'right' not in kwargs:
+            if 'right' not in kwargs:
+
+                if 'cols' not in kwargs:
+                    raise ValueError('Either right or cols must be given.')
+
+                kwargs['right'] = kwargs['left'] + (kwargs['cols'] * cell_size) + cell_size
+
+            if 'bottom' not in kwargs:
+
+                if 'rows' not in kwargs:
+                    raise ValueError('Either bottom or rows must be given.')
+
+                kwargs['bottom'] = kwargs['top'] - (kwargs['rows'] * cell_size) - cell_size
+
+            # get rows and columns
+            if 'rows' not in kwargs:
+
+                if (kwargs['top'] > 0) and (kwargs['bottom'] >= 0):
+                    kwargs['rows'] = int((kwargs['top'] - kwargs['bottom']) / cell_size)
+                elif (kwargs['top'] > 0) and (kwargs['bottom'] < 0):
+                    kwargs['rows'] = int((kwargs['top'] + abs(kwargs['bottom'])) / cell_size)
+                elif (kwargs['top'] < 0) and (kwargs['bottom'] < 0):
+                    kwargs['rows'] = int((abs(kwargs['bottom']) - abs(kwargs['top'])) / cell_size)
 
             if 'cols' not in kwargs:
-                raise ValueError('Either right or cols must be given.')
 
-            kwargs['right'] = kwargs['left'] + (kwargs['cols'] * cell_size) + cell_size
+                if (kwargs['right'] > 0) and (kwargs['left'] >= 0):
+                    kwargs['cols'] = int((kwargs['right'] - kwargs['left']) / cell_size)
+                elif (kwargs['right'] > 0) and (kwargs['left'] < 0):
+                    kwargs['cols'] = int((kwargs['right'] + abs(kwargs['left'])) / cell_size)
+                elif (kwargs['right'] < 0) and (kwargs['left'] < 0):
+                    kwargs['cols'] = int((abs(kwargs['left']) - abs(kwargs['right'])) / cell_size)
 
-        if 'bottom' not in kwargs:
+            create_dict = dict(left=kwargs['left'], right=kwargs['right'], top=kwargs['top'],
+                               bottom=kwargs['bottom'], projection=kwargs['projection'], storage=storage, bands=1,
+                               cellY=cell_size, cellX=-cell_size, rows=kwargs['rows'], cols=kwargs['cols'])
 
-            if 'rows' not in kwargs:
-                raise ValueError('Either bottom or rows must be given.')
+        else:
 
-            kwargs['bottom'] = kwargs['top'] - (kwargs['rows'] * cell_size) - cell_size
+            if not isinstance(cell_size, float):
+                raise ValueError('The cell size must be given.')
 
-        # get rows and columns
-        if 'rows' not in kwargs:
+            # get rows and columns
+            rows = abs(int((abs(v_info.top) - abs(v_info.bottom)) / cell_size))
+            cols = abs(int((abs(v_info.left) - abs(v_info.right)) / cell_size))
 
-            if (kwargs['top'] > 0) and (kwargs['bottom'] >= 0):
-                kwargs['rows'] = int((kwargs['top'] - kwargs['bottom']) / cell_size)
-            elif (kwargs['top'] > 0) and (kwargs['bottom'] < 0):
-                kwargs['rows'] = int((kwargs['top'] + abs(kwargs['bottom'])) / cell_size)
-            elif (kwargs['top'] < 0) and (kwargs['bottom'] < 0):
-                kwargs['rows'] = int((abs(kwargs['bottom']) - abs(kwargs['top'])) / cell_size)
+            create_dict = dict(left=v_info.left, right=v_info.right, top=v_info.top, bottom=v_info.bottom,
+                               projection=v_info.projection, storage=storage, bands=1,
+                               cellY=cell_size, cellX=-cell_size, rows=rows, cols=cols)
 
-        if 'cols' not in kwargs:
+        if match_raster and not kwargs:
 
-            if (kwargs['right'] > 0) and (kwargs['left'] >= 0):
-                kwargs['cols'] = int((kwargs['right'] - kwargs['left']) / cell_size)
-            elif (kwargs['right'] > 0) and (kwargs['left'] < 0):
-                kwargs['cols'] = int((kwargs['right'] + abs(kwargs['left'])) / cell_size)
-            elif (kwargs['right'] < 0) and (kwargs['left'] < 0):
-                kwargs['cols'] = int((abs(kwargs['left']) - abs(kwargs['right'])) / cell_size)
+            with ropen(match_raster) as o_info:
 
-        create_dict = dict(left=kwargs['left'], right=kwargs['right'], top=kwargs['top'],
-                           bottom=kwargs['bottom'], projection=kwargs['projection'], storage=storage, bands=1,
-                           cellY=cell_size, cellX=-cell_size, rows=kwargs['rows'], cols=kwargs['cols'])
-
-    else:
-
-        if not isinstance(cell_size, float):
-            raise ValueError('The cell size must be given.')
-
-        # get rows and columns
-        rows = abs(int((abs(v_info.top) - abs(v_info.bottom)) / cell_size))
-        cols = abs(int((abs(v_info.left) - abs(v_info.right)) / cell_size))
-
-        create_dict = dict(left=v_info.left, right=v_info.right, top=v_info.top, bottom=v_info.bottom,
-                           proj=v_info.projection, storage=storage, bands=1, cellY=cell_size, cellX=-cell_size,
-                           rows=rows, cols=cols)
-
-    if match_raster and not kwargs:
-
-        with ropen(match_raster) as o_info:
-
-            with create_raster(out_raster, o_info, bigtiff=bigtiff, in_memory=in_memory) as orw:
+                orw = create_raster(out_raster, o_info, bigtiff=bigtiff, in_memory=in_memory)
 
                 orw.get_band(1)
                 orw.fill(initial_value)
 
-            orw = None
+        else:
 
-    else:
+            with ropen('create', **create_dict) as o_info:
 
-        with ropen('create', **create_dict) as o_info:
-
-            with create_raster(out_raster, o_info, bigtiff=bigtiff, in_memory=in_memory) as orw:
+                orw = create_raster(out_raster, o_info, bigtiff=bigtiff, in_memory=in_memory)
 
                 orw.get_band(1)
                 orw.fill(initial_value)
 
-            orw = None
+        o_info = None
 
-    o_info = None
+        # raster dataset, band(s) to rasterize, vector layer to rasterize,
+        # burn a specific value, or values, matching the bands :: burn_values=[100]
 
-    # raster dataset, band(s) to rasterize, vector layer to rasterize,
-    # burn a specific value, or values, matching the bands :: burn_values=[100]
+        if isinstance(where_clause, str):
+            v_info.lyr.SetAttributeFilter(where_clause)
 
-    gdal.RasterizeLayer(orw.datasource, [1], v_info.lyr, options=['ATTRIBUTE={}'.format(burn_id)])
+        gdal.RasterizeLayer(orw.datasource, [1], v_info.lyr,
+                            options=['ATTRIBUTE={}'.format(burn_id)])
 
     if in_memory:
-        return orw
+
+        if isinstance(orw, create_raster) and hasattr(orw, 'datasource'):
+
+            i_info = ImageInfo()
+
+            i_info.update_info(datasource=orw.datasource,
+                               hdf_file=False,
+                               **create_dict)
+
+    orw.close_file()
+    orw = None
+    v_info = None
+
+    if in_memory and return_array:
+        return i_info.read()
+    elif in_memory and not return_array:
+        return i_info
     else:
-
-        orw.close_file()
-        orw = None
-
         return None
 
 
