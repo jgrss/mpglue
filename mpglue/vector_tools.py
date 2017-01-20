@@ -165,6 +165,8 @@ class vopen(RegisterDriver):
 
     def read(self):
 
+        self.file_open = False
+
         if self.open2read:
             self.shp = ogr.Open(self.file_name, GA_ReadOnly)
         else:
@@ -250,8 +252,10 @@ class vopen(RegisterDriver):
 
     def close(self):
 
-        if hasattr(self, 'file_open') and self.file_open:
+        if self.file_open:
             self.shp.Destroy()
+
+        self.shp = None
 
         self.file_open = False
 
