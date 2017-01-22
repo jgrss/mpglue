@@ -152,6 +152,12 @@ class VRTBuilder(object):
         subset (Optional[bool]): Whether to subset ancillary data to main data. Default is False.
         """
 
+        new_dict = OrderedDict()
+        for k, v in in_dict.iteritems():
+            new_dict['{:03d}'.format(int(k))] = v
+
+        in_dict = OrderedDict(sorted(new_dict.items(), key=lambda tv: tv[0]))
+
         self.base_name = base_name
 
         self._band_count(in_dict)

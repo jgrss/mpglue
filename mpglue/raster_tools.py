@@ -386,11 +386,21 @@ class ReadWrite(object):
 
             else:
 
-                self.array = np.asarray([self.datasource.GetRasterBand(band).ReadAsArray(self.j,
-                                                                                         self.i,
-                                                                                         self.ccols,
-                                                                                         self.rrows)
-                                         for band in bands2open], dtype=self.d_type)
+                self.array = []
+
+                for band in bands2open:
+
+                    arr = self.datasource.GetRasterBand(band).ReadAsArray(self.j,
+                                                                          self.i,
+                                                                          self.ccols,
+                                                                          self.rrows)
+
+                    if not isinstance(arr, np.ndarray):
+                        raise TypeError('Band {:d} is not a ndarray.'.format(band))
+
+                    self.array.append(arr)
+
+                self.array = np.asarray(self.array, dtype=self.d_type)
 
             self.array = self._reshape(self.array, bands2open)
 
@@ -2570,8 +2580,8 @@ def _read_parallel(image, image_info, bands2open, y, x, rows2open, columns2open,
 
 
 def read(image2open=None, i_info=None, bands2open=1, i=0, j=0,
-            rows=-1, cols=-1, d_type=None, n_jobs=0,
-            predictions=False, sort_bands2open=True, y=0., x=0.):
+         rows=-1, cols=-1, d_type=None, n_jobs=0,
+         predictions=False, sort_bands2open=True, y=0., x=0.):
 
     """
     Reads a raster as an array
@@ -2688,7 +2698,10 @@ def read(image2open=None, i_info=None, bands2open=1, i=0, j=0,
             #                        i_info.datasource.ReadRaster(yoff=i, xoff=j, xsize=cols, ysize=rows, band_list=bands2open))
 
             if predictions:
-                return values.reshape(len(bands2open), rows, cols).T.reshape(rows*cols, len(bands2open))
+
+                return values.reshape(len(bands2open), rows, cols).transpose(1, 2, 0).reshape(rows*cols,
+                                                                                              len(bands2open))
+
             else:
 
                 if len(bands2open) == 1:
