@@ -1119,6 +1119,17 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
             logger.error(gdal.GetLastErrorMsg())
             raise ValueError('\nFailed to load the band.\n')
 
+    def get_stats(self, band_position):
+
+        """
+        Returns:
+            Minimum, Maximum, Mean, Standard deviation
+        """
+
+        self.get_band(band_position)
+
+        return self.band.GetStatistics(1, 1)
+
     def check_corrupted_bands(self):
 
         self.corrupted_bands = []
