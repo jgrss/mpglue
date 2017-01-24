@@ -197,8 +197,7 @@ class SampleImage(object):
             self.points_file = self.convert2points()
 
             # Close the polygon shapefile
-            self.shp_info.shp.Destroy()
-            self.shp_info.feature.Destroy()
+            self.shp_info.close()
 
             self.d_name_points, f_name_points = os.path.split(self.points_file)
             self.f_base_points, __ = os.path.splitext(f_name_points)
@@ -265,6 +264,16 @@ class SampleImage(object):
 
         # Open the image.
         with raster_tools.ropen(self.image_file) as self.m_info:
+
+            # Check if any of the bands are corrupted.
+            self.m_info.check_corrupted_bands()
+
+            if self.m_info.corrupted_bands:
+
+                print
+                print('The following bands appear to be corrupted:')
+                print ', '.join(self.m_info.corrupted_bands)
+                sys.exit()
 
             self.write_headers()
 
@@ -361,8 +370,7 @@ class SampleImage(object):
                 self.coords_offsets[n] = [x, y, x_off, y_off, pt_id]
 
             self.feature.Destroy()
-
-        self.feature = None
+            self.feature = None
 
     def sample_image(self):
 

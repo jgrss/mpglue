@@ -252,6 +252,10 @@ class vopen(RegisterDriver):
 
     def close(self):
 
+        if hasattr(self.shp, 'feature'):
+            self.shp.feature.Destroy()
+            self.shp.feature = None
+
         if self.file_open:
             self.shp.Destroy()
 

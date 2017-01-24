@@ -417,13 +417,13 @@ class ReadWrite(object):
         if n_bands == 1:
 
             self.array = self.array.reshape(self.rrows,
-                                            self.ccols).T.reshape(self.rrows * self.ccols, n_bands)
+                                            self.ccols).transpose(1, 2, 0).reshape(self.rrows*self.ccols, n_bands)
 
         else:
 
             self.array = self.array.reshape(n_bands,
                                             self.rrows,
-                                            self.ccols).T.reshape(self.rrows * self.ccols, n_bands)
+                                            self.ccols).transpose(1, 2, 0).reshape(self.rrows * self.ccols, n_bands)
 
         self.array_shape = [1, self.rrows*self.ccols, n_bands]
 
@@ -2581,10 +2581,11 @@ def _read_parallel(image, image_info, bands2open, y, x, rows2open, columns2open,
 
     if predictions:
 
-        return np.array(band_arrays, dtype=d_type).reshape(len(bands2open),
-                                                           rows2open,
-                                                           columns2open).T.reshape(rows2open*columns2open,
-                                                                                   len(bands2open))
+        return np.array(band_arrays,
+                        dtype=d_type).reshape(len(bands2open),
+                                              rows2open,
+                                              columns2open).transpose(1, 2, 0).reshape(rows2open*columns2open,
+                                                                                       len(bands2open))
 
     else:
         return np.array(band_arrays, dtype=d_type).reshape(len(bands2open), rows2open, columns2open)
@@ -4598,7 +4599,8 @@ def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None,
             v_info.lyr.SetAttributeFilter(where_clause)
 
         gdal.RasterizeLayer(orw.datasource, [1], v_info.lyr,
-                            options=['ATTRIBUTE={}'.format(burn_id)])
+                            options=['ATTRIBUTE={}'.format(burn_id),
+                                     'ALL_TOUCHED=TRUE'])
 
     if in_memory:
 

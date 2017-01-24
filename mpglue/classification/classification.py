@@ -3672,10 +3672,10 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                         self.open_image = False
 
                     max_check = self.i_info.read(bands2open=self.band_check,
-                                                    i=i,
-                                                    j=j,
-                                                    rows=n_rows,
-                                                    cols=n_cols).max()
+                                                 i=i,
+                                                 j=j,
+                                                 rows=n_rows,
+                                                 cols=n_cols).max()
 
                     if max_check == 0:
                         continue
@@ -3712,13 +3712,13 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                 # Get all the bands for the tile. The shape
                 #   of the features is (features x rows x columns).
                 features = raster_tools.read(image2open=self.input_image,
-                                                bands2open=bands2open,
-                                                i=i, j=j,
-                                                rows=n_rows,
-                                                cols=n_cols,
-                                                predictions=True,
-                                                d_type='float32',
-                                                n_jobs=self.n_jobs_vars)
+                                             bands2open=bands2open,
+                                             i=i, j=j,
+                                             rows=n_rows,
+                                             cols=n_cols,
+                                             predictions=True,
+                                             d_type='float32',
+                                             n_jobs=self.n_jobs_vars)
 
                 n_samples = n_rows * n_cols
 
@@ -3733,7 +3733,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                     predicted = self.model.predict_proba(features)
 
                     for cl in xrange(0, self.n_classes):
-                        out_bands[cl].WriteArray(predicted[:, cl].reshape(n_cols, n_rows).T, j, i)
+                        out_bands[cl].WriteArray(predicted[:, cl].reshape(n_rows, n_cols), j, i)
 
                 else:
 
@@ -3761,7 +3761,8 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                                                                   for chunk in xrange(0, n_samples, self.chunk_size))
 
                         # transpose and reshape the predicted labels to (rows x columns)
-                        out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_cols, n_rows).T, i, j)
+                        out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
+                                                                                                                       n_cols), i, j)
 
                     elif self.classifier_info['classifier'] in ['C5', 'Cubist']:
 
@@ -3786,14 +3787,15 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                                                                   for ip in indice_pairs)
 
                             # Write the predictions to file.
-                            out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_cols, n_rows).T, i, j)
+                            out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
+                                                                                                                           n_cols), i, j)
 
                         else:
 
                             out_raster_object.write_array(_do_c5_cubist_predict(self.model,
                                                                                 self.classifier_info['classifier'],
-                                                                                predict_samps).reshape(n_cols,
-                                                                                                       n_rows).T, i, j)
+                                                                                predict_samps).reshape(n_rows,
+                                                                                                       n_cols), i, j)
 
                     else:
 
@@ -3818,7 +3820,8 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                                 predicted = [predict_scikit(m, ip) for ip in indice_pairs]
 
                             # Write the predictions to file.
-                            out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_cols, n_rows).T, i, j)
+                            out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
+                                                                                                                           n_cols), i, j)
 
                         else:
 
@@ -3839,7 +3842,8 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                             predicted = [predict_scikit(m, ip) for ip in indice_pairs]
 
                             # Write the predictions to file.
-                            out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_cols, n_rows).T, i, j)
+                            out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
+                                                                                                                           n_cols), i, j)
 
                 self.record_list.append(n_block)
 
