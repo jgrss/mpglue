@@ -3,7 +3,7 @@ from distutils.core import setup
 import platform
 
 
-__version__ = '0.0.7b'
+__version__ = '0.0.7'
 
 mappy_name = 'MpGlue'
 maintainer = 'Jordan Graesser'
