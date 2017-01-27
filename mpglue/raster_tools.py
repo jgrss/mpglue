@@ -1136,12 +1136,20 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
         for band in range(1, self.bands+1):
 
-            self.datasource.GetRasterBand(band).Checksum()
+            try:
+                self.datasource.GetRasterBand(band).Checksum()
 
-            if gdal.GetLastErrorType() != 0:
+                if gdal.GetLastErrorType() != 0:
+
+                    print('\nBand {:d} of {} appears to be corrupted.\n'.format(band, self.file_name))
+                    self.corrupted_bands.append(str(band))
+
+            except:
+
+                logger.error(gdal.GetLastErrorMsg())
+
                 print('\nBand {:d} of {} appears to be corrupted.\n'.format(band, self.file_name))
-
-                self.corrupted_bands.append(band)
+                self.corrupted_bands.append(str(band))
 
     def write_array(self, array2write, i=0, j=0, band=None):
 
