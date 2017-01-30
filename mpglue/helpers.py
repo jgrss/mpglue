@@ -249,17 +249,27 @@ def n_rows_cols(pixel_index, block_size, rows_cols):
 def get_block_chunks(im_rows, im_cols, chunk_size, kernel_size):
 
     """
-    Indexes:
-        0: i :: actual row index
-        1: isub :: adjusted row starting position
-        2: iplus :: adjusted row end position
-        3: ip :: row start position to read back the chunk
-        4: j :: actual column index
-        5: jsub :: adjusted column starting position
-        6: jplus :: adjusted column end position
-        7: jp :: column start position to read back the chunk
-        8: n_rows :: row chunk size for GDAL
-        9: n_cols :: column chunk size for GDAL
+    Gets offset block chunks
+
+    Args:
+        im_rows (int): The number of rows.
+        im_cols (int): The number of columns.
+        chunk_size (int): The block chunk size.
+        kernel_size (int): The moving window size.
+
+    Returns:
+
+        Indexes:
+            0: i :: actual row index
+            1: isub :: adjusted row starting position
+            2: iplus :: adjusted row end position
+            3: ip :: row start position to read back the chunk
+            4: j :: actual column index
+            5: jsub :: adjusted column starting position
+            6: jplus :: adjusted column end position
+            7: jp :: column start position to read back the chunk
+            8: n_rows :: row chunk size for GDAL
+            9: n_cols :: column chunk size for GDAL
     """
 
     block_chunks = []

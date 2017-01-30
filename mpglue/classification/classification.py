@@ -14,7 +14,7 @@ import platform
 import shutil
 from copy import copy, deepcopy
 # from multiprocessing import Pool
-from pathos.multiprocessing import ProcessingPool as Pool
+# from pathos.multiprocessing import ProcessingPool as Pool
 # import multiprocessing as mm
 import joblib
 import itertools
