@@ -14,8 +14,9 @@ import platform
 import shutil
 from copy import copy, deepcopy
 # from multiprocessing import Pool
+from pathos.multiprocessing import ProcessingPool as Pool
 # import multiprocessing as mm
-from joblib import Parallel, delayed
+import joblib
 import itertools
 from collections import OrderedDict
 # from operator import itemgetter
@@ -324,11 +325,11 @@ def predict_scikit(input_model, ip):
     """
 
     if isinstance(input_model, str):
-        __, m = pickle.load(file(input_model, 'rb'))
+        __, MDL = pickle.load(file(input_model, 'rb'))
     else:
-        m = input_model
+        MDL = input_model
 
-    return m.predict(features[ip[0]:ip[0]+ip[1]])
+    return MDL.predict(features[ip[0]:ip[0]+ip[1]])
 
 
 def predict_cv(ci, cs, fn, pc, cr, ig, xy, cinfo, wc):
@@ -3495,6 +3496,9 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
         self.n_jobs_vars = n_jobs_vars
         self.chunk_size = (self.row_block_size * self.col_block_size) / 100
 
+        if self.n_jobs == -1:
+            self.n_jobs = joblib.cpu_count()
+
         if not hasattr(self, 'classifier_info'):
 
             raise NameError("""\
@@ -3751,8 +3755,8 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                             #   passing it to the joblib workers.
                             # predicted = np.empty((n_samples, 1), dtype='uint8')
 
-                            predicted = Parallel(n_jobs=self.n_jobs,
-                                                 max_nbytes=None)(delayed(predict_cv)(chunk, self.chunk_size,
+                            predicted = joblib.Parallel(n_jobs=self.n_jobs,
+                                                 max_nbytes=None)(joblib.delayed(predict_cv)(chunk, self.chunk_size,
                                                                                       self.file_name, self.perc_samp,
                                                                                       self.classes2remove,
                                                                                       self.ignore_feas, self.use_xy,
@@ -3782,8 +3786,8 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                         # Make the predictions and convert to a NumPy array.
                         if isinstance(self.input_model, str):
 
-                            predicted = Parallel(n_jobs=self.n_jobs,
-                                                 max_nbytes=None)(delayed(predict_c5_cubist)(self.input_model, ip)
+                            predicted = joblib.Parallel(n_jobs=self.n_jobs,
+                                                 max_nbytes=None)(joblib.delayed(predict_c5_cubist)(self.input_model, ip)
                                                                   for ip in indice_pairs)
 
                             # Write the predictions to file.
@@ -3810,10 +3814,14 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                             # Make the predictions and convert to a NumPy array.
                             if isinstance(self.input_model, str):
 
-                                predicted = Parallel(n_jobs=self.n_jobs,
-                                                     max_nbytes=None)(delayed(predict_scikit)(self.input_model,
-                                                                                              ip)
-                                                                      for ip in indice_pairs)
+                                # predicted = Pool(nodes=1).map(predict_scikit,
+                                #                                         [self.input_model]*len(indice_pairs),
+                                #                                         indice_pairs)
+
+                                predicted = joblib.Parallel(n_jobs=self.n_jobs,
+                                                            max_nbytes=None)(joblib.delayed(predict_scikit)(self.input_model,
+                                                                                                            ip)
+                                                                             for ip in indice_pairs)
 
                             else:
                                 m = self.model
@@ -5461,8 +5469,8 @@ class classification_r(classification):
 
                     if isinstance(self.input_model, str):
 
-                        predicted = Parallel(n_jobs=self.n_jobs,
-                                             max_nbytes=None)(delayed(self.c5_predict_parallel)(input_model, ip)
+                        predicted = joblib.Parallel(n_jobs=self.n_jobs,
+                                             max_nbytes=None)(joblib.delayed(self.c5_predict_parallel)(input_model, ip)
                                                               for ip in indice_pairs)
 
                         # Write the predictions to file.

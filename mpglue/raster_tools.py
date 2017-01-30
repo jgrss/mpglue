@@ -2878,6 +2878,15 @@ def translate(input_image, output_image, cell_size=0, d_type=None, **kwargs):
     out_ds = None
 
 
+def vis2rgb(image_array):
+
+    """
+    Converts a layer x rows x columns array to RGB
+    """
+
+    return image_array.transpose(1, 2, 0)
+
+
 class create_raster(CreateDriver, FileManager):
 
     """

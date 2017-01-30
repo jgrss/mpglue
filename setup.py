@@ -22,7 +22,7 @@ with open('AUTHORS.txt') as f:
 
 required_packages = ['numpy>=1.11.0', 'scipy>=0.17.1', 'scikit-learn>=0.17.1',
                      'scikit-image>=0.12.3', 'tables>=3.2.2', 'pandas>=0.18.1',
-                     'matplotlib', 'joblib', 'BeautifulSoup4']
+                     'matplotlib', 'joblib', 'BeautifulSoup4', 'pathos']
 
 if platform.system() == 'Darwin':
 
