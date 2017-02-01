@@ -441,9 +441,7 @@ class ReadWrite(object):
     def _check_band_list(self, bands2open):
 
         if isinstance(bands2open, dict):
-
             return bands2open
-
         elif isinstance(bands2open, list):
 
             if len(bands2open) == 0:
@@ -841,7 +839,10 @@ class DatasourceInfo(object):
         if hasattr(self, 'file_name'):
             self.directory, self.filename = os.path.split(self.file_name)
 
-        self.bands = self.datasource.RasterCount
+        if self.hdf_file:
+            self.bands = len(self.hdf_datasources)
+        else:
+            self.bands = self.datasource.RasterCount
 
         # Initiate the data checks object.
         # DataChecks.__init__(self)
