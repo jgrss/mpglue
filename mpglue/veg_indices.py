@@ -243,7 +243,6 @@ class SensorInfo(object):
         for veg_index, indice_wavelengths in self.wavelength_lists.iteritems():
 
             if set(indice_wavelengths).issubset(sensor_wavelengths):
-
                 self.sensor_indices.append(veg_index)
 
 
@@ -1311,8 +1310,11 @@ class BandHandler(SensorInfo):
 
         band_positions = self.get_band_positions(band_list)
 
-        return self.meta_info.read(bands2open=band_positions, i=self.i, j=self.j,
-                                      rows=self.n_rows, cols=self.n_cols, d_type='float32')
+        return self.meta_info.read(bands2open=band_positions,
+                                   i=self.i, j=self.j,
+                                   sort_bands2open=False,
+                                   rows=self.n_rows, cols=self.n_cols,
+                                   d_type='float32')
 
     def get_band_positions(self, band_list):
 
@@ -1477,7 +1479,10 @@ class VegIndices(BandHandler):
                     if isinstance(self.mask_band, int):
 
                         mask_array = self.meta_info.read(bands2open=self.mask_band, i=self.i, j=self.j,
-                                                            rows=self.n_rows, cols=self.n_cols, d_type='byte')
+                                                         rows=self.n_rows, cols=self.n_cols, d_type='byte')
+
+                    else:
+                        mask_array = None
 
                     # Setup the vegetation index object.
                     vie = VegIndicesEquations(image_stack,
