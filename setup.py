@@ -3,7 +3,7 @@ from distutils.core import setup
 import platform
 
 
-__version__ = '0.0.8b'
+__version__ = '0.1.0b'
 
 mappy_name = 'MpGlue'
 maintainer = 'Jordan Graesser'
@@ -44,12 +44,13 @@ def get_package_data():
 
 def get_console_dict():
 
-    return {'console_scripts': ['classify=mpglue.classification.classify:main',
+    return {'console_scripts': ['change=mpglue.classification.change:main',
+                                'classify=mpglue.classification.classify:main',
                                 'sample-raster=mpglue.classification.sample_raster:main',
-                                'veg-indices=mpglue.veg_indices:main',
                                 'reclassify=mpglue.classification.reclassify:main',
+                                'recode=mpglue.classification.recode:main',
                                 'raster-calc=mpglue.raster_calc:main',
-                                'recode=mpglue.classification.recode:main']}
+                                'veg-indices=mpglue.veg_indices:main']}
 
 
 # def get_pyx_list():

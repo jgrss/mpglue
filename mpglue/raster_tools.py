@@ -608,6 +608,7 @@ class ReadWrite(object):
         if flush_final or new_file:
             out_rst.close_file()
 
+
 class DataChecks(object):
 
     """
@@ -631,7 +632,7 @@ class DataChecks(object):
         else:
             return False
 
-    def contains_value(self, value):
+    def contains_value(self, value, array2check=None):
 
         """
         Tests whether a value is within the array (the array must be open)
@@ -640,7 +641,11 @@ class DataChecks(object):
             value (int): The value to search for.
         """
 
-        return np.in1d(np.array([value]), self.array)[0]
+        if hasattr(self, 'array'):
+            return np.in1d(np.array([value]), self.array)[0]
+        else:
+            if isinstance(np.ndarray, array2check):
+                return np.in1d(np.array([value]), array2check)[0]
 
     def intersects(self, iinfo):
 
