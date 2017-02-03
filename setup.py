@@ -48,6 +48,7 @@ def get_console_dict():
                                 'sample-raster=mpglue.classification.sample_raster:main',
                                 'veg-indices=mpglue.veg_indices:main',
                                 'reclassify=mpglue.classification.reclassify:main',
+                                'raster-calc=mpglue.raster_calc:main',
                                 'recode=mpglue.classification.recode:main']}
 
 

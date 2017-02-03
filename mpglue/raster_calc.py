@@ -25,9 +25,9 @@ except ImportError:
     raise ImportError('NumPy must be installed')
 
 
-def raster_calc(output, equation=None, out_type='byte', extent=None, overwrite=False, be_quiet=False,
-                out_no_data=0, row_block_size=2048, col_block_size=2048,
-                **kwargs):
+def raster_calc(output, equation=None, out_type='byte', extent=None,
+                overwrite=False, be_quiet=False, out_no_data=0,
+                row_block_size=2048, col_block_size=2048, **kwargs):
 
     """
     Raster calculator
