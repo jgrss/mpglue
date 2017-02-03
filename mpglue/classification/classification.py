@@ -318,6 +318,20 @@ def predict_c5_cubist(input_model, ip):
         return np.array(Cubist.predict_cubist(m, newdata=predict_samps.rx(rows_i, True)), dtype='float32')
 
 
+def predict_scikit_win(feature_sub, input_model):
+
+    """
+    A Scikit-learn prediction function for parallel predictions
+    """
+
+    if isinstance(input_model, str):
+        __, mdl = pickle.load(file(input_model, 'rb'))
+    else:
+        mdl = input_model
+
+    return mdl.predict(feature_sub)
+
+
 def predict_scikit(input_model, ip):
 
     """
@@ -325,11 +339,11 @@ def predict_scikit(input_model, ip):
     """
 
     if isinstance(input_model, str):
-        __, MDL = pickle.load(file(input_model, 'rb'))
+        __, mdl = pickle.load(file(input_model, 'rb'))
     else:
-        MDL = input_model
+        mdl = input_model
 
-    return MDL.predict(features[ip[0]:ip[0]+ip[1]])
+    return mdl.predict(features[ip[0]:ip[0]+ip[1]])
 
 
 def predict_cv(ci, cs, fn, pc, cr, ig, xy, cinfo, wc):
@@ -3818,10 +3832,19 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                                 #                                         [self.input_model]*len(indice_pairs),
                                 #                                         indice_pairs)
 
-                                predicted = joblib.Parallel(n_jobs=self.n_jobs,
-                                                            max_nbytes=None)(joblib.delayed(predict_scikit)(self.input_model,
-                                                                                                            ip)
-                                                                             for ip in indice_pairs)
+                                if platform.system() == 'Windows':
+
+                                    predicted = joblib.Parallel(n_jobs=self.n_jobs,
+                                                                max_nbytes=None)(joblib.delayed(predict_scikit_win)(features[ip[0]:ip[0]+ip[1]],
+                                                                                                                    self.input_model)
+                                                                                 for ip in indice_pairs)
+
+                                else:
+
+                                    predicted = joblib.Parallel(n_jobs=self.n_jobs,
+                                                                max_nbytes=None)(joblib.delayed(predict_scikit)(self.input_model,
+                                                                                                                ip)
+                                                                                 for ip in indice_pairs)
 
                             else:
                                 m = self.model

@@ -2590,6 +2590,9 @@ def _read_parallel(image, image_info, bands2open, y, x, rows2open, columns2open,
 
     if predictions:
 
+        # Check for empty images.
+        band_arrays = [b_ if b_.shape else np.zeros((rows2open, columns2open), dtype=d_type) for b_ in band_arrays]
+
         return np.array(band_arrays,
                         dtype=d_type).reshape(len(bands2open),
                                               rows2open,
@@ -3314,6 +3317,9 @@ class GetMinExtent(UpdateInfo):
 
     def copy(self):
         return copy.copy(self)
+
+    def close(self):
+        pass
 
     def get_overlap_info(self, info2):
 
