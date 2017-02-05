@@ -441,9 +441,7 @@ class ReadWrite(object):
     def _check_band_list(self, bands2open):
 
         if isinstance(bands2open, dict):
-
             return bands2open
-
         elif isinstance(bands2open, list):
 
             if len(bands2open) == 0:
@@ -610,6 +608,7 @@ class ReadWrite(object):
         if flush_final or new_file:
             out_rst.close_file()
 
+
 class DataChecks(object):
 
     """
@@ -633,7 +632,7 @@ class DataChecks(object):
         else:
             return False
 
-    def contains_value(self, value):
+    def contains_value(self, value, array2check=None):
 
         """
         Tests whether a value is within the array (the array must be open)
@@ -642,7 +641,11 @@ class DataChecks(object):
             value (int): The value to search for.
         """
 
-        return np.in1d(np.array([value]), self.array)[0]
+        if hasattr(self, 'array'):
+            return np.in1d(np.array([value]), self.array)[0]
+        else:
+            if isinstance(np.ndarray, array2check):
+                return np.in1d(np.array([value]), array2check)[0]
 
     def intersects(self, iinfo):
 
@@ -841,7 +844,10 @@ class DatasourceInfo(object):
         if hasattr(self, 'file_name'):
             self.directory, self.filename = os.path.split(self.file_name)
 
-        self.bands = self.datasource.RasterCount
+        if self.hdf_file:
+            self.bands = len(self.hdf_datasources)
+        else:
+            self.bands = self.datasource.RasterCount
 
         # Initiate the data checks object.
         # DataChecks.__init__(self)
@@ -2589,6 +2595,9 @@ def _read_parallel(image, image_info, bands2open, y, x, rows2open, columns2open,
 
     if predictions:
 
+        # Check for empty images.
+        band_arrays = [b_ if b_.shape else np.zeros((rows2open, columns2open), dtype=d_type) for b_ in band_arrays]
+
         return np.array(band_arrays,
                         dtype=d_type).reshape(len(bands2open),
                                               rows2open,
@@ -3313,6 +3322,9 @@ class GetMinExtent(UpdateInfo):
 
     def copy(self):
         return copy.copy(self)
+
+    def close(self):
+        pass
 
     def get_overlap_info(self, info2):
 
