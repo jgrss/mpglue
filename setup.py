@@ -3,7 +3,7 @@ from distutils.core import setup
 import platform
 
 
-__version__ = '0.1.0b'
+__version__ = '0.1.0'
 
 mappy_name = 'MpGlue'
 maintainer = 'Jordan Graesser'
@@ -20,13 +20,19 @@ with open('LICENSE.txt') as f:
 with open('AUTHORS.txt') as f:
     author_file = f.read()
 
-required_packages = ['numpy>=1.11.0', 'scipy>=0.17.1', 'scikit-learn>=0.17.1',
-                     'scikit-image>=0.12.3', 'tables>=3.2.2', 'pandas>=0.18.1',
-                     'matplotlib', 'joblib', 'BeautifulSoup4']
+required_packages = ['matplotlib', 'joblib', 'BeautifulSoup4']
 
 if platform.system() == 'Darwin':
 
-    for pkg in ['gdal>=2.1', 'statsmodels>=0.8.0']:
+    for pkg in ['numpy>=1.12.0',
+                'scipy>=0.18.1',
+                'scikit-image>=0.12.3',
+                'gdal>=2.1', 'tables>=3.3',
+                'statsmodels>=0.8.0',
+                'cython>=0.25.2',
+                'scikit-learn>=0.18.1',
+                'pandas>=0.19.2']:
+
         required_packages.append(pkg)
 
 
