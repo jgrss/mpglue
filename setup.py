@@ -2,6 +2,13 @@ import setuptools
 from distutils.core import setup
 import platform
 
+from Cython.Build import cythonize
+
+try:
+    from Cython.Distutils import build_ext
+except:
+    from distutils.command import build_ext
+
 
 __version__ = '0.1.0'
 
@@ -22,12 +29,13 @@ with open('AUTHORS.txt') as f:
 
 required_packages = ['matplotlib', 'joblib', 'BeautifulSoup4']
 
-if platform.system() == 'Darwin':
+if platform.system() != 'Windows':
 
     for pkg in ['numpy>=1.12.0',
                 'scipy>=0.18.1',
                 'scikit-image>=0.12.3',
-                'gdal>=2.1', 'tables>=3.3',
+                'gdal>=2.1',
+                'tables>=3.3',
                 'statsmodels>=0.8.0',
                 'cython>=0.25.2',
                 'scikit-learn>=0.18.1',
@@ -36,16 +44,27 @@ if platform.system() == 'Darwin':
         required_packages.append(pkg)
 
 
+def get_pyx_list():
+    return ['mpglue/stats/*.pyx']
+
+
 def get_packages():
     return setuptools.find_packages()
 
 
 def get_package_data():
 
-    return {'mpglue': ['*.md',
-                       '*.txt',
-                       'stats/*.so',
-                       'stats/*.pyd']}
+    if platform.system() == 'Windows':
+
+        return {'mpglue': ['*.md',
+                           '*.txt',
+                           'stats/*.pyd']}
+
+    else:
+
+        return {'mpglue': ['*.md',
+                           '*.txt',
+                           'stats/*.so']}
 
 
 def get_console_dict():
@@ -57,10 +76,6 @@ def get_console_dict():
                                 'recode=mpglue.classification.recode:main',
                                 'raster-calc=mpglue.raster_calc:main',
                                 'veg-indices=mpglue.veg_indices:main']}
-
-
-# def get_pyx_list():
-#     return ['mpglue/stats/*.pyx']
 
 
 def setup_package():
@@ -75,6 +90,9 @@ def setup_package():
                     author=author_file,
                     packages=get_packages(),
                     package_data=get_package_data(),
+                    ext_modules=cythonize(get_pyx_list()),
+                    setup_requires=['setuptools_cython', 'cython>=0.25.2'],
+                    cmdclass=dict(build_ext=build_ext),
                     zip_safe=False,
                     download_url=git_url,
                     install_requires=required_packages,
