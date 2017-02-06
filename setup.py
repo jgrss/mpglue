@@ -91,7 +91,6 @@ def setup_package():
                     packages=get_packages(),
                     package_data=get_package_data(),
                     ext_modules=cythonize(get_pyx_list()),
-                    setup_requires=['setuptools_cython', 'cython>=0.25.2'],
                     cmdclass=dict(build_ext=build_ext),
                     zip_safe=False,
                     download_url=git_url,
