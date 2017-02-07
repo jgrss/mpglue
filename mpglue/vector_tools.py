@@ -61,12 +61,6 @@ try:
 except:
     rtree_installed = False
 
-# PyTables
-try:
-    import tables
-except:
-    print('PyTables is not installed')
-
 # Pickle
 try:
     import cPickle as pickle

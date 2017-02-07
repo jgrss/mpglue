@@ -13,9 +13,12 @@ from collections import OrderedDict
 
 from . import raster_tools, vector_tools
 
-FORCE_TYPE_DICT = {'float32': 'Float32',
-                   'byte': 'Byte',
-                   'uint16': 'UInt16'}
+FORCE_TYPE_DICT = {'byte': 'Byte',
+                   'float32': 'Float32',
+                   'float64': 'Float64',
+                   'uint16': 'UInt16',
+                   'uint32': 'Uint32',
+                   'uint64': 'Uint64'}
 
 
 class VRTBuilder(object):
@@ -342,18 +345,25 @@ class VRTBuilder(object):
     def _band_count(self, in_dict):
 
         self.band_count = 0
-        self.band_dict = {}
+        self.band_dict = dict()
 
         # get first image from each list
         for k, v in in_dict.iteritems():
 
-            with raster_tools.ropen(v[0]) as i_info:
+            vi_ = v[0]
 
-                self.band_count += i_info.bands
+            if 'HDF4_EOS:EOS_GRID:' in vi_:
+                n_bands = 1
+            else:
 
-                self.band_dict[k] = i_info.bands
+                with raster_tools.ropen(v[0]) as i_info:
+                    n_bands = i_info.bands
 
-            i_info = None
+                i_info = None
+
+            self.band_count += n_bands
+
+            self.band_dict[k] = n_bands
 
         self.band_dict = OrderedDict(sorted(self.band_dict.items(), key=lambda t: t[0]))
 

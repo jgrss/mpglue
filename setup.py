@@ -32,11 +32,11 @@ required_packages = ['matplotlib', 'joblib', 'BeautifulSoup4']
 if platform.system() != 'Windows':
 
     for pkg in ['numpy>=1.12.0',
-                'scipy>=0.18.1',
-                'scikit-image>=0.12.3',
+                'scipy>=0.17.0',
+                'scikit-image>=0.10.0',
                 'gdal>=2.1',
                 'tables>=3.3',
-                'statsmodels>=0.8.0',
+                'statsmodels>=0.8.0rc1',
                 'cython>=0.25.2',
                 'scikit-learn>=0.18.1',
                 'pandas>=0.19.2']:
