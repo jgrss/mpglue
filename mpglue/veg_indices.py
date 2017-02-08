@@ -103,7 +103,8 @@ class SensorInfo(object):
                             'Sentinel2-10m': {'blue': 1, 'green': 2, 'red': 3, 'nir': 4},
                             'Sentinel2-20m': {'rededge': 1, 'niredge': 4, 'midir': 5, 'farir': 6},
                             'RGB': {'blue': 3, 'green': 2, 'red': 1},
-                            'BGR': {'blue': 1, 'green': 2, 'red': 3}}
+                            'BGR': {'blue': 1, 'green': 2, 'red': 3},
+                            'pan-sharp57': {'midir': 1, 'farir': 2}}
 
         # The wavelengths needed to compute the index.
         # The wavelengths are loaded in order, so the

@@ -1380,7 +1380,7 @@ class LandsatParser(object):
         if os.path.isdir(self.temp_dir):
 
             for landsat_file in os.listdir(self.temp_dir):
-                os.remove('{}/{}'.format(self.temp_dir, landsat_file))
+                os.remove(os.path.join(self.temp_dir, landsat_file))
 
             shutil.rmtree(self.temp_dir)
 
