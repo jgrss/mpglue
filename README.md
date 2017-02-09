@@ -170,7 +170,7 @@ pip install -U setuptools
 
 ```text
 pip install MpGlue-<version>.tar.gz
-e.g., pip install MpGlue-0.0.1.tar.gz
+e.g., pip install MpGlue-0.1.0.tar.gz
 ```
 
 4) To update:
