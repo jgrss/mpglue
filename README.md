@@ -139,10 +139,24 @@ Build mixed-type VRT files:
 
 Installation
 ---
-#### Dependencies
-- Python third-party libraries see [**the notebooks installation guide**](https://github.com/jgrss/mpglue/tree/master/mpglue/notebooks/01_installation.pynb).
 
-**Install stable release with pip**
+#### Install from source
+ 
+1) Clone MpGlue
+
+```text
+cd <location to clone MpGlue>
+git clone https://github.com/jgrss/mpglue.git
+```
+
+2) Build and install
+
+```text
+python setup.py build
+python setup.py install
+```
+
+#### Install stable release with pip
 
 1) Update setuptools:
 
