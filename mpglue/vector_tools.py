@@ -18,7 +18,7 @@ import atexit
 import tarfile
 
 from .paths import get_main_path
-from . import raster_tools
+import raster_tools
 from .errors import TransformError, logger
 
 MAIN_PATH = get_main_path()

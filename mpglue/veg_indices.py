@@ -18,7 +18,7 @@ import fnmatch
 from collections import OrderedDict
 
 # MapPy
-from . import raster_tools
+import raster_tools
 from .helpers import _iteration_parameters
 # from mappy.utilities import composite
 
