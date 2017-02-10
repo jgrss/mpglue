@@ -51,7 +51,7 @@ def _sample_parallel(band_position, image_name, c_list, accuracy, feature_length
     # image_info = raster_tools.ropen(image_name)
 
     # print 'Band {:d} of {:d} ...'.format(band_position, image_info.bands)
-    print 'Band {:d} of {:d} ...'.format(band_position, datasource.RasterCount)
+    print('Band {:d} of {:d} ...'.format(band_position, datasource.RasterCount))
 
     # image_info.get_band(band_position)
 
@@ -146,7 +146,7 @@ class SampleImage(object):
 
         if not self.out_dir:
             self.out_dir = copy(self.d_name_points)
-            print '\nNo output directory was given. Results will be saved to {}'.format(self.out_dir)
+            print('\nNo output directory was given. Results will be saved to {}'.format(self.out_dir))
 
         if not os.path.isdir(self.out_dir):
             os.makedirs(self.out_dir)
@@ -171,7 +171,7 @@ class SampleImage(object):
 
         ogr_com = '{} -sql {}"'.format(ogr_com, ogr_com_sql)
 
-        print '\nSubsetting {} by classes {} ...\n'.format(self.points_file, ','.join(self.sql_expression_attr))
+        print('\nSubsetting {} by classes {} ...\n'.format(self.points_file, ','.join(self.sql_expression_attr)))
 
         subprocess.call(ogr_com, shell=True)
 
@@ -260,7 +260,7 @@ class SampleImage(object):
 
     def sample(self):
 
-        print '  \nSampling {} ...\n'.format(self.f_name_rst)
+        print('  \nSampling {} ...\n'.format(self.f_name_rst))
 
         # Open the image.
         with raster_tools.ropen(self.image_file) as self.m_info:
@@ -270,9 +270,9 @@ class SampleImage(object):
 
             if self.m_info.corrupted_bands:
 
-                print
+                print()
                 print('The following bands appear to be corrupted:')
-                print ', '.join(self.m_info.corrupted_bands)
+                print(', '.join(self.m_info.corrupted_bands))
                 sys.exit()
 
             self.write_headers()
@@ -435,7 +435,7 @@ class SampleImage(object):
 
             value_arr = np.zeros((feature_length*self.updater, self.m_info.bands+4), dtype='float32')
 
-            print '\nSampling {:,d} samples from {:d} image layers ...\n'.format(feature_length, self.m_info.bands)
+            print('\nSampling {:,d} samples from {:d} image layers ...\n'.format(feature_length, self.m_info.bands))
 
             ctr, pbar = _iteration_parameters_values(self.m_info.bands, feature_length)
 

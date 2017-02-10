@@ -78,7 +78,7 @@ except ImportError:
 try:
     from bs4 import BeautifulSoup
 except:
-    raise ImportError('BeautifulSoup4 must be installed to parse metadata')
+    print('BeautifulSoup4 must be installed to parse metadata')
 
 
 gdal.UseExceptions()
@@ -99,7 +99,11 @@ DRIVER_DICT = {'.tif': 'GTiff',
                '.til': 'TIL',
                '.nc': 'netCDF'}
 
-FORMAT_DICT = dict((v, k) for k, v in DRIVER_DICT.iteritems())
+try:
+    FORMAT_DICT = dict((v, k) for k, v in DRIVER_DICT.iteritems())
+except:
+    # Python 3
+    FORMAT_DICT = dict((v, k) for k, v in DRIVER_DICT.items())
 
 STORAGE_DICT = {'byte': 'uint8',
                 'int16': 'int16',
@@ -346,7 +350,8 @@ class ReadWrite(object):
 
             vie = VegIndicesEquations(self.array, chunk_size=-1)
 
-            exec 'self.{} = vie.compute(compute_index.upper())'.format(compute_index)
+            # exec 'self.{} = vie.compute(compute_index.upper())'.format(compute_index)
+            exec('self.{} = vie.compute(compute_index.upper())'.format(compute_index))
 
         return self.array
 
@@ -997,7 +1002,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
         except:
             logger.error(gdal.GetLastErrorMsg())
-            print '\nCould not open {}.\n'.format(self.file_name)
+            print('\nCould not open {}.\n'.format(self.file_name))
             return
 
         if self.file_name.lower().endswith('.hdf'):
@@ -1005,7 +1010,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
             self.hdf_file = True
 
             if self.datasource is None:
-                print '\n1) {} appears to be empty.\n'.format(self.file_name)
+                print('\n1) {} appears to be empty.\n'.format(self.file_name))
                 return
 
             # self.hdf_layers = self.datasource.GetSubDatasets()
@@ -4783,32 +4788,32 @@ def main():
 
         i_info = ropen(args.input)
 
-        print '\nThe projection:\n'
-        print i_info.projection
+        print('\nThe projection:\n')
+        print(i_info.projection)
 
-        print '\n======================================\n'
+        print('\n======================================\n')
 
-        print 'The extent (left, right, top, bottom):\n'
-        print '{:f}, {:f}, {:f}, {:f}'.format(i_info.left, i_info.right, i_info.top, i_info.bottom)
+        print('The extent (left, right, top, bottom):\n')
+        print('{:f}, {:f}, {:f}, {:f}'.format(i_info.left, i_info.right, i_info.top, i_info.bottom))
 
         storage_string = 'The data type: {}\n'.format(i_info.storage)
 
-        print '\n{}\n'.format(''.join(['=']*(len(storage_string)-1)))
+        print('\n{}\n'.format(''.join(['=']*(len(storage_string)-1))))
 
-        print storage_string
+        print(storage_string)
 
-        print '=========\n'
+        print('=========\n')
 
-        print 'The size:\n'
-        print '{:,d} rows'.format(i_info.rows)
-        print '{:,d} columns'.format(i_info.cols)
+        print('The size:\n')
+        print('{:,d} rows'.format(i_info.rows))
+        print('{:,d} columns'.format(i_info.cols))
 
         if i_info.bands == 1:
-            print '{:,d} band'.format(i_info.bands)
+            print('{:,d} band'.format(i_info.bands))
         else:
-            print '{:,d} bands'.format(i_info.bands)
+            print('{:,d} bands'.format(i_info.bands))
 
-        print '{:.2f} meter cell size'.format(i_info.cellY)
+        print('{:.2f} meter cell size'.format(i_info.cellY))
 
         i_info.close()
 

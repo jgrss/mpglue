@@ -170,7 +170,7 @@ class VRTBuilder(object):
         for bdk, bd in self.band_dict.iteritems():
 
             if not be_quiet:
-                print 'Building list {} ...'.format(bdk)
+                print('Building list {} ...'.format(bdk))
 
             image_list = in_dict[bdk]
 

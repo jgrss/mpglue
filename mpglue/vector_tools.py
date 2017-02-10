@@ -18,7 +18,7 @@ import atexit
 import tarfile
 
 from .paths import get_main_path
-import raster_tools
+from . import raster_tools
 from .errors import TransformError, logger
 
 MAIN_PATH = get_main_path()
@@ -551,7 +551,7 @@ def merge_vectors(shps2merge, merged_shapefile):
     # output file.
     for shp2merge in shps2merge[1:]:
 
-        print 'Merging {} ...'.format(shp2merge)
+        print('Merging {} ...'.format(shp2merge))
 
         ogr2ogr.main(['', '-f', 'ESRI Shapefile', '-update', '-append', merged_shapefile, shp2merge, '-nln', of_base])
 
@@ -1400,7 +1400,7 @@ def spatial_intersection(select_shp, intersect_shp, output_shp, epsg=None):
                 else:
                     end_feature = m + 499
 
-                print 'Select features {:d}--{:d} of {:d} ...'.format(m, end_feature, select_info.n_feas)
+                print('Select features {:d}--{:d} of {:d} ...'.format(m, end_feature, select_info.n_feas))
 
             # Get the current polygon feature.
             select_feature = select_info.lyr.GetFeature(m)
@@ -1530,8 +1530,8 @@ def list_field_names(in_shapefile, be_quiet=False, epsg=None):
 
     if not be_quiet:
 
-        print '\n{} has the following fields:\n'.format(f_name)
-        print df_fields
+        print('\n{} has the following fields:\n'.format(f_name))
+        print(df_fields)
 
     return df_fields
 
@@ -1576,9 +1576,9 @@ def buffer_vector(file_name, out_vector, distance=None, epsg=None, field_name=No
     with vopen(file_name, epsg=epsg) as v_info:
 
         if isinstance(distance, float):
-            print '\nBuffering {} by {:f} distance ...'.format(f_name, distance)
+            print('\nBuffering {} by {:f} distance ...'.format(f_name, distance))
         else:
-            print '\nBuffering {} by field {} ...'.format(f_name, field_name)
+            print('\nBuffering {} by field {} ...'.format(f_name, field_name))
 
         # create the output shapefile
         if isinstance(epsg, int):
@@ -1839,7 +1839,7 @@ def add_fields(input_vector, output_vector=None, field_names=['x', 'y'], method=
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                print 'Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas)
+                print('Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
 
             geometry = feature.GetGeometryRef()
 
@@ -1869,7 +1869,7 @@ def add_fields(input_vector, output_vector=None, field_names=['x', 'y'], method=
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                print 'Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas)
+                print('Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
 
             try:
                 field_value = float(feature.GetField(field_names[0]))
@@ -1927,7 +1927,7 @@ def add_fields(input_vector, output_vector=None, field_names=['x', 'y'], method=
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                print 'Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas)
+                print('Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
 
             feature.SetField(field_names[0], fi+1)
 
@@ -1952,7 +1952,7 @@ def add_fields(input_vector, output_vector=None, field_names=['x', 'y'], method=
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                print 'Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas)
+                print('Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
 
             feature.SetField(field_names[0], constant)
 
@@ -1977,7 +1977,7 @@ def add_fields(input_vector, output_vector=None, field_names=['x', 'y'], method=
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                print 'Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas)
+                print('Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
 
             geometry = feature.GetGeometryRef()
 
@@ -2009,7 +2009,7 @@ def add_fields(input_vector, output_vector=None, field_names=['x', 'y'], method=
         com = 'ogr2ogr {} {} -dialect sqlite -sql "SELECT ST_Union(geometry), \
         {} FROM {} GROUP BY {}"'.format(output_vector, input_vector, field_names[0], f_base, field_names[0])
 
-        print 'Dissolving {} by {} ...'.format(input_vector, field_names[0])
+        print('Dissolving {} by {} ...'.format(input_vector, field_names[0]))
 
         subprocess.call(com, shell=True)
 
@@ -2044,7 +2044,7 @@ def add_fields(input_vector, output_vector=None, field_names=['x', 'y'], method=
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                print 'Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas)
+                print('Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
 
             feature.SetField(field_names[1], class_dictionary[str(feature.GetField(field_names[0]))])
 
@@ -2069,7 +2069,7 @@ def add_fields(input_vector, output_vector=None, field_names=['x', 'y'], method=
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                print 'Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas)
+                print('Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
 
             feature.SetField(field_names[2],
                              ''.join([str(feature.GetField(field_names[0])), str(feature.GetField(field_names[1]))]))
@@ -2201,14 +2201,14 @@ def main():
 
         v_info = vopen(args.input, epsg=args.epsg)
 
-        print '\nThe projection:\n'
-        print v_info.projection
+        print('\nThe projection:\n')
+        print(v_info.projection)
 
-        print '\nThe extent (left, right, top, bottom):\n'
-        print '{:f}, {:f}, {:f}, {:f}'.format(v_info.left, v_info.right, v_info.top, v_info.bottom)
+        print('\nThe extent (left, right, top, bottom):\n')
+        print('{:f}, {:f}, {:f}, {:f}'.format(v_info.left, v_info.right, v_info.top, v_info.bottom))
 
-        print '\nThe geometry:\n'
-        print v_info.shp_geom_name
+        print('\nThe geometry:\n')
+        print(v_info.shp_geom_name)
 
         v_info.close()
 

@@ -18,8 +18,8 @@ import fnmatch
 from collections import OrderedDict
 
 # MapPy
-import raster_tools
-from helpers import _iteration_parameters
+from . import raster_tools
+from .helpers import _iteration_parameters
 # from mappy.utilities import composite
 
 # Numpy    
@@ -206,9 +206,9 @@ class SensorInfo(object):
         # Return the dictionary sorted by values
         self.expected_band_order = OrderedDict(sorted(self.band_orders[sensor].items(), key=lambda sbo: sbo[1]))
 
-        print '\nExpected band order for {}:\n'.format(sensor)
-        print '  WAVELENGTH  Band'
-        print '  ----------  ----'
+        print('\nExpected band order for {}:\n'.format(sensor))
+        print('  WAVELENGTH  Band')
+        print('  ----------  ----')
 
         sp = ' '
 
@@ -220,7 +220,7 @@ class SensorInfo(object):
             for gx in xrange(0, gap_len):
                 gap_string += sp
 
-            print '  {}{}{:d}'.format(w.upper(), gap_string, b)
+            print('  {}{}{:d}'.format(w.upper(), gap_string, b))
 
         print
 
@@ -1445,7 +1445,7 @@ class VegIndices(BandHandler):
                         os.remove(associated_file_full)
 
         if os.path.isfile(self.output_image):
-            print '\n{} already exists ...'.format(self.output_image)
+            print('\n{} already exists ...'.format(self.output_image))
         else:
 
             out_rst = raster_tools.create_raster(self.output_image, o_info, compress='none')
@@ -1454,7 +1454,7 @@ class VegIndices(BandHandler):
 
             if not self.be_quiet:
 
-                print '\n{} ...\n'.format(self.input_indice.upper())
+                print('\n{} ...\n'.format(self.input_indice.upper()))
 
                 if print_progress:
                     ctr, pbar = _iteration_parameters(self.rows, self.cols, block_size_rows, block_size_cols)
@@ -1522,7 +1522,7 @@ class VegIndices(BandHandler):
             if self.input_indice.upper() == 'VCI':
 
                 if not self.be_quiet:
-                    print '\nComputing VCI ...'
+                    print('\nComputing VCI ...')
 
                 # iterative over entire image with row blocks
                 for self.i in xrange(0, self.rows, block_size_rows):
@@ -1569,7 +1569,7 @@ class VegIndices(BandHandler):
 
         if overviews:
 
-            print '\nComputing overviews ...\n'
+            print('\nComputing overviews ...\n')
 
             with raster_tools.ropen(output_image) as v_info:
                 v_info.build_overviews()

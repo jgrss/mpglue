@@ -49,7 +49,7 @@ def _add_points_from_raster(out_shp, class_id, field_type, in_rst,
     block_size_rows = 512
     block_size_cols = 512
 
-    print '\nConverting to points ...\n'
+    print('\nConverting to points ...\n')
 
     if not be_quiet:
         ctr, pbar = _iteration_parameters(m_info.rows, m_info.cols, block_size_rows, block_size_cols)
@@ -180,7 +180,7 @@ def poly2points(poly, out_shp, targ_img, class_id='Id', cell_size=None,
     # if 'S' in vct_info.proj.GetAttrValue('PROJCS')[-1]: # GetUTMZone()
     #     sys.exit('\nERROR!! The shapefile should be projected to UTM North (even for the Southern Hemisphere).\n')
 
-    print '\nRasterizing {} ...\n'.format(f_name)
+    print('\nRasterizing {} ...\n'.format(f_name))
 
     if use_extent:
 

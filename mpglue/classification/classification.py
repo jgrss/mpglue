@@ -32,22 +32,23 @@ from ..helpers import get_path
 
 SPFEAS_PATH = get_path()
 
-# helpers
-try:
-    if platform.system() == 'Linux':
-        from ..stats import _lin_interp_l as _lin_interp
-    else:
-        from ..stats import _lin_interp
-except ImportError:
-    raise ImportError('Could not import _lin_interp')
+if sys.version_info[0] != 3:
 
-try:
-    if platform.system() == 'Linux':
-        from ..stats import _rolling_stats_l as _rolling_stats
-    else:
-        from ..stats import _rolling_stats
-except ImportError:
-    raise ImportError('Could not import _rolling_stats')
+    try:
+        if platform.system() == 'Linux':
+            from ..stats import _lin_interp_l as _lin_interp
+        else:
+            from ..stats import _lin_interp
+    except ImportError:
+        raise ImportError('Could not import _lin_interp')
+
+    try:
+        if platform.system() == 'Linux':
+            from ..stats import _rolling_stats_l as _rolling_stats
+        else:
+            from ..stats import _rolling_stats
+    except ImportError:
+        raise ImportError('Could not import _rolling_stats')
 
 # Pickle
 try:
@@ -761,7 +762,7 @@ class Samples(object):
 
             if stratified:
 
-                print 'Stratifying ...'
+                print('Stratifying ...')
 
                 n_total_samps = int(perc_samp * self.n_samps)
                 n_match_samps = 0
@@ -2150,8 +2151,8 @@ class Preprocessing(object):
 
                 assert df.shape[0] == len(weights_out)
 
-        print 'Base samples: {:,d}'.format(df_base.shape[0])
-        print 'New samples: {:,d}'.format(df.shape[0])
+        print('Base samples: {:,d}'.format(df_base.shape[0]))
+        print('New samples: {:,d}'.format(df.shape[0]))
 
         if os.path.isfile(output):
             os.remove(output)
@@ -2259,7 +2260,7 @@ class Preprocessing(object):
 
         for check_class in self.classes:
 
-            print 'Class {:d} ...'.format(check_class)
+            print('Class {:d} ...'.format(check_class))
 
             try:
                 new_p_vars, new_labels = self._remove_outliers(check_class, new_p_vars, new_labels)
@@ -2305,7 +2306,7 @@ class Preprocessing(object):
 
         n_outliers = len(y_pred) - len(inlier_idx[0])
 
-        print '  {:d} outliers in class {:d}'.format(n_outliers, check_class)
+        print('  {:d} outliers in class {:d}'.format(n_outliers, check_class))
 
         # temp_p_vars = temp_p_vars[inlier_idx]
 
@@ -3073,7 +3074,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
                 if os.path.isfile(self.out_stats):
 
-                    print '\nThe statistics already exist'
+                    print('\nThe statistics already exist')
 
                 else:
 
@@ -3267,12 +3268,12 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                 a_or_an = 'a'
 
             if isinstance(self.classifier_info['classifier'], list):
-                print '\nTraining a voting model with {} ...\n'.format(','.join(self.classifier_info['classifier']))
+                print('\nTraining a voting model with {} ...\n'.format(','.join(self.classifier_info['classifier'])))
             else:
-                print '\nTraining {} {} model with {:,d} samples and {:,d} variables ...\n'.format(a_or_an,
+                print('\nTraining {} {} model with {:,d} samples and {:,d} variables ...\n'.format(a_or_an,
                                                                                                    self.classifier_info['classifier'],
                                                                                                    self.n_samps,
-                                                                                                   self.n_feas)
+                                                                                                   self.n_feas))
 
         # OpenCV tree-based models
         if self.classifier_info['classifier'] in ['CART', 'CVRF', 'CVEX_RF']:
@@ -3334,7 +3335,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
         elif self.classifier_info['classifier'] in ['CVSVMA', 'CVSVRA']:
 
-            print '  Be patient. Auto tuning can take a while.\n'
+            print('  Be patient. Auto tuning can take a while.\n')
 
             self.model.train_auto(self.p_vars, self.labels, None, None, params=self.parameters, k_fold=10)
 
@@ -3606,7 +3607,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
             else:
                 self.o_info.storage = 'byte'
 
-            print '\nMapping labels ...\n'
+            print('\nMapping labels ...\n')
 
             self._predict()
 
@@ -3669,12 +3670,12 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
             for j in xrange(0, cols, block_cols):
 
-                print 'Block {:d} of {:d} ...'.format(n_block, n_blocks)
+                print('Block {:d} of {:d} ...'.format(n_block, n_blocks))
                 n_block += 1
 
                 if n_block in self.record_list:
 
-                    print '  Skipping current block ...'
+                    print('  Skipping current block ...')
 
                     continue
                     
@@ -4144,7 +4145,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                 self.test_array = np.float32(np.c_[test_labs_pred, self.labels])
 
         if not be_quiet:
-            print '\nGetting test accuracy ...\n'
+            print('\nGetting test accuracy ...\n')
 
         self.emat = error_matrix()
         self.emat.get_stats(po_array=self.test_array, discrete=discrete)
@@ -4226,7 +4227,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                                    ignore_feas=indices,
                                    use_xy=self.use_xy)
 
-                print '{:d} features ...'.format(self.n_feas)
+                print('{:d} features ...'.format(self.n_feas))
 
                 self.construct_model(classifier_info=self.classifier_info)
 
@@ -4327,7 +4328,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
             title = '************************************\n*                                  *\n* Random Forest Feature Importance *\n*                                  *\n************************************\n\nRank      Variable      Value\n----      --------      -----'
 
         if not be_quiet:
-            print title
+            print(title)
 
         if isinstance(rank_text, str):
             rank_txt_wr.write('%s\n' % title)
@@ -4354,7 +4355,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                     ranks = '%d        %d            %s' % (r, s, str(self.fea_rank[s]))
 
                 if not be_quiet:
-                    print ranks
+                    print(ranks)
 
                 if isinstance(rank_text, str):
                     rank_txt_wr.write('%s\n' % ranks)
@@ -4371,13 +4372,13 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
         if not be_quiet:
 
-            print '\nMean score:  %.2f' % np.average([v for k, v in self.fea_rank.iteritems()])
+            print('\nMean score:  %.2f' % np.average([v for k, v in self.fea_rank.iteritems()]))
 
-            print '\n=================='
-            print 'Excluded variables'
-            print '=================='
-            print ','.join(map(str, sorted(self.bad_features)))
-            print
+            print('\n==================')
+            print('Excluded variables')
+            print('==================')
+            print(','.join(map(str, sorted(self.bad_features))))
+            print()
 
         if isinstance(rank_text, str):
 
@@ -4430,7 +4431,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
         for k, v in self.variable_names.iteritems():
 
-            print k, v
+            print(k, v)
 
     def sub_feas(self, input_image, out_img, band_list=[]):
 
@@ -4482,7 +4483,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
             for fea_idx in self.ranked_feas:
                 band_list = '%s-b %d ' % (band_list, fea_idx)
 
-        print '\nSubsetting ranked features ...\n'
+        print('\nSubsetting ranked features ...\n')
 
         com = 'gdalbuildvrt %s %s %s' % (band_list, out_img, input_image)
 
@@ -4577,7 +4578,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
         for k_fold in xrange(1, k_folds + 1):
 
-            print 'Fold {:d} of {:d} ...'.format(k_fold, k_folds)
+            print('Fold {:d} of {:d} ...'.format(k_fold, k_folds))
 
             self.split_samples(file_name, perc_samp_each=perc_samp, ignore_feas=ignore_feas,
                                use_xy=use_xy, classes2remove=classes2remove, stratified=stratified,
@@ -4619,13 +4620,13 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
         else:
             best_score_index = np.argmin(df[score_label].values)
 
-        print '\nBest {} score: {:f}'.format(metric, df[score_label].values[best_score_index])
+        print('\nBest {} score: {:f}'.format(metric, df[score_label].values[best_score_index]))
 
-        print '\nBest parameters:\n'
-        print ''.join(['='] * len(df_param_headers))
-        print df_param_headers
-        print ''.join(['=']*len(df_param_headers))
-        print df[df_param_headers].values[best_score_index]
+        print('\nBest parameters:\n')
+        print(''.join(['='] * len(df_param_headers)))
+        print(df_param_headers)
+        print(''.join(['=']*len(df_param_headers)))
+        print(df[df_param_headers].values[best_score_index])
 
         if isinstance(output_file, str):
             df.to_csv(output_file, sep=',', index=False)
@@ -4813,7 +4814,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
         else:
             raise NameError('\nThe model cannot be optimized.\n')
 
-        print '\nFinding the best paramaters for a {} model ...\n'.format(classifier_info['classifier'])
+        print('\nFinding the best paramaters for a {} model ...\n'.format(classifier_info['classifier']))
 
         core_classifiers = ['C5', 'Cubist', 'RF', 'RFR',
                             'AB', 'AB_RF', 'AB_EX_RF', 'AB_DT', 'AB_EX_DT',
@@ -4837,9 +4838,9 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
             grid_search.fit(self.p_vars, self.labels)
 
-            print grid_search.best_estimator_
-            print '\nBest score: {:f}'.format(grid_search.best_score_)
-            print '\nBest parameters: {}\n'.format(grid_search.best_params_)
+            print(grid_search.best_estimator_)
+            print('\nBest score: {:f}'.format(grid_search.best_score_))
+            print('\nBest parameters: {}\n'.format(grid_search.best_params_))
 
         else:
             raise NameError('The score method {} is not supported.'.format(method))
@@ -5202,10 +5203,10 @@ class classification_r(classification):
         # Train a Cubist model.
         if 'Cubist' in self.classifier_info['classifier']:
 
-            print '\nTraining a Cubist model with {:d} committees, {:d} rules, {:d}% extrapolation, and {:,d} samples ...\n'.format(self.classifier_info['committees'],
+            print('\nTraining a Cubist model with {:d} committees, {:d} rules, {:d}% extrapolation, and {:,d} samples ...\n'.format(self.classifier_info['committees'],
                                                                                                                                     self.classifier_info['rules'],
                                                                                                                                     self.classifier_info['extrapolation'],
-                                                                                                                                    self.n_samps)
+                                                                                                                                    self.n_samps))
 
             # train the Cubist model
             # R('model = Cubist::cubist(x=samps, y=labels, committees=%d, control=cubistControl(rules=%d, extrapolation=%d))' % \
@@ -5218,7 +5219,7 @@ class classification_r(classification):
 
             if isinstance(output_model, str):
 
-                print 'Writing the model to file ...'
+                print('Writing the model to file ...')
 
                 # Write the Cubist model and .names to file.
                 if self.OS_SYSTEM == 'Windows':
@@ -5234,7 +5235,7 @@ class classification_r(classification):
 
                 if write_summary:
 
-                    print 'Writing the model summary to file ...'
+                    print('Writing the model summary to file ...')
 
                     # Write the Cubist model summary to file.
                     with open(os.path.join(self.model_dir, '{}_summary.txt'.format(self.model_base)), 'wb') as out_tree:
@@ -5242,10 +5243,10 @@ class classification_r(classification):
 
         elif 'C5' in self.classifier_info['classifier']:
 
-            print '\nTraining a C5 model with {:d} trials, {:.2f} CF, {:d} minimum cases, and {:,d} samples ...\n'.format(self.classifier_info['trials'],
+            print('\nTraining a C5 model with {:d} trials, {:.2f} CF, {:d} minimum cases, and {:,d} samples ...\n'.format(self.classifier_info['trials'],
                                                                                                                           self.classifier_info['CF'],
                                                                                                                           self.classifier_info['min_cases'],
-                                                                                                                          self.n_samps)
+                                                                                                                          self.n_samps))
 
             # train the C5 model
             # R('model = C50::C5.0(x=samps, y=factor(labels), trials=%d, control=C5.0Control(CF=%f, minCases=%d))' % \
@@ -5265,7 +5266,7 @@ class classification_r(classification):
 
             if isinstance(output_model, str):
 
-                print 'Writing the model to file ...'
+                print('Writing the model to file ...')
 
                 # Write the C5 tree to file.
                 if self.OS_SYSTEM == 'Windows':
@@ -5282,7 +5283,7 @@ class classification_r(classification):
 
                 if write_summary:
 
-                    print 'Writing the model summary to file (this may take a few minutes with large trees) ...'
+                    print('Writing the model summary to file (this may take a few minutes with large trees) ...')
 
                     # Write the C5 model summary to file.
                     with open(os.path.join(self.model_dir, '{}_summary.txt'.format(self.model_base)), 'wb') as out_imp:
@@ -5449,7 +5450,7 @@ class classification_r(classification):
 
             n_block = 1
 
-            print '\nMapping labels ...\n'
+            print('\nMapping labels ...\n')
 
             for i in xrange(0, rows, block_rows):
 
@@ -5457,11 +5458,11 @@ class classification_r(classification):
 
                 for j in xrange(0, cols, block_cols):
 
-                    print 'Block {:d} of {:d} ...'.format(n_block, n_blocks)
+                    print('Block {:d} of {:d} ...'.format(n_block, n_blocks))
                     n_block += 1
 
                     if n_block in self.record_list:
-                        print '  Skipping current block ...'
+                        print('  Skipping current block ...')
 
                         continue
 
@@ -6129,8 +6130,8 @@ def main():
 
             cl.optimize_parameters(samples, classifier_info, perc_samp, max_depth_range=(1, 100), k_folds=optimize)
 
-            print '\nThe optimum depth was %d' % cl.opt_depth
-            print 'The maximum accuracy was %f\n' % cl.max_acc
+            print('\nThe optimum depth was %d' % cl.opt_depth)
+            print('The maximum accuracy was %f\n' % cl.max_acc)
 
         if samples:
 

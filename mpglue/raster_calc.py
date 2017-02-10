@@ -117,9 +117,13 @@ def raster_calc(output, equation=None, out_type='byte', extent=None,
 
             image_dict[kw] = vw
 
-            exec 'i_info_{} = raster_tools.ropen(r"{}")'.format(kw, vw)
-            exec 'info_dict["{}"] = i_info_{}'.format(kw, kw)
-            exec 'info_list.append(i_info_{})'.format(kw)
+            exec('i_info_{} = raster_tools.ropen(r"{}")'.format(kw, vw))
+            exec('info_dict["{}"] = i_info_{}'.format(kw, kw))
+            exec('info_list.append(i_info_{})'.format(kw))
+
+            # exec 'i_info_{} = raster_tools.ropen(r"{}")'.format(kw, vw)
+            # exec 'info_dict["{}"] = i_info_{}'.format(kw, kw)
+            # exec 'info_list.append(i_info_{})'.format(kw)
 
         if isinstance(vw, int):
             band_dict[kw] = vw
