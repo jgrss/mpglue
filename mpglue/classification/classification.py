@@ -4948,6 +4948,17 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
         i_info = None
 
 
+def importr_tryhard(packname):
+
+    from rpy2.robjects.packages import importr
+    utils = importr('utils')
+
+    try:
+        __ = importr(packname)
+    except:
+        utils.install_packages(StrVector(packname))
+
+
 class classification_r(classification):
 
     """
@@ -4996,7 +5007,6 @@ class classification_r(classification):
     try:
         import rpy2.robjects as ro
         from rpy2.robjects.packages import importr
-        import rpy2.robjects.packages as rpackages
 
         from rpy2.robjects.numpy2ri import numpy2ri
         ro.numpy2ri.activate()
@@ -5008,7 +5018,7 @@ class classification_r(classification):
         pandas2ri.activate()
 
         # import R's utility package
-        utils = rpackages.importr('utils')
+        utils = importr('utils')
 
         R_installed = True
 
@@ -5025,14 +5035,15 @@ class classification_r(classification):
 
         # Selectively install what needs to be install.
         # We are fancy, just because we can.
-        names_to_install = [x for x in package_names if not rpackages.isinstalled(x)]
+        # names_to_install = [x for x in package_names if not isinstalled(x)]
+        [importr_tryhard(px) for px in package_names]
 
         # Install necessary libraries.
-        if len(names_to_install) > 0:
-
-            print('Installing R packages--{} ...'.format(', '.join(names_to_install)))
-
-            utils.install_packages(StrVector(names_to_install))
+        # if len(names_to_install) > 0:
+        #
+        #     print('Installing R packages--{} ...'.format(', '.join(names_to_install)))
+        #
+        #     utils.install_packages(StrVector(names_to_install))
 
         # print('Importing R packages--{} ...'.format(', '.join(package_names)))
 
