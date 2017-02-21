@@ -83,6 +83,7 @@ except:
 
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
+gdal.SetCacheMax(2.**30.)
 
 DRIVER_DICT = {'.tif': 'GTiff',
                '.img': 'HFA',
@@ -280,12 +281,9 @@ class ReadWrite(object):
                 raise ValueError('\nThe requested columns cannot be larger than the image columns.\n')
 
         # Index the image by x, y coordinates (in map units).
-        if abs(y) > 0:
-            __, __, __, self.i = get_xy_offsets(self, x=x, y=y)
-
-        if abs(x) > 0:
-            __, __, self.j, __ = get_xy_offsets(self, x=x, y=y)
-
+        if (abs(y) > 0) and (abs(x) > 0):
+            __, __, self.j, self.i = get_xy_offsets(self, x=x, y=y)
+            
         if isinstance(check_x, float) and isinstance(check_y, float):
 
             __, __, x_offset, y_offset = get_xy_offsets(self, x=check_x, y=check_y, check_position=False)
@@ -513,8 +511,6 @@ class ReadWrite(object):
 
         elif isinstance(write_which, np.ndarray):
             out_arr = write_which
-
-        gdal.SetCacheMax(2.56e+8)
 
         d_name, f_name = os.path.split(out_name)
 
@@ -3185,8 +3181,6 @@ def write2raster(out_arr, out_name, o_info=None, x=0, y=0, out_rst=None, write2b
         >>> mp.write2raster(out_array, '/out_name.tif', o_info=copy(i_info),
         >>>                 flush_final=True)
     """
-
-    gdal.SetCacheMax(2.56e+8)
 
     d_name, f_name = os.path.split(out_name)
 
