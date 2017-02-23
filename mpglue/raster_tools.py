@@ -997,8 +997,10 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
             self.file_open = True
 
         except:
+
             logger.error(gdal.GetLastErrorMsg())
             print('\nCould not open {}.\n'.format(self.file_name))
+
             return
 
         if self.file_name.lower().endswith('.hdf'):
@@ -1211,11 +1213,15 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
             #     pass
 
             try:
+
                 self.band.GetStatistics(0, 1)
                 self.band.FlushCache()
+
             except:
+
                 logger.warning('The band statistics could not be flushed.')
                 logger.error(gdal.GetLastErrorMsg())
+
                 pass
 
         self.band = None
@@ -1230,17 +1236,34 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
         if hasattr(self, 'datasource'):
 
             if hasattr(self, 'hdf_file'):
-                self.hdf_datasources = None
-            else:
 
-                if hasattr(self.datasource, 'FlushCache'):
+                if self.hdf_file:
 
-                    try:
-                        self.datasource.FlushCache()
-                    except:
-                        logger.warning('The dataset could not be flushed.')
-                        logger.error(gdal.GetLastErrorMsg())
-                        pass
+                    if self.hdf_datasources:
+
+                        for hdfd in self.hdf_datasources:
+
+                            try:
+                                hdfd.FlushCache()
+                            except:
+
+                                logger.warning('The HDF subdataset could not be flushed.')
+                                logger.error(gdal.GetLastErrorMsg())
+
+                                pass
+
+                            hdfd = None
+
+            if hasattr(self.datasource, 'FlushCache'):
+
+                try:
+                    self.datasource.FlushCache()
+                except:
+
+                    logger.warning('The dataset could not be flushed.')
+                    logger.error(gdal.GetLastErrorMsg())
+
+                    pass
 
         self.datasource = None
         self.hdf_datasources = None

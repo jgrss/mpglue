@@ -142,7 +142,8 @@ class VRTBuilder(object):
             self.xml_band_header = self.xml_band_header.replace('<NoDataValue>0', '<NoDataValue>{:f}'.format(no_data))
             self.xml_band = self.xml_band.replace('<NODATA>0', '<NODATA>{:f}'.format(no_data))
 
-    def add_bands(self, in_dict, bands2include=[], force_type=None, subset=False, base_name=None, be_quiet=False):
+    def add_bands(self, in_dict, bands2include=None, start_band=1, force_type=None,
+                  subset=False, base_name=None, be_quiet=False):
 
         """
         in_dict (OrderedDict): An ordered dictionary. The main bands should be first, followed by ancillary data.
@@ -174,7 +175,7 @@ class VRTBuilder(object):
 
             image_list = in_dict[bdk]
 
-            for bdi in xrange(1, bd+1):
+            for bdi in xrange(start_band, bd+start_band):
 
                 band_found = False
 
@@ -344,7 +345,6 @@ class VRTBuilder(object):
 
     def _band_count(self, in_dict):
 
-        self.band_count = 0
         self.band_dict = dict()
 
         # get first image from each list
@@ -361,14 +361,12 @@ class VRTBuilder(object):
 
                 i_info = None
 
-            self.band_count += n_bands
-
             self.band_dict[k] = n_bands
 
         self.band_dict = OrderedDict(sorted(self.band_dict.items(), key=lambda t: t[0]))
 
 
-def vrt_builder(in_dict, out_vrt, bands2include=[], force_type=None,
+def vrt_builder(in_dict, out_vrt, bands2include=None, start_band=1, force_type=None,
                 subset=False, base_name=None, no_data=None, be_quiet=False):
 
     """
@@ -377,7 +375,7 @@ def vrt_builder(in_dict, out_vrt, bands2include=[], force_type=None,
     Args:
         in_dict (dict): The input dictionary of images to add to a VRT file.
         out_vrt (str): The output VRT file.
-        bands2include (Optional[list]): A list of bands to include. Default is [], or all bands.
+        bands2include (Optional[list]): A list of bands to include. Default is None, or all bands.
         force_type (Optional[str]): Force the output storage type. Default is None.
         subset (Optional[bool]): Whether to subset ``in_dict`` >= '2' to '1'. Default is False.
         base_name (Optional[str]): A base name to prepend to the /subs directory. Default is None.
@@ -400,8 +398,8 @@ def vrt_builder(in_dict, out_vrt, bands2include=[], force_type=None,
 
     vb.replace_main(no_data=no_data)
 
-    vb.add_bands(in_dict, bands2include=bands2include, force_type=force_type,
-                 subset=subset, base_name=base_name, be_quiet=be_quiet)
+    vb.add_bands(in_dict, bands2include=bands2include, start_band=start_band,
+                 force_type=force_type, subset=subset, base_name=base_name, be_quiet=be_quiet)
 
     d_name, f_name = os.path.split(out_vrt)
 
