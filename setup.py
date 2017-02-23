@@ -81,41 +81,41 @@ def get_console_dict():
 
 def setup_package():
 
-    if platform.system() != 'Windows':
+    # if platform.system() != 'Windows':
 
-        metadata = dict(name=mappy_name,
-                        maintainer=maintainer,
-                        maintainer_email=maintainer_email,
-                        description=description,
-                        license=license_file,
-                        version=__version__,
-                        long_description=long_description,
-                        author=author_file,
-                        packages=get_packages(),
-                        package_data=get_package_data(),
-                        ext_modules=cythonize(get_pyx_list()),
-                        cmdclass=dict(build_ext=build_ext),
-                        zip_safe=False,
-                        download_url=git_url,
-                        install_requires=required_packages,
-                        entry_points=get_console_dict())
+    metadata = dict(name=mappy_name,
+                    maintainer=maintainer,
+                    maintainer_email=maintainer_email,
+                    description=description,
+                    license=license_file,
+                    version=__version__,
+                    long_description=long_description,
+                    author=author_file,
+                    packages=get_packages(),
+                    package_data=get_package_data(),
+                    ext_modules=cythonize(get_pyx_list()),
+                    cmdclass=dict(build_ext=build_ext),
+                    zip_safe=False,
+                    download_url=git_url,
+                    install_requires=required_packages,
+                    entry_points=get_console_dict())
 
-    else:
-
-        metadata = dict(name=mappy_name,
-                        maintainer=maintainer,
-                        maintainer_email=maintainer_email,
-                        description=description,
-                        license=license_file,
-                        version=__version__,
-                        long_description=long_description,
-                        author=author_file,
-                        packages=get_packages(),
-                        package_data=get_package_data(),
-                        zip_safe=False,
-                        download_url=git_url,
-                        install_requires=required_packages,
-                        entry_points=get_console_dict())
+    # else:
+    #
+    #     metadata = dict(name=mappy_name,
+    #                     maintainer=maintainer,
+    #                     maintainer_email=maintainer_email,
+    #                     description=description,
+    #                     license=license_file,
+    #                     version=__version__,
+    #                     long_description=long_description,
+    #                     author=author_file,
+    #                     packages=get_packages(),
+    #                     package_data=get_package_data(),
+    #                     zip_safe=False,
+    #                     download_url=git_url,
+    #                     install_requires=required_packages,
+    #                     entry_points=get_console_dict())
 
     setup(**metadata)
 
