@@ -2842,17 +2842,20 @@ def warp(input_image, output_image, out_epsg=None, in_epsg=None, resample='neare
     if isinstance(in_epsg, int):
         in_epsg = 'EPSG:{:d}'.format(in_epsg)
 
+    if not isinstance(cell_size, tuple):
+        cell_size = (cell_size, -cell_size)
+
     if isinstance(d_type, str):
 
         awargs = _merge_dicts(dict(srcSRS=in_epsg, dstSRS=out_epsg,
-                                   xRes=cell_size, yRes=cell_size,
+                                   xRes=cell_size[0], yRes=cell_size[1],
                                    outputType=STORAGE_DICT_GDAL[d_type],
                                    resampleAlg=RESAMPLE_DICT[resample]), kwargs)
 
     else:
 
         awargs = _merge_dicts(dict(srcSRS=in_epsg, dstSRS=out_epsg,
-                                   xRes=cell_size, yRes=cell_size,
+                                   xRes=cell_size[0], yRes=cell_size[1],
                                    resampleAlg=RESAMPLE_DICT[resample]), kwargs)
 
     warp_options = gdal.WarpOptions(**awargs)
