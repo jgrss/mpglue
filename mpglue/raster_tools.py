@@ -1241,29 +1241,35 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
                     if self.hdf_datasources:
 
-                        for hdfd in self.hdf_datasources:
+                        for hdfd in range(0, len(self.hdf_datasources)):
 
-                            try:
-                                hdfd.FlushCache()
-                            except:
+                            if hasattr(self.hdf_datasources[hdfd], 'FlushCache'):
 
-                                logger.warning('The HDF subdataset could not be flushed.')
-                                logger.error(gdal.GetLastErrorMsg())
+                                self.hdf_datasources[hdfd].FlushCache()
+                                self.hdf_datasources[hdfd] = None
 
-                                pass
-
-                            hdfd = None
+                            # try:
+                            #     hdfd.FlushCache()
+                            # except:
+                            #
+                            #     logger.warning('The HDF subdataset could not be flushed.')
+                            #     logger.error(gdal.GetLastErrorMsg())
+                            #
+                            #     pass
+                            # hdfd = None
 
             if hasattr(self.datasource, 'FlushCache'):
 
-                try:
-                    self.datasource.FlushCache()
-                except:
+                self.datasource.FlushCache()
 
-                    logger.warning('The dataset could not be flushed.')
-                    logger.error(gdal.GetLastErrorMsg())
-
-                    pass
+                # try:
+                #     self.datasource.FlushCache()
+                # except:
+                #
+                #     logger.warning('The dataset could not be flushed.')
+                #     logger.error(gdal.GetLastErrorMsg())
+                #
+                #     pass
 
         self.datasource = None
         self.hdf_datasources = None
