@@ -14,10 +14,9 @@ import argparse
 import inspect
 import atexit
 from joblib import Parallel, delayed
-import platform
 import shutil
 import itertools
-
+import platform
 import ctypes
 
 if platform.system() == 'Darwin':
@@ -91,6 +90,7 @@ DRIVER_DICT = {'.tif': 'GTiff',
                '.hdf4': 'HDF4',
                '.hdf5': 'HDF5',
                '.vrt': 'VRT',
+               '.hdr': 'ENVI',
                '.dat': 'ENVI',
                '.bin': 'ENVI',
                '.kea': 'KEA',
@@ -771,8 +771,15 @@ class RegisterDriver(object):
 
     def _get_file_format(self, image_name):
 
-        __, f_name = os.path.split(image_name)
+        d_name, f_name = os.path.split(image_name)
         __, file_extension = os.path.splitext(f_name)
+
+        self.hdr_file = False
+
+        if os.path.isfile(os.path.join(d_name, '{}.hdr'.format(f_name))):
+
+            file_extension = '.hdr'
+            self.hdr_file = True
 
         self.file_format = self._get_driver_name(file_extension)
 
@@ -1034,7 +1041,8 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
             self.hdf_datasources = [self._open_dataset(hdf_name, True) for hdf_name in self.hdf_name_list]
 
             self.datasource = self.hdf_datasources[hdf_band-1]
-
+            print self.datasource
+            sys.exit()
             # self.datasource = gdal.Open(self.datasource.GetSubDatasets()[hdf_band - 1][0], GA_ReadOnly)
 
         self.datasource_info()
@@ -1214,7 +1222,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
             try:
 
-                self.band.GetStatistics(0, 1)
+                # self.band.GetStatistics(0, 1)
                 self.band.FlushCache()
 
             except:
