@@ -957,7 +957,7 @@ class RTreeManager(object):
 
             if not os.path.isfile(self.base_shapefile_):
 
-                with tarfile.open('{}/utm_shp.tar.bz2'.format(self.utm_shp_path), mode='r:bz2') as tar:
+                with tarfile.open('{}/utm_shp.tar.gz'.format(self.utm_shp_path), mode='r') as tar:
                     tar.extractall(path=self.utm_shp_path)
 
         if rtree_installed:
