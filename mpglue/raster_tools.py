@@ -1041,8 +1041,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
             self.hdf_datasources = [self._open_dataset(hdf_name, True) for hdf_name in self.hdf_name_list]
 
             self.datasource = self.hdf_datasources[hdf_band-1]
-            print self.datasource
-            sys.exit()
+
             # self.datasource = gdal.Open(self.datasource.GetSubDatasets()[hdf_band - 1][0], GA_ReadOnly)
 
         self.datasource_info()
