@@ -9,8 +9,10 @@ try:
 except:
     from distutils.command import build_ext
 
+import numpy as np
 
-__version__ = '0.1.0'
+
+__version__ = '0.1.1'
 
 mappy_name = 'MpGlue'
 maintainer = 'Jordan Graesser'
@@ -93,6 +95,7 @@ def setup_package():
                     packages=get_packages(),
                     package_data=get_package_data(),
                     ext_modules=cythonize(get_pyx_list()),
+                    include_dirs=[np.get_include()],
                     cmdclass=dict(build_ext=build_ext),
                     zip_safe=False,
                     download_url=git_url,

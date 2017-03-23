@@ -35,18 +35,12 @@ SPFEAS_PATH = get_path()
 if sys.version_info[0] != 3:
 
     try:
-        if platform.system() == 'Linux':
-            from ..stats import _lin_interp_l as _lin_interp
-        else:
-            from ..stats import _lin_interp
+        from ..stats import _lin_interp
     except ImportError:
         raise ImportError('Could not import _lin_interp')
 
     try:
-        if platform.system() == 'Linux':
-            from ..stats import _rolling_stats_l as _rolling_stats
-        else:
-            from ..stats import _rolling_stats
+        from ..stats import _rolling_stats
     except ImportError:
         raise ImportError('Could not import _rolling_stats')
 
