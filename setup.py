@@ -3,6 +3,7 @@ from distutils.core import setup
 import platform
 
 from Cython.Build import cythonize
+# from distutils.extension import Extension
 
 try:
     from Cython.Distutils import build_ext
@@ -60,12 +61,14 @@ def get_package_data():
 
         return {'mpglue': ['*.md',
                            '*.txt',
+                           'stats/*.pyx',
                            'stats/*.pyd']}
 
     else:
 
         return {'mpglue': ['*.md',
                            '*.txt',
+                           'stats/*.pyx',
                            'stats/*.so']}
 
 
@@ -82,8 +85,6 @@ def get_console_dict():
 
 def setup_package():
 
-    # if platform.system() != 'Windows':
-
     metadata = dict(name=mappy_name,
                     maintainer=maintainer,
                     maintainer_email=maintainer_email,
@@ -94,30 +95,13 @@ def setup_package():
                     author=author_file,
                     packages=get_packages(),
                     package_data=get_package_data(),
-                    ext_modules=cythonize(get_pyx_list()),
+                    ext_modules=cythonize(get_pyx_list(), include_dirs=[np.get_include()]),
                     include_dirs=[np.get_include()],
                     cmdclass=dict(build_ext=build_ext),
                     zip_safe=False,
                     download_url=git_url,
                     install_requires=required_packages,
                     entry_points=get_console_dict())
-
-    # else:
-    #
-    #     metadata = dict(name=mappy_name,
-    #                     maintainer=maintainer,
-    #                     maintainer_email=maintainer_email,
-    #                     description=description,
-    #                     license=license_file,
-    #                     version=__version__,
-    #                     long_description=long_description,
-    #                     author=author_file,
-    #                     packages=get_packages(),
-    #                     package_data=get_package_data(),
-    #                     zip_safe=False,
-    #                     download_url=git_url,
-    #                     install_requires=required_packages,
-    #                     entry_points=get_console_dict())
 
     setup(**metadata)
 
