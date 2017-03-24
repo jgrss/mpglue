@@ -8,6 +8,8 @@ ehthumbs.db
 Thumbs.db
 
 # Python
+*.c
+*.so
 *.log
 *.pyo
 *.pyc
