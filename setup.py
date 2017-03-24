@@ -10,10 +10,17 @@ try:
 except:
     from distutils.command import build_ext
 
+# try:
+#     from setuptools import setup
+#     # from setuptools import Extension
+# except ImportError:
+#     from distutils.core import setup
+#     # from distutils.extension import Extension
+
 import numpy as np
 
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 mappy_name = 'MpGlue'
 maintainer = 'Jordan Graesser'
@@ -48,7 +55,9 @@ if platform.system() != 'Windows':
 
 
 def get_pyx_list():
-    return ['mpglue/stats/*.pyx']
+
+    return ['mpglue/classification/*.pyx',
+            'mpglue/stats/*.pyx']
 
 
 def get_packages():
@@ -59,15 +68,17 @@ def get_package_data():
 
     if platform.system() == 'Windows':
 
-        return {'mpglue': ['*.md',
-                           '*.txt',
+        return {'': ['*.md', '*.txt'],
+                'mpglue': ['classification/*.pyx',
+                           'classification/*.pyd',
                            'stats/*.pyx',
                            'stats/*.pyd']}
 
     else:
 
-        return {'mpglue': ['*.md',
-                           '*.txt',
+        return {'': ['*.md', '*.txt'],
+                'mpglue': ['classification/*.pyx',
+                           'classification/*.so',
                            'stats/*.pyx',
                            'stats/*.so']}
 
@@ -95,13 +106,14 @@ def setup_package():
                     author=author_file,
                     packages=get_packages(),
                     package_data=get_package_data(),
-                    ext_modules=cythonize(get_pyx_list(), include_dirs=[np.get_include()]),
-                    include_dirs=[np.get_include()],
+                    ext_modules=cythonize(get_pyx_list()),
                     cmdclass=dict(build_ext=build_ext),
                     zip_safe=False,
                     download_url=git_url,
                     install_requires=required_packages,
                     entry_points=get_console_dict())
+
+    # include_dirs = [np.get_include()],
 
     setup(**metadata)
 
