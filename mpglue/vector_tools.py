@@ -290,7 +290,11 @@ class vopen(RegisterDriver):
         if file_list:
 
             for rf in file_list:
-                os.remove('{}/{}'.format(self.d_name, rf))
+
+                file2remove = os.path.join(self.d_name, rf)
+
+                if os.path.isfile(file2remove):
+                    os.remove(file2remove)
 
     def exit(self):
         self.close()
@@ -347,7 +351,11 @@ def delete_vector(file_name):
     f_base, f_ext = os.path.splitext(f_name)
 
     for f in fnmatch.filter(os.listdir(d_name), '{}*.qpj'.format(f_base)):
-        os.remove('{}/{}'.format(d_name, f))
+
+        qpj_file = os.path.join(d_name, f)
+
+        if os.path.isfile(qpj_file)
+            os.remove(qpj_file)
 
 
 class CreateDriver(RegisterDriver):
@@ -504,7 +512,7 @@ def rename_vector(input_file, output_file):
         if a_base == f_base:
 
             try:
-                os.rename('{}/{}'.format(d_name, associated_file), '{}/{}{}'.format(od_name, of_base, a_ext))
+                os.rename(os.path.join(d_name, associated_file), os.path.join(od_name, '{}{}'.format(of_base, a_ext)))
             except OSError:
                 logger.error(gdal.GetLastErrorMsg())
                 raise OSError('Could not write {} to file.'.format(of_base))
@@ -547,10 +555,10 @@ def merge_vectors(shps2merge, merged_shapefile):
 
         if a_base == f_base:
 
-            out_file = '{}/{}{}'.format(od_name, of_base, a_ext)
+            out_file = os.path.join(od_name, '{}{}'.format(of_base, a_ext))
 
             if not os.path.isfile(out_file):
-                shutil.copy2('{}/{}'.format(d_name, associated_file), out_file)
+                shutil.copy2(os.path.join(d_name, associated_file), out_file)
 
     # Then merge each shapefile into the
     # output file.
@@ -946,18 +954,18 @@ class RTreeManager(object):
 
     def __init__(self, base_shapefile=None):
 
-        self.utm_shp_path = '{}/utilities/sentinel'.format(MAIN_PATH.replace('mpglue', 'mappy'))
+        self.utm_shp_path = os.path.join(MAIN_PATH.replace('mpglue', 'mappy'), 'utilities', 'sentinel')
 
         # Setup the UTM MGRS shapefile
         if isinstance(base_shapefile, str):
             self.base_shapefile_ = base_shapefile
         else:
 
-            self.base_shapefile_ = '{}/sentinel2_grid.shp'.format(self.utm_shp_path)
+            self.base_shapefile_ = os.path.join(self.utm_shp_path, 'sentinel2_grid.shp')
 
             if not os.path.isfile(self.base_shapefile_):
 
-                with tarfile.open('{}/utm_shp.tar.gz'.format(self.utm_shp_path), mode='r') as tar:
+                with tarfile.open(os.path.join(self.utm_shp_path, 'utm_shp.tar.gz'), mode='r') as tar:
                     tar.extractall(path=self.utm_shp_path)
 
         if rtree_installed:
@@ -986,7 +994,9 @@ class RTreeManager(object):
         bdy_info = None
 
         # Load the RTree info
-        self.rtree_info = '{}/utilities/sentinel/utm_grid_info.txt'.format(MAIN_PATH.replace('mpglue', 'mappy'))
+        self.rtree_info = os.path.join(MAIN_PATH.replace('mpglue', 'mappy'),
+                                       'utilities', 'sentinel', 'utm_grid_info.txt')
+
         self.field_dict = pickle.load(file(self.rtree_info, 'rb'))
 
     def get_intersecting_features(self, shapefile2intersect=None, envelope=None,
