@@ -354,7 +354,7 @@ def delete_vector(file_name):
 
         qpj_file = os.path.join(d_name, f)
 
-        if os.path.isfile(qpj_file)
+        if os.path.isfile(qpj_file):
             os.remove(qpj_file)
 
 
