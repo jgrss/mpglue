@@ -5021,43 +5021,48 @@ class classification_r(classification):
 
     if R_installed:
 
-        # select a mirror for R packages
-        utils.chooseCRANmirror(ind=1)  # select the first mirror in the list
+        try:
 
-        # R package names
-        package_names = ('Cubist', 'C50', 'raster', 'rgdal')#, 'foreach', 'doSNOW')
+            # select a mirror for R packages
+            utils.chooseCRANmirror(ind=1)  # select the first mirror in the list
 
-        # Selectively install what needs to be install.
-        # We are fancy, just because we can.
-        # names_to_install = [x for x in package_names if not isinstalled(x)]
-        [importr_tryhard(px) for px in package_names]
+            # R package names
+            package_names = ('Cubist', 'C50', 'raster', 'rgdal')#, 'foreach', 'doSNOW')
 
-        # Install necessary libraries.
-        # if len(names_to_install) > 0:
-        #
-        #     print('Installing R packages--{} ...'.format(', '.join(names_to_install)))
-        #
-        #     utils.install_packages(StrVector(names_to_install))
+            # Selectively install what needs to be install.
+            # We are fancy, just because we can.
+            # names_to_install = [x for x in package_names if not isinstalled(x)]
+            [importr_tryhard(px) for px in package_names]
 
-        # print('Importing R packages--{} ...'.format(', '.join(package_names)))
+            # Install necessary libraries.
+            # if len(names_to_install) > 0:
+            #
+            #     print('Installing R packages--{} ...'.format(', '.join(names_to_install)))
+            #
+            #     utils.install_packages(StrVector(names_to_install))
 
-        # Cubist
-        Cubist = importr('Cubist', suppress_messages=True)
+            # print('Importing R packages--{} ...'.format(', '.join(package_names)))
 
-        # C50
-        C50 = importr('C50', suppress_messages=True)
+            # Cubist
+            Cubist = importr('Cubist', suppress_messages=True)
 
-        # raster
-        raster = importr('raster', suppress_messages=True)
+            # C50
+            C50 = importr('C50', suppress_messages=True)
 
-        # rgdal
-        rgdal = importr('rgdal', suppress_messages=True)
+            # raster
+            raster = importr('raster', suppress_messages=True)
 
-        # # foreach
-        # foreach = importr('foreach', suppress_messages=True)
-        #
-        # # doSNOW
-        # doSNOW = importr('doSNOW', suppress_messages=True)
+            # rgdal
+            rgdal = importr('rgdal', suppress_messages=True)
+
+            # # foreach
+            # foreach = importr('foreach', suppress_messages=True)
+            #
+            # # doSNOW
+            # doSNOW = importr('doSNOW', suppress_messages=True)
+
+        except:
+            R_installed = False
 
     def __init__(self):
 
