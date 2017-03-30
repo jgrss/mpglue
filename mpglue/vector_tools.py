@@ -1889,9 +1889,11 @@ def add_fields(input_vector, output_vector=None, field_names=['x', 'y'], method=
             try:
                 field_value = float(feature.GetField(field_names[0]))
             except:
+                feature.Destroy()
                 continue
 
             if field_value is None or field_value == 'None':
+                feature.Destroy()
                 continue
 
             value_found = False
