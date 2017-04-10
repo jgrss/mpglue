@@ -1208,6 +1208,7 @@ def _get_xy_offsets(x, left, right, y, top, bottom, cell_size_x, cell_size_y, ro
 
     # Xs (longitudes)
     if check:
+
         if (x < left) or (x > right):
             raise ValueError('The x is out of the image extent.')
 
