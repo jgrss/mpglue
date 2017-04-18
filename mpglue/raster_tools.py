@@ -4761,6 +4761,153 @@ def _discrete_cmap(n_classes, base_cmap='cubehelix'):
     return base.from_list(cmap_name, color_list, n_classes)
 
 
+class QAMasker(object):
+
+    """
+    A class for masking bit-packed quality flags
+
+    Args:
+        qa (ndarray): The quality array.
+        sensor (str): The sensor name. Choices are ['HLS', 'L8-pre', 'L8-C1', 'L-C1', 'MODIS']. 'L-C1' refers to
+            Collection 1 L4-5 and L7. 'L8-C1' refers to Collection 1 L8.
+        mask_items (str list): A list of items to mask.
+        modis_qa_position (Optional[int]): The MODIS QA band position. Default is 1.
+        modis_quality (Optional[int]): The MODIS quality level. Default is 2.
+        
+    References:
+        Landsat Collection 1:
+            https://landsat.usgs.gov/collectionqualityband
+
+    Examples:
+        >>> # Get the MODIS cloud mask.
+        >>> qa = QAMasker(<array>, 'MODIS', ['cloud'])
+        >>>
+        >>> # HLS
+        >>> qa = QAMasker(<array>, 'HLS', ['cloud'])
+        >>> qa.mask
+    """
+
+    def __init__(self, qa, sensor, mask_items, modis_qa_position=1, modis_quality=2):
+
+        self.qa = qa
+        self.sensor = sensor
+        self.modis_qa_position = modis_qa_position
+        self.modis_quality = modis_quality
+
+        # sensor_bit_lengths = dict(HLS=3, MODIS=2)
+        # self.bit_length = sensor_bit_lengths[sensor]
+
+        fmask_dict = dict(clear=0, water=1, shadow=2, snow=3, snowice=3, adjacent=4, cloud=4, cirrus=5, fill=255)
+
+        if sensor == 'MODIS':
+            self.bit_length = int('1' * self.bit_length, 2)
+
+        if sensor == 'HLS':
+            self.confidence_value = 0
+        elif sensor == 'OLI_TIRS':
+            self.confidence_value = 3
+        else:
+            self.confidence_value = 3
+
+        # For confidence bits
+        # 0 = not determined
+        # 1 = no
+        # 2 = maybe
+        # 3 = yes
+
+        self.qa_flags = {'HLS': {'cirrus': (0, 0),
+                                 'cloud': (1, 1),
+                                 'adjacent': (2, 2),
+                                 'shadow': (3, 3),
+                                 'snowice': (4, 4),
+                                 'water': (5, 5)},
+                         'L8-pre': {'cirrus': (13, 12),
+                                    'snowice': (11, 10),
+                                    'water': (5, 4),
+                                    'fill': (0, 0),
+                                    'dropped': (1, 1),
+                                    'terrain': (2, 2),
+                                    'shadow': (7, 6),
+                                    'vegconf': (9, 8),
+                                    'snowiceconf': (11, 10),
+                                    'cirrusconf': (13, 12),
+                                    'cloudconf': (15, 14)},
+                         'L8-C1': {'cirrus': (12, 11),
+                                   'snowice': (10, 9),
+                                   'shadowconf': (8, 7),
+                                   'cloudconf': (6, 5),
+                                   'cloud': (4, 4),
+                                   'saturated': (3, 2),
+                                   'terrain': (1, 1),
+                                   'fill': (0, 0)},
+                         'L-C1': {'fill': (0, 0),
+                                  'dropped': (1, 1),
+                                  'saturated': (3, 2),
+                                  'cloud': (4, 4),
+                                  'cloudconf': (6, 5),
+                                  'shadowconf': (8, 7),
+                                  'snowice': (10, 9)},
+                         'MODIS': {'cloud': (0, 0),
+                                   'daynight': (3, 3),
+                                   'sunglint': (4, 4),
+                                   'snowice': (5, 5),
+                                   'landwater': (7, 6)}}
+
+        self.mask = np.zeros(qa.shape, dtype='uint8')
+
+        for mask_item in mask_items:
+
+            if self.sensor == 'MODIS':
+                self.mask = np.logical_or(self.mask, self.get_modis_qa_mask())
+            elif self.sensor == 'HLS':
+
+                if mask_item in fmask_dict:
+                    self.mask[self.get_qa_mask(mask_item) == 1] = fmask_dict[mask_item]
+                else:
+                    self.mask[self.get_qa_mask(mask_item) == 1] = 1
+
+                # self.mask[self.mask == 0] = fmask_dict['fill']
+
+    def get_modis_qa_mask(self):
+
+        """
+        Reference:
+            https://github.com/haoliangyu/pymasker/blob/master/pymasker.py
+        """
+
+        # bit_pos = 0
+        # bit_len = 2
+        # data_quality = 0
+        #
+        # bitlen = int('1' * bit_len, 2)
+        # value = int(data_quality, 2)
+        #
+        # pos_value = bitlen << bit_pos
+        # con_value = value << bit_pos
+        #
+        # return np.uint8(((self.qa & pos_value) == con_value) * 1)
+
+        bit_shifts = {1: 0, 2: 4, 3: 8, 4: 12, 5: 16, 6: 20, 7: 24}
+
+        modis_mask = np.uint8(self.qa >> bit_shifts[self.modis_qa_position] & 4)
+
+        # 1=clear
+        return np.where(modis_mask <= self.modis_quality, 1, 0)
+
+    def get_qa_mask(self, what2mask):
+
+        """
+        Reference:
+            https://github.com/mapbox/landsat8-qa/blob/master/landsat8_qa/qa.py        
+        """
+
+        bit_location = self.qa_flags[self.sensor][what2mask]
+
+        width_int = int((bit_location[0] - bit_location[1] + 1) * '1', 2)
+
+        return np.uint8(((self.qa >> bit_location) & width_int) * 1)
+
+
 def _examples():
 
     sys.exit("""\
