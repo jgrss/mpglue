@@ -704,20 +704,37 @@ class DataChecks(object):
 
             iif = ImageInfo()
 
-            iif.left = iinfo['left']
-            iif.right = iinfo['right']
-            iif.top = iinfo['top']
-            iif.bottom = iinfo['bottom']
+            for k, v in iinfo.iteritems():
+                setattr(iif, k, v)
 
             iinfo = iif.copy()
 
-        if (self.right < iinfo.left) or (self.left > iinfo.right) or \
-                (self.top < iinfo.bottom) or (self.bottom > iinfo.top):
+        has_extent = False
 
-            return True
+        if hasattr(self, 'left') and hasattr(self, 'right'):
 
-        else:
-            return False
+            has_extent = True
+
+            if self.left > iinfo.right:
+                return True
+
+            if self.right < iinfo.left:
+                return True
+
+        if hasattr(self, 'top') and hasattr(self, 'bottom'):
+
+            has_extent = True
+
+            if self.top < iinfo.bottom:
+                return True
+
+            if self.bottom > iinfo.top:
+                return True
+
+        if not has_extent:
+            logger.error('The `iinfo` parameter did not contain extent information.')
+
+        return False
 
     def check_clouds(self, cloud_band=7, clear_value=0, background_value=255):
 
