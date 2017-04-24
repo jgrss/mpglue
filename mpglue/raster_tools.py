@@ -4826,6 +4826,23 @@ class QAMasker(object):
         else:
             self.confidence_value = 3
 
+        self.mask = np.zeros(qa.shape, dtype='uint8')
+
+        for mask_item in mask_items:
+
+            if self.sensor == 'MODIS':
+                self.mask = np.logical_or(self.mask, self.get_modis_qa_mask())
+            elif self.sensor == 'HLS':
+
+                if mask_item in fmask_dict:
+                    self.mask[self.get_qa_mask(mask_item) > 0] = fmask_dict[mask_item]
+                else:
+                    self.mask[self.get_qa_mask(mask_item) > 0] = 6
+
+                # self.mask[self.mask == 0] = fmask_dict['fill']
+
+    def qa_bits(self, what2mask):
+
         # For confidence bits
         # 0 = not determined
         # 1 = no
@@ -4870,20 +4887,10 @@ class QAMasker(object):
                                    'snowice': (5, 5),
                                    'landwater': (7, 6)}}
 
-        self.mask = np.zeros(qa.shape, dtype='uint8')
+        bit_location = self.qa_flags[self.sensor][what2mask]
 
-        for mask_item in mask_items:
-
-            if self.sensor == 'MODIS':
-                self.mask = np.logical_or(self.mask, self.get_modis_qa_mask())
-            elif self.sensor == 'HLS':
-
-                if mask_item in fmask_dict:
-                    self.mask[self.get_qa_mask(mask_item) == 1] = fmask_dict[mask_item]
-                else:
-                    self.mask[self.get_qa_mask(mask_item) == 1] = 1
-
-                # self.mask[self.mask == 0] = fmask_dict['fill']
+        self.b1 = bit_location[0]
+        self.b2 = bit_location[1]
 
     def get_modis_qa_mask(self):
 
@@ -4918,11 +4925,11 @@ class QAMasker(object):
             https://github.com/mapbox/landsat8-qa/blob/master/landsat8_qa/qa.py        
         """
 
-        bit_location = self.qa_flags[self.sensor][what2mask]
+        self.qa_bits(what2mask)
 
-        width_int = int((bit_location[0] - bit_location[1] + 1) * '1', 2)
+        width_int = int((self.b1 - self.b2 + 1) * '1', 2)
 
-        return np.uint8(((self.qa >> bit_location) & width_int) * 1)
+        return np.uint8(((self.qa >> self.b2) & width_int) * 1)
 
 
 def _examples():
