@@ -3106,7 +3106,7 @@ class create_raster(CreateDriver, FileManager):
 
                     out_cols = n_rows_cols(j, blk_size_cols, out_cols)
 
-                    out_name = '{}/{}_{:d}_{:d}{}'.format(d_name_tiles, f_base, i, j, f_ext)
+                    out_name = os.path.join(d_name_tiles, '{}_{:d}_{:d}{}'.format(f_base, i, j, f_ext))
 
                     out_rst[image_counter] = out_name
 
