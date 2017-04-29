@@ -20,7 +20,7 @@ except:
 import numpy as np
 
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 mappy_name = 'MpGlue'
 maintainer = 'Jordan Graesser'
@@ -96,6 +96,11 @@ def get_console_dict():
 
 def setup_package():
 
+    if platform.system() != 'Windows':
+        include_dirs = [np.get_include()]
+    else:
+        include_dirs = None
+
     metadata = dict(name=mappy_name,
                     maintainer=maintainer,
                     maintainer_email=maintainer_email,
@@ -111,9 +116,8 @@ def setup_package():
                     zip_safe=False,
                     download_url=git_url,
                     install_requires=required_packages,
-                    entry_points=get_console_dict())
-
-    # include_dirs = [np.get_include()],
+                    entry_points=get_console_dict(),
+                    include_dirs=include_dirs)
 
     setup(**metadata)
 
