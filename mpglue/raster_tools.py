@@ -89,6 +89,7 @@ DRIVER_DICT = {'.tif': 'GTiff',
                '.hdf': 'HDF4',
                '.hdf4': 'HDF4',
                '.hdf5': 'HDF5',
+               '.h5': 'HDF5',
                '.vrt': 'VRT',
                '.hdr': 'ENVI',
                '.dat': 'ENVI',
@@ -1078,6 +1079,9 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
     def _get_hdr_info(self):
 
         hdr_file = '{}.hdr'.format(self.file_name)
+
+        if not os.path.isfile(hdr_file):
+            return
 
         with open(hdr_file, 'rb') as hdr_open:
 
