@@ -4801,14 +4801,14 @@ class QAMasker(object):
 
     Examples:
         >>> # Get the MODIS cloud mask.
-        >>> qa = QAMasker(<array>, 'MODIS', ['cloud'])
+        >>> qa = QAMasker(<array>, 'MODIS')
         >>>
         >>> # HLS
         >>> qa = QAMasker(<array>, 'HLS', ['cloud'])
         >>> qa.mask
     """
 
-    def __init__(self, qa, sensor, mask_items, modis_qa_position=1, modis_quality=2):
+    def __init__(self, qa, sensor, mask_items=None, modis_qa_position=1, modis_quality=2):
 
         self.qa = qa
         self.sensor = sensor
@@ -4830,13 +4830,15 @@ class QAMasker(object):
         else:
             self.confidence_value = 3
 
-        self.mask = np.zeros(qa.shape, dtype='uint8')
+        if self.sensor == 'MODIS':
 
-        for mask_item in mask_items:
+            self.mask = self.get_modis_qa_mask()
 
-            if self.sensor == 'MODIS':
-                self.mask = np.logical_or(self.mask, self.get_modis_qa_mask())
-            elif self.sensor == 'HLS':
+        elif self.sensor == 'HLS':
+
+            self.mask = np.zeros(self.qa.shape, dtype='uint8')
+
+            for mask_item in mask_items:
 
                 if mask_item in fmask_dict:
                     self.mask[self.get_qa_mask(mask_item) > 0] = fmask_dict[mask_item]
@@ -4903,24 +4905,29 @@ class QAMasker(object):
             https://github.com/haoliangyu/pymasker/blob/master/pymasker.py
         """
 
-        # bit_pos = 0
-        # bit_len = 2
-        # data_quality = 0
-        #
-        # bitlen = int('1' * bit_len, 2)
-        # value = int(data_quality, 2)
-        #
-        # pos_value = bitlen << bit_pos
-        # con_value = value << bit_pos
-        #
-        # return np.uint8(((self.qa & pos_value) == con_value) * 1)
+        bit_pos = 0
+        bit_len = 2
 
-        bit_shifts = {1: 0, 2: 4, 3: 8, 4: 12, 5: 16, 6: 20, 7: 24}
+        # 0 = high
+        # 1 = medium
+        # 2 = low
+        # 3 = low cloud
+        data_quality = 0
 
-        modis_mask = np.uint8(self.qa >> bit_shifts[self.modis_qa_position] & 4)
+        bitlen = int('1' * bit_len, 2)
+        value = int(data_quality, 2)
 
-        # 1=clear
-        return np.where(modis_mask <= self.modis_quality, 1, 0)
+        pos_value = bitlen << bit_pos
+        con_value = value << bit_pos
+
+        return np.uint8(((self.qa & pos_value) == con_value) * 1)
+
+        # bit_shifts = {1: 0, 2: 4, 3: 8, 4: 12, 5: 16, 6: 20, 7: 24}
+        #
+        # modis_mask = np.uint8(self.qa >> bit_shifts[self.modis_qa_position] & 4)
+        #
+        # # 1=clear
+        # return np.where(modis_mask <= self.modis_quality, 1, 0)
 
     def get_qa_mask(self, what2mask):
 
