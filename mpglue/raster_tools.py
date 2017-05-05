@@ -1813,24 +1813,26 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
             resample (Optional[str]): The resampling method. Default is 'nearest'.N
             cell_size (Optional[float]): The output cell size. Default is 0.
             kwargs:
-                format='GTiff', outputBounds=None, outputBoundsSRS=None, targetAlignedPixels=False,
-                 width=0, height=0, srcAlpha=False, dstAlpha=False, warpOptions=None,
-                 errorThreshold=None, warpMemoryLimit=None,
-                 creationOptions=None, outputType=0, workingType=0,
-                 resampleAlg=resample_dict[resample], srcNodata=None, dstNodata=None,
-                 multithread=False, tps=False, rpc=False, geoloc=False,
-                 polynomialOrder=None, transformerOptions=None, cutlineDSName=None,
-                 cutlineLayer=None, cutlineWhere=None, cutlineSQL=None,
-                 cutlineBlend=None, cropToCutline=False, copyMetadata=True,
-                 metadataConflictValue=None, setColorInterpretation=False,
-                 callback=None, callback_data=None
+                format='GTiff', outputBounds=None (minX, minY, maxX, maxY), 
+                outputBoundsSRS=None, targetAlignedPixels=False,
+                width=0, height=0, srcAlpha=False, dstAlpha=False, warpOptions=None,
+                errorThreshold=None, warpMemoryLimit=None,
+                creationOptions=None, outputType=0, workingType=0,
+                resampleAlg=resample_dict[resample], srcNodata=None, dstNodata=None,
+                multithread=False, tps=False, rpc=False, geoloc=False,
+                polynomialOrder=None, transformerOptions=None, cutlineDSName=None,
+                cutlineLayer=None, cutlineWhere=None, cutlineSQL=None,
+                cutlineBlend=None, cropToCutline=False, copyMetadata=True,
+                metadataConflictValue=None, setColorInterpretation=False,
+                callback=None, callback_data=None
 
         Returns:
             None, writes to `output_image'.
         """
 
         warp_options = gdal.WarpOptions(srcSRS=None, dstSRS='EPSG:{:d}'.format(epsg),
-                                        xRes=cell_size, yRes=cell_size, resampleAlg=RESAMPLE_DICT[resample],
+                                        xRes=cell_size, yRes=cell_size,
+                                        resampleAlg=RESAMPLE_DICT[resample],
                                         **kwargs)
 
         out_ds = gdal.Warp(output_image, self.file_name, options=warp_options)
@@ -2846,12 +2848,13 @@ def warp(input_image, output_image, out_epsg=None, in_epsg=None, resample='neare
         output_image (str): The output image.
         out_epsg (Optional[int]): The output EPSG projection code.
         in_epsg (Optional[int]): The input EPSG code. Default is None.
-        resample (Optional[str]): The resampling method. Default is 'nearest'.N
+        resample (Optional[str]): The resampling method. Default is 'nearest'.
         cell_size (Optional[float]): The output cell size. Default is 0.
         d_type (Optional[str]): Data type to overwrite `outputType`. Default is None.
         return_datasource (Optional[bool])
         kwargs:
-            format=None, outputBounds=None, outputBoundsSRS=None, targetAlignedPixels=False,
+            format=None, outputBounds=None (minX, minY, maxX, maxY), 
+            outputBoundsSRS=None, targetAlignedPixels=False,
              width=0, height=0, srcAlpha=False, dstAlpha=False, warpOptions=None,
              errorThreshold=None, warpMemoryLimit=None,
              creationOptions=None, outputType=0, workingType=0,
