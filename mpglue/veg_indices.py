@@ -141,7 +141,8 @@ class SensorInfo(object):
                                  'TNDVI': ['red', 'nir'],
                                  'TVI': ['green', 'nir'],
                                  'YNDVI': ['yellow', 'nir'],
-                                 'VCI': ['red', 'nir']}
+                                 'VCI': ['red', 'nir'],
+                                 'VISMU': ['blue', 'green', 'red']}
 
         # The vegetation index equations. The arrays are
         #   loaded from ``self.wavelength_lists``. For example,
@@ -173,7 +174,8 @@ class SensorInfo(object):
              'TNDVI': 'sqrt(((array02 - array01) / (array02 + array01)) * .5)',
              'TVI': 'sqrt(((array02 - array01) / (array02 + array01)) + .5)',
              'YNDVI': '(array02 - array01) / (array02 + array01)',
-             'VCI': '(((array02 - array01) / (array02 + array01)) - min_ndvi) / (max_ndvi - min_ndvi)'}
+             'VCI': '(((array02 - array01) / (array02 + array01)) - min_ndvi) / (max_ndvi - min_ndvi)',
+             'VISMU': '(array01 + array02 + array03) / 3.'}
 
         # The data ranges for scaling, but only
         #   used if the output storage type is not
@@ -204,7 +206,8 @@ class SensorInfo(object):
                             'TNDVI': (),
                             'TVI': (),
                             'YNDVI': (-1., 1.),
-                            'VCI': ()}
+                            'VCI': (),
+                            'VISmu': (0., 10000.)}
 
     def list_expected_band_order(self, sensor):
 
