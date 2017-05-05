@@ -1320,13 +1320,14 @@ class BandHandler(SensorInfo):
         band_positions = self.get_band_positions(band_list)
 
         return self.meta_info.read(bands2open=band_positions,
-                                   i=self.i, j=self.j,
+                                   i=self.i,
+                                   j=self.j,
                                    sort_bands2open=False,
-                                   rows=self.n_rows, cols=self.n_cols,
+                                   rows=self.n_rows,
+                                   cols=self.n_cols,
                                    d_type='float32')
 
     def get_band_positions(self, band_list):
-
         return [self.band_order[img_band] for img_band in band_list]
 
 

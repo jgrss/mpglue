@@ -265,6 +265,7 @@ class ReadWrite(object):
 
             bh.get_band_order()
 
+            # Overwrite the bands to open
             bands2open = bh.get_band_positions(bh.wavelength_lists[compute_index.upper()])
 
             self.d_type = 'float32'
@@ -349,8 +350,8 @@ class ReadWrite(object):
 
             vie = VegIndicesEquations(self.array, chunk_size=-1)
 
-            # exec 'self.{} = vie.compute(compute_index.upper())'.format(compute_index)
-            exec('self.{} = vie.compute(compute_index.upper())'.format(compute_index))
+            # exec('self.{} = vie.compute(compute_index.upper())'.format(compute_index.lower()))
+            exec('self.array = vie.compute(compute_index.upper())')
 
         return self.array
 
@@ -4811,11 +4812,11 @@ class QAMasker(object):
         >>> qa.mask
     """
 
-    def __init__(self, qa, sensor, mask_items=None, modis_qa_position=1, modis_quality=2):
+    def __init__(self, qa, sensor, mask_items=None, modis_qa_band=1, modis_quality=2):
 
         self.qa = qa
         self.sensor = sensor
-        self.modis_qa_position = modis_qa_position
+        self.modis_qa_band = modis_qa_band
         self.modis_quality = modis_quality
 
         # sensor_bit_lengths = dict(HLS=3, MODIS=2)
@@ -4823,8 +4824,8 @@ class QAMasker(object):
 
         fmask_dict = dict(clear=0, water=1, shadow=2, snow=3, snowice=3, adjacent=4, cloud=4, cirrus=5, fill=255)
 
-        if sensor == 'MODIS':
-            self.bit_length = int('1' * self.bit_length, 2)
+        # if sensor == 'MODIS':
+        #     self.bit_length = int('1' * self.bit_length, 2)
 
         if sensor == 'HLS':
             self.confidence_value = 0
@@ -4908,29 +4909,36 @@ class QAMasker(object):
             https://github.com/haoliangyu/pymasker/blob/master/pymasker.py
         """
 
-        bit_pos = 0
-        bit_len = 2
-
-        # 0 = high
-        # 1 = medium
-        # 2 = low
-        # 3 = low cloud
-        data_quality = 0
-
-        bitlen = int('1' * bit_len, 2)
-        value = int(data_quality, 2)
-
-        pos_value = bitlen << bit_pos
-        con_value = value << bit_pos
-
-        return np.uint8(((self.qa & pos_value) == con_value) * 1)
-
-        # bit_shifts = {1: 0, 2: 4, 3: 8, 4: 12, 5: 16, 6: 20, 7: 24}
+        # bit_pos = 0
+        # bit_len = 2
         #
-        # modis_mask = np.uint8(self.qa >> bit_shifts[self.modis_qa_position] & 4)
+        # # 0 = high
+        # # 1 = medium
+        # # 2 = low
+        # # 3 = low cloud
+        # data_quality = 0
         #
-        # # 1=clear
-        # return np.where(modis_mask <= self.modis_quality, 1, 0)
+        # bit_len = int('1' * bit_len, 2)
+        # value = int(str(data_quality), 2)
+        #
+        # pos_value = bit_len << bit_pos
+        # con_value = value << bit_pos
+        #
+        # return (self.qa & pos_value) == con_value
+
+        bit_shifts = {1: 0, 2: 4, 3: 8, 4: 12, 5: 16, 6: 20, 7: 24}
+
+        modis_mask = np.uint8(self.qa >> bit_shifts[self.modis_qa_band] & 4)
+
+        # `modis_mask`
+        #   0: best quality
+        #   1: good quality
+        #   4: fill value
+        #
+        # `output`
+        #   1: good data
+        #   0: bad data
+        return np.where(modis_mask <= self.modis_quality, 1, 0)
 
     def get_qa_mask(self, what2mask):
 
