@@ -184,7 +184,7 @@ class SensorInfo(object):
                             'CBI': (-1., 1.),
                             'CIre': (-1., 1.),
                             'EVI': (-1., 1.),
-                            'EVI2': (),
+                            'EVI2': (0, 4.),
                             'IPVI': (),
                             'MSAVI': (),
                             'GNDVI': (-1., 1.),
@@ -435,22 +435,29 @@ class VegIndicesEquations(SensorInfo):
         index_array = ne.evaluate(self.equations[self.index2compute.upper()])
 
         # Clip lower and upper bounds.
-        if self.data_ranges[self.index2compute.upper()] == (-1., 1.):
+        if self.data_ranges[self.index2compute.upper()]:
 
-            index_array = ne.evaluate('where(index_array > 1, 1, index_array)')
+            d_range = self.data_ranges[self.index2compute.upper()]
 
-            if self.out_type == 1:
+            index_array = ne.evaluate('where(index_array > {:d}, {:d}, index_array)'.format(d_range[1], d_range[1]))
 
-                # If not rescaling from float
-                index_array = ne.evaluate('where(index_array < -1, -1, index_array)')
+            if d_range == (-1., 1.):
+
+                if self.out_type == 1:
+
+                    # If not rescaling from float
+                    index_array = ne.evaluate('where(index_array < -1, -1, index_array)')
+
+                else:
+
+                    # If rescaling to byte or 16-bit
+                    index_array = ne.evaluate('where(index_array < 0, 0, index_array)')
 
             else:
+                index_array = ne.evaluate('where(index_array < {:d}, {:d}, index_array)'.format(d_range[0], d_range[0]))
 
-                # If rescaling to byte or 16-bit
-                index_array = ne.evaluate('where(index_array < 0, 0, index_array)')
-
-        else:
-            in_data_range = self.data_ranges[self.index2compute.upper()]
+        # else:
+        #     in_data_range = self.data_ranges[self.index2compute.upper()]
 
         index_array = ne.evaluate(mask_equation)
 

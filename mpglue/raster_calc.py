@@ -46,24 +46,24 @@ def raster_calc(output, equation=None, out_type='byte', extent=None,
             Band positions default to 1 unless given as [A]_band.
 
     Examples:
-        >>> from mappy.utilities import raster_calc
+        >>> from mpglue.raster_calc import raster_calc
         >>>
         >>> # Multiply image A x image B
-        >>> raster_calc('/output.tif', equation='A * B', \
+        >>> raster_calc('/output.tif', equation='A * B', 
         >>>             A='/some_raster1.tif', B='some_raster2.tif')
         >>>
         >>> # Reads as...
         >>> # Where image A equals 1 AND image B is greater than 5,
         >>> #   THEN write image A, OTHERWISE write 0
-        >>> raster_calc('/output.tif', equation='where((A == 1) & (B > 5), A, 0)', \
+        >>> raster_calc('/output.tif', equation='where((A == 1) & (B > 5), A, 0)', 
         >>>             A='/some_raster1.tif', B='some_raster2.tif')
         >>>
         >>> # Use different bands from the same image. The letter given for the
         >>> #   image must be the same for the band, followed by _band.
         >>> # E.g., for raster 'n', the corresponding band would be 'n_band'. For
         >>> #   raster 'r', the corresponding band would be 'r_band', etc.
-        >>> raster_calc('/output.tif', equation='(n - r) / (n + r)', \
-        >>>             n='/some_raster.tif', n_band=4, \
+        >>> raster_calc('/output.tif', equation='(n - r) / (n + r)', 
+        >>>             n='/some_raster.tif', n_band=4, 
         >>>             r='/some_raster.tif', r_band=3)
 
     Returns:
