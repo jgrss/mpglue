@@ -457,9 +457,9 @@ class VegIndicesEquations(SensorInfo):
         # index_array = self.rescale_range(index_array, in_range=in_data_range)
 
         if self.out_type == 2:
-            index_array *= 255.
+            index_array = np.uint8(index_array * 255.)
         elif self.out_type == 3:
-            index_array *= 10000.
+            index_array = np.uint16(index_array * 10000.)
 
         index_array[np.isinf(index_array) | np.isnan(index_array)] = self.no_data
 
