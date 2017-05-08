@@ -175,7 +175,7 @@ class SensorInfo(object):
              'TVI': 'sqrt(((array02 - array01) / (array02 + array01)) + .5)',
              'YNDVI': '(array02 - array01) / (array02 + array01)',
              'VCI': '(((array02 - array01) / (array02 + array01)) - min_ndvi) / (max_ndvi - min_ndvi)',
-             'VISMU': '(array01 + array02 + array03) / 3.'}
+             'VISMU': '((array01/10000.) + (array02/10000.) + (array03/10000.)) / 3.'}
 
         # The data ranges for scaling, but only
         #   used if the output storage type is not
@@ -184,7 +184,7 @@ class SensorInfo(object):
                             'CBI': (-1., 1.),
                             'CIre': (-1., 1.),
                             'EVI': (-1., 1.),
-                            'EVI2': (-.5, 2.5),
+                            'EVI2': (),
                             'IPVI': (),
                             'MSAVI': (),
                             'GNDVI': (-1., 1.),
@@ -207,7 +207,7 @@ class SensorInfo(object):
                             'TVI': (),
                             'YNDVI': (-1., 1.),
                             'VCI': (),
-                            'VISmu': (0., 10000.)}
+                            'VISmu': ()}
 
     def list_expected_band_order(self, sensor):
 
@@ -434,23 +434,34 @@ class VegIndicesEquations(SensorInfo):
 
         index_array = ne.evaluate(self.equations[self.index2compute.upper()])
 
-        # Clip lower and upper, standardized bounds.
+        # Clip lower and upper bounds.
         if self.data_ranges[self.index2compute.upper()] == (-1., 1.):
 
-            index_array = ne.evaluate('where(index_array < -1, -1, index_array)')
             index_array = ne.evaluate('where(index_array > 1, 1, index_array)')
 
-        # elif self.data_ranges[self.index2compute.upper()] == (0., 1.):
-        #
-        #     index_array = ne.evaluate('where(index_array < 0, 0, index_array)')
-        #     index_array = ne.evaluate('where(index_array > 1, 1, index_array)')
+            if self.out_type == 1:
+
+                # If not rescaling from float
+                index_array = ne.evaluate('where(index_array < -1, -1, index_array)')
+
+            else:
+
+                # If rescaling to byte or 16-bit
+                index_array = ne.evaluate('where(index_array < 0, 0, index_array)')
+
+        else:
+            in_data_range = self.data_ranges[self.index2compute.upper()]
 
         index_array = ne.evaluate(mask_equation)
 
-        index_array[np.isinf(index_array) | np.isnan(index_array)] = self.no_data
+        # index_array = self.rescale_range(index_array, in_range=in_data_range)
 
-        if self.out_type > 1:
-            index_array = self.rescale_range(index_array, in_range=self.data_ranges[self.index2compute.upper()])
+        if self.out_type == 2:
+            index_array *= 255.
+        elif self.out_type == 3:
+            index_array *= 10000.
+
+        index_array[np.isinf(index_array) | np.isnan(index_array)] = self.no_data
 
         return index_array
 
