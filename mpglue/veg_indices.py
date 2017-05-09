@@ -207,7 +207,7 @@ class SensorInfo(object):
                             'TVI': (),
                             'YNDVI': (-1., 1.),
                             'VCI': (),
-                            'VISmu': ()}
+                            'VISMU': ()}
 
     def list_expected_band_order(self, sensor):
 
