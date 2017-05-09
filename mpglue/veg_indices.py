@@ -207,7 +207,7 @@ class SensorInfo(object):
                             'TVI': (),
                             'YNDVI': (-1., 1.),
                             'VCI': (),
-                            'VISMU': ()}
+                            'VISMU': (-9999)}
 
     def list_expected_band_order(self, sensor):
 
@@ -434,27 +434,33 @@ class VegIndicesEquations(SensorInfo):
 
         index_array = ne.evaluate(self.equations[self.index2compute.upper()])
 
+        scale_data = True
+
         # Clip lower and upper bounds.
         if self.data_ranges[self.index2compute.upper()]:
 
             d_range = self.data_ranges[self.index2compute.upper()]
 
-            index_array = ne.evaluate('where(index_array > {:f}, {:f}, index_array)'.format(d_range[1], d_range[1]))
+            if d_range[0] == -9999:
+                scale_data = False
+            else:
 
-            if d_range == (-1., 1.):
+                index_array = ne.evaluate('where(index_array > {:f}, {:f}, index_array)'.format(d_range[1], d_range[1]))
 
-                if self.out_type == 1:
+                if d_range == (-1., 1.):
 
-                    # If not rescaling from float
-                    index_array = ne.evaluate('where(index_array < -1, -1, index_array)')
+                    if self.out_type == 1:
+
+                        # If not rescaling from float
+                        index_array = ne.evaluate('where(index_array < -1, -1, index_array)')
+
+                    else:
+
+                        # If rescaling to byte or 16-bit
+                        index_array = ne.evaluate('where(index_array < 0, 0, index_array)')
 
                 else:
-
-                    # If rescaling to byte or 16-bit
-                    index_array = ne.evaluate('where(index_array < 0, 0, index_array)')
-
-            else:
-                index_array = ne.evaluate('where(index_array < {:f}, {:f}, index_array)'.format(d_range[0], d_range[0]))
+                    index_array = ne.evaluate('where(index_array < {:f}, {:f}, index_array)'.format(d_range[0], d_range[0]))
 
         # else:
         #     in_data_range = self.data_ranges[self.index2compute.upper()]
@@ -463,10 +469,19 @@ class VegIndicesEquations(SensorInfo):
 
         # index_array = self.rescale_range(index_array, in_range=in_data_range)
 
-        if self.out_type == 2:
-            index_array = np.uint8(index_array * 255.)
-        elif self.out_type == 3:
-            index_array = np.uint16(index_array * 10000.)
+        if scale_data:
+
+            if self.out_type == 2:
+                index_array = np.uint8(index_array * 255.)
+            elif self.out_type == 3:
+                index_array = np.uint16(index_array * 10000.)
+
+        else:
+
+            if self.out_type == 2:
+                index_array = np.uint8(index_array)
+            elif self.out_type == 3:
+                index_array = np.uint16(index_array)
 
         index_array[np.isinf(index_array) | np.isnan(index_array)] = self.no_data
 
