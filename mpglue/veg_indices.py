@@ -467,19 +467,17 @@ class VegIndicesEquations(SensorInfo):
 
         index_array = ne.evaluate(mask_equation)
 
-        # index_array = self.rescale_range(index_array, in_range=in_data_range)
-
         if scale_data:
 
             if self.out_type == 2:
-                index_array = np.uint8(index_array * 255.)
+                index_array = np.uint8(index_array * 254.)
             elif self.out_type == 3:
                 index_array = np.uint16(index_array * 10000.)
 
         else:
 
             if self.out_type == 2:
-                index_array = np.uint8(index_array)
+                index_array = self.rescale_range(index_array, in_range=(0, 10000))
             elif self.out_type == 3:
                 index_array = np.uint16(index_array)
 
