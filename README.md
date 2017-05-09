@@ -6,13 +6,13 @@ The **glue** of [MapPy](https://github.com/jgrss/mappy).
 Usage examples
 ---
 
-Load the library:
+#### Load the library:
     
 ```python
 >>> import mpglue as gl
 ```
 
-Opening an image:
+#### Opening an image:
 
 ```python
 >>> # Load an image and get information.
@@ -30,28 +30,27 @@ Opening an image:
 >>>     print(i_info.bands)
 ```
     
-Getting an array:
+#### Getting an array:
 
 ```python
 >>> # Open an image as an array.
 >>> with gl.ropen('/your/image.tif') as i_info:
 >>>     my_array = i_info.read()
 >>>
->>> # Open specific bands, starting indexes, and row/column dimensions.
->>> with gl.ropen('/your/image.tif') as i_info:
->>>     my_array = i_info.read()
+>>> # The 1st index = the first band of the image
+>>> my_array[0]
 >>>
 >>> # Open specific bands, starting indexes, and row/column dimensions.
 >>> with gl.open('/your/image.tif') as i_info:
 >>>     my_array = i_info.read(bands2open=[2, 3, 4], i=1000, j=2000, rows=500, cols=500)
 >>>
->>> my_array[0]     # 1st index = band 2
+>>> # The array shape = (3, 500, 500)
+>>> print(my_array.shape)
 >>>
->>> # Open all bands and index by map coordinates.
->>> with gl.ropen('/your/image.tif') as i_info:
->>>     my_array = i_info.read(bands2open=-1, y=1200000, x=4230000, rows=500, cols=500)
+>>> # The 1st index = band 2
+>>> my_array[0]
 >>>
->>> # Open image bands as arrays with dictionary mappings.
+>>> # Open all bands (i.e., `bands2open` = -1) and index by map coordinates.
 >>> with gl.ropen('/your/image.tif') as i_info:
 >>>     my_array = i_info.read(bands2open=-1, y=1200000, x=4230000, rows=500, cols=500)
 >>>
@@ -64,9 +63,15 @@ Getting an array:
 >>> # Compute the NDVI.
 >>> with gl.ropen('/your/image.tif') as i_info:
 >>>     ndvi = i_info.read(compute_index='ndvi', sensor='Landsat')
+>>>
+>>> # or
+>>>
+>>> with gl.ropen('/your/image.tif') as i_info:
+>>>     i_info.read(compute_index='ndvi', sensor='Landsat')
+>>>     ndvi = i_info.array
 ```
     
-Writing to file:
+#### Writing to file:
 
 ```python
 >>> # Copy an image info object and modify it.
@@ -74,15 +79,14 @@ Writing to file:
 >>> o_info.update_info(bands=3, storage='float32')
 >>>
 >>> # Create the raster object
->>> out_raster = gl.create_raster('/output_image.tif', o_info)
+>>> with gl.create_raster('/output_image.tif', o_info) as out_raster:
 >>>
->>> # Write an array block to band 1.
->>> array2write = <some 2d array data>
->>> out_raster.write_array(array2write, i=0, j=0, band=1)
->>> out_raster.close()
+>>>     # Write an array block to band 1.
+>>>     array2write = <some 2d array data>
+>>>     out_raster.write_array(array2write, i=0, j=0, band=1)
 ```
 
-Vegetation indices:
+#### Vegetation indices:
 
 ```python
 >>> # Compute the NDVI.
@@ -92,15 +96,14 @@ Vegetation indices:
 >>> gl.veg_indices('/image.tif', '/out_index.tif', ['ndvi', 'evi2'], 'Landsat')
 ```
 
-Land cover sampling:
+#### Land cover sampling:
 
 ```python
 >>> # Sample land cover data.
->>> gl.sample_raster('/train_samples.shp', '/image_variables.tif',
->>>                  class_id='Id')
+>>> gl.sample_raster('/train_samples.shp', '/image_variables.tif', class_id='Id')
 ```
 
-Image classification:
+#### Image classification:
 
 ```python
 >>> # Initiate the classification object.
@@ -119,7 +122,7 @@ Image classification:
 >>> cl.predict('/input_image.tif', '/output_map.tif')
 ```
 
-Thematic accuracy:
+#### Thematic accuracy:
 
 ```python
 >>> # Get map accuracy.
@@ -127,7 +130,7 @@ Thematic accuracy:
 >>>                  class_id='Id', accuracy=True)
 ```
 
-Build mixed-type VRT files:
+#### Build mixed-type VRT files:
 
 ```python
 >>> # Fill a dictionary with image names.
@@ -188,8 +191,3 @@ pip uninstall mpglue
 Development
 ---
 For questions or bugs, contact Jordan Graesser (graesser@bu.edu).
-
-
-
-
-
