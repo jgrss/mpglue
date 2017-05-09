@@ -1079,7 +1079,7 @@ class RTreeManager(object):
         # bdy_feature = None
         # bdy_geometry = None
 
-        self._cleanup()
+        # self._cleanup()
 
     def _cleanup(self):
 
