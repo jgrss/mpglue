@@ -117,7 +117,7 @@ class SensorInfo(object):
         #   ``self.equations``.
         self.wavelength_lists = {'ARVI': ['blue', 'red', 'nir'],
                                  'CBI': ['cblue', 'blue'],
-                                 'CIre': ['rededge', 'rededge3'],
+                                 'CIRE': ['rededge', 'rededge3'],
                                  'EVI': ['blue', 'red', 'nir'],
                                  'EVI2': ['red', 'nir'],
                                  'IPVI': ['red', 'nir'],
@@ -150,7 +150,7 @@ class SensorInfo(object):
         self.equations = \
             {'ARVI': '(array03 - (array02 - y*(array01 - array02))) / (array03 + (array02 - y*(array01 - array02)))',
              'CBI': '(array02 - array01) / (array02 + array01)',
-             'CIre': '(array02 / array01) - 1.',
+             'CIRE': '(array02 / array01) - 1.',
              'EVI': 'g * ((array03 - array02) / (array03 + (c1 * array02) - (c2 * array01) + L))',
              'EVI2': 'g * ((array02 - array01) / (array02 + c1 * array01 + L))',
              'IPVI': 'array02 / (array02 + array01)',
@@ -182,9 +182,9 @@ class SensorInfo(object):
         #   equal to 'float32'.
         self.data_ranges = {'ARVI': (),
                             'CBI': (-1., 1.),
-                            'CIre': (-1., 1.),
+                            'CIRE': (-1., 1.),
                             'EVI': (-1., 1.),
-                            'EVI2': (0, 4.),
+                            'EVI2': (0., 4.),
                             'IPVI': (),
                             'MSAVI': (),
                             'GNDVI': (-1., 1.),
@@ -207,7 +207,7 @@ class SensorInfo(object):
                             'TVI': (),
                             'YNDVI': (-1., 1.),
                             'VCI': (),
-                            'VISMU': (-9999)}
+                            'VISMU': (-9999., -9999.)}
 
     def list_expected_band_order(self, sensor):
 
