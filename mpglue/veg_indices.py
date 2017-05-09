@@ -439,7 +439,7 @@ class VegIndicesEquations(SensorInfo):
 
             d_range = self.data_ranges[self.index2compute.upper()]
 
-            index_array = ne.evaluate('where(index_array > {:d}, {:d}, index_array)'.format(d_range[1], d_range[1]))
+            index_array = ne.evaluate('where(index_array > {:f}, {:f}, index_array)'.format(d_range[1], d_range[1]))
 
             if d_range == (-1., 1.):
 
@@ -454,7 +454,7 @@ class VegIndicesEquations(SensorInfo):
                     index_array = ne.evaluate('where(index_array < 0, 0, index_array)')
 
             else:
-                index_array = ne.evaluate('where(index_array < {:d}, {:d}, index_array)'.format(d_range[0], d_range[0]))
+                index_array = ne.evaluate('where(index_array < {:f}, {:f}, index_array)'.format(d_range[0], d_range[0]))
 
         # else:
         #     in_data_range = self.data_ranges[self.index2compute.upper()]
