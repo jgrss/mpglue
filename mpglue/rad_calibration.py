@@ -182,9 +182,9 @@ def jd_interp(the_array, length, skip_factor):
         #   days in year `current_year`.
         if current_doy > year_dict[current_year]:
 
-            current_year += 1
-
             current_doy_diff = current_doy - year_dict[current_year]
+
+            current_year += 1
 
             the_date = int('{:d}{:03d}'.format(current_year, current_doy_diff))
 
