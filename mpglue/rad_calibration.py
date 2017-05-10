@@ -71,6 +71,8 @@ def julian_day_dictionary(start_year=1975, end_year=2040, store='st_jd'):
 
     Returns:
         Dictionary of {'year-day': yearday}
+        or
+        Dictionary of {'year-day': 'yyyy.mm.dd'}
     """
 
     jd_dict = OrderedDict()
