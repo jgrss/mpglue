@@ -184,7 +184,7 @@ class SensorInfo(object):
                             'CBI': (-1., 1.),
                             'CIRE': (-1., 1.),
                             'EVI': (-1., 1.),
-                            'EVI2': (0., 4.),
+                            'EVI2': (-1., 3.),
                             'IPVI': (),
                             'MSAVI': (),
                             'GNDVI': (-1., 1.),
@@ -207,7 +207,7 @@ class SensorInfo(object):
                             'TVI': (),
                             'YNDVI': (-1., 1.),
                             'VCI': (),
-                            'VISMU': (-9999., -9999.)}
+                            'VISMU': (0., 1.)}
 
     def list_expected_band_order(self, sensor):
 
@@ -265,17 +265,19 @@ class VegIndicesEquations(SensorInfo):
 
     Args:
         image_array (ndarray)
-        no_data (Optional[int]): An output 'no data' value. Overflows and NaNs are filled with ``no_data``.
+        no_data (Optional[int]): The output 'no data' value. Overflows and NaNs are filled with ``no_data``.
             Default is 0.
+        in_no_data (Optional[int]): The input 'no data' value.
         chunk_size (Optional[int]): The chunk size to determine whether to use ``ne.evaluate``. Default is -1, or
             use ``numexpr``.
         mask_array (Optional[2d array]): A mask where anything equal to 255 is background. Default is None.
     """
 
-    def __init__(self, image_array, no_data=0, chunk_size=-1, mask_array=None):
+    def __init__(self, image_array, no_data=0, in_no_data=0, chunk_size=-1, mask_array=None):
 
         self.image_array = image_array
         self.no_data = no_data
+        self.in_no_data = in_no_data
         self.chunk_size = chunk_size
         self.mask_array = mask_array
 
@@ -402,6 +404,7 @@ class VegIndicesEquations(SensorInfo):
             c1 = 2.4
 
         no_data = self.no_data
+        in_no_data = self.in_no_data
         pi = np.pi
 
         # Setup a mask
@@ -418,7 +421,7 @@ class VegIndicesEquations(SensorInfo):
                 raise ValueError('\nThe input array should have {:d} dimensions.\n'.format(self.n_bands))
 
             if not isinstance(self.mask_array, np.ndarray):
-                mask_equation = 'where((array01 == 0) | (array02 == 0), no_data, index_array)'
+                mask_equation = 'where((array01 == in_no_data) | (array02 == in_no_data), no_data, index_array)'
 
         elif self.n_bands == 3:
 
@@ -430,58 +433,52 @@ class VegIndicesEquations(SensorInfo):
                 raise ValueError('\nThe input array should have {:d} dimensions.\n'.format(self.n_bands))
 
             if not isinstance(self.mask_array, np.ndarray):
-                mask_equation = 'where((array01 == 0) | (array02 == 0) | (array03 == 0), no_data, index_array)'
+                mask_equation = 'where((array01 == in_no_data) | (array02 == in_no_data) | (array03 == in_no_data), no_data, index_array)'
 
         index_array = ne.evaluate(self.equations[self.index2compute.upper()])
 
-        scale_data = True
+        d_range = self.data_ranges[self.index2compute.upper()]
 
-        # Clip lower and upper bounds.
-        if self.data_ranges[self.index2compute.upper()]:
-
-            d_range = self.data_ranges[self.index2compute.upper()]
+        if d_range:
 
             if d_range[0] == -9999:
                 scale_data = False
             else:
 
+                scale_data = True
+
+                # Clip lower and upper bounds.
+                index_array = ne.evaluate('where(index_array < {:f}, {:f}, index_array)'.format(d_range[0], d_range[0]))
                 index_array = ne.evaluate('where(index_array > {:f}, {:f}, index_array)'.format(d_range[1], d_range[1]))
 
-                if d_range == (-1., 1.):
-
-                    if self.out_type == 1:
-
-                        # If not rescaling from float
-                        index_array = ne.evaluate('where(index_array < -1, -1, index_array)')
-
-                    else:
-
-                        # If rescaling to byte or 16-bit
-                        index_array = ne.evaluate('where(index_array < 0, 0, index_array)')
-
-                else:
-                    index_array = ne.evaluate('where(index_array < {:f}, {:f}, index_array)'.format(d_range[0], d_range[0]))
-
-        # else:
-        #     in_data_range = self.data_ranges[self.index2compute.upper()]
-
-        index_array = ne.evaluate(mask_equation)
+                # if self.out_type != 1:
+                #     index_array += abs(d_range[0])
+        else:
+            scale_data = False
 
         if scale_data:
 
-            if self.out_type == 2:
-                index_array = np.uint8(index_array * 254.)
-            elif self.out_type == 3:
-                index_array = np.uint16(index_array * 10000.)
+            # if self.out_type == 2:
+            #     index_array = np.uint8(index_array * 254.)
+            # elif self.out_type == 3:
+            #     index_array = np.uint16(index_array * 10000.)
+
+            if self.data_ranges[self.index2compute.upper()]:
+
+                if self.out_type == 2:
+                    index_array = np.uint8(self.rescale_range(index_array, in_range=d_range))
+                elif self.out_type == 3:
+                    index_array = np.uint16(self.rescale_range(index_array, in_range=d_range))
 
         else:
 
             if self.out_type == 2:
-                index_array = self.rescale_range(index_array, in_range=(0, 10000))
+                index_array = np.uint8(self.rescale_range(index_array, in_range=(0, 10000)))
             elif self.out_type == 3:
                 index_array = np.uint16(index_array)
 
         index_array[np.isinf(index_array) | np.isnan(index_array)] = self.no_data
+        index_array = ne.evaluate(mask_equation)
 
         return index_array
 
@@ -1390,7 +1387,8 @@ class VegIndices(BandHandler):
 
         self.rows, self.cols = self.meta_info.rows, self.meta_info.cols
 
-    def run(self, output_image, storage='float32', no_data=0, chunk_size=1024, k=0,
+    def run(self, output_image, storage='float32',
+            no_data=0, in_no_data=0, chunk_size=1024, k=0,
             be_quiet=False, overwrite=False, overviews=False):
 
         """
@@ -1398,6 +1396,7 @@ class VegIndices(BandHandler):
             output_image (str)
             storage (Optional[str])
             no_data (Optional[int])
+            in_no_data (Optional[int])
             chunk_size (Optional[int])
             k (Optional[int])
             be_quiet (Optional[bool])
@@ -1408,6 +1407,7 @@ class VegIndices(BandHandler):
         self.output_image = output_image
         self.storage = storage
         self.no_data = no_data
+        self.in_no_data = in_no_data
         self.chunk_size = chunk_size
         self.k = k
         self.be_quiet = be_quiet
@@ -1532,6 +1532,7 @@ class VegIndices(BandHandler):
                     vie = VegIndicesEquations(image_stack,
                                               chunk_size=self.chunk_size,
                                               no_data=self.no_data,
+                                              in_no_data=self.in_no_data,
                                               mask_array=mask_array)
 
                     # Calculate the vegetation index.
@@ -1661,8 +1662,10 @@ def _compute_as_list(img, out_img, sensor, k, storage, no_data, chunk_size,
             tio.write('{:d}: {}\n'.format(bi+1, vi))
 
 
-def veg_indices(input_image, output_image, input_index, sensor, k=0., storage='float32', no_data=0,
-                chunk_size=-1, be_quiet=False, overwrite=False, overviews=False, mask_band=None):
+def veg_indices(input_image, output_image, input_index, sensor, k=0.,
+                storage='float32', no_data=0, in_no_data=0,
+                chunk_size=-1, be_quiet=False, overwrite=False,
+                overviews=False, mask_band=None):
 
     """
     Computes vegetation indexes
@@ -1680,6 +1683,7 @@ def veg_indices(input_image, output_image, input_index, sensor, k=0., storage='f
         storage (Optional[str]): Storage type of ``output_image``. Default is 'float32'. Choices are
             ['byte', 'uint16', 'float32].
         no_data (Optional[int]): The output 'no data' value for ``output_image``. Default is 0.
+        in_no_data (Optional[int]): The input 'no data' value. Default is 0.
         chunk_size (Optional[int]): Size of image chunks. Default is -1. *chunk_size=-1 will use Numexpr
             threading. This should give faster results on larger imagery.
         be_quiet (Optional[bool]): Whether to print progress (False) or be quiet (True). Default is False.
@@ -1822,8 +1826,8 @@ def veg_indices(input_image, output_image, input_index, sensor, k=0., storage='f
 
             vio = VegIndices(input_image, input_index, sensor, mask_band=mask_band)
 
-            vio.run(output_image, k=k, storage=storage, no_data=no_data, chunk_size=chunk_size,
-                    be_quiet=be_quiet, overwrite=overwrite, overviews=overviews)
+            vio.run(output_image, k=k, storage=storage, no_data=no_data, in_no_data=in_no_data,
+                    chunk_size=chunk_size, be_quiet=be_quiet, overwrite=overwrite, overviews=overviews)
 
     if isinstance(input_index, list):
 
@@ -1831,8 +1835,8 @@ def veg_indices(input_image, output_image, input_index, sensor, k=0., storage='f
 
             vio = VegIndices(input_image, input_index[0], sensor, mask_band=mask_band)
 
-            vio.run(output_image, k=k, storage=storage, no_data=no_data, chunk_size=chunk_size,
-                    be_quiet=be_quiet, overwrite=overwrite, overviews=overviews)
+            vio.run(output_image, k=k, storage=storage, no_data=no_data, in_no_data=in_no_data,
+                    chunk_size=chunk_size, be_quiet=be_quiet, overwrite=overwrite, overviews=overviews)
 
         else:
 
