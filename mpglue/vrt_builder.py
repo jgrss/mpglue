@@ -367,7 +367,7 @@ class VRTBuilder(object):
 
 
 def vrt_builder(in_dict, out_vrt, bands2include=None, start_band=1, force_type=None,
-                subset=False, base_name=None, no_data=None, be_quiet=False):
+                subset=False, base_name=None, no_data=None, be_quiet=False, overwrite=False):
 
     """
     Builds a VRT file, accepting raster files with different band counts.
@@ -380,7 +380,8 @@ def vrt_builder(in_dict, out_vrt, bands2include=None, start_band=1, force_type=N
         subset (Optional[bool]): Whether to subset ``in_dict`` >= '2' to '1'. Default is False.
         base_name (Optional[str]): A base name to prepend to the /subs directory. Default is None.
         no_data (Optional[int or float]):
-        be_quiet (Optional[bool])
+        be_quiet (Optional[bool]): Whether to be quiet and do not print progress. Default is False.
+        overwrite (Optional[bool]): Whether to overwrite `out_vrt`, if it exists. Default is False.
 
     Examples:
         >>> vrt_builder({'1': ['image1.tif', 'imag2.tif'],
@@ -398,13 +399,23 @@ def vrt_builder(in_dict, out_vrt, bands2include=None, start_band=1, force_type=N
 
     vb.replace_main(no_data=no_data)
 
-    vb.add_bands(in_dict, bands2include=bands2include, start_band=start_band,
-                 force_type=force_type, subset=subset, base_name=base_name, be_quiet=be_quiet)
+    vb.add_bands(in_dict,
+                 bands2include=bands2include,
+                 start_band=start_band,
+                 force_type=force_type,
+                 subset=subset,
+                 base_name=base_name,
+                 be_quiet=be_quiet)
 
     d_name, f_name = os.path.split(out_vrt)
 
     if not os.path.isdir(d_name):
         os.makedirs(d_name)
+
+    if overwrite:
+
+        if os.path.isfile(out_vrt):
+            os.remove(out_vrt)
 
     with open(out_vrt, 'w') as xml_writer:
         xml_writer.writelines(vb.xml_base)

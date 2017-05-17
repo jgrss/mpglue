@@ -2839,7 +2839,7 @@ def _merge_dicts(dict1, dict2):
 
 
 def warp(input_image, output_image, out_epsg=None, in_epsg=None, resample='nearest',
-         cell_size=0, d_type=None, return_datasource=False, **kwargs):
+         cell_size=0, d_type=None, return_datasource=False, overwrite=False, **kwargs):
 
     """
     Warp transforms a dataset
@@ -2852,7 +2852,8 @@ def warp(input_image, output_image, out_epsg=None, in_epsg=None, resample='neare
         resample (Optional[str]): The resampling method. Default is 'nearest'.
         cell_size (Optional[float]): The output cell size. Default is 0.
         d_type (Optional[str]): Data type to overwrite `outputType`. Default is None.
-        return_datasource (Optional[bool])
+        return_datasource (Optional[bool]): Whether to return the datasource object. Default is False.
+        overwrite (Optional[bool]): Whether to overwrite `out_vrt`, if it exists. Default is False.
         kwargs:
             format=None, outputBounds=None (minX, minY, maxX, maxY), 
             outputBoundsSRS=None, targetAlignedPixels=False,
@@ -2882,6 +2883,11 @@ def warp(input_image, output_image, out_epsg=None, in_epsg=None, resample='neare
 
     if not isinstance(cell_size, tuple):
         cell_size = (cell_size, -cell_size)
+
+    if overwrite:
+
+        if os.path.isfile(output_image):
+            os.remove(output_image)
 
     if isinstance(d_type, str):
 
