@@ -351,16 +351,23 @@ class ReadWrite(object):
             vie = VegIndicesEquations(self.array, chunk_size=-1)
 
             # exec('self.{} = vie.compute(compute_index.upper())'.format(compute_index.lower()))
-            exec('self.array = vie.compute(compute_index.upper())')
+            self.array = vie.compute(compute_index.upper())
 
         return self.array
 
     def _open_array(self, bands2open):
 
+        """
+        Opens image bands into an ndarray.
+        
+        Args:
+             bands2open (int or list)
+        """
+
         # Open the image as a dictionary of arrays.
         if isinstance(bands2open, dict):
 
-            self.array = {}
+            self.array = dict()
 
             for band_name, band_position in bands2open.iteritems():
 
@@ -391,7 +398,7 @@ class ReadWrite(object):
 
             else:
 
-                self.array = []
+                self.array = list()
 
                 for band in bands2open:
 
@@ -419,6 +426,13 @@ class ReadWrite(object):
 
     def _reshape2predictions(self, n_bands):
 
+        """
+        Reshapes an array into predictions (samples X dimensions)
+        
+        Args:
+            n_bands (int)
+        """
+
         if n_bands == 1:
 
             self.array = self.array.reshape(self.rrows,
@@ -434,6 +448,14 @@ class ReadWrite(object):
 
     def _reshape(self, array2reshape, band_list):
 
+        """
+        Reshapes an array into [rows X columns] or [dimensions X rows X columns].
+        
+        Args:
+            array2reshape (ndarray)
+            band_list (list)
+        """
+
         if len(band_list) == 1:
             array2reshape = array2reshape.reshape(self.rrows, self.ccols)
         else:
@@ -444,6 +466,13 @@ class ReadWrite(object):
         return array2reshape
 
     def _check_band_list(self, bands2open):
+
+        """
+        Checks whether a band list is valid.
+        
+        Args:
+            bands2open (dict, list, or int)
+        """
 
         if isinstance(bands2open, dict):
             return bands2open
@@ -479,10 +508,12 @@ class ReadWrite(object):
                      compress='LZW', tile=False, close_band=True, flush_final=False, write_chunks=False, **kwargs):
 
         """
-        Writes array to file
+        Writes an array to file.
 
         Args:
-            out_name (str): Output image name.
+            out_name (str): The output image name.
+            write_which (Optional[str]): The array type to write. Choices are ['array', '<spectral indices>'].
+                Default is 'array'.
             o_info (Optional[object]): Output image information, instance of ``ropen``.
                 Needed if <out_rst> not given. Default is None.
             x (Optional[int]): Column starting position. Default is 0.
@@ -621,7 +652,7 @@ class DataChecks(object):
     def contains(self, iinfo):
 
         """
-        Test whether the open image contains another image.
+        Tests whether the open image contains another image.
 
         Args:
             iinfo (object): An image instance of ``ropen`` to test.
@@ -642,6 +673,7 @@ class DataChecks(object):
 
         Args:
             value (int): The value to search for.
+            array2check (Optional[ndarray])
         """
 
         if hasattr(self, 'array'):
@@ -653,7 +685,7 @@ class DataChecks(object):
     def intersects(self, iinfo):
 
         """
-        Test whether the open image intersects another image.
+        Tests whether the open image intersects another image.
 
         Args:
             iinfo (object): An image instance of ``ropen`` to test.
@@ -676,7 +708,7 @@ class DataChecks(object):
     def within(self, iinfo):
 
         """
-        Test whether the open image falls within another image.
+        Tests whether the open image falls within another image.
 
         Args:
             iinfo (object or dict): An image instance of ``ropen`` to test.
@@ -696,7 +728,7 @@ class DataChecks(object):
     def outside(self, iinfo):
 
         """
-        Test whether the open image falls outside coordinates
+        Tests whether the open image falls outside coordinates
 
         Args:
             iinfo (object or dict): An image instance of ``ropen`` to test.
@@ -741,7 +773,7 @@ class DataChecks(object):
     def check_clouds(self, cloud_band=7, clear_value=0, background_value=255):
 
         """
-        Checks cloud information
+        Checks cloud information.
 
         Args:
             cloud_band (Optional[int]): The cloud band position. Default is 7.
@@ -1067,6 +1099,14 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
     def _open_dataset(self, image_name, open2read):
 
+        """
+        Opens the image dataset.
+        
+        Args:
+            image_name (str)
+            open2read (bool)
+        """
+
         if open2read:
             source_dataset = gdal.Open(image_name, GA_ReadOnly)
         else:
@@ -1115,20 +1155,20 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
                     self.projection = line.replace('coordinate system string = {', '')
                     self.projection = self.projection.replace('}\n', '')
 
-    def build_overviews(self, sampling_method='nearest', levels=[2, 4, 8, 16]):
+    def build_overviews(self, sampling_method='nearest', levels=None):
 
         """
-        Builds image overviews
+        Builds image overviews.
 
         Args:
             sampling_method (Optional[str]): The sampling method to use. Default is 'nearest'.
             levels (Optional[int list]): The levels to build. Default is [2, 4, 8, 16].
         """
 
-        if not isinstance(levels, list):
-            raise TypeError('\nThe overviews must be a list.\n')
-
-        levels = map(int, levels)
+        if not levels:
+            levels = [2, 4, 8, 16]
+        else:
+            levels = map(int, levels)
 
         try:
             self.datasource.BuildOverviews(sampling_method.upper(), overviewlist=levels)
@@ -1139,7 +1179,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
     def get_band(self, band_position):
 
         """
-        Loads a raster band pointer
+        Loads a raster band pointer.
 
         Args:
             band_position (int): The band position to load.
@@ -1160,6 +1200,11 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
     def get_stats(self, band_position):
 
         """
+        Get band statistics.
+        
+        Args:
+            band_position (int)
+        
         Returns:
             Minimum, Maximum, Mean, Standard deviation
         """
@@ -1169,6 +1214,10 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
         return self.band.GetStatistics(1, 1)
 
     def check_corrupted_bands(self):
+
+        """
+        Checks whether corrupted bands exist.        
+        """
 
         self.corrupted_bands = []
 
@@ -1228,7 +1277,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
     def close_band(self):
 
         """
-        Closes a band object
+        Closes a band object.
         """
 
         if hasattr(self, 'band') and self.band_open:
@@ -1259,7 +1308,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
     def close_file(self):
 
         """
-        Closes file object
+        Closes file object.
         """
 
         if hasattr(self, 'datasource'):
@@ -1307,7 +1356,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
     def close_all(self):
 
         """
-        Closes a band object and a file object
+        Closes a band object and a file object.
         """
 
         self.close_band()
@@ -1316,7 +1365,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
     def fill(self, fill_value, band=None):
 
         """
-        Fills a band with a specified value
+        Fills a band with a specified value.
 
         Args:
             fill_value (int): The value to fill.
@@ -1331,7 +1380,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
     def get_chunk_size(self):
 
         """
-        Gets the band block size
+        Gets the band block size.
         """
 
         try:
@@ -1342,7 +1391,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
     def remove_overviews(self):
 
         """
-        Removes image overviews
+        Removes image overviews.
         """
 
         if self.image_mode != 'update':
@@ -2092,7 +2141,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
 def gdal_open(image2open, band):
 
     """
-    A direct file open from GDAL
+    A direct file open from GDAL.
     """
 
     driver_o = gdal.Open(image2open, GA_ReadOnly)
@@ -2103,7 +2152,7 @@ def gdal_open(image2open, band):
 def gdal_read(image2open, band, i, j, rows, cols):
 
     """
-    A direct array read from GDAL
+    A direct array read from GDAL.
     """
 
     driver_o = gdal.Open(image2open, GA_ReadOnly)
@@ -3729,8 +3778,8 @@ def pixel_stats(input_image, output_image, stat='mean', bands2process=-1,
         >>>
         >>> # Calculate the mean of the first 3 bands, ignoring zeros, and
         >>> #   set the output no data pixels as -999.
-        >>> mp.pixel_stats('/image.tif', '/output.tif', stat='mean', \
-        >>>                bands2process=[1, 2, 3], ignore_value=0, \
+        >>> mp.pixel_stats('/image.tif', '/output.tif', stat='mean', 
+        >>>                bands2process=[1, 2, 3], ignore_value=0, 
         >>>                no_data_value=-999)
 
     Returns:
