@@ -409,8 +409,9 @@ class VegIndicesEquations(SensorInfo):
 
         # Setup a mask
         if isinstance(self.mask_array, np.ndarray):
+
             mask_array = self.mask_array
-            mask_equation = 'where(mask_array == 255, no_data, index_array)'
+            mask_equation = 'where(mask_array == 1, no_data, index_array)'
 
         if self.n_bands == 2:
 
@@ -1522,8 +1523,12 @@ class VegIndices(BandHandler):
 
                     if isinstance(self.mask_band, int):
 
-                        mask_array = self.meta_info.read(bands2open=self.mask_band, i=self.i, j=self.j,
-                                                         rows=self.n_rows, cols=self.n_cols, d_type='byte')
+                        mask_array = self.meta_info.read(bands2open=self.mask_band,
+                                                         i=self.i,
+                                                         j=self.j,
+                                                         rows=self.n_rows,
+                                                         cols=self.n_cols,
+                                                         d_type='byte')
 
                     else:
                         mask_array = None

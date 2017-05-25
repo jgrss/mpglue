@@ -4843,76 +4843,98 @@ def _discrete_cmap(n_classes, base_cmap='cubehelix'):
 
 class QAMasker(object):
 
-    """
-    A class for masking bit-packed quality flags
+    """A class for masking bit-packed quality flags"""
 
-    Args:
-        qa (ndarray): The quality array.
-        sensor (str): The sensor name. Choices are ['HLS', 'L8-pre', 'L8-C1', 'L-C1', 'MODIS']. 'L-C1' refers to
-            Collection 1 L4-5 and L7. 'L8-C1' refers to Collection 1 L8.
-        mask_items (str list): A list of items to mask.
-        modis_qa_position (Optional[int]): The MODIS QA band position. Default is 1.
-        modis_quality (Optional[int]): The MODIS quality level. Default is 2.
-        
-    References:
-        Landsat Collection 1:
-            https://landsat.usgs.gov/collectionqualityband
+    def __init__(self, qa, sensor, mask_items=None, modis_qa_band=1, modis_quality=2, confidence_level='yes'):
 
-    Examples:
-        >>> # Get the MODIS cloud mask.
-        >>> qa = QAMasker(<array>, 'MODIS')
-        >>>
-        >>> # HLS
-        >>> qa = QAMasker(<array>, 'HLS', ['cloud'])
-        >>> qa.mask
-    """
+        """
+        Args:
+            qa (2d array): The quality array.
+            sensor (str): The sensor name. Choices are ['HLS', 'L8-pre', 'L8-C1', 'L-C1', 'MODIS']. 
+                'L-C1' refers to Collection 1 L4-5 and L7. 'L8-C1' refers to Collection 1 L8.
+            mask_items (str list): A list of items to mask.
+            modis_qa_position (Optional[int]): The MODIS QA band position. Default is 1.
+            modis_quality (Optional[int]): The MODIS quality level. Default is 2.
+            confidence_level (Optional[str]): The confidence level. Choices are ['notdet', 'no', 'maybe', 'yes']. 
 
-    def __init__(self, qa, sensor, mask_items=None, modis_qa_band=1, modis_quality=2):
+        References:
+            Landsat Collection 1:
+                https://landsat.usgs.gov/collectionqualityband
+
+        Examples:
+            >>> # Get the MODIS cloud mask.
+            >>> qa = QAMasker(<array>, 'MODIS')
+            >>>
+            >>> # HLS
+            >>> qa = QAMasker(<array>, 'HLS', ['cloud'])
+            >>> qa.mask
+
+        Returns:
+            2d array with values:
+                0: clear                
+                1: water
+                2: shadow
+                3: snow or ice
+                4: cloud
+                5: cirrus cloud
+                6: adjacent cloud
+                7: saturated                
+                8: dropped
+                9: terrain occluded
+                255: fill
+        """
 
         self.qa = qa
         self.sensor = sensor
         self.modis_qa_band = modis_qa_band
         self.modis_quality = modis_quality
 
-        # sensor_bit_lengths = dict(HLS=3, MODIS=2)
-        # self.bit_length = sensor_bit_lengths[sensor]
-
-        fmask_dict = dict(clear=0, water=1, shadow=2, snow=3, snowice=3, adjacent=4, cloud=4, cirrus=5, fill=255)
-
-        # if sensor == 'MODIS':
-        #     self.bit_length = int('1' * self.bit_length, 2)
-
-        if sensor == 'HLS':
-            self.confidence_value = 0
-        elif sensor == 'OLI_TIRS':
-            self.confidence_value = 3
-        else:
-            self.confidence_value = 3
+        self._set_dicts()
 
         if self.sensor == 'MODIS':
-
             self.mask = self.get_modis_qa_mask()
-
-        elif self.sensor == 'HLS':
+        else:
 
             self.mask = np.zeros(self.qa.shape, dtype='uint8')
 
             for mask_item in mask_items:
 
-                if mask_item in fmask_dict:
-                    self.mask[self.get_qa_mask(mask_item) > 0] = fmask_dict[mask_item]
-                else:
-                    self.mask[self.get_qa_mask(mask_item) > 0] = 6
+                if mask_item in self.qa_flags[self.sensor]:
 
-                # self.mask[self.mask == 0] = fmask_dict['fill']
+                    if 'conf' in mask_item:
 
-    def qa_bits(self, what2mask):
+                        # Has high confidence that
+                        #   this condition was met.
+                        mask_value = self.conf_dict[confidence_level]
 
-        # For confidence bits
-        # 0 = not determined
-        # 1 = no
-        # 2 = maybe
-        # 3 = yes
+                    else:
+                        mask_value = 1
+
+                    self.mask[self.get_qa_mask(mask_item) >= mask_value] = self.fmask_dict[mask_item]
+
+    def _set_dicts(self):
+
+        self.fmask_dict = dict(clear=0,
+                               water=1,
+                               shadow=2,
+                               shadowconf=2,
+                               snow=3,
+                               snowice=3,
+                               snowiceconf=3,
+                               cloud=4,
+                               cloudconf=4,
+                               cirrus=5,
+                               cirrusconf=5,
+                               adjacent=6,
+                               saturated=7,
+                               dropped=8,
+                               terrain=0,
+                               fill=255)
+
+        self.conf_dict = dict(notdet=0,
+                              no=1,
+                              maybe=2,
+                              yes=3)
 
         self.qa_flags = {'HLS': {'cirrus': (0, 0),
                                  'cloud': (1, 1),
@@ -4951,6 +4973,14 @@ class QAMasker(object):
                                    'sunglint': (4, 4),
                                    'snowice': (5, 5),
                                    'landwater': (7, 6)}}
+
+    def qa_bits(self, what2mask):
+
+        # For confidence bits
+        # 0 = not determined
+        # 1 = no
+        # 2 = maybe
+        # 3 = yes
 
         bit_location = self.qa_flags[self.sensor][what2mask]
 
@@ -5006,7 +5036,7 @@ class QAMasker(object):
 
         width_int = int((self.b1 - self.b2 + 1) * '1', 2)
 
-        return np.uint8(((self.qa >> self.b2) & width_int) * 1)
+        return np.uint8(((self.qa >> self.b2) & width_int))
 
 
 def _examples():
