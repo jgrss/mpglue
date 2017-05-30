@@ -151,7 +151,7 @@ class SensorInfo(object):
             {'ARVI': '(array03 - (array02 - y*(array01 - array02))) / (array03 + (array02 - y*(array01 - array02)))',
              'CBI': '(array02 - array01) / (array02 + array01)',
              'CIRE': '(array02 / array01) - 1.',
-             'EVI': 'g * ((array03 - array02) / (array03 + (c1 * array02) - (c2 * array01) + L))',
+             'EVI': 'g * ((array03 - array02) / (array03 + c1 * array02 - c2 * array01 + L))',
              'EVI2': 'g * ((array02 - array01) / (array02 + c1 * array01 + L))',
              'IPVI': 'array02 / (array02 + array01)',
              'MSAVI': '((2 * array02 + 1) - ((((2 * array02 + 1)**2) - (8 * (array02 - array01)))**.5)) / 2',
@@ -183,8 +183,8 @@ class SensorInfo(object):
         self.data_ranges = {'ARVI': (),
                             'CBI': (-1., 1.),
                             'CIRE': (-1., 1.),
-                            'EVI': (-1., 1.),
-                            'EVI2': (-1., 3.),
+                            'EVI': (),
+                            'EVI2': (),
                             'IPVI': (),
                             'MSAVI': (),
                             'GNDVI': (-1., 1.),
@@ -275,7 +275,7 @@ class VegIndicesEquations(SensorInfo):
 
     def __init__(self, image_array, no_data=0, in_no_data=0, chunk_size=-1, mask_array=None):
 
-        self.image_array = image_array
+        self.image_array = np.float32(image_array)
         self.no_data = no_data
         self.in_no_data = in_no_data
         self.chunk_size = chunk_size

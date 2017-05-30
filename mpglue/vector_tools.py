@@ -922,9 +922,15 @@ class TransformExtent(object):
     Converts an extent envelope
 
     Args:
-        grid_envelope (list)
-        from_epsg (int)
-        to_epsg (Optional[int])
+        grid_envelope (dict): A dictionary with 'left', 'right', 'top', 'bottom' mappings.
+        from_epsg (int): A EPSG projection code.
+        to_epsg (Optional[int]): A EPSG projection code.
+
+    Attributes:
+        left
+        right
+        top
+        bottom
     """
 
     def __init__(self, grid_envelope, from_epsg, to_epsg=4326):
@@ -933,6 +939,7 @@ class TransformExtent(object):
         # left, right, bottom, top
 
         if not grid_envelope:
+
             logger.error('The grid envelope list must be set.')
             raise TypeError('The grid envelope list must be set.')
 
