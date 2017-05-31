@@ -148,34 +148,59 @@ class SensorInfo(object):
         #   loaded from ``self.wavelength_lists``. For example,
         #   ``array01`` of 'ARVI' would be the 'blue' wavelength.
         self.equations = \
-            {'ARVI': '(array03 - (array02 - y*(array01 - array02))) / (array03 + (array02 - y*(array01 - array02)))',
-             'CBI': '(array02 - array01) / (array02 + array01)',
-             'CIRE': '(array02 / array01) - 1.',
-             'EVI': 'g * ((array03 - array02) / (array03 + c1 * array02 - c2 * array01 + L))',
-             'EVI2': 'g * ((array02 - array01) / (array02 + c1 * array01 + L))',
-             'IPVI': 'array02 / (array02 + array01)',
+            {'ARVI': '((array03 / scale_factor) - ((array02 / scale_factor) - '
+                     'y*((array01 / scale_factor) - (array02 / scale_factor)))) / '
+                     '((array03 / scale_factor) + ((array02 / scale_factor) - '
+                     'y*((array01 / scale_factor) - (array02 / scale_factor))))',
+             'CBI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                    '((array02 / scale_factor) + (array01 / scale_factor))',
+             'CIRE': '((array02 / scale_factor) / (array01 / scale_factor)) - 1.',
+             'EVI': 'g * (((array03 / scale_factor) - (array02 / scale_factor)) / '
+                    '((array03 / scale_factor) + (c1 * (array02 / scale_factor)) - '
+                    '(c2 * (array01 / scale_factor)) + L))',
+             'EVI2': 'g * (((array02 / scale_factor) - (array01 / scale_factor)) / '
+                     '((array02 / scale_factor) + L + (c1 * (array01 / scale_factor))))',
+             'IPVI': '(array02 / scale_factor) / ((array02 / scale_factor) + (array01 / scale_factor))',
              'MSAVI': '((2 * array02 + 1) - ((((2 * array02 + 1)**2) - (8 * (array02 - array01)))**.5)) / 2',
-             'GNDVI': '(array02 - array01) / (array02 + array01)',
-             'MNDWI': '(array02 - array01) / (array02 + array01)',
-             'NDSI': '(array02 - array01) / (array02 + array01)',
-             'NDBAI': '(array02 - array01) / (array02 + array01)',
+             'GNDVI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor))',
+             'MNDWI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor))',
+             'NDSI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                     '((array02 / scale_factor) + (array01 / scale_factor))',
+             'NDBAI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor))',
              'NDII': '(array03 - array02 + array01) / (array03 + array02 + array01)',
-             'NDVI': '(array02 - array01) / (array02 + array01)',
-             'RENDVI': '(array02 - array01) / (array02 + array01)',
-             'NDWI': '(array02 - array01) / (array02 + array01)',
-             'PNDVI': '(array02 - array01) / (array02 + array01)',
-             'RBVI': '(array02 - array01) / (array02 + array01)',
-             'GBVI': '(array02 - array01) / (array02 + array01)',
-             'ONDVI': '(4. / pi) * arctan((array02 - array01) / (array02 + array01))',
-             'SATVI': '(((array02 - array01) / (array02 + array01 + L)) * (1. + L)) - (array03 / 2.)',
-             'SAVI': '((array02 - array01) / (array02 + array01 + L)) * (1. + L)',
-             'OSAVI': 'arctan((((array02 - array01) / (array02 + array01 + L)) * (1. + L)) / 1.5) * 2.',
-             'SVI': 'array02 / array01',
-             'TNDVI': 'sqrt(((array02 - array01) / (array02 + array01)) * .5)',
-             'TVI': 'sqrt(((array02 - array01) / (array02 + array01)) + .5)',
-             'YNDVI': '(array02 - array01) / (array02 + array01)',
+             'NDVI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                     '((array02 / scale_factor) + (array01 / scale_factor))',
+             'RENDVI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                       '((array02 / scale_factor) + (array01 / scale_factor))',
+             'NDWI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor))',
+             'PNDVI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor))',
+             'RBVI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                     '((array02 / scale_factor) + (array01 / scale_factor))',
+             'GBVI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                     '((array02 / scale_factor) + (array01 / scale_factor))',
+             'ONDVI': '(4. / pi) * arctan(((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor)))',
+             'SATVI': '((((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor) + L)) * (1. + L)) - '
+                      '((array03 / scale_factor) / 2.)',
+             'SAVI': '(((array02 / scale_factor) - (array01 / scale_factor)) / '
+                     '((array02 / scale_factor) + (array01 / scale_factor) + L)) * (1. + L)',
+             'OSAVI': 'arctan(((((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor) + L)) * (1. + L)) / 1.5) * 2.',
+             'SVI': '(array02 / scale_factor) / (array01 / scale_factor)',
+             'TNDVI': 'sqrt((((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor))) * .5)',
+             'TVI': 'sqrt((((array02 / scale_factor) - (array01 / scale_factor)) / '
+                    '((array02 / scale_factor) + (array01 / scale_factor))) + .5)',
+             'YNDVI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor))',
              'VCI': '(((array02 - array01) / (array02 + array01)) - min_ndvi) / (max_ndvi - min_ndvi)',
-             'VISMU': '((array01/10000.) + (array02/10000.) + (array03/10000.)) / 3.'}
+             'VISMU': '((array01 / scale_factor) + (array02 / scale_factor) + (array03 / scale_factor)) / 3.'}
 
         # The data ranges for scaling, but only
         #   used if the output storage type is not
@@ -183,8 +208,8 @@ class SensorInfo(object):
         self.data_ranges = {'ARVI': (),
                             'CBI': (-1., 1.),
                             'CIRE': (-1., 1.),
-                            'EVI': (),
-                            'EVI2': (),
+                            'EVI': (0., 1.),
+                            'EVI2': (0., 1.),
                             'IPVI': (),
                             'MSAVI': (),
                             'GNDVI': (-1., 1.),
@@ -317,7 +342,7 @@ class VegIndicesEquations(SensorInfo):
 
         return np.where(array2rescale == self.no_data, self.no_data, array2rescale_)
 
-    def compute(self, index2compute, out_type=1, **kwargs):
+    def compute(self, index2compute, out_type=1, scale_factor=1., **kwargs):
 
         """
         Args:
@@ -328,6 +353,7 @@ class VegIndicesEquations(SensorInfo):
                 1 = raw values (float32)
                 2 = scaled (byte)
                 3 = scaled (uint16)
+            scale_factor (Optional[float]): A scale factor to divide the inputs by. Default is 1.
 
         Example:
             >>> from mappy.features import VegIndicesEquations
@@ -351,9 +377,9 @@ class VegIndicesEquations(SensorInfo):
         if self.chunk_size == -1:
 
             if kwargs:
-                return self.run_index(**kwargs)
+                return self.run_index(scale_factor, **kwargs)
             else:
-                return self.run_index()
+                return self.run_index(scale_factor)
 
         else:
 
@@ -394,7 +420,7 @@ class VegIndicesEquations(SensorInfo):
             else:
                 return vi_function()
 
-    def run_index(self, y=1., g=2.5, L=1., min_ndvi=-1, max_ndvi=1, **kwargs):
+    def run_index(self, scale_factor, y=1., g=2.5, L=1., min_ndvi=-1, max_ndvi=1, **kwargs):
 
         # EVI defaults
         if self.index2compute.upper() == 'EVI' and not kwargs:
