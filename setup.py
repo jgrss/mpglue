@@ -20,7 +20,7 @@ except:
 import numpy as np
 
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 mappy_name = 'MpGlue'
 maintainer = 'Jordan Graesser'
@@ -91,10 +91,17 @@ def get_console_dict():
                                 'reclassify=mpglue.classification.reclassify:main',
                                 'recode=mpglue.classification.recode:main',
                                 'raster-calc=mpglue.raster_calc:main',
-                                'veg-indices=mpglue.veg_indices:main']}
+                                'veg-indices=mpglue.veg_indices:main',
+                                'raster-tools=mpglue.raster_tools:main',
+                                'vector-tools=mpglue.vector_tools:main']}
 
 
 def setup_package():
+
+    if platform.system() != 'Windows':
+        include_dirs = [np.get_include()]
+    else:
+        include_dirs = None
 
     metadata = dict(name=mappy_name,
                     maintainer=maintainer,
@@ -111,9 +118,8 @@ def setup_package():
                     zip_safe=False,
                     download_url=git_url,
                     install_requires=required_packages,
-                    entry_points=get_console_dict())
-
-    # include_dirs = [np.get_include()],
+                    entry_points=get_console_dict(),
+                    include_dirs=include_dirs)
 
     setup(**metadata)
 

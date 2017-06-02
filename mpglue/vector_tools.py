@@ -922,9 +922,15 @@ class TransformExtent(object):
     Converts an extent envelope
 
     Args:
-        grid_envelope (list)
-        from_epsg (int)
-        to_epsg (Optional[int])
+        grid_envelope (dict): A dictionary with 'left', 'right', 'top', 'bottom' mappings.
+        from_epsg (int): A EPSG projection code.
+        to_epsg (Optional[int]): A EPSG projection code.
+
+    Attributes:
+        left
+        right
+        top
+        bottom
     """
 
     def __init__(self, grid_envelope, from_epsg, to_epsg=4326):
@@ -933,6 +939,7 @@ class TransformExtent(object):
         # left, right, bottom, top
 
         if not grid_envelope:
+
             logger.error('The grid envelope list must be set.')
             raise TypeError('The grid envelope list must be set.')
 
@@ -1079,7 +1086,7 @@ class RTreeManager(object):
         # bdy_feature = None
         # bdy_geometry = None
 
-        self._cleanup()
+        # self._cleanup()
 
     def _cleanup(self):
 
@@ -1208,6 +1215,7 @@ def _get_xy_offsets(x, left, right, y, top, bottom, cell_size_x, cell_size_y, ro
 
     # Xs (longitudes)
     if check:
+
         if (x < left) or (x > right):
             raise ValueError('The x is out of the image extent.')
 
@@ -1889,9 +1897,11 @@ def add_fields(input_vector, output_vector=None, field_names=['x', 'y'], method=
             try:
                 field_value = float(feature.GetField(field_names[0]))
             except:
+                feature.Destroy()
                 continue
 
             if field_value is None or field_value == 'None':
+                feature.Destroy()
                 continue
 
             value_found = False

@@ -489,32 +489,6 @@ class Samples(object):
     """
     A class to handle data samples
 
-    Args:
-        file_name (str): Input .txt file with samples and labels.
-        perc_samp (Optional[float]): Percent to sample from all samples. Default is .9. *This parameter
-            samples from the entire set of samples, regardless of which class they are in.
-        perc_samp_each (Optional[float]): Percent to sample from each class. Default is 0. *This parameter
-            overrides ``perc_samp`` and forces a percentage of samples from each class.
-        scale_data (Optional[bool]): Whether to scale (normalize) data. Default is False.
-        class_subs (Optional[dict]): Dictionary of class percentages or number to sample. Default is empty, or None.
-            Example:
-                Sample by percentage = {1:.9, 2:.9, 3:.5}
-                Sample by integer = {1:300, 2:300, 3:150}
-        norm_struct (Optional[bool]): Whether the structure of the data is normals Default is True. In MapPy's
-            case, normal is (X,Y,Var1,Var2,Var3,Var4,...,VarN,Labels), whereas the alternative (i.e., False) is
-            (Labels,Var1,Var2,Var3,Var4,...,VarN)
-        labs_type (Optional[str]): Read class labels as integer ('int') or float ('float'). Default is 'int'.
-        recode_dict (Optional[dict]): Dictionary of classes to recode. Default is {}, or empty dictionary.
-        classes2remove (Optional[list]): List of classes to remove from samples. Default is [], or keep
-            all classes.
-        sample_weight (Optional[list or 1d array]): Sample weights. Default is None.
-        ignore_feas (Optional[list]): A list of feature (image layer) indexes to ignore. Default is [], or use all
-            features. *The features are sorted.
-        use_xy (Optional[bool]): Whether to use the x, y coordinates as predictive variables. Default is False.
-        stratified (Optional[bool]): Whether to stratify the samples. Default is False.
-        spacing (Optional[float]): The grid spacing (meters) to use for stratification (in ``stratified``).
-            Default is 1000.
-
     Attributes:
         file_name (str)
         p_vars (ndarray)
@@ -540,6 +514,39 @@ class Samples(object):
                       sample_weight=None, ignore_feas=[], use_xy=False, stratified=False, spacing=1000.,
                       x_label='X', y_label='Y', response_label='response'):
 
+        """
+        Split samples for training and testing.
+        
+        Args:
+            file_name (str or 2d array): Input text file or 2d array with samples and labels.
+            perc_samp (Optional[float]): Percent to sample from all samples. Default is .9. *This parameter
+                samples from the entire set of samples, regardless of which class they are in.
+            perc_samp_each (Optional[float]): Percent to sample from each class. Default is 0. *This parameter
+                overrides ``perc_samp`` and forces a percentage of samples from each class.
+            scale_data (Optional[bool]): Whether to scale (normalize) data. Default is False.
+            class_subs (Optional[dict]): Dictionary of class percentages or number to sample. Default is empty, or None.
+                Example:
+                    Sample by percentage = {1:.9, 2:.9, 3:.5}
+                    Sample by integer = {1:300, 2:300, 3:150}
+            norm_struct (Optional[bool]): Whether the structure of the data is normal. Default is True. 
+                In MapPy's case, normal is (X,Y,Var1,Var2,Var3,Var4,...,VarN,Labels), 
+                whereas the alternative (i.e., False) is (Labels,Var1,Var2,Var3,Var4,...,VarN)
+            labs_type (Optional[str]): Read class labels as integer ('int') or float ('float'). Default is 'int'.
+            recode_dict (Optional[dict]): Dictionary of classes to recode. Default is {}, or empty dictionary.
+            classes2remove (Optional[list]): List of classes to remove from samples. Default is [], or keep
+                all classes.
+            sample_weight (Optional[list or 1d array]): Sample weights. Default is None.
+            ignore_feas (Optional[list]): A list of feature (image layer) indexes to ignore. Default is [], or use all
+                features. *The features are sorted.
+            use_xy (Optional[bool]): Whether to use the x, y coordinates as predictive variables. Default is False.
+            stratified (Optional[bool]): Whether to stratify the samples. Default is False.
+            spacing (Optional[float]): The grid spacing (meters) to use for stratification (in ``stratified``).
+                Default is 1000.
+            x_label (str)        
+            y_label (str)                
+            response_label (str)  
+        """
+
         # if platform.system() == 'Windows':
         #     self.file_name = file_name.replace('\\', '/')
         # else:
@@ -555,11 +562,24 @@ class Samples(object):
         self.classes2remove = classes2remove
         self.sample_weight = sample_weight
 
-        if not isinstance(self.file_name, str):
-            raise TypeError('The samples file must be a text file.')
+        if isinstance(self.file_name, str):
 
-        # Open the data samples.
-        df = pd.read_csv(self.file_name, sep=',')
+            # Open the data samples.
+            df = pd.read_csv(self.file_name, sep=',')
+
+        elif isinstance(self.file_name, np.ndarray):
+
+            if len(self.file_name.shape) != 2:
+                raise TypeError('The samples array must be a 2d array.')
+
+            headers = [x_label, y_label] + map(str, range(1, self.file_name.shape[1]-2)) + [response_label]
+
+            df = pd.DataFrame(self.file_name, columns=headers)
+
+            del self.file_name
+
+        else:
+            raise TypeError('The samples file must be a text file or a 2d array.')
 
         # Parse the headers.
         self.headers = df.columns.values.tolist()
@@ -5021,43 +5041,48 @@ class classification_r(classification):
 
     if R_installed:
 
-        # select a mirror for R packages
-        utils.chooseCRANmirror(ind=1)  # select the first mirror in the list
+        try:
 
-        # R package names
-        package_names = ('Cubist', 'C50', 'raster', 'rgdal')#, 'foreach', 'doSNOW')
+            # select a mirror for R packages
+            utils.chooseCRANmirror(ind=1)  # select the first mirror in the list
 
-        # Selectively install what needs to be install.
-        # We are fancy, just because we can.
-        # names_to_install = [x for x in package_names if not isinstalled(x)]
-        [importr_tryhard(px) for px in package_names]
+            # R package names
+            package_names = ('Cubist', 'C50', 'raster', 'rgdal')#, 'foreach', 'doSNOW')
 
-        # Install necessary libraries.
-        # if len(names_to_install) > 0:
-        #
-        #     print('Installing R packages--{} ...'.format(', '.join(names_to_install)))
-        #
-        #     utils.install_packages(StrVector(names_to_install))
+            # Selectively install what needs to be install.
+            # We are fancy, just because we can.
+            # names_to_install = [x for x in package_names if not isinstalled(x)]
+            [importr_tryhard(px) for px in package_names]
 
-        # print('Importing R packages--{} ...'.format(', '.join(package_names)))
+            # Install necessary libraries.
+            # if len(names_to_install) > 0:
+            #
+            #     print('Installing R packages--{} ...'.format(', '.join(names_to_install)))
+            #
+            #     utils.install_packages(StrVector(names_to_install))
 
-        # Cubist
-        Cubist = importr('Cubist', suppress_messages=True)
+            # print('Importing R packages--{} ...'.format(', '.join(package_names)))
 
-        # C50
-        C50 = importr('C50', suppress_messages=True)
+            # Cubist
+            Cubist = importr('Cubist', suppress_messages=True)
 
-        # raster
-        raster = importr('raster', suppress_messages=True)
+            # C50
+            C50 = importr('C50', suppress_messages=True)
 
-        # rgdal
-        rgdal = importr('rgdal', suppress_messages=True)
+            # raster
+            raster = importr('raster', suppress_messages=True)
 
-        # # foreach
-        # foreach = importr('foreach', suppress_messages=True)
-        #
-        # # doSNOW
-        # doSNOW = importr('doSNOW', suppress_messages=True)
+            # rgdal
+            rgdal = importr('rgdal', suppress_messages=True)
+
+            # # foreach
+            # foreach = importr('foreach', suppress_messages=True)
+            #
+            # # doSNOW
+            # doSNOW = importr('doSNOW', suppress_messages=True)
+
+        except:
+            R_installed = False
 
     def __init__(self):
 

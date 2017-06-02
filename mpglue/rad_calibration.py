@@ -7,8 +7,11 @@ Date Created: 9/24/2011
 
 from __future__ import division
 
+import sys
 import math
 from copy import copy
+import datetime
+from collections import OrderedDict
 
 # MapPy
 from . import raster_tools
@@ -18,6 +21,12 @@ try:
     import numpy as np
 except ImportError:
     raise ImportError('NumPy must be installed')
+
+# Pandas
+try:
+    import pandas as pd
+except ImportError:
+    raise ImportError('Pandas must be installed')
 
 # Numexpr
 try:
@@ -51,45 +60,177 @@ def earth_sun_distance(julian_day):
     return (1. - .01672 * math.cos(math.radians(.9856 * (float(julian_day) - 4.)))) ** 2.
 
 
-def julian_day_dictionary(start_year=1975, end_year=2040):
+def julian_day_dictionary(start_year=1980, end_year=2020, store='st_jd'):
 
     """
     A function to setup standard (continuously increasing) Julian Days
+
+    Args:
+        start_year
+        end_year
+        store (Optional[str]): Choices are ['st_jd', 'date'].
+
+    Returns:
+        Dictionary of {'year-day': yearday}
+        or
+        Dictionary of {'year-day': 'yyyy.mm.dd'}
     """
 
-    jd_dict = dict()
-
-    counter = 1
+    jd_dict = OrderedDict()
 
     for yyyy in range(start_year, end_year):
 
-        for dd in range(1, 366):
+        # Get the days for the current year.
+        time_stamp = pd.date_range('{:d}-01-01'.format(yyyy),
+                                   '{:d}-12-31'.format(yyyy),
+                                   name='time',
+                                   freq='D')
 
-            jd_dict['{}-{}'.format(yyyy, dd)] = counter
+        date_time = time_stamp.to_pydatetime()
 
-            counter += 1
+        dd_yyyy = ('-{:d},'.format(yyyy).join(map(str, [dt.timetuple().tm_yday
+                                                        for dt in date_time])) + '-{:d}'.format(yyyy)).split(',')
+
+        date_list = (map(str, ['{}.{:02d}.{:03d}.{:03d}'.format(dt.timetuple().tm_year,
+                                                                int(dt.timetuple().tm_mon),
+                                                                int(dt.timetuple().tm_mday),
+                                                                int(dt.timetuple().tm_yday)) for dt in date_time]))
+
+        for date in range(0, len(dd_yyyy)):
+
+            if store == 'st_jd':
+
+                date_split = dd_yyyy[date].split('-')
+
+                dd_ = '{:03d}'.format(int(date_split[0]))
+                yyyy_ = '{}'.format(date_split[1])
+
+                jd_dict['{}-{}'.format(yyyy_, dd_)] = int('{}{}'.format(yyyy_, dd_))
+
+            elif store == 'date':
+
+                y, m, d, jd = date_list[date].split('.')
+
+                jd_dict['{}-{}'.format(y, jd)] = '{}.{}.{}'.format(y, m, d)
 
     return jd_dict
 
 
-class Calendar(object):
+def julian_day_dictionary_r(start_year=1980, end_year=2020):
 
     """
-    A class to setup Leap year and normal year calendars
+    A function to get the reverse Julian Data dictionary
+
+    Returns:
+        Dictionary of {yearday: 'year-day'}
     """
 
-    def __init__(self):
+    jd_dict_r = OrderedDict()
 
-        self.year_range = range(1972, 2044, 4)
+    jd_dict = julian_day_dictionary(start_year=start_year, end_year=end_year)
 
-        self.calendar_dict = {'leap': {1: range(1, 32), 2: range(32, 32+30), 3: range(61, 61+31),
-                                       4: range(92, 92+30), 5: range(122, 122+31), 6: range(153, 153+30),
-                                       7: range(183, 183+31), 8: range(214, 214+31), 9: range(245, 245+30),
-                                       10: range(275, 275+31), 11: range(306, 306+30), 12: range(336, 336+31)},
-                              'normal': {1: range(1, 32), 2: range(32, 32+29), 3: range(60, 60+31),
-                                         4: range(91, 91+30), 5: range(121, 121+31), 6: range(152, 152+30),
-                                         7: range(182, 182+31), 8: range(213, 213+31), 9: range(244, 244+30),
-                                         10: range(274, 274+31), 11: range(305, 305+30), 12: range(335, 335+31)}}
+    for k, v in jd_dict.items():
+        jd_dict_r[v] = k
+
+    return jd_dict_r
+
+
+def get_leap_years(start_year=1980, end_year=2020):
+
+    """
+    Gets the number of calendar days by year
+    """
+
+    max_dict = dict()
+
+    jd_dict = julian_day_dictionary(start_year=start_year, end_year=end_year)
+
+    for yyyy in range(start_year, end_year):
+        max_dict[yyyy] = max([int(k.split('-')[1]) for k, v in jd_dict.iteritems() if str(yyyy) in k])
+
+    return max_dict
+
+
+def jd_interp(the_array, length, skip_factor):
+
+    """
+    Args:
+        the_array
+        length
+        skip_factor     
+    """
+
+    year_dict = get_leap_years()
+
+    current_year = int(str(the_array[0])[:4])
+
+    # yyyyddd
+    the_date = the_array[0]
+
+    rescaled = []
+
+    for i in range(0, length):
+
+        rescaled.append(the_date)
+
+        the_date += skip_factor
+
+        current_doy = int(str(the_date)[-3:])
+
+        # Check year overload.
+        #   Update calendar day > maximum
+        #   days in year `current_year`.
+        if current_doy > year_dict[current_year]:
+
+            current_doy_diff = current_doy - year_dict[current_year]
+
+            current_year += 1
+
+            the_date = int('{:d}{:03d}'.format(current_year, current_doy_diff))
+
+    return rescaled
+
+
+def rescale_scaled_jds(the_array, counter=1000):
+
+    """
+    Rescales yyyyddd values to monotonically increasing values
+            
+    Args:
+        the_array
+        length (Optional[str]): Choices are ['array', <int value>].
+    """
+
+    iter_length = len(the_array) - 1
+
+    year_dict = get_leap_years()
+    current_year = int(str(the_array[0])[:4])
+
+    rescaled = []
+
+    for i in range(0, iter_length):
+
+        rescaled.append(counter)
+
+        next_year = int(str(the_array[i+1])[:4])
+
+        if next_year != current_year:
+
+            # Next year Julian Day + (Current year max - current year Julian Day)
+            counter += int(str(the_array[i+1])[-3:]) + (year_dict[current_year] - int(str(the_array[i])[-3:]))
+
+        else:
+
+            # Next Julian Day - Current Julian Day
+            counter += the_array[i+1] - the_array[i]
+
+        last_jd = the_array[i]
+
+        current_year = copy(next_year)
+
+    rescaled.append(counter)
+
+    return rescaled
 
 
 def date2julian(month, day, year):
@@ -107,18 +248,18 @@ def date2julian(month, day, year):
     """
 
     # Convert strings to integers
-    month, day = int(month), int(day)
+    month = int(month)
+    day = int(day)
     year = int(year)
 
-    cdict = Calendar()
+    fmt = '%Y.%m.%d'
 
-    if year in cdict.year_range:
-        return cdict.calendar_dict['leap'][month][day-1]
-    else:
-        return cdict.calendar_dict['normal'][month][day-1]
+    dt = datetime.datetime.strptime('{}.{}.{}'.format(str(year), str(month), str(day)), fmt)
+
+    return int(dt.timetuple().tm_yday)
 
 
-def julian2date(julian_day, year):
+def julian2date(julian_day, year, jd_dict_date=None):
 
     """
     Converts Julian day to month and day.
@@ -134,29 +275,35 @@ def julian2date(julian_day, year):
     year = int(year)
     julian_day = int(julian_day)
 
-    cdict = Calendar()
+    if not isinstance(jd_dict_date, dict):
+        jd_dict_date = julian_day_dictionary(store='date')
 
-    if year in cdict.year_range:
+    y, m, d = jd_dict_date['{:d}-{:03d}'.format(year, julian_day)].split('.')
 
-        # check each month
-        for month in xrange(1, 13):
+    return int(m), int(d)
 
-            if julian_day in cdict.calendar_dict['leap'][month]:
-                break
 
-        month_range = cdict.calendar_dict['leap'][month]
+def scaled_jd2jd(scaled_jds, return_jd=True):
 
+    """
+    Args:
+        scaled_jds
+        return_jd (Optional[bool]): Whether to return Julian Days. Otherwise, returns month-day-year format.
+    """
+
+    jd_dict_r = julian_day_dictionary_r()
+
+    xd_smooth_labels = [jd_dict_r[int(k)] for k in scaled_jds]
+
+    jd_dict_date = julian_day_dictionary(store='date')
+
+    if return_jd:
+        return xd_smooth_labels
     else:
 
-        # check each month
-        for month in xrange(1, 13):
-
-            if julian_day in cdict.calendar_dict['normal'][month]:
-                break
-
-        month_range = cdict.calendar_dict['normal'][month]
-
-    return month, month_range.index(julian_day)+1
+        return ['{}-{}-{}'.format(julian2date(l.split('-')[1], l.split('-')[0], jd_dict_date=jd_dict_date)[0],
+                                  julian2date(l.split('-')[1], l.split('-')[0], jd_dict_date=jd_dict_date)[1],
+                                  l.split('-')[0]) for l in xd_smooth_labels]
 
 
 class Conversions(object):

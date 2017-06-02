@@ -99,7 +99,8 @@ class SensorInfo(object):
                             'Landsat8': {'cblue': 1, 'blue': 2, 'green': 3, 'red': 4, 'nir': 5, 'midir': 6,
                                          'farir': 7, 'cirrus': 8, 'pan': 8},
                             'Landsat-thermal': {'blue': 1, 'green': 2, 'red': 3, 'nir': 4, 'midir': 5, 'farir': 7},
-                            'MODIS': {'blue': 10, 'green': 11, 'red': 8, 'nir': 9, 'midir': 13, 'farir': 14},                            
+                            'MODISc5': {'blue': 3, 'green': 4, 'red': 1, 'nir': 2, 'midir': 6, 'farir': 7},
+                            'MODIS': {'blue': 10, 'green': 11, 'red': 8, 'nir': 9, 'midir': 13, 'farir': 14},
                             'RapidEye': {'blue': 1, 'green': 2, 'red': 3, 'rededge': 4, 'nir': 5},
                             'Sentinel2': {'cblue': 1, 'blue': 2, 'green': 3, 'red': 4, 'rededge': 5,
                                           'rededge2': 6, 'rededge3': 7, 'niredge': 8,
@@ -116,7 +117,7 @@ class SensorInfo(object):
         #   ``self.equations``.
         self.wavelength_lists = {'ARVI': ['blue', 'red', 'nir'],
                                  'CBI': ['cblue', 'blue'],
-                                 'CIre': ['rededge', 'rededge3'],
+                                 'CIRE': ['rededge', 'rededge3'],
                                  'EVI': ['blue', 'red', 'nir'],
                                  'EVI2': ['red', 'nir'],
                                  'IPVI': ['red', 'nir'],
@@ -140,48 +141,75 @@ class SensorInfo(object):
                                  'TNDVI': ['red', 'nir'],
                                  'TVI': ['green', 'nir'],
                                  'YNDVI': ['yellow', 'nir'],
-                                 'VCI': ['red', 'nir']}
+                                 'VCI': ['red', 'nir'],
+                                 'VISMU': ['blue', 'green', 'red']}
 
         # The vegetation index equations. The arrays are
         #   loaded from ``self.wavelength_lists``. For example,
         #   ``array01`` of 'ARVI' would be the 'blue' wavelength.
         self.equations = \
-            {'ARVI': '(array03 - (array02 - y*(array01 - array02))) / (array03 + (array02 - y*(array01 - array02)))',
-             'CBI': '(array02 - array01) / (array02 + array01)',
-             'CIre': '(array02 / array01) - 1.',
-             'EVI': 'g * ((array03 - array02) / (array03 + (c1 * array02) - (c2 * array01) + L))',
-             'EVI2': 'g * ((array02 - array01) / (array02 + c1 * array01 + L))',
-             'IPVI': 'array02 / (array02 + array01)',
+            {'ARVI': '((array03 / scale_factor) - ((array02 / scale_factor) - '
+                     'y*((array01 / scale_factor) - (array02 / scale_factor)))) / '
+                     '((array03 / scale_factor) + ((array02 / scale_factor) - '
+                     'y*((array01 / scale_factor) - (array02 / scale_factor))))',
+             'CBI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                    '((array02 / scale_factor) + (array01 / scale_factor))',
+             'CIRE': '((array02 / scale_factor) / (array01 / scale_factor)) - 1.',
+             'EVI': 'g * (((array03 / scale_factor) - (array02 / scale_factor)) / '
+                    '((array03 / scale_factor) + (c1 * (array02 / scale_factor)) - '
+                    '(c2 * (array01 / scale_factor)) + L))',
+             'EVI2': 'g * (((array02 / scale_factor) - (array01 / scale_factor)) / '
+                     '((array02 / scale_factor) + L + (c1 * (array01 / scale_factor))))',
+             'IPVI': '(array02 / scale_factor) / ((array02 / scale_factor) + (array01 / scale_factor))',
              'MSAVI': '((2 * array02 + 1) - ((((2 * array02 + 1)**2) - (8 * (array02 - array01)))**.5)) / 2',
-             'GNDVI': '(array02 - array01) / (array02 + array01)',
-             'MNDWI': '(array02 - array01) / (array02 + array01)',
-             'NDSI': '(array02 - array01) / (array02 + array01)',
-             'NDBAI': '(array02 - array01) / (array02 + array01)',
+             'GNDVI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor))',
+             'MNDWI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor))',
+             'NDSI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                     '((array02 / scale_factor) + (array01 / scale_factor))',
+             'NDBAI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor))',
              'NDII': '(array03 - array02 + array01) / (array03 + array02 + array01)',
-             'NDVI': '(array02 - array01) / (array02 + array01)',
-             'RENDVI': '(array02 - array01) / (array02 + array01)',
-             'NDWI': '(array02 - array01) / (array02 + array01)',
-             'PNDVI': '(array02 - array01) / (array02 + array01)',
-             'RBVI': '(array02 - array01) / (array02 + array01)',
-             'GBVI': '(array02 - array01) / (array02 + array01)',
-             'ONDVI': '(4. / pi) * arctan((array02 - array01) / (array02 + array01))',
-             'SATVI': '(((array02 - array01) / (array02 + array01 + L)) * (1. + L)) - (array03 / 2.)',
-             'SAVI': '((array02 - array01) / (array02 + array01 + L)) * (1. + L)',
-             'OSAVI': 'arctan((((array02 - array01) / (array02 + array01 + L)) * (1. + L)) / 1.5) * 2.',
-             'SVI': 'array02 / array01',
-             'TNDVI': 'sqrt(((array02 - array01) / (array02 + array01)) * .5)',
-             'TVI': 'sqrt(((array02 - array01) / (array02 + array01)) + .5)',
-             'YNDVI': '(array02 - array01) / (array02 + array01)',
-             'VCI': '(((array02 - array01) / (array02 + array01)) - min_ndvi) / (max_ndvi - min_ndvi)'}
+             'NDVI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                     '((array02 / scale_factor) + (array01 / scale_factor))',
+             'RENDVI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                       '((array02 / scale_factor) + (array01 / scale_factor))',
+             'NDWI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor))',
+             'PNDVI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor))',
+             'RBVI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                     '((array02 / scale_factor) + (array01 / scale_factor))',
+             'GBVI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                     '((array02 / scale_factor) + (array01 / scale_factor))',
+             'ONDVI': '(4. / pi) * arctan(((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor)))',
+             'SATVI': '((((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor) + L)) * (1. + L)) - '
+                      '((array03 / scale_factor) / 2.)',
+             'SAVI': '(((array02 / scale_factor) - (array01 / scale_factor)) / '
+                     '((array02 / scale_factor) + (array01 / scale_factor) + L)) * (1. + L)',
+             'OSAVI': 'arctan(((((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor) + L)) * (1. + L)) / 1.5) * 2.',
+             'SVI': '(array02 / scale_factor) / (array01 / scale_factor)',
+             'TNDVI': 'sqrt((((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor))) * .5)',
+             'TVI': 'sqrt((((array02 / scale_factor) - (array01 / scale_factor)) / '
+                    '((array02 / scale_factor) + (array01 / scale_factor))) + .5)',
+             'YNDVI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor))',
+             'VCI': '(((array02 - array01) / (array02 + array01)) - min_ndvi) / (max_ndvi - min_ndvi)',
+             'VISMU': '((array01 / scale_factor) + (array02 / scale_factor) + (array03 / scale_factor)) / 3.'}
 
         # The data ranges for scaling, but only
         #   used if the output storage type is not
         #   equal to 'float32'.
         self.data_ranges = {'ARVI': (),
                             'CBI': (-1., 1.),
-                            'CIre': (-1., 1.),
-                            'EVI': (-1., 1.),
-                            'EVI2': (0., 2.),
+                            'CIRE': (-1., 1.),
+                            'EVI': (0., 1.),
+                            'EVI2': (0., 1.),
                             'IPVI': (),
                             'MSAVI': (),
                             'GNDVI': (-1., 1.),
@@ -203,7 +231,8 @@ class SensorInfo(object):
                             'TNDVI': (),
                             'TVI': (),
                             'YNDVI': (-1., 1.),
-                            'VCI': ()}
+                            'VCI': (),
+                            'VISMU': (0., 1.)}
 
     def list_expected_band_order(self, sensor):
 
@@ -261,17 +290,19 @@ class VegIndicesEquations(SensorInfo):
 
     Args:
         image_array (ndarray)
-        no_data (Optional[int]): An output 'no data' value. Overflows and NaNs are filled with ``no_data``.
+        no_data (Optional[int]): The output 'no data' value. Overflows and NaNs are filled with ``no_data``.
             Default is 0.
+        in_no_data (Optional[int]): The input 'no data' value.
         chunk_size (Optional[int]): The chunk size to determine whether to use ``ne.evaluate``. Default is -1, or
             use ``numexpr``.
         mask_array (Optional[2d array]): A mask where anything equal to 255 is background. Default is None.
     """
 
-    def __init__(self, image_array, no_data=0, chunk_size=-1, mask_array=None):
+    def __init__(self, image_array, no_data=0, in_no_data=0, chunk_size=-1, mask_array=None):
 
-        self.image_array = image_array
+        self.image_array = np.float32(image_array)
         self.no_data = no_data
+        self.in_no_data = in_no_data
         self.chunk_size = chunk_size
         self.mask_array = mask_array
 
@@ -311,7 +342,7 @@ class VegIndicesEquations(SensorInfo):
 
         return np.where(array2rescale == self.no_data, self.no_data, array2rescale_)
 
-    def compute(self, index2compute, out_type=1, **kwargs):
+    def compute(self, index2compute, out_type=1, scale_factor=1., **kwargs):
 
         """
         Args:
@@ -322,6 +353,7 @@ class VegIndicesEquations(SensorInfo):
                 1 = raw values (float32)
                 2 = scaled (byte)
                 3 = scaled (uint16)
+            scale_factor (Optional[float]): A scale factor to divide the inputs by. Default is 1.
 
         Example:
             >>> from mappy.features import VegIndicesEquations
@@ -345,9 +377,9 @@ class VegIndicesEquations(SensorInfo):
         if self.chunk_size == -1:
 
             if kwargs:
-                return self.run_index(**kwargs)
+                return self.run_index(scale_factor, **kwargs)
             else:
-                return self.run_index()
+                return self.run_index(scale_factor)
 
         else:
 
@@ -388,7 +420,7 @@ class VegIndicesEquations(SensorInfo):
             else:
                 return vi_function()
 
-    def run_index(self, y=1., g=2.5, L=1., min_ndvi=-1, max_ndvi=1, **kwargs):
+    def run_index(self, scale_factor, y=1., g=2.5, L=1., min_ndvi=-1, max_ndvi=1, **kwargs):
 
         # EVI defaults
         if self.index2compute.upper() == 'EVI' and not kwargs:
@@ -398,12 +430,14 @@ class VegIndicesEquations(SensorInfo):
             c1 = 2.4
 
         no_data = self.no_data
+        in_no_data = self.in_no_data
         pi = np.pi
 
         # Setup a mask
         if isinstance(self.mask_array, np.ndarray):
+
             mask_array = self.mask_array
-            mask_equation = 'where(mask_array == 255, no_data, index_array)'
+            mask_equation = 'where(mask_array == 1, no_data, index_array)'
 
         if self.n_bands == 2:
 
@@ -414,7 +448,7 @@ class VegIndicesEquations(SensorInfo):
                 raise ValueError('\nThe input array should have {:d} dimensions.\n'.format(self.n_bands))
 
             if not isinstance(self.mask_array, np.ndarray):
-                mask_equation = 'where((array01 == 0) | (array02 == 0), no_data, index_array)'
+                mask_equation = 'where((array01 == in_no_data) | (array02 == in_no_data), no_data, index_array)'
 
         elif self.n_bands == 3:
 
@@ -426,27 +460,52 @@ class VegIndicesEquations(SensorInfo):
                 raise ValueError('\nThe input array should have {:d} dimensions.\n'.format(self.n_bands))
 
             if not isinstance(self.mask_array, np.ndarray):
-                mask_equation = 'where((array01 == 0) | (array02 == 0) | (array03 == 0), no_data, index_array)'
+                mask_equation = 'where((array01 == in_no_data) | (array02 == in_no_data) | (array03 == in_no_data), no_data, index_array)'
 
         index_array = ne.evaluate(self.equations[self.index2compute.upper()])
 
-        # Clip lower and upper, standardized bounds.
-        if self.data_ranges[self.index2compute.upper()] == (-1., 1.):
+        d_range = self.data_ranges[self.index2compute.upper()]
 
-            index_array = ne.evaluate('where(index_array < -1, -1, index_array)')
-            index_array = ne.evaluate('where(index_array > 1, 1, index_array)')
+        if d_range:
 
-        # elif self.data_ranges[self.index2compute.upper()] == (0., 1.):
-        #
-        #     index_array = ne.evaluate('where(index_array < 0, 0, index_array)')
-        #     index_array = ne.evaluate('where(index_array > 1, 1, index_array)')
+            if d_range[0] == -9999:
+                scale_data = False
+            else:
 
-        index_array = ne.evaluate(mask_equation)
+                scale_data = True
+
+                # Clip lower and upper bounds.
+                index_array = ne.evaluate('where(index_array < {:f}, {:f}, index_array)'.format(d_range[0], d_range[0]))
+                index_array = ne.evaluate('where(index_array > {:f}, {:f}, index_array)'.format(d_range[1], d_range[1]))
+
+                # if self.out_type != 1:
+                #     index_array += abs(d_range[0])
+        else:
+            scale_data = False
+
+        if scale_data:
+
+            # if self.out_type == 2:
+            #     index_array = np.uint8(index_array * 254.)
+            # elif self.out_type == 3:
+            #     index_array = np.uint16(index_array * 10000.)
+
+            if self.data_ranges[self.index2compute.upper()]:
+
+                if self.out_type == 2:
+                    index_array = np.uint8(self.rescale_range(index_array, in_range=d_range))
+                elif self.out_type == 3:
+                    index_array = np.uint16(self.rescale_range(index_array, in_range=d_range))
+
+        else:
+
+            if self.out_type == 2:
+                index_array = np.uint8(self.rescale_range(index_array, in_range=(0, 10000)))
+            elif self.out_type == 3:
+                index_array = np.uint16(index_array)
 
         index_array[np.isinf(index_array) | np.isnan(index_array)] = self.no_data
-
-        if self.out_type > 1:
-            index_array = self.rescale_range(index_array, in_range=self.data_ranges[self.index2compute.upper()])
+        index_array = ne.evaluate(mask_equation)
 
         return index_array
 
@@ -1319,13 +1378,14 @@ class BandHandler(SensorInfo):
         band_positions = self.get_band_positions(band_list)
 
         return self.meta_info.read(bands2open=band_positions,
-                                   i=self.i, j=self.j,
+                                   i=self.i,
+                                   j=self.j,
                                    sort_bands2open=False,
-                                   rows=self.n_rows, cols=self.n_cols,
+                                   rows=self.n_rows,
+                                   cols=self.n_cols,
                                    d_type='float32')
 
     def get_band_positions(self, band_list):
-
         return [self.band_order[img_band] for img_band in band_list]
 
 
@@ -1354,14 +1414,17 @@ class VegIndices(BandHandler):
 
         self.rows, self.cols = self.meta_info.rows, self.meta_info.cols
 
-    def run(self, output_image, storage='float32', no_data=0, chunk_size=1024, k=0,
-            be_quiet=False, overwrite=False, overviews=False):
+    def run(self, output_image, storage='float32',
+            no_data=0, in_no_data=0, chunk_size=1024, k=0,
+            be_quiet=False, overwrite=False, overviews=False,
+            scale_factor=1.):
 
         """
         Args:
             output_image (str)
             storage (Optional[str])
             no_data (Optional[int])
+            in_no_data (Optional[int])
             chunk_size (Optional[int])
             k (Optional[int])
             be_quiet (Optional[bool])
@@ -1372,9 +1435,11 @@ class VegIndices(BandHandler):
         self.output_image = output_image
         self.storage = storage
         self.no_data = no_data
+        self.in_no_data = in_no_data
         self.chunk_size = chunk_size
         self.k = k
         self.be_quiet = be_quiet
+        self.scale_factor = scale_factor
 
         print_progress = True
 
@@ -1486,8 +1551,12 @@ class VegIndices(BandHandler):
 
                     if isinstance(self.mask_band, int):
 
-                        mask_array = self.meta_info.read(bands2open=self.mask_band, i=self.i, j=self.j,
-                                                         rows=self.n_rows, cols=self.n_cols, d_type='byte')
+                        mask_array = self.meta_info.read(bands2open=self.mask_band,
+                                                         i=self.i,
+                                                         j=self.j,
+                                                         rows=self.n_rows,
+                                                         cols=self.n_cols,
+                                                         d_type='byte')
 
                     else:
                         mask_array = None
@@ -1496,10 +1565,13 @@ class VegIndices(BandHandler):
                     vie = VegIndicesEquations(image_stack,
                                               chunk_size=self.chunk_size,
                                               no_data=self.no_data,
+                                              in_no_data=self.in_no_data,
                                               mask_array=mask_array)
 
                     # Calculate the vegetation index.
-                    veg_indice_array = vie.compute(self.input_indice, out_type=self.out_type)
+                    veg_indice_array = vie.compute(self.input_indice,
+                                                   out_type=self.out_type,
+                                                   scale_factor=scale_factor)
 
                     if self.input_indice.upper() == 'VCI':
 
@@ -1625,8 +1697,10 @@ def _compute_as_list(img, out_img, sensor, k, storage, no_data, chunk_size,
             tio.write('{:d}: {}\n'.format(bi+1, vi))
 
 
-def veg_indices(input_image, output_image, input_index, sensor, k=0., storage='float32', no_data=0,
-                chunk_size=-1, be_quiet=False, overwrite=False, overviews=False, mask_band=None):
+def veg_indices(input_image, output_image, input_index, sensor, k=0.,
+                storage='float32', no_data=0, in_no_data=0,
+                chunk_size=-1, be_quiet=False, overwrite=False,
+                overviews=False, mask_band=None, scale_factor=1.):
 
     """
     Computes vegetation indexes
@@ -1644,6 +1718,7 @@ def veg_indices(input_image, output_image, input_index, sensor, k=0., storage='f
         storage (Optional[str]): Storage type of ``output_image``. Default is 'float32'. Choices are
             ['byte', 'uint16', 'float32].
         no_data (Optional[int]): The output 'no data' value for ``output_image``. Default is 0.
+        in_no_data (Optional[int]): The input 'no data' value. Default is 0.
         chunk_size (Optional[int]): Size of image chunks. Default is -1. *chunk_size=-1 will use Numexpr
             threading. This should give faster results on larger imagery.
         be_quiet (Optional[bool]): Whether to print progress (False) or be quiet (True). Default is False.
@@ -1786,8 +1861,9 @@ def veg_indices(input_image, output_image, input_index, sensor, k=0., storage='f
 
             vio = VegIndices(input_image, input_index, sensor, mask_band=mask_band)
 
-            vio.run(output_image, k=k, storage=storage, no_data=no_data, chunk_size=chunk_size,
-                    be_quiet=be_quiet, overwrite=overwrite, overviews=overviews)
+            vio.run(output_image, k=k, storage=storage, no_data=no_data, in_no_data=in_no_data,
+                    chunk_size=chunk_size, be_quiet=be_quiet, overwrite=overwrite, overviews=overviews,
+                    scale_factor=scale_factor)
 
     if isinstance(input_index, list):
 
@@ -1795,8 +1871,9 @@ def veg_indices(input_image, output_image, input_index, sensor, k=0., storage='f
 
             vio = VegIndices(input_image, input_index[0], sensor, mask_band=mask_band)
 
-            vio.run(output_image, k=k, storage=storage, no_data=no_data, chunk_size=chunk_size,
-                    be_quiet=be_quiet, overwrite=overwrite, overviews=overviews)
+            vio.run(output_image, k=k, storage=storage, no_data=no_data, in_no_data=in_no_data,
+                    chunk_size=chunk_size, be_quiet=be_quiet, overwrite=overwrite, overviews=overviews,
+                    scale_factor=scale_factor)
 
         else:
 

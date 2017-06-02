@@ -89,6 +89,7 @@ DRIVER_DICT = {'.tif': 'GTiff',
                '.hdf': 'HDF4',
                '.hdf4': 'HDF4',
                '.hdf5': 'HDF5',
+               '.h5': 'HDF5',
                '.vrt': 'VRT',
                '.hdr': 'ENVI',
                '.dat': 'ENVI',
@@ -264,6 +265,7 @@ class ReadWrite(object):
 
             bh.get_band_order()
 
+            # Overwrite the bands to open
             bands2open = bh.get_band_positions(bh.wavelength_lists[compute_index.upper()])
 
             self.d_type = 'float32'
@@ -348,17 +350,24 @@ class ReadWrite(object):
 
             vie = VegIndicesEquations(self.array, chunk_size=-1)
 
-            # exec 'self.{} = vie.compute(compute_index.upper())'.format(compute_index)
-            exec('self.{} = vie.compute(compute_index.upper())'.format(compute_index))
+            # exec('self.{} = vie.compute(compute_index.upper())'.format(compute_index.lower()))
+            self.array = vie.compute(compute_index.upper())
 
         return self.array
 
     def _open_array(self, bands2open):
 
+        """
+        Opens image bands into an ndarray.
+        
+        Args:
+             bands2open (int or list)
+        """
+
         # Open the image as a dictionary of arrays.
         if isinstance(bands2open, dict):
 
-            self.array = {}
+            self.array = dict()
 
             for band_name, band_position in bands2open.iteritems():
 
@@ -389,7 +398,7 @@ class ReadWrite(object):
 
             else:
 
-                self.array = []
+                self.array = list()
 
                 for band in bands2open:
 
@@ -417,6 +426,13 @@ class ReadWrite(object):
 
     def _reshape2predictions(self, n_bands):
 
+        """
+        Reshapes an array into predictions (samples X dimensions)
+        
+        Args:
+            n_bands (int)
+        """
+
         if n_bands == 1:
 
             self.array = self.array.reshape(self.rrows,
@@ -432,6 +448,14 @@ class ReadWrite(object):
 
     def _reshape(self, array2reshape, band_list):
 
+        """
+        Reshapes an array into [rows X columns] or [dimensions X rows X columns].
+        
+        Args:
+            array2reshape (ndarray)
+            band_list (list)
+        """
+
         if len(band_list) == 1:
             array2reshape = array2reshape.reshape(self.rrows, self.ccols)
         else:
@@ -442,6 +466,13 @@ class ReadWrite(object):
         return array2reshape
 
     def _check_band_list(self, bands2open):
+
+        """
+        Checks whether a band list is valid.
+        
+        Args:
+            bands2open (dict, list, or int)
+        """
 
         if isinstance(bands2open, dict):
             return bands2open
@@ -477,10 +508,12 @@ class ReadWrite(object):
                      compress='LZW', tile=False, close_band=True, flush_final=False, write_chunks=False, **kwargs):
 
         """
-        Writes array to file
+        Writes an array to file.
 
         Args:
-            out_name (str): Output image name.
+            out_name (str): The output image name.
+            write_which (Optional[str]): The array type to write. Choices are ['array', '<spectral indices>'].
+                Default is 'array'.
             o_info (Optional[object]): Output image information, instance of ``ropen``.
                 Needed if <out_rst> not given. Default is None.
             x (Optional[int]): Column starting position. Default is 0.
@@ -619,7 +652,7 @@ class DataChecks(object):
     def contains(self, iinfo):
 
         """
-        Test whether the open image contains another image.
+        Tests whether the open image contains another image.
 
         Args:
             iinfo (object): An image instance of ``ropen`` to test.
@@ -640,6 +673,7 @@ class DataChecks(object):
 
         Args:
             value (int): The value to search for.
+            array2check (Optional[ndarray])
         """
 
         if hasattr(self, 'array'):
@@ -651,7 +685,7 @@ class DataChecks(object):
     def intersects(self, iinfo):
 
         """
-        Test whether the open image intersects another image.
+        Tests whether the open image intersects another image.
 
         Args:
             iinfo (object): An image instance of ``ropen`` to test.
@@ -674,7 +708,7 @@ class DataChecks(object):
     def within(self, iinfo):
 
         """
-        Test whether the open image falls within another image.
+        Tests whether the open image falls within another image.
 
         Args:
             iinfo (object or dict): An image instance of ``ropen`` to test.
@@ -694,7 +728,7 @@ class DataChecks(object):
     def outside(self, iinfo):
 
         """
-        Test whether the open image falls outside coordinates
+        Tests whether the open image falls outside coordinates
 
         Args:
             iinfo (object or dict): An image instance of ``ropen`` to test.
@@ -704,25 +738,42 @@ class DataChecks(object):
 
             iif = ImageInfo()
 
-            iif.left = iinfo['left']
-            iif.right = iinfo['right']
-            iif.top = iinfo['top']
-            iif.bottom = iinfo['bottom']
+            for k, v in iinfo.iteritems():
+                setattr(iif, k, v)
 
             iinfo = iif.copy()
 
-        if (self.right < iinfo.left) or (self.left > iinfo.right) or \
-                (self.top < iinfo.bottom) or (self.bottom > iinfo.top):
+        has_extent = False
 
-            return True
+        if hasattr(self, 'left') and hasattr(self, 'right'):
 
-        else:
-            return False
+            has_extent = True
+
+            if self.left > iinfo.right:
+                return True
+
+            if self.right < iinfo.left:
+                return True
+
+        if hasattr(self, 'top') and hasattr(self, 'bottom'):
+
+            has_extent = True
+
+            if self.top < iinfo.bottom:
+                return True
+
+            if self.bottom > iinfo.top:
+                return True
+
+        if not has_extent:
+            logger.error('The `iinfo` parameter did not contain extent information.')
+
+        return False
 
     def check_clouds(self, cloud_band=7, clear_value=0, background_value=255):
 
         """
-        Checks cloud information
+        Checks cloud information.
 
         Args:
             cloud_band (Optional[int]): The cloud band position. Default is 7.
@@ -1048,6 +1099,14 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
     def _open_dataset(self, image_name, open2read):
 
+        """
+        Opens the image dataset.
+        
+        Args:
+            image_name (str)
+            open2read (bool)
+        """
+
         if open2read:
             source_dataset = gdal.Open(image_name, GA_ReadOnly)
         else:
@@ -1061,6 +1120,9 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
     def _get_hdr_info(self):
 
         hdr_file = '{}.hdr'.format(self.file_name)
+
+        if not os.path.isfile(hdr_file):
+            return
 
         with open(hdr_file, 'rb') as hdr_open:
 
@@ -1093,20 +1155,20 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
                     self.projection = line.replace('coordinate system string = {', '')
                     self.projection = self.projection.replace('}\n', '')
 
-    def build_overviews(self, sampling_method='nearest', levels=[2, 4, 8, 16]):
+    def build_overviews(self, sampling_method='nearest', levels=None):
 
         """
-        Builds image overviews
+        Builds image overviews.
 
         Args:
             sampling_method (Optional[str]): The sampling method to use. Default is 'nearest'.
             levels (Optional[int list]): The levels to build. Default is [2, 4, 8, 16].
         """
 
-        if not isinstance(levels, list):
-            raise TypeError('\nThe overviews must be a list.\n')
-
-        levels = map(int, levels)
+        if not levels:
+            levels = [2, 4, 8, 16]
+        else:
+            levels = map(int, levels)
 
         try:
             self.datasource.BuildOverviews(sampling_method.upper(), overviewlist=levels)
@@ -1117,7 +1179,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
     def get_band(self, band_position):
 
         """
-        Loads a raster band pointer
+        Loads a raster band pointer.
 
         Args:
             band_position (int): The band position to load.
@@ -1138,6 +1200,11 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
     def get_stats(self, band_position):
 
         """
+        Get band statistics.
+        
+        Args:
+            band_position (int)
+        
         Returns:
             Minimum, Maximum, Mean, Standard deviation
         """
@@ -1147,6 +1214,10 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
         return self.band.GetStatistics(1, 1)
 
     def check_corrupted_bands(self):
+
+        """
+        Checks whether corrupted bands exist.        
+        """
 
         self.corrupted_bands = []
 
@@ -1206,7 +1277,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
     def close_band(self):
 
         """
-        Closes a band object
+        Closes a band object.
         """
 
         if hasattr(self, 'band') and self.band_open:
@@ -1237,7 +1308,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
     def close_file(self):
 
         """
-        Closes file object
+        Closes file object.
         """
 
         if hasattr(self, 'datasource'):
@@ -1285,7 +1356,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
     def close_all(self):
 
         """
-        Closes a band object and a file object
+        Closes a band object and a file object.
         """
 
         self.close_band()
@@ -1294,7 +1365,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
     def fill(self, fill_value, band=None):
 
         """
-        Fills a band with a specified value
+        Fills a band with a specified value.
 
         Args:
             fill_value (int): The value to fill.
@@ -1309,7 +1380,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
     def get_chunk_size(self):
 
         """
-        Gets the band block size
+        Gets the band block size.
         """
 
         try:
@@ -1320,7 +1391,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
     def remove_overviews(self):
 
         """
-        Removes image overviews
+        Removes image overviews.
         """
 
         if self.image_mode != 'update':
@@ -1792,24 +1863,26 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
             resample (Optional[str]): The resampling method. Default is 'nearest'.N
             cell_size (Optional[float]): The output cell size. Default is 0.
             kwargs:
-                format='GTiff', outputBounds=None, outputBoundsSRS=None, targetAlignedPixels=False,
-                 width=0, height=0, srcAlpha=False, dstAlpha=False, warpOptions=None,
-                 errorThreshold=None, warpMemoryLimit=None,
-                 creationOptions=None, outputType=0, workingType=0,
-                 resampleAlg=resample_dict[resample], srcNodata=None, dstNodata=None,
-                 multithread=False, tps=False, rpc=False, geoloc=False,
-                 polynomialOrder=None, transformerOptions=None, cutlineDSName=None,
-                 cutlineLayer=None, cutlineWhere=None, cutlineSQL=None,
-                 cutlineBlend=None, cropToCutline=False, copyMetadata=True,
-                 metadataConflictValue=None, setColorInterpretation=False,
-                 callback=None, callback_data=None
+                format='GTiff', outputBounds=None (minX, minY, maxX, maxY), 
+                outputBoundsSRS=None, targetAlignedPixels=False,
+                width=0, height=0, srcAlpha=False, dstAlpha=False, warpOptions=None,
+                errorThreshold=None, warpMemoryLimit=None,
+                creationOptions=None, outputType=0, workingType=0,
+                resampleAlg=resample_dict[resample], srcNodata=None, dstNodata=None,
+                multithread=False, tps=False, rpc=False, geoloc=False,
+                polynomialOrder=None, transformerOptions=None, cutlineDSName=None,
+                cutlineLayer=None, cutlineWhere=None, cutlineSQL=None,
+                cutlineBlend=None, cropToCutline=False, copyMetadata=True,
+                metadataConflictValue=None, setColorInterpretation=False,
+                callback=None, callback_data=None
 
         Returns:
             None, writes to `output_image'.
         """
 
         warp_options = gdal.WarpOptions(srcSRS=None, dstSRS='EPSG:{:d}'.format(epsg),
-                                        xRes=cell_size, yRes=cell_size, resampleAlg=RESAMPLE_DICT[resample],
+                                        xRes=cell_size, yRes=cell_size,
+                                        resampleAlg=RESAMPLE_DICT[resample],
                                         **kwargs)
 
         out_ds = gdal.Warp(output_image, self.file_name, options=warp_options)
@@ -2068,7 +2141,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
 def gdal_open(image2open, band):
 
     """
-    A direct file open from GDAL
+    A direct file open from GDAL.
     """
 
     driver_o = gdal.Open(image2open, GA_ReadOnly)
@@ -2079,7 +2152,7 @@ def gdal_open(image2open, band):
 def gdal_read(image2open, band, i, j, rows, cols):
 
     """
-    A direct array read from GDAL
+    A direct array read from GDAL.
     """
 
     driver_o = gdal.Open(image2open, GA_ReadOnly)
@@ -2815,7 +2888,7 @@ def _merge_dicts(dict1, dict2):
 
 
 def warp(input_image, output_image, out_epsg=None, in_epsg=None, resample='nearest',
-         cell_size=0, d_type=None, return_datasource=False, **kwargs):
+         cell_size=0, d_type=None, return_datasource=False, overwrite=False, **kwargs):
 
     """
     Warp transforms a dataset
@@ -2825,12 +2898,14 @@ def warp(input_image, output_image, out_epsg=None, in_epsg=None, resample='neare
         output_image (str): The output image.
         out_epsg (Optional[int]): The output EPSG projection code.
         in_epsg (Optional[int]): The input EPSG code. Default is None.
-        resample (Optional[str]): The resampling method. Default is 'nearest'.N
+        resample (Optional[str]): The resampling method. Default is 'nearest'.
         cell_size (Optional[float]): The output cell size. Default is 0.
         d_type (Optional[str]): Data type to overwrite `outputType`. Default is None.
-        return_datasource (Optional[bool])
+        return_datasource (Optional[bool]): Whether to return the datasource object. Default is False.
+        overwrite (Optional[bool]): Whether to overwrite `out_vrt`, if it exists. Default is False.
         kwargs:
-            format=None, outputBounds=None, outputBoundsSRS=None, targetAlignedPixels=False,
+            format=None, outputBounds=None (minX, minY, maxX, maxY), 
+            outputBoundsSRS=None, targetAlignedPixels=False,
              width=0, height=0, srcAlpha=False, dstAlpha=False, warpOptions=None,
              errorThreshold=None, warpMemoryLimit=None,
              creationOptions=None, outputType=0, workingType=0,
@@ -2857,6 +2932,11 @@ def warp(input_image, output_image, out_epsg=None, in_epsg=None, resample='neare
 
     if not isinstance(cell_size, tuple):
         cell_size = (cell_size, -cell_size)
+
+    if overwrite:
+
+        if os.path.isfile(output_image):
+            os.remove(output_image)
 
     if isinstance(d_type, str):
 
@@ -3089,7 +3169,7 @@ class create_raster(CreateDriver, FileManager):
 
                     out_cols = n_rows_cols(j, blk_size_cols, out_cols)
 
-                    out_name = '{}/{}_{:d}_{:d}{}'.format(d_name_tiles, f_base, i, j, f_ext)
+                    out_name = os.path.join(d_name_tiles, '{}_{:d}_{:d}{}'.format(f_base, i, j, f_ext))
 
                     out_rst[image_counter] = out_name
 
@@ -3698,8 +3778,8 @@ def pixel_stats(input_image, output_image, stat='mean', bands2process=-1,
         >>>
         >>> # Calculate the mean of the first 3 bands, ignoring zeros, and
         >>> #   set the output no data pixels as -999.
-        >>> mp.pixel_stats('/image.tif', '/output.tif', stat='mean', \
-        >>>                bands2process=[1, 2, 3], ignore_value=0, \
+        >>> mp.pixel_stats('/image.tif', '/output.tif', stat='mean', 
+        >>>                bands2process=[1, 2, 3], ignore_value=0, 
         >>>                no_data_value=-999)
 
     Returns:
@@ -4759,6 +4839,204 @@ def _discrete_cmap(n_classes, base_cmap='cubehelix'):
     cmap_name = base.name + str(n_classes)
 
     return base.from_list(cmap_name, color_list, n_classes)
+
+
+class QAMasker(object):
+
+    """A class for masking bit-packed quality flags"""
+
+    def __init__(self, qa, sensor, mask_items=None, modis_qa_band=1, modis_quality=2, confidence_level='yes'):
+
+        """
+        Args:
+            qa (2d array): The quality array.
+            sensor (str): The sensor name. Choices are ['HLS', 'L8-pre', 'L8-C1', 'L-C1', 'MODIS']. 
+                'L-C1' refers to Collection 1 L4-5 and L7. 'L8-C1' refers to Collection 1 L8.
+            mask_items (str list): A list of items to mask.
+            modis_qa_position (Optional[int]): The MODIS QA band position. Default is 1.
+            modis_quality (Optional[int]): The MODIS quality level. Default is 2.
+            confidence_level (Optional[str]): The confidence level. Choices are ['notdet', 'no', 'maybe', 'yes']. 
+
+        References:
+            Landsat Collection 1:
+                https://landsat.usgs.gov/collectionqualityband
+
+        Examples:
+            >>> # Get the MODIS cloud mask.
+            >>> qa = QAMasker(<array>, 'MODIS')
+            >>>
+            >>> # HLS
+            >>> qa = QAMasker(<array>, 'HLS', ['cloud'])
+            >>> qa.mask
+
+        Returns:
+            2d array with values:
+                0: clear                
+                1: water
+                2: shadow
+                3: snow or ice
+                4: cloud
+                5: cirrus cloud
+                6: adjacent cloud
+                7: saturated                
+                8: dropped
+                9: terrain occluded
+                255: fill
+        """
+
+        self.qa = qa
+        self.sensor = sensor
+        self.modis_qa_band = modis_qa_band
+        self.modis_quality = modis_quality
+
+        self._set_dicts()
+
+        if self.sensor == 'MODIS':
+            self.mask = self.get_modis_qa_mask()
+        else:
+
+            self.mask = np.zeros(self.qa.shape, dtype='uint8')
+
+            for mask_item in mask_items:
+
+                if mask_item in self.qa_flags[self.sensor]:
+
+                    if 'conf' in mask_item:
+
+                        # Has high confidence that
+                        #   this condition was met.
+                        mask_value = self.conf_dict[confidence_level]
+
+                    else:
+                        mask_value = 1
+
+                    self.mask[self.get_qa_mask(mask_item) >= mask_value] = self.fmask_dict[mask_item]
+
+    def _set_dicts(self):
+
+        self.fmask_dict = dict(clear=0,
+                               water=1,
+                               shadow=2,
+                               shadowconf=2,
+                               snow=3,
+                               snowice=3,
+                               snowiceconf=3,
+                               cloud=4,
+                               cloudconf=4,
+                               cirrus=5,
+                               cirrusconf=5,
+                               adjacent=6,
+                               saturated=7,
+                               dropped=8,
+                               terrain=0,
+                               fill=255)
+
+        self.conf_dict = dict(notdet=0,
+                              no=1,
+                              maybe=2,
+                              yes=3)
+
+        self.qa_flags = {'HLS': {'cirrus': (0, 0),
+                                 'cloud': (1, 1),
+                                 'adjacent': (2, 2),
+                                 'shadow': (3, 3),
+                                 'snowice': (4, 4),
+                                 'water': (5, 5)},
+                         'L8-pre': {'cirrus': (13, 12),
+                                    'snowice': (11, 10),
+                                    'water': (5, 4),
+                                    'fill': (0, 0),
+                                    'dropped': (1, 1),
+                                    'terrain': (2, 2),
+                                    'shadow': (7, 6),
+                                    'vegconf': (9, 8),
+                                    'snowiceconf': (11, 10),
+                                    'cirrusconf': (13, 12),
+                                    'cloudconf': (15, 14)},
+                         'L8-C1': {'cirrus': (12, 11),
+                                   'snowice': (10, 9),
+                                   'shadowconf': (8, 7),
+                                   'cloudconf': (6, 5),
+                                   'cloud': (4, 4),
+                                   'saturated': (3, 2),
+                                   'terrain': (1, 1),
+                                   'fill': (0, 0)},
+                         'L-C1': {'fill': (0, 0),
+                                  'dropped': (1, 1),
+                                  'saturated': (3, 2),
+                                  'cloud': (4, 4),
+                                  'cloudconf': (6, 5),
+                                  'shadowconf': (8, 7),
+                                  'snowice': (10, 9)},
+                         'MODIS': {'cloud': (0, 0),
+                                   'daynight': (3, 3),
+                                   'sunglint': (4, 4),
+                                   'snowice': (5, 5),
+                                   'landwater': (7, 6)}}
+
+    def qa_bits(self, what2mask):
+
+        # For confidence bits
+        # 0 = not determined
+        # 1 = no
+        # 2 = maybe
+        # 3 = yes
+
+        bit_location = self.qa_flags[self.sensor][what2mask]
+
+        self.b1 = bit_location[0]
+        self.b2 = bit_location[1]
+
+    def get_modis_qa_mask(self):
+
+        """
+        Reference:
+            https://github.com/haoliangyu/pymasker/blob/master/pymasker.py
+        """
+
+        # bit_pos = 0
+        # bit_len = 2
+        #
+        # # 0 = high
+        # # 1 = medium
+        # # 2 = low
+        # # 3 = low cloud
+        # data_quality = 0
+        #
+        # bit_len = int('1' * bit_len, 2)
+        # value = int(str(data_quality), 2)
+        #
+        # pos_value = bit_len << bit_pos
+        # con_value = value << bit_pos
+        #
+        # return (self.qa & pos_value) == con_value
+
+        bit_shifts = {1: 0, 2: 4, 3: 8, 4: 12, 5: 16, 6: 20, 7: 24}
+
+        modis_mask = np.uint8(self.qa >> bit_shifts[self.modis_qa_band] & 4)
+
+        # `modis_mask`
+        #   0: best quality
+        #   1: good quality
+        #   4: fill value
+        #
+        # `output`
+        #   1: good data
+        #   0: bad data
+        return np.where(modis_mask <= self.modis_quality, 1, 0)
+
+    def get_qa_mask(self, what2mask):
+
+        """
+        Reference:
+            https://github.com/mapbox/landsat8-qa/blob/master/landsat8_qa/qa.py        
+        """
+
+        self.qa_bits(what2mask)
+
+        width_int = int((self.b1 - self.b2 + 1) * '1', 2)
+
+        return np.uint8(((self.qa >> self.b2) & width_int))
 
 
 def _examples():
