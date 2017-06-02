@@ -76,10 +76,10 @@ except ImportError:
     raise ImportError('GDAL must be installed')
 
 # OpenCV
-try:
-    import cv2
-except ImportError:
-    raise ImportError('OpenCV must be installed')
+#try:
+#    import cv2
+#except ImportError:
+#    raise ImportError('OpenCV must be installed')
 
 # Scikit-learn
 try:
