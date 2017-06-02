@@ -1416,7 +1416,8 @@ class VegIndices(BandHandler):
 
     def run(self, output_image, storage='float32',
             no_data=0, in_no_data=0, chunk_size=1024, k=0,
-            be_quiet=False, overwrite=False, overviews=False):
+            be_quiet=False, overwrite=False, overviews=False,
+            scale_factor=1.):
 
         """
         Args:
@@ -1438,6 +1439,7 @@ class VegIndices(BandHandler):
         self.chunk_size = chunk_size
         self.k = k
         self.be_quiet = be_quiet
+        self.scale_factor = scale_factor
 
         print_progress = True
 
@@ -1567,7 +1569,9 @@ class VegIndices(BandHandler):
                                               mask_array=mask_array)
 
                     # Calculate the vegetation index.
-                    veg_indice_array = vie.compute(self.input_indice, out_type=self.out_type)
+                    veg_indice_array = vie.compute(self.input_indice,
+                                                   out_type=self.out_type,
+                                                   scale_factor=scale_factor)
 
                     if self.input_indice.upper() == 'VCI':
 
@@ -1696,7 +1700,7 @@ def _compute_as_list(img, out_img, sensor, k, storage, no_data, chunk_size,
 def veg_indices(input_image, output_image, input_index, sensor, k=0.,
                 storage='float32', no_data=0, in_no_data=0,
                 chunk_size=-1, be_quiet=False, overwrite=False,
-                overviews=False, mask_band=None):
+                overviews=False, mask_band=None, scale_factor=1.):
 
     """
     Computes vegetation indexes
@@ -1858,7 +1862,8 @@ def veg_indices(input_image, output_image, input_index, sensor, k=0.,
             vio = VegIndices(input_image, input_index, sensor, mask_band=mask_band)
 
             vio.run(output_image, k=k, storage=storage, no_data=no_data, in_no_data=in_no_data,
-                    chunk_size=chunk_size, be_quiet=be_quiet, overwrite=overwrite, overviews=overviews)
+                    chunk_size=chunk_size, be_quiet=be_quiet, overwrite=overwrite, overviews=overviews,
+                    scale_factor=scale_factor)
 
     if isinstance(input_index, list):
 
@@ -1867,7 +1872,8 @@ def veg_indices(input_image, output_image, input_index, sensor, k=0.,
             vio = VegIndices(input_image, input_index[0], sensor, mask_band=mask_band)
 
             vio.run(output_image, k=k, storage=storage, no_data=no_data, in_no_data=in_no_data,
-                    chunk_size=chunk_size, be_quiet=be_quiet, overwrite=overwrite, overviews=overviews)
+                    chunk_size=chunk_size, be_quiet=be_quiet, overwrite=overwrite, overviews=overviews,
+                    scale_factor=scale_factor)
 
         else:
 
