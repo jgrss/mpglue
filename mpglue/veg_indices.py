@@ -1430,6 +1430,7 @@ class VegIndices(BandHandler):
             be_quiet (Optional[bool])
             overwrite (Optional[bool])
             overviews (Optional[bool])
+            scale_factor (Optional[float])
         """
 
         self.output_image = output_image
@@ -1439,7 +1440,6 @@ class VegIndices(BandHandler):
         self.chunk_size = chunk_size
         self.k = k
         self.be_quiet = be_quiet
-        self.scale_factor = scale_factor
 
         print_progress = True
 
