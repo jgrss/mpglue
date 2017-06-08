@@ -959,7 +959,11 @@ class TransformExtent(object):
 
 class RTreeManager(object):
 
-    def __init__(self, base_shapefile=None):
+    """
+    A class to handle nearest neighbor lookups and spatial intersections with RTree
+    """
+
+    def __init__(self, base_shapefile=None, name_field=None):
 
         self.utm_shp_path = os.path.join(MAIN_PATH.replace('mpglue', 'mappy'), 'utilities', 'sentinel')
 
@@ -980,10 +984,12 @@ class RTreeManager(object):
         else:
             self.rtree_index = dict()
 
+        self.field_dict = dict()
+
         # Setup the RTree index
         with vopen(self.base_shapefile_) as bdy_info:
 
-            for f in xrange(0, bdy_info.n_feas):
+            for f in range(0, bdy_info.n_feas):
 
                 bdy_feature = bdy_info.lyr.GetFeature(f)
                 bdy_geometry = bdy_feature.GetGeometryRef()
@@ -994,20 +1000,35 @@ class RTreeManager(object):
                 else:
                     self.rtree_index[f] = (en[0], en[1], en[2], en[3])
 
-                # bdy_feature.Destroy()
-                # bdy_feature = None
-                # bdy_geometry = None
+                if isinstance(base_shapefile, str):
+
+                    feature_name = bdy_feature.GetField(name_field)
+
+                    self.field_dict[f] = dict(name=feature_name,
+                                              extent=dict(left=en[0],
+                                                          right=en[1],
+                                                          bottom=en[2],
+                                                          top=en[3]))
 
         bdy_info = None
 
-        # Load the RTree info
-        self.rtree_info = os.path.join(MAIN_PATH.replace('mpglue', 'mappy'),
-                                       'utilities', 'sentinel', 'utm_grid_info.txt')
+        if not isinstance(base_shapefile, str):
 
-        self.field_dict = pickle.load(file(self.rtree_info, 'rb'))
+            # Load the RTree info for the MGRS grid.
+            self.rtree_info = os.path.join(MAIN_PATH.replace('mpglue', 'mappy'),
+                                           'utilities', 'sentinel', 'utm_grid_info.txt')
 
-    def get_intersecting_features(self, shapefile2intersect=None, envelope=None,
-                                  epsg=None, proj4=None, proj=None, lat_lon=None):
+            self.field_dict = pickle.load(file(self.rtree_info, 'rb'))
+
+    def get_intersecting_features(self,
+                                  shapefile2intersect=None,
+                                  get_centroid_feature=False,
+                                  name_field=None,
+                                  envelope=None,
+                                  epsg=None,
+                                  proj4=None,
+                                  proj=None,
+                                  lat_lon=None):
 
         """
         Intersects the RTree index with a shapefile or extent envelope.
@@ -1018,37 +1039,42 @@ class RTreeManager(object):
             # Open the base shapefile
             with vopen(shapefile2intersect) as bdy_info:
 
-                bdy_feature = bdy_info.lyr.GetFeature(0)
-                bdy_geometry = bdy_feature.GetGeometryRef()
-                bdy_envelope = bdy_geometry.GetEnvelope()
+                if bdy_info.n_feas == 1:
 
-            bdy_info = None
+                    bdy_feature = bdy_info.lyr.GetFeature(0)
+                    bdy_geometry = bdy_feature.GetGeometryRef()
+                    bdy_envelope = bdy_geometry.GetEnvelope()
 
-            # left, right, bottom, top
-            envelope = [bdy_envelope[0], bdy_envelope[1], bdy_envelope[2], bdy_envelope[3]]
+                    # left, right, bottom, top
+                    envelope = [bdy_envelope[0], bdy_envelope[1], bdy_envelope[2], bdy_envelope[3]]
 
         image_envelope = dict(left=envelope[0],
                               right=envelope[1],
                               bottom=envelope[2],
                               top=envelope[3])
 
-        # Transform the points from UTM to WGS84
+        # Transform the points from ___ to WGS84.
         if isinstance(epsg, int):
+
             e2w = TransformExtent(image_envelope, epsg)
             envelope = [e2w.left, e2w.right, e2w.bottom, e2w.top]
+
         elif isinstance(proj4, str):
+
             e2w = TransformExtent(image_envelope, proj4)
             envelope = [e2w.left, e2w.right, e2w.bottom, e2w.top]
+
         elif isinstance(proj, str):
+
             e2w = TransformExtent(image_envelope, proj, to_epsg=lat_lon)
             envelope = [e2w.left, e2w.right, e2w.bottom, e2w.top]
 
         if rtree_installed:
             index_iter = self.rtree_index.intersection(envelope)
         else:
-            index_iter = xrange(0, len(self.field_dict))
+            index_iter = range(0, len(self.field_dict))
 
-        self.grid_infos = []
+        self.grid_infos = list()
 
         # Intersect the base shapefile bounding box
         #   with the UTM grids.
@@ -1056,37 +1082,101 @@ class RTreeManager(object):
 
             grid_info = self.field_dict[n]
 
-            # Create a polygon object from the coordinates.
-            # 0:left, 1:right, 2:bottom, 3:top
-            coord_wkt = 'POLYGON (({:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}))'.format(
-                grid_info['extent']['left'],
-                grid_info['extent']['top'],
-                grid_info['extent']['right'],
-                grid_info['extent']['top'],
-                grid_info['extent']['right'],
-                grid_info['extent']['bottom'],
-                grid_info['extent']['left'],
-                grid_info['extent']['bottom'],
-                grid_info['extent']['left'],
-                grid_info['extent']['top'])
+            if get_centroid_feature:
 
-            coord_poly = ogr.CreateGeometryFromWkt(coord_wkt)
+                # Get the polygon coordinates.
+                coord_poly = self._get_coord_poly(e2w)
 
-            if isinstance(shapefile2intersect, str):
+                with vopen(self.base_shapefile_) as svi_info:
 
-                # Check if the feature intersects
-                #   the base shapefile.
-                if not bdy_geometry.Intersection(coord_poly).IsEmpty():
-                    self.grid_infos.append(grid_info)
+                    for svi_fea_iter in range(0, svi_info.n_feas):
+
+                        svi_feature = svi_info.lyr.GetFeature(svi_fea_iter)
+                        svi_field = svi_feature.GetField(name_field)
+
+                        if not isinstance(svi_field, str):
+                            continue
+
+                        if svi_field.strip() == grid_info['name']:
+
+                            svi_geometry = svi_feature.GetGeometryRef()
+
+                            # Check if the feature's centroid
+                            #   is within the base shapefile.
+                            if coord_poly.Centroid().Within(svi_geometry):
+
+                                if grid_info not in self.grid_infos:
+                                    self.grid_infos.append(grid_info)
+
+            #     # Open the shapefile and check each feature.
+            #     with vopen(shapefile2intersect) as svi_info:
+            #
+            #         if svi_info.n_feas == 1:
+            #
+            #             svi_feature = svi_info.lyr.GetFeature(0)
+            #             svi_geometry = svi_feature.GetGeometryRef()
+            #
+            #             # Check if the feature intersects
+            #             #   the base shapefile.
+            #             if coord_poly.Intersects(svi_geometry):
+            #                 self.grid_infos.append(grid_info)
+            #
+            #         else:
+            #
+            #             for svi_fea_iter in range(0, svi_info.n_feas):
+            #
+            #                 svi_feature = svi_info.lyr.GetFeature(svi_fea_iter)
+            #                 # svi_field = svi_feature.GetField(name_field)
+            #
+            #                 # if svi_field.strip() == grid_info['name']:
+            #
+            #                 svi_geometry = svi_feature.GetGeometryRef()
+            #
+            #                 # Check if the feature's centroid
+            #                 #   is within the base shapefile.
+            #                 if coord_poly.Centroid().Within(svi_geometry):
+            #
+            #                     if grid_info not in self.grid_infos:
+            #                         self.grid_infos.append(grid_info)
 
             else:
                 self.grid_infos.append(grid_info)
 
-        # bdy_feature.Destroy()
-        # bdy_feature = None
-        # bdy_geometry = None
+    def _get_coord_poly(self, the_extent_info):
 
-        # self._cleanup()
+        if isinstance(the_extent_info, dict):
+
+            # Create a polygon object from the coordinates.
+            # 0:left, 1:right, 2:bottom, 3:top
+            coord_wkt = 'POLYGON (({:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}))'.format(
+                the_extent_info['extent']['left'],
+                the_extent_info['extent']['top'],
+                the_extent_info['extent']['right'],
+                the_extent_info['extent']['top'],
+                the_extent_info['extent']['right'],
+                the_extent_info['extent']['bottom'],
+                the_extent_info['extent']['left'],
+                the_extent_info['extent']['bottom'],
+                the_extent_info['extent']['left'],
+                the_extent_info['extent']['top'])
+
+        else:
+
+            # Create a polygon object from the coordinates.
+            # 0:left, 1:right, 2:bottom, 3:top
+            coord_wkt = 'POLYGON (({:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}))'.format(
+                the_extent_info.left,
+                the_extent_info.top,
+                the_extent_info.right,
+                the_extent_info.top,
+                the_extent_info.right,
+                the_extent_info.bottom,
+                the_extent_info.left,
+                the_extent_info.bottom,
+                the_extent_info.left,
+                the_extent_info.top)
+
+        return ogr.CreateGeometryFromWkt(coord_wkt)
 
     def _cleanup(self):
 

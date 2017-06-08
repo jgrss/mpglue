@@ -92,6 +92,7 @@ def get_console_dict():
                                 'recode=mpglue.classification.recode:main',
                                 'raster-calc=mpglue.raster_calc:main',
                                 'veg-indices=mpglue.veg_indices:main',
+                                'vrt-builder=mpglue.vrt_builder:main',
                                 'raster-tools=mpglue.raster_tools:main',
                                 'vector-tools=mpglue.vector_tools:main']}
 

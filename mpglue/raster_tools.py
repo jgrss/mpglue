@@ -2940,16 +2940,22 @@ def warp(input_image, output_image, out_epsg=None, in_epsg=None, resample='neare
 
     if isinstance(d_type, str):
 
-        awargs = _merge_dicts(dict(srcSRS=in_epsg, dstSRS=out_epsg,
-                                   xRes=cell_size[0], yRes=cell_size[1],
+        awargs = _merge_dicts(dict(srcSRS=in_epsg,
+                                   dstSRS=out_epsg,
+                                   xRes=cell_size[0],
+                                   yRes=cell_size[1],
                                    outputType=STORAGE_DICT_GDAL[d_type],
-                                   resampleAlg=RESAMPLE_DICT[resample]), kwargs)
+                                   resampleAlg=RESAMPLE_DICT[resample]),
+                              kwargs)
 
     else:
 
-        awargs = _merge_dicts(dict(srcSRS=in_epsg, dstSRS=out_epsg,
-                                   xRes=cell_size[0], yRes=cell_size[1],
-                                   resampleAlg=RESAMPLE_DICT[resample]), kwargs)
+        awargs = _merge_dicts(dict(srcSRS=in_epsg,
+                                   dstSRS=out_epsg,
+                                   xRes=cell_size[0],
+                                   yRes=cell_size[1],
+                                   resampleAlg=RESAMPLE_DICT[resample]),
+                              kwargs)
 
     warp_options = gdal.WarpOptions(**awargs)
 
@@ -2981,7 +2987,7 @@ def translate(input_image, output_image, cell_size=0, d_type=None, **kwargs):
         kwargs:
             format='GTiff', outputType=0, bandList=None, maskBand=None, width=0, height=0,
             widthPct=0.0, heightPct=0.0, xRes=0.0, yRes=0.0, creationOptions=None, srcWin=None,
-            projWin=None, projWinSRS=None, strict=False, unscale=False, scaleParams=None,
+            projWin=None [ulx, uly, lrx, lry], projWinSRS=None, strict=False, unscale=False, scaleParams=None,
             exponents=None, outputBounds=None, metadataOptions=None, outputSRS=None, GCPs=None,
             noData=None, rgbExpand=None, stats=False, rat=True, resampleAlg=None,
             callback=None, callback_data=None
@@ -2996,11 +3002,15 @@ def translate(input_image, output_image, cell_size=0, d_type=None, **kwargs):
 
     if isinstance(d_type, str):
 
-        translate_options = gdal.TranslateOptions(xRes=cell_size, yRes=cell_size,
-                                                  outputType=STORAGE_DICT_GDAL[d_type], **kwargs)
+        translate_options = gdal.TranslateOptions(xRes=cell_size,
+                                                  yRes=cell_size,
+                                                  outputType=STORAGE_DICT_GDAL[d_type],
+                                                  **kwargs)
 
     else:
-        translate_options = gdal.TranslateOptions(xRes=cell_size, yRes=cell_size, **kwargs)
+        translate_options = gdal.TranslateOptions(xRes=cell_size,
+                                                  yRes=cell_size,
+                                                  **kwargs)
 
     out_ds = gdal.Translate(output_image, input_image, options=translate_options)
 

@@ -32,7 +32,7 @@ except ImportError:
 
 # Scikit-image
 try:
-    from skimage.measure import regionprops
+    from skimage.measure import label, regionprops
 except ImportError:
     raise ImportError('Scikit-image must be installed')
 
@@ -730,12 +730,17 @@ class object_accuracy(object):
         >>> oi.write_stats('/out_object_accuracy.tif', o_info)
     """
 
-    def __init__(self, reference_array, predicted_array, image_id=None):
+    def __init__(self,
+                 reference_array,
+                 predicted_array,
+                 image_id=None,
+                 objects_labeled=True):
 
         # predicted_array[predicted_array > 0] = 1
         # reference_array[reference_array > 0] = 1
 
         self.image_id = image_id
+        self.objects_labeled = objects_labeled
 
         self.unique_object_ids = np.unique(reference_array)
 
@@ -746,7 +751,9 @@ class object_accuracy(object):
         self.predicted_array = predicted_array
 
         # convert the predictions to binary
-        self.predicted_array[self.predicted_array > 0] = 1
+        # self.predicted_array[self.predicted_array > 0] = 1
+        # print np.unique(self.predicted_array)
+        # sys.exit()
 
         # over_segmentation = band 1
         # under_segmentation = band 2
@@ -757,9 +764,20 @@ class object_accuracy(object):
 
     def label_objects(self):
 
-        # Label the objects of the reference array.
-        # self.reference_objects, num_objs = lab_img(self.reference_array)
-        self.predicted_objects, num_objs = lab_img(self.predicted_array)
+        # Label the objects of the predicted array.
+        if self.objects_labeled:
+            self.predicted_objects = self.predicted_array
+        else:
+            self.predicted_objects, __ = lab_img(self.predicted_array)
+
+        # plt.subplot(121)
+        # plt.imshow(self.predicted_objects)
+        # plt.axis('off')
+        # plt.subplot(122)
+        # plt.imshow(self.reference_array)
+        # plt.axis('off')
+        # plt.show()
+        # sys.exit()
 
         # get the object properties of the labeled reference array
         # self.props = regionprops(self.reference_objects)
@@ -776,7 +794,8 @@ class object_accuracy(object):
         self.frag = []
         self.shape = []
         self.dist = []
-        self.area = []
+        self.area_reference = []
+        self.area_predicted = []
 
         # iterate over each object
         for uoi in self.unique_object_ids:
@@ -834,6 +853,8 @@ class object_accuracy(object):
                 self.overlap_sum = np.where((self.predicted_sub == unique_label) &
                                             (self.reference_sub == 1), 1, 0).sum()
 
+                # Take the object with the highest
+                #   number of overlapping pixels.
                 if self.overlap_sum > self.max_sum:
 
                     # This is the predicted object sum, which is
@@ -844,13 +865,18 @@ class object_accuracy(object):
                     # Get the object properties of the current predicted object
                     pprops = regionprops(self.predicted_sub_)
 
-                    predicted_object_properties = [(pprop.eccentricity, pprop.centroid) for pprop in pprops][0]
+                    predicted_object_properties = [(pprop.eccentricity,
+                                                    pprop.centroid,
+                                                    pprop.area) for pprop in pprops][0]
 
                     # Get the eccentricity of the predicted object.
                     self.predicted_eccentricity = predicted_object_properties[0]
 
                     # Get the centroid of the predicted object.
                     self.predicted_centroid = predicted_object_properties[1]
+
+                    # Get the area of the predicted object.
+                    self.predicted_area = predicted_object_properties[2]
 
                     # The object label of the highest overlapping object.
                     self.max_label = copy(unique_label)
@@ -875,7 +901,8 @@ class object_accuracy(object):
             self.frag.append(self.fragmentation())
             self.shape.append(self.shape_error())
             self.dist.append(self.offset_error())
-            self.area.append(self.reference_area)
+            self.area_reference.append(self.reference_area)
+            self.area_predicted.append(self.predicted_area)
 
         self.error_array[self.error_array == 999] = 0
 
@@ -1005,16 +1032,32 @@ class object_accuracy(object):
 
         with open(out_report, 'w') as ro:
 
-            ro.write('UNQ,ID,AREA,OVER,UNDER,FRAG,SHAPE,OFFSET\n')
+            ro.write('UNQ,ID,AREA_REF,AREA_PRED,OVER,UNDER,FRAG,SHAPE,OFFSET\n')
 
-            for unq, ar, ov, un, fr, sh, di in zip(self.ids, self.area,
-                                                   self.over, self.under,
-                                                   self.frag, self.shape, self.dist):
+            for unq, ar, ap, ov, un, fr, sh, di in zip(self.ids,
+                                                       self.area_reference,
+                                                       self.area_predicted,
+                                                       self.over,
+                                                       self.under,
+                                                       self.frag,
+                                                       self.shape,
+                                                       self.dist):
 
-                ro.write('{:d},{},{:f},{:f},{:f},{:f},{:f},{:f}\n'.format(int(unq), self.image_id,
-                                                                          ar, ov, un, fr, sh, di))
+                ro.write('{:d},{},{:f},{:f},{:f},{:f},{:f},{:f},{:f}\n'.format(int(unq),
+                                                                               self.image_id,
+                                                                               ar,
+                                                                               ap,
+                                                                               ov,
+                                                                               un,
+                                                                               fr,
+                                                                               sh,
+                                                                               di))
 
     def write_stats(self, out_image, o_info):
 
-        raster_tools.write2raster(self.error_array, out_image, o_info=o_info,
-                                  compress='none', tile=False, flush_final=True)
+        raster_tools.write2raster(self.error_array,
+                                  out_image,
+                                  o_info=o_info,
+                                  compress='none',
+                                  tile=False,
+                                  flush_final=True)
