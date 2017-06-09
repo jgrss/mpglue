@@ -34,6 +34,51 @@ except:
     print('PySAL is not installed')
 
 
+ITER_DICT = {0: '0',
+             10: '0...10',
+             20: '0...10...20',
+             30: '0...10...20...30',
+             40: '0...10...20...30...40',
+             50: '0...10...20...30...40...50',
+             60: '0...10...20...30...40...50...60',
+             70: '0...10...20...30...40...50...60...70',
+             80: '0...10...20...30...40...50...60...70...80',
+             90: '0...10...20...30...40...50...60...70...80...90',
+             100: '0...10...20...30...40...50...60...70...80...90...100'}
+
+
+def get_print_progress(i_iter, n_iters):
+
+    int_iter = int((float(i_iter) / float(n_iters)) * 100.)
+
+    if int_iter in ITER_DICT:
+        return ITER_DICT[int_iter]
+    else:
+
+        if int_iter < 10:
+            return ITER_DICT[0]
+        elif 10 <= int_iter < 20:
+            return ITER_DICT[10]
+        elif 20 <= int_iter < 30:
+            return ITER_DICT[20]
+        elif 30 <= int_iter < 40:
+            return ITER_DICT[30]
+        elif 40 <= int_iter < 50:
+            return ITER_DICT[40]
+        elif 50 <= int_iter < 60:
+            return ITER_DICT[50]
+        elif 60 <= int_iter < 70:
+            return ITER_DICT[60]
+        elif 70 <= int_iter < 80:
+            return ITER_DICT[70]
+        elif 80 <= int_iter < 90:
+            return ITER_DICT[80]
+        elif 90 <= int_iter < 100:
+            return ITER_DICT[90]
+        else:
+            return ITER_DICT[100]
+
+
 def get_path():
     return os.path.dirname(os.path.realpath(__file__))
 

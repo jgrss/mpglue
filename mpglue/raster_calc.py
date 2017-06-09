@@ -71,12 +71,12 @@ def raster_calc(output, equation=None, out_type='byte', extent=None,
     """
 
     # Set the image dictionary
-    image_dict = {}
-    info_dict = {}
-    info_list = []
-    band_dict = {}
+    image_dict = dict()
+    info_dict = dict()
+    info_list = list()
+    band_dict = dict()
 
-    temp_files = []
+    temp_files = list()
 
     if isinstance(extent, str):
 
@@ -119,6 +119,7 @@ def raster_calc(output, equation=None, out_type='byte', extent=None,
 
             exec('i_info_{} = raster_tools.ropen(r"{}")'.format(kw, vw))
             exec('info_dict["{}"] = i_info_{}'.format(kw, kw))
+            # exec('info_dict["{}"] = r"{}"'.format(kw, vw))
             exec('info_list.append(i_info_{})'.format(kw))
 
             # exec 'i_info_{} = raster_tools.ropen(r"{}")'.format(kw, vw)
@@ -184,11 +185,11 @@ def raster_calc(output, equation=None, out_type='byte', extent=None,
         ctr, pbar = _iteration_parameters(o_info.rows, o_info.cols, block_rows, block_cols)
 
     # Iterate over the minimum overlapping extent.
-    for i in xrange(0, o_info.rows, block_rows):
+    for i in range(0, o_info.rows, block_rows):
 
         n_rows = raster_tools.n_rows_cols(i, block_rows, o_info.rows)
 
-        for j in xrange(0, o_info.cols, block_cols):
+        for j in range(0, o_info.cols, block_cols):
 
             n_cols = raster_tools.n_rows_cols(j, block_cols, o_info.cols)
 

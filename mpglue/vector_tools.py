@@ -916,6 +916,17 @@ class TransformUTM(object):
         self.bottom = copy.copy(ptr.y_transform)
 
 
+class TransfromEmpty(object):
+
+    def __init__(self):
+        pass
+
+    def update_info(self, **kwargs):
+
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
+
+
 class TransformExtent(object):
 
     """
@@ -1069,6 +1080,14 @@ class RTreeManager(object):
             e2w = TransformExtent(image_envelope, proj, to_epsg=lat_lon)
             envelope = [e2w.left, e2w.right, e2w.bottom, e2w.top]
 
+        else:
+
+            e2w = TransfromEmpty()
+            e2w.update_info(left=image_envelope['left'],
+                            top=image_envelope['top'],
+                            right=image_envelope['right'],
+                            bottom=image_envelope['bottom'])
+
         if rtree_installed:
             index_iter = self.rtree_index.intersection(envelope)
         else:
@@ -1106,7 +1125,12 @@ class RTreeManager(object):
                             if coord_poly.Centroid().Within(svi_geometry):
 
                                 if grid_info not in self.grid_infos:
+
+                                    grid_info['intersecting_centroid'] = str(coord_poly.Centroid()).strip()
+
                                     self.grid_infos.append(grid_info)
+
+                        svi_feature.Destroy()
 
             #     # Open the shapefile and check each feature.
             #     with vopen(shapefile2intersect) as svi_info:
