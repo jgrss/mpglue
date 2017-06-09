@@ -889,18 +889,24 @@ class object_accuracy(object):
 
             # now, <max_label> has the most overlapping pixels with
             # the reference object, so we can get statistics for it.
-            self.error_array[0][self.reference_array == uoi] = self.over_segmentation()
-            self.error_array[1][self.reference_array == uoi] = self.under_segmentation()
-            self.error_array[2][self.reference_array == uoi] = self.fragmentation()
-            self.error_array[3][self.reference_array == uoi] = self.shape_error()
-            self.error_array[4][self.reference_array == uoi] = self.offset_error()
+            stat_over = self.over_segmentation()
+            stat_under = self.under_segmentation()
+            stat_frag = self.fragmentation()
+            stat_shape = self.shape_error()
+            stat_off = self.offset_error()
+
+            self.error_array[0][self.reference_array == uoi] = stat_over
+            self.error_array[1][self.reference_array == uoi] = stat_under
+            self.error_array[2][self.reference_array == uoi] = stat_frag
+            self.error_array[3][self.reference_array == uoi] = stat_shape
+            self.error_array[4][self.reference_array == uoi] = stat_off
 
             self.ids.append(uoi)
-            self.over.append(self.over_segmentation())
-            self.under.append(self.under_segmentation())
-            self.frag.append(self.fragmentation())
-            self.shape.append(self.shape_error())
-            self.dist.append(self.offset_error())
+            self.over.append(stat_over)
+            self.under.append(stat_under)
+            self.frag.append(stat_frag)
+            self.shape.append(stat_shape)
+            self.dist.append(stat_off)
             self.area_reference.append(self.reference_area)
             self.area_predicted.append(self.predicted_area)
 
@@ -1004,7 +1010,6 @@ class object_accuracy(object):
         return (r_i - 1.) / (self.reference_object_area - 1.)
 
     def shape_error(self):
-
         return abs(self.reference_eccentricity - self.predicted_eccentricity)
 
     def offset_error(self):
@@ -1032,7 +1037,7 @@ class object_accuracy(object):
 
         with open(out_report, 'w') as ro:
 
-            ro.write('UNQ,ID,AREA_REF,AREA_PRED,OVER,UNDER,FRAG,SHAPE,OFFSET\n')
+            ro.write('UNQ,ID,PIX_REF,PIX_PRED,OVER,UNDER,FRAG,SHAPE,OFFSET\n')
 
             for unq, ar, ap, ov, un, fr, sh, di in zip(self.ids,
                                                        self.area_reference,
@@ -1043,15 +1048,15 @@ class object_accuracy(object):
                                                        self.shape,
                                                        self.dist):
 
-                ro.write('{:d},{},{:f},{:f},{:f},{:f},{:f},{:f},{:f}\n'.format(int(unq),
-                                                                               self.image_id,
-                                                                               ar,
-                                                                               ap,
-                                                                               ov,
-                                                                               un,
-                                                                               fr,
-                                                                               sh,
-                                                                               di))
+                ro.write('{:d},{},{:d},{:d},{:.4f},{:.4f},{:.4f},{:.4f},{:.4f}\n'.format(int(unq),
+                                                                                         self.image_id,
+                                                                                         int(ar),
+                                                                                         int(ap),
+                                                                                         ov,
+                                                                                         un,
+                                                                                         fr,
+                                                                                         sh,
+                                                                                         di))
 
     def write_stats(self, out_image, o_info):
 
