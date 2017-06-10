@@ -2138,6 +2138,127 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
         self.__exit__(None, None, None)
 
 
+class PanSharpen(object):
+
+    """
+    A class to pan sharpen an image
+
+    Args:
+        multi_image (str)
+        pan_array (str)
+        out_dir (Optional[str])
+        method (Optional[str])
+
+    Equation:
+        DNF = (P - IW * I) / (RW * R + GW * G + BW * B)
+        Red_out = R * DNF
+        Green_out = G * DNF
+        Blue_out = B * DNF
+        Infrared_out = I * DNF
+
+    Example:
+        >>> ps = PanSharpen('/multi.tif', '/pan.tif')
+        >>> ps.sharpen()
+    """
+
+    def __init__(self, multi_image, pan_image, out_dir=None, method='Brovey'):
+
+        self.multi_image = multi_image
+        self.pan_image = pan_image
+        self.method = method
+
+        if isinstance(out_dir, str):
+            self.out_dir = out_dir
+        else:
+            self.out_dir = os.path.split(self.multi_image)[0]
+
+        f_name = os.path.split(self.multi_image)[1]
+        self.f_base, self.f_ext = os.path.splitext(f_name)
+
+        self.multi_image_ps = os.path.join(self.out_dir, '{}_pan.tif'.format(self.f_base))
+
+    def sharpen(self):
+
+        self._warp_multi()
+        self._sharpen()
+
+    def _brozey(self, im):
+
+        try:
+            import numexpr as ne
+        except:
+            pass
+
+        blue = im[0][0]
+        green = im[0][1]
+        red = im[0][2]
+
+        bw = .2
+        gw = 1.
+        rw = 1.
+        iw = .5
+
+        if im[0].shape[0] == 4:
+
+            nir = im[0][3]
+            pan_array = im[1]
+
+            dnf = ne.evaluate('(pan_array - iw * nir) / (rw * red + gw * green + bw * blue)')
+
+        # TODO
+        # else:
+        #     dnf = ne.evaluate('(pan_array - iw * nir) / (rw * red + gw * green + bw * blue)')
+
+        im = im[0]
+
+        for bi in range(0, im.shape[0]):
+            im[bi] *= dnf
+
+        return im
+
+    def _sharpen(self):
+
+        with ropen(self.multi_warped) as m_info, ropen(self.pan_image) as p_info:
+
+            o_info = m_info.copy()
+
+            bp = BlockFunc(self._brozey,
+                           [m_info, p_info],
+                           self.multi_image_ps,
+                           o_info,
+                           band_list=[range(1, m_info.bands+1), 1],
+                           d_types=['float32', 'float32'],
+                           print_statement='\nPan sharpening using {} ...\n'.format(self.method))
+
+            bp.run()
+
+        # os.remove(self.multi_warped)
+
+    def _warp_multi(self):
+
+        # Get warping info.
+        with ropen(self.pan_image) as p_info:
+
+            extent = p_info.extent
+            cell_size = p_info.cellY
+
+        self.multi_warped = os.path.join(self.out_dir, '{}_warped.tif'.format(self.f_base))
+
+        print('Resampling to pan scale ...')
+
+        # Resample the multispectral bands.
+        # warp(self.multi_image,
+        #      self.multi_warped,
+        #      cell_size=cell_size,
+        #      resample='cubic',
+        #      outputBounds=[extent['left'],
+        #                    extent['bottom'],
+        #                    extent['right'],
+        #                    extent['top']],
+        #      multithread=True,
+        #      creationOptions=['GDAL_CACHEMAX=256', 'TILED=YES'])
+
+
 def gdal_open(image2open, band):
 
     """
@@ -2506,9 +2627,7 @@ class BlockFunc(object):
     def _process_blocks(self):
 
         if self.write_array:
-
             out_raster = create_raster(self.out_image, self.out_info)
-            out_raster.get_band(1)
 
         # n_blocks = 0
         # for i in xrange(0, self.proc_info.rows, self.block_rows):
@@ -2526,7 +2645,7 @@ class BlockFunc(object):
                                               self.block_rows, self.block_cols)
 
         # iterate over the images and get change pixels
-        for i in xrange(0, self.proc_info.rows, self.block_rows):
+        for i in range(0, self.proc_info.rows, self.block_rows):
 
             n_rows = n_rows_cols(i, self.block_rows, self.proc_info.rows)
 
@@ -2537,7 +2656,7 @@ class BlockFunc(object):
                 y_pad_minus = 0
                 y_pad_plus = 0
 
-            for j in xrange(0, self.proc_info.cols, self.block_cols):
+            for j in range(0, self.proc_info.cols, self.block_cols):
 
                 n_cols = n_rows_cols(j, self.block_cols, self.proc_info.cols)
 
@@ -2618,10 +2737,25 @@ class BlockFunc(object):
                 if isinstance(output, tuple):
 
                     if self.write_array:
-                        out_raster.write_array(output[0], i=i, j=j)
+
+                        if output[0].shape[0] > 1:
+
+                            for obi, obb in enumerate(output[0]):
+
+                                out_raster.write_array(obb,
+                                                       i=i,
+                                                       j=j,
+                                                       band=obi + 1)
+
+                        else:
+
+                            out_raster.write_array(output[0],
+                                                   i=i,
+                                                   j=j,
+                                                   band=1)
 
                     # Get the other results.
-                    for ri in xrange(1, len(output)):
+                    for ri in range(1, len(output)):
 
                         self.kwargs[self.out_attributes[ri-1]] = output[ri]
                         setattr(self, self.out_attributes[ri-1], output[ri])
@@ -2629,7 +2763,22 @@ class BlockFunc(object):
                 else:
 
                     if self.write_array:
-                        out_raster.write_array(output, i=i, j=j)
+
+                        if output.shape[0] > 1:
+
+                            for obi, obb in enumerate(output):
+
+                                out_raster.write_array(obb,
+                                                       i=i,
+                                                       j=j,
+                                                       band=obi+1)
+
+                        else:
+
+                            out_raster.write_array(output,
+                                                   i=i,
+                                                   j=j,
+                                                   band=1)
 
                 if not self.be_quiet:
 
