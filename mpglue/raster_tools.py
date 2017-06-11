@@ -147,6 +147,10 @@ RESAMPLE_DICT = {'average': gdal.GRA_Average,
                  'cubic': gdal.GRA_Cubic}
 
 
+GOOGLE_CLOUD_SENSORS = dict(oli_tirs='LC08',
+                            etm='LE07',
+                            tm='LT05')
+
 def get_sensor_dict():
 
     return {'landsat_tm': 'tm',
@@ -1613,30 +1617,35 @@ class LandsatParser(object):
 
             wrs = soup.find('wrs')
 
+            try:
+                self.product_id = str(soup.find('product_id').text.strip())
+            except:
+                self.product_id = None
+
             self.scene_id = soup.find('lpgs_metadata_file').text
             si_index = self.scene_id.find('_')
-            self.scene_id = self.scene_id[:si_index]
+            self.scene_id = self.scene_id[:si_index].strip()
 
-            self.path = wrs['path']
+            self.path = wrs['path'].strip()
 
-            self.row = wrs['row']
+            self.row = wrs['row'].strip()
 
-            self.sensor = soup.find('instrument').text
+            self.sensor = soup.find('instrument').text.strip()
 
-            self.series = soup.find('satellite').text
+            self.series = soup.find('satellite').text.strip()
 
-            self.date = soup.find('acquisition_date').text
+            self.date = soup.find('acquisition_date').text.strip()
 
             self.date_ = self.date.split('-')
-            self.year = self.date_[0]
-            self.month = self.date_[1]
-            self.day = self.date_[2]
+            self.year = self.date_[0].strip()
+            self.month = self.date_[1].strip()
+            self.day = self.date_[2].strip()
 
             solar_angles = soup.find('solar_angles')
 
-            self.zenith = solar_angles['zenith']
+            self.zenith = float(solar_angles['zenith'].strip())
             self.elev = 90. - self.zenith
-            self.azimuth = solar_angles['azimuth']
+            self.azimuth = float(solar_angles['azimuth'].strip())
 
 
 class SentinelParser(object):
@@ -2192,21 +2201,23 @@ class PanSharpen(object):
         with ropen(self.multi_image) as m_info:
             m_bands = m_info.bands
 
+        print('\nPan-sharpening ...\n')
+
         if m_bands == 4:
 
             com = 'gdal_pansharpen.py {} {} {} ' \
-                  '-w .2 -w 1 -w 1 -w .5 ' \
-                  '-bitdepth 16 -threads ALL_CPUS'.format(self.pan_image,
-                                                          self.multi_image,
-                                                          self.multi_image_ps)
+                  '-w .15 -w .4 -w .4 -w .05 -r cubic ' \
+                  '-bitdepth 16 -threads ALL_CPUS -co TILED=YES -co COMPRESS=LZW'.format(self.pan_image,
+                                                                                         self.multi_image,
+                                                                                         self.multi_image_ps)
 
         else:
 
             com = 'gdal_pansharpen.py {} {} {} ' \
-                  '-w .2 -w 1 -w 1 ' \
-                  '-bitdepth 16 -threads ALL_CPUS'.format(self.pan_image,
-                                                          self.multi_image,
-                                                          self.multi_image_ps)
+                  '-w .2 -w 1 -w 1 -r cubic ' \
+                  '-bitdepth 16 -threads ALL_CPUS -co TILED=YES -co COMPRESS=LZW'.format(self.pan_image,
+                                                                                         self.multi_image,
+                                                                                         self.multi_image_ps)
 
         subprocess.call(com, shell=True)
 
