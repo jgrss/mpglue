@@ -18,6 +18,7 @@ import shutil
 import itertools
 import platform
 import ctypes
+import subprocess
 
 if platform.system() == 'Darwin':
 
@@ -2156,12 +2157,14 @@ class PanSharpen(object):
         Blue_out = B * DNF
         Infrared_out = I * DNF
 
+        pan / ((rgb[0] + rgb[1] + rgb[2] * weight) / (2 + weight))
+
     Example:
         >>> ps = PanSharpen('/multi.tif', '/pan.tif')
         >>> ps.sharpen()
     """
 
-    def __init__(self, multi_image, pan_image, out_dir=None, method='Brovey'):
+    def __init__(self, multi_image, pan_image, out_dir=None, method='brovey'):
 
         self.multi_image = multi_image
         self.pan_image = pan_image
@@ -2179,10 +2182,35 @@ class PanSharpen(object):
 
     def sharpen(self):
 
-        self._warp_multi()
-        self._sharpen()
+        self._sharpen_gdal()
 
-    def _brozey(self, im):
+        # self._warp_multi()
+        # self._sharpen()
+
+    def _sharpen_gdal(self):
+
+        with ropen(self.multi_image) as m_info:
+            m_bands = m_info.bands
+
+        if m_bands == 4:
+
+            com = 'gdal_pansharpen.py {} {} {} ' \
+                  '-w .2 -w 1 -w 1 -w .5 ' \
+                  '-bitdepth 16 -threads ALL_CPUS'.format(self.pan_image,
+                                                          self.multi_image,
+                                                          self.multi_image_ps)
+
+        else:
+
+            com = 'gdal_pansharpen.py {} {} {} ' \
+                  '-w .2 -w 1 -w 1 ' \
+                  '-bitdepth 16 -threads ALL_CPUS'.format(self.pan_image,
+                                                          self.multi_image,
+                                                          self.multi_image_ps)
+
+        subprocess.call(com, shell=True)
+
+    def _do_sharpen(self, im, method='brovey'):
 
         try:
             import numexpr as ne
@@ -2203,7 +2231,11 @@ class PanSharpen(object):
             nir = im[0][3]
             pan_array = im[1]
 
-            dnf = ne.evaluate('(pan_array - iw * nir) / (rw * red + gw * green + bw * blue)')
+            if self.method == 'esri':
+                dnf = ne.evaluate('pan_array - ((red*.166 + green*.167 + blue*.167 + nir*.5) / (.166+.167+.167+.5))')
+            elif self.method == 'brovey':
+                # dnf = ne.evaluate('(pan_array - (iw * nir)) / ((rw * red) + (gw * green) + (bw * blue))')
+                dnf = ne.evaluate('pan_array / (((blue * bw) + (green * gw) + (red * rw) + (nir * iw)) / (bw + gw + rw + iw))')
 
         # TODO
         # else:
@@ -2211,8 +2243,21 @@ class PanSharpen(object):
 
         im = im[0]
 
+        # plt.subplot(121)
+        # plt.imshow(im[0]+dnf)
+        # plt.axis('off')
+        # plt.subplot(122)
+        # plt.imshow(dnf)
+        # plt.axis('off')
+        # plt.show()
+        # sys.exit()
+
         for bi in range(0, im.shape[0]):
-            im[bi] *= dnf
+
+            if self.method == 'esri':
+                im[bi] += dnf
+            elif self.method == 'brovey':
+                im[bi] *= dnf
 
         return im
 
@@ -2222,13 +2267,16 @@ class PanSharpen(object):
 
             o_info = m_info.copy()
 
-            bp = BlockFunc(self._brozey,
+            bp = BlockFunc(self._do_sharpen,
                            [m_info, p_info],
                            self.multi_image_ps,
                            o_info,
                            band_list=[range(1, m_info.bands+1), 1],
                            d_types=['float32', 'float32'],
-                           print_statement='\nPan sharpening using {} ...\n'.format(self.method))
+                           block_rows=4000,
+                           block_cols=4000,
+                           print_statement='\nPan sharpening using {} ...\n'.format(self.method),
+                           method=self.method)
 
             bp.run()
 
