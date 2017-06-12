@@ -760,7 +760,7 @@ class object_accuracy(object):
         # fragmentation = band 3
         # shape error = band 4
         # offset error = band 5
-        self.error_array = np.zeros((5, self.rows, self.cols), dtype='float32') + 999
+        self.error_array = np.zeros((6, self.rows, self.cols), dtype='float32') + 999
 
     def label_objects(self):
 
@@ -788,14 +788,15 @@ class object_accuracy(object):
         Iterate over objects, where each object has a unique id
         """
 
-        self.ids = []
-        self.over = []
-        self.under = []
-        self.frag = []
-        self.shape = []
-        self.dist = []
-        self.area_reference = []
-        self.area_predicted = []
+        self.ids = list()
+        self.over = list()
+        self.under = list()
+        self.frag = list()
+        self.shape = list()
+        self.dist = list()
+        self.area_reference = list()
+        self.area_predicted = list()
+        self.relative = list()
 
         # iterate over each object
         for uoi in self.unique_object_ids:
@@ -894,12 +895,14 @@ class object_accuracy(object):
             stat_frag = self.fragmentation()
             stat_shape = self.shape_error()
             stat_off = self.offset_error()
+            stat_rel = self.relative_error()
 
             self.error_array[0][self.reference_array == uoi] = stat_over
             self.error_array[1][self.reference_array == uoi] = stat_under
             self.error_array[2][self.reference_array == uoi] = stat_frag
             self.error_array[3][self.reference_array == uoi] = stat_shape
             self.error_array[4][self.reference_array == uoi] = stat_off
+            self.error_array[5][self.reference_array == uoi] = stat_rel
 
             self.ids.append(uoi)
             self.over.append(stat_over)
@@ -909,6 +912,7 @@ class object_accuracy(object):
             self.dist.append(stat_off)
             self.area_reference.append(self.reference_area)
             self.area_predicted.append(self.predicted_area)
+            self.relative.append(stat_rel)
 
         self.error_array[self.error_array == 999] = 0
 
@@ -967,12 +971,25 @@ class object_accuracy(object):
             self.error_array[3][self.reference_objects == prop.label] = self.shape_error()
             self.error_array[4][self.reference_objects == prop.label] = self.offset_error()
 
+    def relative_error(self):
+
+        """
+        Relative object error
+
+        Equation:
+            (extracted object area - reference object area) / reference object area * 100%
+        """
+
+        return ((self.predicted_object_area - self.reference_object_area) / float(self.reference_object_area)) * 100.
+
     def over_segmentation(self):
 
         """
-        0-1 range
+        Over-segmentation
+
+        0-1 range:
             0 = perfect agreement
-            1 = high amount of oversegmentation
+            1 = high over-segmentation
         """
 
         # Get the union of the reference object and
@@ -983,9 +1000,11 @@ class object_accuracy(object):
     def under_segmentation(self):
 
         """
-        0-1 range
+        Under-segmentation
+
+        0-1 range:
             0 = perfect agreement
-            1 = high amount of undersegmentation
+            1 = high under-segmentation
         """
 
         # union(reference object, highest overlap) / sum of object with highest overlap
@@ -1037,26 +1056,28 @@ class object_accuracy(object):
 
         with open(out_report, 'w') as ro:
 
-            ro.write('UNQ,ID,PIX_REF,PIX_PRED,OVER,UNDER,FRAG,SHAPE,OFFSET\n')
+            ro.write('UNQ,ID,PIX_REF,PIX_PRED,OVER,UNDER,FRAG,SHAPE,OFFSET,RELATIVE\n')
 
-            for unq, ar, ap, ov, un, fr, sh, di in zip(self.ids,
-                                                       self.area_reference,
-                                                       self.area_predicted,
-                                                       self.over,
-                                                       self.under,
-                                                       self.frag,
-                                                       self.shape,
-                                                       self.dist):
+            for unq, ar, ap, ov, un, fr, sh, di, rl in zip(self.ids,
+                                                           self.area_reference,
+                                                           self.area_predicted,
+                                                           self.over,
+                                                           self.under,
+                                                           self.frag,
+                                                           self.shape,
+                                                           self.dist,
+                                                           self.relative):
 
-                ro.write('{:d},{},{:d},{:d},{:.4f},{:.4f},{:.4f},{:.4f},{:.4f}\n'.format(int(unq),
-                                                                                         self.image_id,
-                                                                                         int(ar),
-                                                                                         int(ap),
-                                                                                         ov,
-                                                                                         un,
-                                                                                         fr,
-                                                                                         sh,
-                                                                                         di))
+                ro.write('{:d},{},{:d},{:d},{:.4f},{:.4f},{:.4f},{:.4f},{:.4f},{:.4f}\n'.format(int(unq),
+                                                                                                self.image_id,
+                                                                                                int(ar),
+                                                                                                int(ap),
+                                                                                                ov,
+                                                                                                un,
+                                                                                                fr,
+                                                                                                sh,
+                                                                                                di,
+                                                                                                rl))
 
     def write_stats(self, out_image, o_info):
 

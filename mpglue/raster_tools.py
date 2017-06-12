@@ -3195,7 +3195,8 @@ def translate(input_image, output_image, cell_size=0, d_type=None, **kwargs):
         kwargs:
             format='GTiff', outputType=0, bandList=None, maskBand=None, width=0, height=0,
             widthPct=0.0, heightPct=0.0, xRes=0.0, yRes=0.0, creationOptions=None, srcWin=None,
-            projWin=None [ulx, uly, lrx, lry], projWinSRS=None, strict=False, unscale=False, scaleParams=None,
+            projWin=None [ulx, uly, lrx, lry], projWinSRS=None, strict=False, unscale=False,
+            scaleParams=None [[srcmin srcmax, dstmin, dstmax]],
             exponents=None, outputBounds=None, metadataOptions=None, outputSRS=None, GCPs=None,
             noData=None, rgbExpand=None, stats=False, rat=True, resampleAlg=None,
             callback=None, callback_data=None
