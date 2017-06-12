@@ -289,7 +289,7 @@ class ReadWrite(object):
 
         # Index the image by x, y coordinates (in map units).
         if (abs(y) > 0) and (abs(x) > 0):
-            __, __, self.j, self.i = get_xy_offsets(self, x=x, y=y)
+            __, __, self.j, self.i = get_xy_offsets(self, x=x, y=y, check_position=False)
             
         if isinstance(check_x, float) and isinstance(check_y, float):
 
@@ -4319,7 +4319,8 @@ def quick_plot(image_arrays, titles=['Field estimates'], colorbar_labels=['ha'],
                 #                                     out_range=(0, 255)).astype(np.uint8)
 
                 # image_array[ii] = exposure.equalize_hist(im)
-                image_array[ii] = exposure.equalize_adapthist(np.uint8(im),
+                image_array[ii] = exposure.equalize_adapthist(np.uint8(exposure.rescale_intensity(im,
+                                                                                                  out_range=(0, 255))),
                                                               kernel_size=tile_size,
                                                               clip_limit=clip_limit)
 
@@ -4361,10 +4362,17 @@ def quick_plot(image_arrays, titles=['Field estimates'], colorbar_labels=['ha'],
 
             else:
 
+                if color_map.lower() == 'random':
+
+                    image_array = np.ma.masked_where(image_array == 0, image_array)
+                    color_map = colors.ListedColormap(np.random.rand(256, 3))
+                    color_map.set_bad('none')
+
                 # my_cmap = cm.gist_stern
                 # my_cmap.set_under('#E6E6E6', alpha=1)
                 ip = ax.imshow(image_array, vmin=im_min, vmax=im_max, clim=[im_min, im_max])
                 # modest_image.imshow(ax, image_array, vmin=im_min, vmax=im_max, clim=[im_min, im_max])
+
                 ip.set_cmap(color_map)
                 ip.set_clim(im_min, im_max)
 
@@ -4839,7 +4847,7 @@ def cumulative_plot_array(image_array, small2large=True, out_fig=None):
 def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None,
                      storage='float32', match_raster=None, bigtiff='no',
                      in_memory=False, initial_value=0, where_clause=None,
-                     return_array=False, **kwargs):
+                     return_array=False, all_touched=False, **kwargs):
 
     """
     Rasterizes a vector dataset
@@ -4923,7 +4931,7 @@ def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None,
 
             create_dict = dict(left=kwargs['left'], right=kwargs['right'], top=kwargs['top'],
                                bottom=kwargs['bottom'], projection=kwargs['projection'], storage=storage, bands=1,
-                               cellY=cell_size, cellX=-cell_size, rows=kwargs['rows'], cols=kwargs['cols'])
+                               cellY=cell_size, cellX=-cell_size, rows=kwargs['rows']+1, cols=kwargs['cols']+1)
 
         else:
 
@@ -4963,6 +4971,14 @@ def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None,
 
         if isinstance(where_clause, str):
             v_info.lyr.SetAttributeFilter(where_clause)
+
+        # rasterize_options = gdal.RasterizeOptions(attribute=burn_id,
+        #                                           allTouched=all_touched)
+        #
+        # gdal.RasterizeLayer(orw.datasource,
+        #                     [1],
+        #                     v_info.lyr,
+        #                     options=rasterize_options)
 
         gdal.RasterizeLayer(orw.datasource, [1], v_info.lyr,
                             options=['ATTRIBUTE={}'.format(burn_id),

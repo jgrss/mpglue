@@ -774,7 +774,7 @@ class object_accuracy(object):
         # plt.imshow(self.predicted_objects)
         # plt.axis('off')
         # plt.subplot(122)
-        # plt.imshow(self.reference_array)
+        # plt.imshow(self.reference_array+self.predicted_objects)
         # plt.axis('off')
         # plt.show()
         # sys.exit()
@@ -850,7 +850,8 @@ class object_accuracy(object):
                 if unique_label == 0:
                     continue
 
-                # Get the pixel count where predicted and the reference object overlap.
+                # Get the pixel count where predicted and
+                #   the reference object overlap.
                 self.overlap_sum = np.where((self.predicted_sub == unique_label) &
                                             (self.reference_sub == 1), 1, 0).sum()
 
@@ -896,6 +897,22 @@ class object_accuracy(object):
             stat_shape = self.shape_error()
             stat_off = self.offset_error()
             stat_rel = self.relative_error()
+
+            # print
+            # print self.reference_eccentricity, self.predicted_eccentricity
+            # print self.reference_centroid, self.predicted_centroid
+            # print self.reference_area, self.predicted_object_area
+            # print self.max_label
+            # print self.max_sum
+            # print stat_rel
+            # plt.subplot(121)
+            # plt.imshow(self.reference_sub)
+            # plt.axis('off')
+            # plt.subplot(122)
+            # plt.imshow(self.predicted_sub_+self.reference_sub)
+            # plt.axis('off')
+            # plt.show()
+            # sys.exit()
 
             self.error_array[0][self.reference_array == uoi] = stat_over
             self.error_array[1][self.reference_array == uoi] = stat_under
@@ -1056,7 +1073,7 @@ class object_accuracy(object):
 
         with open(out_report, 'w') as ro:
 
-            ro.write('UNQ,ID,PIX_REF,PIX_PRED,OVER,UNDER,FRAG,SHAPE,OFFSET,RELATIVE\n')
+            ro.write('ID,UNQ,PIX_REF,PIX_PRED,OVER,UNDER,FRAG,SHAPE,OFFSET,RELATIVE\n')
 
             for unq, ar, ap, ov, un, fr, sh, di, rl in zip(self.ids,
                                                            self.area_reference,
@@ -1068,8 +1085,8 @@ class object_accuracy(object):
                                                            self.dist,
                                                            self.relative):
 
-                ro.write('{:d},{},{:d},{:d},{:.4f},{:.4f},{:.4f},{:.4f},{:.4f},{:.4f}\n'.format(int(unq),
-                                                                                                self.image_id,
+                ro.write('{},{:d},{:d},{:d},{:.4f},{:.4f},{:.4f},{:.4f},{:.4f},{:.4f}\n'.format(self.image_id,
+                                                                                                int(unq),
                                                                                                 int(ar),
                                                                                                 int(ap),
                                                                                                 ov,
