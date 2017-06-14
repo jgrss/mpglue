@@ -1224,7 +1224,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
         Checks whether corrupted bands exist.        
         """
 
-        self.corrupted_bands = []
+        self.corrupted_bands = list()
 
         for band in range(1, self.bands+1):
 
