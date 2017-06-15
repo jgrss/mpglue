@@ -50,7 +50,7 @@ try:
 except:
     from six.moves import cPickle as pickle
 else:
-   import pickle
+    import pickle
 
 # NumPy
 try:
