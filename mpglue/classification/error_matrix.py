@@ -38,6 +38,8 @@ except ImportError:
 
 # Matplotlib
 try:
+    import matplotlib as mpl
+    mpl.use('TkAgg')
     import matplotlib.pyplot as plt
 except ImportError:
     raise ImportError('Matplotlib must be installed')
