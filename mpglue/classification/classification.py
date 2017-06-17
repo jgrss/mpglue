@@ -109,7 +109,10 @@ except ImportError:
 # Matplotlib
 try:
     import matplotlib as mpl
-    mpl.use('TkAgg')
+
+    if os.environ.get('DISPLAY', '') == '':
+        mpl.use('Agg')
+
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D
     from matplotlib.colors import ListedColormap

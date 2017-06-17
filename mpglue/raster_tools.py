@@ -46,7 +46,10 @@ except ImportError:
 # Matplotlib
 try:
     import matplotlib as mpl
-    mpl.use('TkAgg')
+
+    if os.environ.get('DISPLAY', '') == '':
+        mpl.use('Agg')
+
     import matplotlib.pyplot as plt
     import matplotlib.gridspec as gridspec
     from matplotlib import ticker, colors, colorbar

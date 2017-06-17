@@ -5,6 +5,7 @@
 Date Created: 9/24/2011
 """
 
+import os
 import sys
 import time
 import logging
@@ -39,7 +40,10 @@ except ImportError:
 # Matplotlib
 try:
     import matplotlib as mpl
-    mpl.use('TkAgg')
+
+    if os.environ.get('DISPLAY', '') == '':
+        mpl.use('Agg')
+
     import matplotlib.pyplot as plt
 except ImportError:
     raise ImportError('Matplotlib must be installed')
