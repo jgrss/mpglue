@@ -2192,14 +2192,14 @@ class PanSharpen(object):
 
         self.multi_image_ps = os.path.join(self.out_dir, '{}_pan.tif'.format(self.f_base))
 
-    def sharpen(self):
+    def sharpen(self, w1=.2, w2=1., w3=1., w4=.5):
 
-        self._sharpen_gdal()
+        self._sharpen_gdal(w1, w2, w3, w4)
 
         # self._warp_multi()
         # self._sharpen()
 
-    def _sharpen_gdal(self):
+    def _sharpen_gdal(self, w1, w2, w3, w4):
 
         with ropen(self.multi_image) as m_info:
             m_bands = m_info.bands
@@ -2209,18 +2209,25 @@ class PanSharpen(object):
         if m_bands == 4:
 
             com = 'gdal_pansharpen.py {} {} {} ' \
-                  '-w .15 -w .4 -w .4 -w .05 -r cubic ' \
+                  '-w {:f} -w {:f} -w {:f} -w {:f} -r cubic ' \
                   '-bitdepth 16 -threads ALL_CPUS -co TILED=YES -co COMPRESS=LZW'.format(self.pan_image,
                                                                                          self.multi_image,
-                                                                                         self.multi_image_ps)
+                                                                                         self.multi_image_ps,
+                                                                                         w1,
+                                                                                         w2,
+                                                                                         w3,
+                                                                                         w4)
 
         else:
 
             com = 'gdal_pansharpen.py {} {} {} ' \
-                  '-w .2 -w 1 -w 1 -r cubic ' \
+                  '-w {:f} -w {:f} -w {:f} -r cubic ' \
                   '-bitdepth 16 -threads ALL_CPUS -co TILED=YES -co COMPRESS=LZW'.format(self.pan_image,
                                                                                          self.multi_image,
-                                                                                         self.multi_image_ps)
+                                                                                         self.multi_image_ps,
+                                                                                         w1,
+                                                                                         w2,
+                                                                                         w3)
 
         subprocess.call(com, shell=True)
 
