@@ -42,8 +42,6 @@ except ImportError:
 
 old_settings = np.seterr(all='ignore')
 
-SENSOR_DICT = raster_tools.get_sensor_dict()
-
 
 def earth_sun_distance(julian_day):
 
@@ -624,7 +622,7 @@ class Conversions(object):
         #   for nadir viewing sensor).
         self.cosS = np.cos(np.radians(90. - sensor_angle))
 
-        tr = self.get_tr(self.get_tri(self.pr.series, SENSOR_DICT[self.pr.sensor.lower()], band_position))
+        tr = self.get_tr(self.get_tri(self.pr.series, raster_tools.SENSOR_DICT[self.pr.sensor.lower()], band_position))
 
         self.tv = math.exp(-tr / self.cosS)
         self.tz = math.exp(-tr / self.cos0)
@@ -855,7 +853,7 @@ class CalibrateSensor(Conversions):
             # Is there a user provided file or object?
             if isinstance(self.metadata, str) or isinstance(self.metadata, raster_tools.LandsatParser):
 
-                if SENSOR_DICT[self.pr.sensor.lower()] == 'oli_tirs':
+                if raster_tools.SENSOR_DICT[self.pr.sensor.lower()] == 'oli_tirs':
 
                     k1 = self.pr.k1
                     k2 = self.pr.k2
@@ -863,10 +861,11 @@ class CalibrateSensor(Conversions):
                 else:
 
                     self.refl_settings['bd_esun'] = self.get_esun(self.pr.series,
-                                                                  SENSOR_DICT[self.pr.sensor.lower()],
+                                                                  raster_tools.SENSOR_DICT[self.pr.sensor.lower()],
                                                                   band_position)
 
-                    k1, k2 = self.get_kelvin_coefficients(self.pr.series, SENSOR_DICT[self.pr.sensor.lower()],
+                    k1, k2 = self.get_kelvin_coefficients(self.pr.series,
+                                                          raster_tools.SENSOR_DICT[self.pr.sensor.lower()],
                                                           band_position)
 
                 self.temp_settings['k1'] = k1
@@ -897,7 +896,7 @@ class CalibrateSensor(Conversions):
                 coeff_check = self.pr.no_coeff
 
                 # Landsat 8 information pulled from metadata.
-                if SENSOR_DICT[self.pr.sensor.lower()] == 'oli_tirs':
+                if raster_tools.SENSOR_DICT[self.pr.sensor.lower()] == 'oli_tirs':
 
                     landsat_gain = self.pr.rad_mult_dict[int(band_position)]
                     landsat_bias = self.pr.rad_add_dict[int(band_position)]
@@ -908,7 +907,7 @@ class CalibrateSensor(Conversions):
                     l_min = self.pr.LMIN_dict[int(band_position)]
 
                     landsat_gain, landsat_bias = self.get_gain_bias(self.pr.series,
-                                                                    SENSOR_DICT[self.pr.sensor.lower()],
+                                                                    raster_tools.SENSOR_DICT[self.pr.sensor.lower()],
                                                                     band_position, l_max, l_min, coeff_check)
 
                 self.rad_settings['landsat_gain'] = landsat_gain

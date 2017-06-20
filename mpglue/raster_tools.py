@@ -47,7 +47,7 @@ except ImportError:
 try:
     import matplotlib as mpl
 
-    if os.environ.get('DISPLAY', '') == '':
+    if (os.environ.get('DISPLAY', '') == '') or (platform.system() == 'Darwin'):
         mpl.use('Agg')
 
     import matplotlib.pyplot as plt
@@ -144,34 +144,34 @@ STORAGE_DICT_NUMPY = {'byte': np.uint8,
                       'float32': np.float32,
                       'float64': np.float64}
 
-RESAMPLE_DICT = {'average': gdal.GRA_Average,
-                 'bilinear': gdal.GRA_Bilinear,
-                 'nearest': gdal.GRA_NearestNeighbour,
-                 'cubic': gdal.GRA_Cubic}
+RESAMPLE_DICT = dict(average=gdal.GRA_Average,
+                     bilinear=gdal.GRA_Bilinear,
+                     nearest=gdal.GRA_NearestNeighbour,
+                     cubic=gdal.GRA_Cubic)
 
+PANSHARPEN_WEIGHTS = dict(oli_tirs=dict(bw=.2, gw=1., rw=1., iw=.1),
+                          etm=dict(bw=.1, gw=1., rw=1., iw=1.))
 
 GOOGLE_CLOUD_SENSORS = dict(oli_tirs='LC08',
                             etm='LE07',
                             tm='LT05')
 
-def get_sensor_dict():
-
-    return {'landsat_tm': 'tm',
-            'lt4': 'tm',
-            'lt5': 'tm',
-            'tm': 'tm',
-            'landsat_etm_slc_off': 'etm',
-            'landsat_etm': 'etm',
-            'landsat_et': 'etm',
-            'landsat_etm_slc_on': 'etm',
-            'etm': 'etm',
-            'le7': 'etm',
-            'lt7': 'etm',
-            'landsat_oli_tirs': 'oli_tirs',
-            'oli_tirs': 'oli_tirs',
-            'oli': 'oli_tirs',
-            'lc8': 'oli_tirs',
-            'lt8': 'oli_tirs'}
+SENSOR_DICT = {'landsat_tm': 'tm',
+               'lt4': 'tm',
+               'lt5': 'tm',
+               'tm': 'tm',
+               'landsat_etm_slc_off': 'etm',
+               'landsat_etm': 'etm',
+               'landsat_et': 'etm',
+               'landsat_etm_slc_on': 'etm',
+               'etm': 'etm',
+               'le7': 'etm',
+               'lt7': 'etm',
+               'landsat_oli_tirs': 'oli_tirs',
+               'oli_tirs': 'oli_tirs',
+               'oli': 'oli_tirs',
+               'lc8': 'oli_tirs',
+               'lt8': 'oli_tirs'}
 
 
 class ReadWrite(object):
@@ -2192,14 +2192,19 @@ class PanSharpen(object):
 
         self.multi_image_ps = os.path.join(self.out_dir, '{}_pan.tif'.format(self.f_base))
 
-    def sharpen(self, w1=.2, w2=1., w3=1., w4=.5):
+    def sharpen(self, bw=.2, gw=1., rw=1., iw=.5):
 
-        self._sharpen_gdal(w1, w2, w3, w4)
+        self.bw = bw
+        self.gw = gw
+        self.rw = rw
+        self.iw = iw
 
-        # self._warp_multi()
-        # self._sharpen()
+        # self._sharpen_gdal()
 
-    def _sharpen_gdal(self, w1, w2, w3, w4):
+        self._warp_multi()
+        self._sharpen()
+
+    def _sharpen_gdal(self):
 
         with ropen(self.multi_image) as m_info:
             m_bands = m_info.bands
@@ -2210,24 +2215,24 @@ class PanSharpen(object):
 
             com = 'gdal_pansharpen.py {} {} {} ' \
                   '-w {:f} -w {:f} -w {:f} -w {:f} -r cubic ' \
-                  '-bitdepth 16 -threads ALL_CPUS -co TILED=YES -co COMPRESS=LZW'.format(self.pan_image,
-                                                                                         self.multi_image,
-                                                                                         self.multi_image_ps,
-                                                                                         w1,
-                                                                                         w2,
-                                                                                         w3,
-                                                                                         w4)
+                  '-bitdepth 16 -threads ALL_CPUS -co TILED=YES -co COMPRESS=DEFLATE'.format(self.pan_image,
+                                                                                             self.multi_image,
+                                                                                             self.multi_image_ps,
+                                                                                             self.w1,
+                                                                                             self.w2,
+                                                                                             self.w3,
+                                                                                             self.w4)
 
         else:
 
             com = 'gdal_pansharpen.py {} {} {} ' \
                   '-w {:f} -w {:f} -w {:f} -r cubic ' \
-                  '-bitdepth 16 -threads ALL_CPUS -co TILED=YES -co COMPRESS=LZW'.format(self.pan_image,
-                                                                                         self.multi_image,
-                                                                                         self.multi_image_ps,
-                                                                                         w1,
-                                                                                         w2,
-                                                                                         w3)
+                  '-bitdepth 16 -threads ALL_CPUS -co TILED=YES -co COMPRESS=DEFLATE'.format(self.pan_image,
+                                                                                             self.multi_image,
+                                                                                             self.multi_image_ps,
+                                                                                             self.w1,
+                                                                                             self.w2,
+                                                                                             self.w3)
 
         subprocess.call(com, shell=True)
 
@@ -2241,16 +2246,16 @@ class PanSharpen(object):
         blue = im[0][0]
         green = im[0][1]
         red = im[0][2]
+        pan_array = im[1]
 
-        bw = .2
-        gw = 1.
-        rw = 1.
-        iw = .5
+        bw = self.bw
+        gw = self.gw
+        rw = self.rw
+        iw = self.iw
 
         if im[0].shape[0] == 4:
 
             nir = im[0][3]
-            pan_array = im[1]
 
             if self.method == 'esri':
                 dnf = ne.evaluate('pan_array - ((red*.166 + green*.167 + blue*.167 + nir*.5) / (.166+.167+.167+.5))')
@@ -2296,12 +2301,10 @@ class PanSharpen(object):
                            d_types=['float32', 'float32'],
                            block_rows=4000,
                            block_cols=4000,
-                           print_statement='\nPan sharpening using {} ...\n'.format(self.method),
+                           print_statement='\nPan sharpening using {} ...\n'.format(self.method.title()),
                            method=self.method)
 
             bp.run()
-
-        # os.remove(self.multi_warped)
 
     def _warp_multi(self):
 
@@ -2315,17 +2318,17 @@ class PanSharpen(object):
 
         print('Resampling to pan scale ...')
 
-        # Resample the multispectral bands.
-        # warp(self.multi_image,
-        #      self.multi_warped,
-        #      cell_size=cell_size,
-        #      resample='cubic',
-        #      outputBounds=[extent['left'],
-        #                    extent['bottom'],
-        #                    extent['right'],
-        #                    extent['top']],
-        #      multithread=True,
-        #      creationOptions=['GDAL_CACHEMAX=256', 'TILED=YES'])
+        # Resample the multi-spectral bands.
+        warp(self.multi_image,
+             self.multi_warped,
+             cell_size=cell_size,
+             resample='cubic',
+             outputBounds=[extent['left'],
+                           extent['bottom'],
+                           extent['right'],
+                           extent['top']],
+             multithread=True,
+             creationOptions=['GDAL_CACHEMAX=256', 'TILED=YES'])
 
 
 def gdal_open(image2open, band):
@@ -3274,8 +3277,9 @@ class create_raster(CreateDriver, FileManager):
         Raster driver GDAL object or list of GDAL objects (if create_tiles > 0).
     """
 
-    def __init__(self, out_name, o_info, compress='lzw', tile=True, bigtiff='no', project_epsg=None,
-                 create_tiles=0, overwrite=False, in_memory=False, **kwargs):
+    def __init__(self, out_name, o_info, compress='deflate', tile=True, bigtiff='no',
+                 project_epsg=None, create_tiles=0, overwrite=False, in_memory=False,
+                 **kwargs):
 
         if not in_memory:
 

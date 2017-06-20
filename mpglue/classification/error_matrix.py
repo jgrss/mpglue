@@ -11,6 +11,7 @@ import time
 import logging
 from copy import copy
 from six import string_types
+import platform
 
 from .. import raster_tools
 
@@ -41,7 +42,7 @@ except ImportError:
 try:
     import matplotlib as mpl
 
-    if os.environ.get('DISPLAY', '') == '':
+    if (os.environ.get('DISPLAY', '') == '') or (platform.system() == 'Darwin'):
         mpl.use('Agg')
 
     import matplotlib.pyplot as plt

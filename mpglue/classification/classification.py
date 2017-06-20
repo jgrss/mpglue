@@ -110,7 +110,7 @@ except ImportError:
 try:
     import matplotlib as mpl
 
-    if os.environ.get('DISPLAY', '') == '':
+    if (os.environ.get('DISPLAY', '') == '') or (platform.system() == 'Darwin'):
         mpl.use('Agg')
 
     import matplotlib.pyplot as plt
