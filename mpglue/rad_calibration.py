@@ -122,7 +122,7 @@ def julian_day_dictionary_r(start_year=1980, end_year=2020):
     A function to get the reverse Julian Data dictionary
 
     Returns:
-        Dictionary of {yearday: 'year-day'}
+        Dictionary of {yyyyddd: 'year-day'}
     """
 
     jd_dict_r = OrderedDict()
