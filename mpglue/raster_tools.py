@@ -4861,7 +4861,7 @@ def cumulative_plot_array(image_array, small2large=True, out_fig=None):
 def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None,
                      storage='float32', match_raster=None, bigtiff='no',
                      in_memory=False, initial_value=0, where_clause=None,
-                     return_array=False, all_touched=False, **kwargs):
+                     return_array=False, **kwargs):
 
     """
     Rasterizes a vector dataset
