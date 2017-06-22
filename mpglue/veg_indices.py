@@ -100,7 +100,7 @@ class SensorInfo(object):
                                          'farir': 7, 'cirrus': 8, 'pan': 8},
                             'Landsat-thermal': {'blue': 1, 'green': 2, 'red': 3, 'nir': 4, 'midir': 5, 'farir': 7},
                             'MODISc5': {'blue': 3, 'green': 4, 'red': 1, 'nir': 2, 'midir': 6, 'farir': 7},
-                            'MODIS': {'blue': 10, 'green': 11, 'red': 8, 'nir': 9, 'midir': 13, 'farir': 14},
+                            'MODIS': {'blue': 10, 'green': 11, 'red': 8, 'nir': 9, 'midir': 12, 'farir': 13},
                             'RapidEye': {'blue': 1, 'green': 2, 'red': 3, 'rededge': 4, 'nir': 5},
                             'Sentinel2': {'cblue': 1, 'blue': 2, 'green': 3, 'red': 4, 'rededge': 5,
                                           'rededge2': 6, 'rededge3': 7, 'niredge': 8,
@@ -130,7 +130,7 @@ class SensorInfo(object):
                                  'NDVI': ['red', 'nir'],
                                  'RENDVI': ['rededge', 'nir'],
                                  'ONDVI': ['red', 'nir'],
-                                 'NDWI': ['nir', 'green'],
+                                 'NDWI': ['midir', 'nir'],
                                  'PNDVI': ['green', 'red'],
                                  'RBVI': ['blue', 'red'],
                                  'GBVI': ['blue', 'green'],
@@ -421,7 +421,7 @@ class VegIndicesEquations(SensorInfo):
                 return vi_function()
 
     def run_index(self, scale_factor, y=1., g=2.5, L=1., min_ndvi=-1, max_ndvi=1, **kwargs):
-
+        scale_factor = 10000.
         # EVI defaults
         if self.index2compute.upper() == 'EVI' and not kwargs:
             c1 = 6.
@@ -1432,7 +1432,7 @@ class VegIndices(BandHandler):
             overviews (Optional[bool])
             scale_factor (Optional[float])
         """
-
+#        scale_factor=10000.
         self.output_image = output_image
         self.storage = storage
         self.no_data = no_data
@@ -1853,12 +1853,11 @@ def veg_indices(input_image, output_image, input_index, sensor, k=0.,
     if isinstance(input_index, str):
 
         if input_index.lower() == 'all':
-
+            print("in compute as list")
             _compute_as_list(input_image, output_image, sensor, k, storage, no_data,
                              chunk_size, overwrite, overviews)
 
         else:
-
             vio = VegIndices(input_image, input_index, sensor, mask_band=mask_band)
 
             vio.run(output_image, k=k, storage=storage, no_data=no_data, in_no_data=in_no_data,
