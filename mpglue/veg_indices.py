@@ -72,7 +72,7 @@ class SensorInfo(object):
     def __init__(self):
 
         self.sensors = ['ASTER', 'ASTER-VNIR', 'CBERS2', 'CitySphere', 'GeoEye1', 'IKONOS',
-                        'Landsat', 'Landsat8', 'Landsat-thermal', 'MODIS', 'RapidEye',
+                        'Landsat', 'Landsat8', 'Landsat-thermal', 'Landsat-sharp', 'MODIS', 'RapidEye',
                         'Sentinel2', 'Sentinel2-10m', 'Sentinel2-20m', 'Quickbird', 'WorldView2',
                         'RGB', 'BGR']
 
@@ -94,6 +94,7 @@ class SensorInfo(object):
                             'Quickbird': {'blue': 1, 'green': 2, 'red': 3, 'nir': 4},
                             'WorldView2': {'cblue': 1, 'blue': 2, 'green': 3, 'yellow': 4, 'red': 5,
                                            'rededge': 6, 'nir': 7, 'midir': 8},
+                            'Landsat-sharp': {'blue': 1, 'green': 2, 'red': 3, 'nir': 4},
                             'Landsat': {'blue': 1, 'green': 2, 'red': 3, 'nir': 4, 'midir': 5, 'farir': 6,
                                         'pan': 8},
                             'Landsat8': {'cblue': 1, 'blue': 2, 'green': 3, 'red': 4, 'nir': 5, 'midir': 6,
