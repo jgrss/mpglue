@@ -401,8 +401,8 @@ class ReadWrite(object):
                 self.array = np.asarray([self.hdf_datasources[band-1].ReadAsArray(self.j,
                                                                                   self.i,
                                                                                   self.ccols,
-                                                                                  self.rrows)
-                                         for band in bands2open], dtype=self.d_type)
+                                                                                  self.rrows) for band in bands2open],
+                                        dtype=self.d_type)
 
             else:
 
