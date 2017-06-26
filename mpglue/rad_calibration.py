@@ -158,22 +158,25 @@ def jd_interp(the_array, length, skip_factor):
         skip_factor     
     """
 
+    # Get a dictionary of leap years.
     year_dict = get_leap_years()
 
+    # The first year.
     current_year = int(str(the_array[0])[:4])
 
-    # yyyyddd
+    # The Julian day `yyyyddd`.
     the_date = the_array[0]
 
-    rescaled = []
+    rescaled = list()
 
     for i in range(0, length):
 
+        # Append `yyyyddd`.
         rescaled.append(the_date)
 
         the_date += skip_factor
 
-        current_doy = int(str(the_date)[-3:])
+        current_doy = int(str(the_date)[4:])
 
         # Check year overload.
         #   Update calendar day > maximum
@@ -192,19 +195,22 @@ def jd_interp(the_array, length, skip_factor):
 def rescale_scaled_jds(the_array, counter=1000):
 
     """
-    Rescales yyyyddd values to monotonically increasing values
+    Rescales `yyyyddd` values to monotonically increasing values.
             
     Args:
         the_array
-        length (Optional[str]): Choices are ['array', <int value>].
+        counter (Optional[int]): The starting index.
     """
 
     iter_length = len(the_array) - 1
 
+    # Get a dictionary of leap years.
     year_dict = get_leap_years()
+
+    # Get the first year.
     current_year = int(str(the_array[0])[:4])
 
-    rescaled = []
+    rescaled = list()
 
     for i in range(0, iter_length):
 
@@ -215,14 +221,12 @@ def rescale_scaled_jds(the_array, counter=1000):
         if next_year != current_year:
 
             # Next year Julian Day + (Current year max - current year Julian Day)
-            counter += int(str(the_array[i+1])[-3:]) + (year_dict[current_year] - int(str(the_array[i])[-3:]))
+            counter += int(str(the_array[i+1])[4:]) + (year_dict[current_year] - int(str(the_array[i])[4:]))
 
         else:
 
             # Next Julian Day - Current Julian Day
             counter += the_array[i+1] - the_array[i]
-
-        last_jd = the_array[i]
 
         current_year = copy(next_year)
 
