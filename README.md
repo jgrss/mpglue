@@ -92,7 +92,7 @@ Usage examples
 >>> # Compute the NDVI.
 >>> gl.veg_indices('/image.tif', '/out_index.tif', 'ndvi', 'Landsat')
 >>>
->>> # Compute multiple indices.
+>>> # Compute multiple spectral indices.
 >>> gl.veg_indices('/image.tif', '/out_index.tif', ['ndvi', 'evi2'], 'Landsat')
 ```
 
@@ -147,14 +147,14 @@ Installation
  
 1) Clone MpGlue
 
-```text
+```commandline
 cd <location to clone MpGlue>
 git clone https://github.com/jgrss/mpglue.git
 ```
 
 2) Build and install
 
-```text
+```commandline
 python setup.py build
 python setup.py install
 ```
@@ -163,7 +163,7 @@ python setup.py install
 
 1) Update setuptools:
 
-```text
+```commandline
 pip install -U setuptools
 ```
 
@@ -171,20 +171,25 @@ pip install -U setuptools
 
 3) To install:
 
-```text
+```commandline
 pip install MpGlue-<version>.tar.gz
-e.g., pip install MpGlue-0.1.0.tar.gz
+```
+
+For example:
+
+```commandline
+pip install MpGlue-0.1.0.tar.gz
 ```
 
 4) To update:
 
-```text
+```commandline
 pip install -U MpGlue-<new version>.tar.gz
 ```
 
 5) To uninstall:
 
-```text
+```commandline
 pip uninstall mpglue
 ```
 
