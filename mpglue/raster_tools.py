@@ -27,7 +27,7 @@ if platform.system() == 'Darwin':
 
 from .helpers import random_float, overwrite_file, check_and_create_dir, _iteration_parameters
 from .vector_tools import vopen, get_xy_offsets, intersects_boundary
-from .errors import LenError, ropenError, logger
+from .errors import EmptyImage, LenError, MissingRequirement, ropenError, logger
 from mpglue.veg_indices import BandHandler, VegIndicesEquations
 
 # GDAL
@@ -1010,10 +1010,13 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
     Class for file handling
 
     Args:
-        raster_object (object)
+        open2read (bool)
+        hdf_band (int)
+        check_corrupted (bool)
 
     Attributes:
-        band (object)
+        band (GDAL object)
+        datasource (GDAL object)
         chunk_size (int)
 
     Methods:
@@ -1111,8 +1114,11 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
         Opens the image dataset.
         
         Args:
-            image_name (str)
-            open2read (bool)
+            image_name (str): The full path, name, and extension of the image to open.
+            open2read (bool): Whether to open the image in 'Read Only' mode.
+
+        Returns:
+            The datasource pointer.
         """
 
         if open2read:
@@ -1121,7 +1127,8 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
             source_dataset = gdal.Open(image_name, GA_Update)
 
         if source_dataset is None:
-            raise OSError('3) {} appears to be empty.'.format(image_name))
+            logger.error('{} appears to be empty'.format(image_name))
+            raise EmptyImage
 
         return source_dataset
 
@@ -1182,7 +1189,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
             self.datasource.BuildOverviews(sampling_method.upper(), overviewlist=levels)
         except:
             logger.error(gdal.GetLastErrorMsg())
-            raise ValueError('\nFailed to build overviews.\n')
+            raise ValueError('Failed to build overviews.')
 
     def get_band(self, band_position):
 
@@ -1194,7 +1201,8 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
         """
 
         if not isinstance(band_position, int) or band_position < 1:
-            raise TypeError('\nThe band position must be an integer > 0.\n')
+            logger.error('The band position must be an integer > 0.')
+            raise ValueError
 
         try:
 
@@ -1203,7 +1211,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
         except:
             logger.error(gdal.GetLastErrorMsg())
-            raise ValueError('\nFailed to load the band.\n')
+            raise ValueError('Failed to load the band.')
 
     def get_stats(self, band_position):
 
@@ -1223,9 +1231,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
     def check_corrupted_bands(self):
 
-        """
-        Checks whether corrupted bands exist.        
-        """
+        """Checks whether corrupted bands exist."""
 
         self.corrupted_bands = list()
 
@@ -1284,9 +1290,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
     def close_band(self):
 
-        """
-        Closes a band object.
-        """
+        """Closes a band object"""
 
         if hasattr(self, 'band') and self.band_open:
 
@@ -1299,25 +1303,25 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
             #     pass
 
             try:
+                self.band.GetStatistics(0, 1)
+            except:
 
-                # self.band.GetStatistics(0, 1)
+                logger.warning('The band statistics could not be calculated.')
+                logger.warning(gdal.GetLastErrorMsg())
+
+            try:
                 self.band.FlushCache()
-
             except:
 
                 logger.warning('The band statistics could not be flushed.')
-                logger.error(gdal.GetLastErrorMsg())
-
-                pass
+                logger.warning(gdal.GetLastErrorMsg())
 
         self.band = None
         self.band_open = False
 
     def close_file(self):
 
-        """
-        Closes file object.
-        """
+        """Closes a file object"""
 
         if hasattr(self, 'datasource'):
 
@@ -1346,16 +1350,10 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
             if hasattr(self.datasource, 'FlushCache'):
 
-                self.datasource.FlushCache()
-
-                # try:
-                #     self.datasource.FlushCache()
-                # except:
-                #
-                #     logger.warning('The dataset could not be flushed.')
-                #     logger.error(gdal.GetLastErrorMsg())
-                #
-                #     pass
+                try:
+                    self.datasource.FlushCache()
+                except:
+                    logger.warning('The dataset could not be flushed.')
 
         self.datasource = None
         self.hdf_datasources = None
@@ -1363,9 +1361,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
     def close_all(self):
 
-        """
-        Closes a band object and a file object.
-        """
+        """Closes a band object and a file object"""
 
         self.close_band()
         self.close_file()
@@ -1387,9 +1383,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
     def get_chunk_size(self):
 
-        """
-        Gets the band block size.
-        """
+        """Gets the band block size"""
 
         try:
             self.chunk_size = self.band.GetBlockSize()[0]
@@ -1398,9 +1392,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
     def remove_overviews(self):
 
-        """
-        Removes image overviews.
-        """
+        """Removes image overviews"""
 
         if self.image_mode != 'update':
             raise NameError('\nOpen the image in update mode (open2read=False) to remove overviews.\n')
@@ -1411,6 +1403,9 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
         """
         Calculates image statistics and can be used to check for empty images.
+
+        Args:
+            band (Optional[int])
         """
 
         self.get_band(band_position=band)
@@ -1451,9 +1446,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
 class UpdateInfo(object):
 
-    """
-    A class for updating attributes
-    """
+    """A class for updating attributes"""
 
     def update_info(self, **kwargs):
 
@@ -1463,9 +1456,7 @@ class UpdateInfo(object):
 
 class ImageInfo(UpdateInfo, ReadWrite, FileManager, DatasourceInfo):
 
-    """
-    An empty class for passing image information
-    """
+    """An empty class for passing image information"""
 
     def __init__(self):
         pass
@@ -1478,6 +1469,10 @@ class LandsatParser(object):
 
     """
     A class to parse Landsat metadata
+
+    Args:
+        metadata (str)
+        band_order (Optional[list])
     """
 
     def __init__(self, metadata, band_order=[]):
@@ -1723,7 +1718,7 @@ class SentinelParser(object):
 class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
 
     """
-    Gets image information and a file pointer object.
+    Gets image information and returns a file pointer object.
 
     Args:
         file_name (Optional[str]): Image location, name, and extension. Default is 'none'.
@@ -1859,9 +1854,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
 
     def close(self):
 
-        """
-        Closes the dataset
-        """
+        """Closes the dataset"""
         
         self.close_all()
 
@@ -2172,7 +2165,7 @@ class PanSharpen(object):
         pan / ((rgb[0] + rgb[1] + rgb[2] * weight) / (2 + weight))
 
     Example:
-        >>> ps = PanSharpen('/multi.tif', '/pan.tif')
+        >>> ps = PanSharpen('/multi.tif', '/pan.tif', method='brovey')
         >>> ps.sharpen()
     """
 
@@ -2209,6 +2202,8 @@ class PanSharpen(object):
         with ropen(self.multi_image) as m_info:
             m_bands = m_info.bands
 
+        m_info = None
+
         print('\nPan-sharpening ...\n')
 
         if m_bands == 4:
@@ -2236,12 +2231,12 @@ class PanSharpen(object):
 
         subprocess.call(com, shell=True)
 
-    def _do_sharpen(self, im, method='brovey'):
+    def _do_sharpen(self, im):
 
         try:
             import numexpr as ne
         except:
-            pass
+            raise ImportError('Numexpr is needed for pan-sharpening.')
 
         blue = im[0][0]
         green = im[0][1]
@@ -2306,6 +2301,8 @@ class PanSharpen(object):
 
             bp.run()
 
+        p_info = None
+
     def _warp_multi(self):
 
         # Get warping info.
@@ -2313,6 +2310,8 @@ class PanSharpen(object):
 
             extent = p_info.extent
             cell_size = p_info.cellY
+
+        p_info = None
 
         self.multi_warped = os.path.join(self.out_dir, '{}_warped.tif'.format(self.f_base))
 
@@ -2986,17 +2985,29 @@ def read(image2open=None, i_info=None, bands2open=1, i=0, j=0,
     """
 
     if not isinstance(i_info, ropen) and not isinstance(image2open, str):
-        raise NameError('\nEither i_info or image2open must be declared.\n')
+
+        logger.error('Either `i_info` or `image2open` must be declared.')
+        raise MissingRequirement
+
     elif isinstance(i_info, ropen) and isinstance(image2open, str):
-        raise NameError('\nChoose either i_info or image2open, but not both.\n')
+
+        logger.error('Choose either `i_info` or `image2open`, but not both.')
+        raise OverflowError
 
     elif not isinstance(i_info, ropen) and isinstance(image2open, str):
         i_info = ropen(image2open)
 
     if (n_jobs == 0) and not predictions:
 
-        kwargs = dict(bands2open=bands2open, i=i, j=j, rows=rows, cols=cols, d_type=d_type,
-                      sort_bands2open=sort_bands2open, y=y, x=x)
+        kwargs = dict(bands2open=bands2open,
+                      i=i,
+                      j=j,
+                      rows=rows,
+                      cols=cols,
+                      d_type=d_type,
+                      sort_bands2open=sort_bands2open,
+                      y=y,
+                      x=x)
 
         return i_info.read(**kwargs)
 
@@ -3007,9 +3018,16 @@ def read(image2open=None, i_info=None, bands2open=1, i=0, j=0,
         else:
             d_type = STORAGE_DICT[i_info.storage.lower()]
 
+        if i < 0:
+            i = 0
+
+        if j < 0:
+            j = 0
+
         if rows == -1:
             rows = i_info.rows
         else:
+
             if rows > i_info.rows:
                 raise ValueError('\nThe requested rows cannot be larger than the image rows.\n')
 
