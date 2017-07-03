@@ -2562,7 +2562,8 @@ class BlockFunc(object):
         None, writes to ``out_image``.
     """
 
-    def __init__(self, func, image_infos, out_image, out_info,
+    def __init__(self, func, image_infos,
+                 out_image, out_info,
                  band_list=None, proc_info=None,
                  y_offset=None, x_offset=None,
                  y_pad=None, x_pad=None,
@@ -2572,7 +2573,8 @@ class BlockFunc(object):
                  out_attributes=None, write_array=True,
                  boundary_file=None, mask_file=None,
                  n_jobs=1, close_files=True,
-                 no_data_values=None, **kwargs):
+                 no_data_values=None,
+                 **kwargs):
 
         self.func = func
         self.image_infos = image_infos
@@ -2597,6 +2599,8 @@ class BlockFunc(object):
         self.close_files = close_files
         self.no_data_values = no_data_values
         self.kwargs = kwargs
+
+        self.out_attributes_dict = dict()
 
         if not isinstance(self.d_types, list):
             self.d_types = ['byte'] * len(self.image_infos)
@@ -2648,7 +2652,7 @@ class BlockFunc(object):
 
         if self.n_jobs in [0, 1]:
 
-            for imi in xrange(0, len(self.image_infos)):
+            for imi in range(0, len(self.image_infos)):
                 if isinstance(self.band_list[imi], int):
                     self.image_infos[imi].get_band(self.band_list[imi])
 
@@ -2828,8 +2832,12 @@ class BlockFunc(object):
                     # Get the other results.
                     for ri in range(1, len(output)):
 
-                        self.kwargs[self.out_attributes[ri-1]] = output[ri]
-                        setattr(self, self.out_attributes[ri-1], output[ri])
+                        # self.kwargs[self.out_attributes[ri-1]] = output[ri]
+
+                        if self.out_attributes[ri-1] not in self.out_attributes_dict:
+                            self.out_attributes_dict[self.out_attributes[ri-1]] = [output[ri]]
+                        else:
+                            self.out_attributes_dict[self.out_attributes[ri-1]].append(output[ri])
 
                 else:
 
@@ -2855,6 +2863,11 @@ class BlockFunc(object):
 
                     pbar.update(ctr)
                     ctr += 1
+
+        if self.out_attributes_dict:
+
+            for ri in range(1, len(output)):
+                setattr(self, self.out_attributes[ri-1], self.out_attributes_dict[self.out_attributes[ri-1]])
 
         if not self.be_quiet:
             pbar.finish()

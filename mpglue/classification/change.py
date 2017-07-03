@@ -109,13 +109,13 @@ def change(img_1, img_2, out_img=None, out_report=None,
                                                            check_position=False)
 
     # get unique classes
-    unique_classes = []
+    unique_classes = list()
 
     bp = raster_tools.BlockFunc(unique_class_func, [i_info_1], None, o_info,
                                 proc_info=overlap_info,
                                 y_offset=[y_off_1],
                                 x_offset=[x_off_1],
-                                out_attributes=['unique_classes'],
+                                out_attributes=['unique_classes_list'],
                                 print_statement='\nGetting unique classes ...\n',
                                 write_array=False,
                                 be_quiet=be_quiet,
@@ -124,10 +124,11 @@ def change(img_1, img_2, out_img=None, out_report=None,
 
     bp.run()
 
-    unique_classes = bp.unique_classes
+    unique_classes = bp.unique_classes_list
 
     # get change combinations
-    change_combos = {}
+    change_combos = dict()
+
     cl_id = 1
     for cl_b in unique_classes:
 
