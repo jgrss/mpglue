@@ -702,16 +702,16 @@ class Samples(object):
                 curr_cl = curr_cl[ran]
 
                 if counter == 1:
-                    train_stk = np.copy(curr_cl)
-                    test_stk = np.copy(test_samps_temp)
+                    train_stk = curr_cl.copy()
+                    test_stk = test_samps_temp.copy()
                 else:
                     train_stk = np.vstack((train_stk, curr_cl))
                     test_stk = np.vstack((test_stk, test_samps_temp))
 
                 counter += 1
 
-            self.all_samps = np.copy(train_stk)
-            test_samps = np.copy(test_stk)
+            self.all_samps = train_stk.copy()
+            test_samps = test_stk.copy()
 
         elif 0 < perc_samp_each < 1:
 
