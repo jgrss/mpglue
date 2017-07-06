@@ -269,6 +269,7 @@ def julian2date(julian_day, year, jd_dict_date=None):
     Args:
         julian_day (int): The Julian Day.
         year (int): The year.
+        jd_dict_date (Optional[dict]):
 
     Returns:
         (month, day) of the Julian Day ``julian_day``

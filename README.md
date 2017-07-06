@@ -195,4 +195,4 @@ pip uninstall mpglue
 
 Development
 ---
-For questions or bugs, contact Jordan Graesser (graesser@bu.edu).
+For questions or bugs, please [**submit an issue**](https://github.com/jgrss/mpglue/issues).
