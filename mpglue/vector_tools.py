@@ -19,11 +19,7 @@ import tarfile
 
 from .paths import get_main_path
 
-try:
-    from . import raster_tools
-except:
-    import raster_tools
-
+import raster_tools
 from .errors import TransformError, logger
 
 MAIN_PATH = get_main_path()
@@ -52,12 +48,6 @@ try:
     from scipy import stats
 except ImportError:
     raise ImportError('SciPy must be installed')
-
-# PySAL
-try:
-    import pysal
-except:
-    print('PySAL is not installed')
 
 # Rtree
 try:
@@ -670,6 +660,12 @@ def dataframe2dbf(df, dbf_file, my_specs=None):
         None, writes to ``dbf_file``.
     """
 
+    # PySAL
+    try:
+        import pysal
+    except:
+        print('PySAL is not installed')
+
     if my_specs:
         specs = my_specs
     else:
@@ -707,6 +703,12 @@ def shp2dataframe(input_shp):
     Returns:
         Pandas dataframe
     """
+
+    # PySAL
+    try:
+        import pysal
+    except:
+        print('PySAL is not installed')
 
     df = pysal.open(input_shp.replace('.shp', '.dbf'), 'r')
 

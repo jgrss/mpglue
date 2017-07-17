@@ -21,18 +21,6 @@ try:
 except ImportError:
     raise ImportError('NumPy must be installed')
 
-# Pandas
-try:
-    import pandas as pd
-except ImportError:
-    raise ImportError('Pandas must be installed')
-
-# PySAL
-try:
-    import pysal
-except:
-    print('PySAL is not installed')
-
 
 ITER_DICT = {0: '0',
              10: '0...10',
@@ -196,6 +184,18 @@ def shp2dataframe(input_shapefile):
         input_shapefile (str): The input shapefile.
     """
 
+    # Pandas
+    try:
+        import pandas as pd
+    except ImportError:
+        raise ImportError('Pandas must be installed')
+
+    # PySAL
+    try:
+        import pysal
+    except:
+        print('PySAL is not installed')
+
     dfs = pysal.open(input_shapefile.replace('.shp', '.dbf'), 'r')
     dfs = OrderedDict([(col, np.array(dfs.by_col(col))) for col in dfs.header])
 
@@ -256,6 +256,12 @@ def dataframe2dbf(df, dbf_file, my_specs=None):
     Returns:
         None, writes to ``dbf_file``.
     """
+
+    # PySAL
+    try:
+        import pysal
+    except:
+        print('PySAL is not installed')
 
     if my_specs:
         specs = my_specs

@@ -25,8 +25,13 @@ if platform.system() == 'Darwin':
     GDAL_LIBRARY_PATH = '/usr/local/lib/libgdal.dylib'
     ctypes.CDLL(GDAL_LIBRARY_PATH)
 
+    # ctypes.CDLL('/usr/lib/libc.dylib')
+    from ctypes.util import find_library
+    ctypes.cdll.LoadLibrary(find_library('c'))
+
 from .helpers import random_float, overwrite_file, check_and_create_dir, _iteration_parameters
 from .vector_tools import vopen, get_xy_offsets, intersects_boundary
+
 from .errors import EmptyImage, LenError, MissingRequirement, ropenError, logger
 from mpglue.veg_indices import BandHandler, VegIndicesEquations
 

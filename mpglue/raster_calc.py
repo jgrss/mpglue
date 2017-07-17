@@ -93,14 +93,13 @@ def raster_calc(output, equation=None, out_type='byte', extent=None,
 
                 vw_sub = os.path.join(d_name, '{}_temp.vrt'.format(f_base))
 
-                com = 'gdal_translate -q -of VRT -projwin {:f} {:f} {:f} {:f} {} {}'.format(ot_info.left,
-                                                                                            ot_info.top,
-                                                                                            ot_info.right,
-                                                                                            ot_info.bottom,
-                                                                                            vw,
-                                                                                            vw_sub)
-
-                subprocess.call(com, shell=True)
+                raster_tools.translate(vw,
+                                       vw_sub,
+                                       format='VRT',
+                                       projWin=[ot_info.left,
+                                                ot_info.top,
+                                                ot_info.right,
+                                                ot_info.bottom])
 
                 temp_files.append(vw_sub)
 
