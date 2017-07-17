@@ -2332,7 +2332,8 @@ class PanSharpen(object):
                            extent['right'],
                            extent['top']],
              multithread=True,
-             creationOptions=['GDAL_CACHEMAX=256', 'TILED=YES'])
+             creationOptions=['GDAL_CACHEMAX=256',
+                              'TILED=YES'])
 
 
 def gdal_open(image2open, band):
@@ -2848,7 +2849,7 @@ class BlockFunc(object):
 
                     if self.write_array:
 
-                        if output.shape[0] > 1:
+                        if len(output.shape) > 2:
 
                             for obi, obb in enumerate(output):
 
@@ -2881,7 +2882,7 @@ class BlockFunc(object):
 
             if self.close_files:
 
-                for imi in xrange(0, len(self.image_infos)):
+                for imi in range(0, len(self.image_infos)):
                     self.image_infos[imi].close()
 
                 self.out_info.close()

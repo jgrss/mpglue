@@ -42,24 +42,28 @@ def reclassify(input_image, output_image, recode_dict):
         recode_dict (dict): Dictionary of values to reclassify.
 
     Examples:
-        >>> # reclassify class 1 to 3, class 2 to 3, class 4 to 3, and so on ...
-        >>> from mappy.classifiers.post import reclassify
+        >>> # Reclassify class 1 to 3, class 2 to 3, class 4 to 3, and so on ...
+        >>> from mpglue.classification import reclassify
         >>>
         >>> recode_dict  = {1:3, 2:3, 4:3, 5:3, 9:4, -128:255}
         >>> reclassify('/image_to_reclassify.tif', '/out_image.tif', recode_dict)
 
     Returns:
-        None, writes reclassified images to ``out_img``.
+        None, writes reclassified images to ``output_image``.
     """
 
-    # Get image information
-
+    # Get image information and reclassify.
     with raster_tools.ropen(input_image) as i_info:
 
         o_info = i_info.copy()
-        o_info.update_info(bands=1, storage='byte')
 
-        bp = raster_tools.BlockFunc(reclassify_func, [i_info], output_image, o_info,
+        o_info.update_info(bands=1,
+                           storage='byte')
+
+        bp = raster_tools.BlockFunc(reclassify_func,
+                                    [i_info],
+                                    output_image,
+                                    o_info,
                                     print_statement='\nReclassifying {} ...\n'.format(input_image),
                                     recode_dict=recode_dict)
 
