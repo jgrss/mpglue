@@ -17,17 +17,17 @@ from joblib import Parallel, delayed
 import shutil
 import itertools
 import platform
-import ctypes
 import subprocess
+# import ctypes
 
-if platform.system() == 'Darwin':
-
-    GDAL_LIBRARY_PATH = '/usr/local/lib/libgdal.dylib'
-    ctypes.CDLL(GDAL_LIBRARY_PATH)
-
-    # ctypes.CDLL('/usr/lib/libc.dylib')
-    from ctypes.util import find_library
-    ctypes.cdll.LoadLibrary(find_library('c'))
+# if platform.system() == 'Darwin':
+#
+#     GDAL_LIBRARY_PATH = '/usr/local/lib/libgdal.dylib'
+#     ctypes.CDLL(GDAL_LIBRARY_PATH)
+#
+#     # ctypes.CDLL('/usr/lib/libc.dylib')
+#     # from ctypes.util import find_library
+#     # ctypes.cdll.LoadLibrary(find_library('c'))
 
 from .helpers import random_float, overwrite_file, check_and_create_dir, _iteration_parameters
 from .vector_tools import vopen, get_xy_offsets, intersects_boundary
@@ -37,7 +37,7 @@ from mpglue.veg_indices import BandHandler, VegIndicesEquations
 
 # GDAL
 try:
-    from osgeo import gdal, osr, gdal_array
+    from osgeo import gdal, osr
     from osgeo.gdalconst import GA_ReadOnly, GA_Update
 except ImportError:
     raise ImportError('GDAL must be installed')
@@ -93,22 +93,25 @@ gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 gdal.SetCacheMax(2.**30.)
 
-DRIVER_DICT = {'.tif': 'GTiff',
+DRIVER_DICT = {'.bin': 'ENVI',
+               '.dat': 'ENVI',
+               '.ecw': 'ECW',
                '.img': 'HFA',
                '.hdf': 'HDF4',
                '.hdf4': 'HDF4',
                '.hdf5': 'HDF5',
                '.h5': 'HDF5',
-               '.vrt': 'VRT',
                '.hdr': 'ENVI',
-               '.dat': 'ENVI',
-               '.bin': 'ENVI',
-               '.kea': 'KEA',
-               '.sid': 'MrSID',
                '.jp2': 'JPEG2000',
+               '.kea': 'KEA',
                '.mem': 'MEM',
+               '.nc': 'netCDF',
+               '.ntf': 'NITF',
+               '.pix': 'PCRaster',
+               '.sid': 'MrSID',
+               '.tif': 'GTiff',
                '.til': 'TIL',
-               '.nc': 'netCDF'}
+               '.vrt': 'VRT'}
 
 try:
     FORMAT_DICT = dict((v, k) for k, v in DRIVER_DICT.iteritems())
@@ -3378,7 +3381,7 @@ class create_raster(CreateDriver, FileManager):
             parameters = ['DEFLATE=1']
 
         else:
-            parameters = []
+            parameters = list()
 
         if isinstance(project_epsg, int):
 
