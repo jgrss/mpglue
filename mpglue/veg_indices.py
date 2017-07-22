@@ -98,7 +98,7 @@ class SensorInfo(object):
                             'Landsat': {'blue': 1, 'green': 2, 'red': 3, 'nir': 4, 'midir': 5, 'farir': 6,
                                         'pan': 8},
                             'Landsat8': {'cblue': 1, 'blue': 2, 'green': 3, 'red': 4, 'nir': 5, 'midir': 6,
-                                         'farir': 7, 'cirrus': 8, 'pan': 8},
+                                         'farir': 7, 'cirrus': 8, 'thermal1': 9, 'thermal2': 10, 'pan': 8},
                             'Landsat-thermal': {'blue': 1, 'green': 2, 'red': 3, 'nir': 4, 'midir': 5, 'farir': 7},
                             'MODISc5': {'blue': 3, 'green': 4, 'red': 1, 'nir': 2, 'midir': 6, 'farir': 7},
                             'MODIS': {'blue': 10, 'green': 11, 'red': 8, 'nir': 9, 'midir': 13, 'farir': 14},
