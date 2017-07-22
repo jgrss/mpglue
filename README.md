@@ -141,8 +141,10 @@ Usage examples
 
 ```python
 >>> # Get map accuracy.
->>> gl.sample_raster('/test_samples.shp', '/thematic_map.tif',
->>>                  class_id='Id', accuracy=True)
+>>> gl.sample_raster('/test_samples.shp', 
+>>>                  '/thematic_map.tif',
+>>>                  class_id='Id', 
+>>>                  accuracy=True)
 ```
 
 #### Raster calculator
@@ -153,14 +155,16 @@ Usage examples
 >>>                equation='A*B', 
 >>>                out_type='float32', 
 >>>                A='/raster1.tif', 
->>>                B='raster2.tif')
+>>>                B='/raster2.tif')
 ```
 
 #### Build mixed-type VRT files:
 
 ```python
 >>> # Fill a dictionary with image names.
->>> comp_dict = dict(zip(map(str, range(1, 3)), ['/im1.tif', 'im2.tif']))
+>>> comp_dict = dict(zip(map(str, range(1, 3)), ['/im1.tif', '/im2.tif']))
+>>>
+>>> # `comp_dict` = {'1': '/im1.tif', '2': '/im2.tif'}
 >>>
 >>> # Stack the images.
 >>> vrt_builder(comp_dict, '/out_image.vrt', force_type='float32')
