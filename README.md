@@ -122,12 +122,38 @@ Usage examples
 >>> cl.predict('/input_image.tif', '/output_map.tif')
 ```
 
+#### Post-classification:
+
+```python
+# Reclassify a map
+#   recode class 1 to class 2
+>>> gl.reclassify('/input_map.tif', '/output_map.tif', {1: 2})
+
+# Recode values within polygon features
+#   In polygon 1, reclassify 6 to 5; in polygon 2, reclassify 2 to 5 and 3 to 5
+>>> gl.recode('/input_poly.shp', '/input_map.tif', '/output_map.tif', {1: {6:5}, 2: {2:5, 3:5}})
+
+# Change analysis
+>>> gl.change('/map1.tif', '/map2.tif', out_report='/change_report.csv'
+```
+
 #### Thematic accuracy:
 
 ```python
 >>> # Get map accuracy.
 >>> gl.sample_raster('/test_samples.shp', '/thematic_map.tif',
 >>>                  class_id='Id', accuracy=True)
+```
+
+#### Raster calculator
+
+```python
+>>> # Multiply raster A by raster B
+>>> gl.raster_calc('/output_image.tif', 
+>>>                equation='A*B', 
+>>>                out_type='float32', 
+>>>                A='/raster1.tif', 
+>>>                B='raster2.tif')
 ```
 
 #### Build mixed-type VRT files:
