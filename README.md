@@ -11,13 +11,13 @@ Usage examples
 ```bash
 change
 classify
-sample-raster
 reclassify
 recode
 raster-calc
+raster-tools
+sample-raster
 veg-indices
 vrt-builder
-raster-tools
 vector-tools
 ```
 
