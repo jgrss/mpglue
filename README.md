@@ -6,6 +6,23 @@ The **glue** of [MapPy](https://github.com/jgrss/mappy).
 Usage examples
 ---
 
+### Command line tools
+
+```bash
+change
+classify
+sample-raster
+reclassify
+recode
+raster-calc
+veg-indices
+vrt-builder
+raster-tools
+vector-tools
+```
+
+### Python library
+
 #### Load the library:
     
 ```python
