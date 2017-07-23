@@ -52,7 +52,8 @@ cdef DTYPE_uint8_t[:, :] _shrink_block(DTYPE_uint8_t[:, :] image_block,
 
     for ii in range(0, ws):
         for jj in range(0, ws):
-            block_sum += 1
+            if image_block[ii, jj] == 1:
+                block_sum += 1
 
     if block_sum < ws*2:
 
