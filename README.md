@@ -134,7 +134,7 @@ Usage examples
 >>> gl.recode('/input_poly.shp', '/input_map.tif', '/output_map.tif', {1: {6:5}, 2: {2:5, 3:5}})
 
 # Change analysis
->>> gl.change('/map1.tif', '/map2.tif', out_report='/change_report.csv'
+>>> gl.change('/map1.tif', '/map2.tif', out_report='/change_report.csv')
 ```
 
 #### Thematic accuracy:
