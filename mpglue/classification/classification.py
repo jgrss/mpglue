@@ -686,6 +686,9 @@ class Samples(object):
                 # Get all the samples that match the current class.
                 curr_cl = self.all_samps[np.where(self.all_samps[:, self.label_idx] == class_key)]
 
+                if curr_cl.shape[0] == 0:
+                    continue
+
                 # Shuffle rows (samples) for randomness.
                 np.random.shuffle(curr_cl)
 

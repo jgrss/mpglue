@@ -1924,6 +1924,68 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
 
         out_ds = None
 
+    def hist(self, band=1, is_cdl=False, bins=256, hist_range=None, normed=False, weights=None, density=None):
+
+        """
+        Prints the image histogram
+
+        Args:
+            band (Optional[int]): The band to get the histogram from.
+            is_cdl (Optional[bool]): Whether the image is a CDL image.
+            bins (Optional[int]): The number of bins.
+            hist_range (Optional[tuple]): The histogram range.
+            normed
+            weights
+            density
+        """
+
+        if is_cdl:
+            from .helpers import CDL_DICT
+            CDL_DICT_r = {v: k for k, v in CDL_DICT.iteritems()}
+
+        if not isinstance(hist_range, tuple):
+            hist_range = (0, 255)
+
+        if hasattr(self, 'array'):
+
+            the_hist, bin_edges = np.histogram(self.array,
+                                               bins=bins,
+                                               range=hist_range,
+                                               normed=normed,
+                                               weights=weights,
+                                               density=density)
+
+        else:
+
+            the_hist, bin_edges = np.histogram(self.read(bands2open=band),
+                                               bins=bins,
+                                               range=hist_range,
+                                               normed=normed,
+                                               weights=weights,
+                                               density=density)
+
+        total_samples = float(the_hist.sum())
+        the_hist_pct = (the_hist / total_samples) * 100.
+
+        print('Total samples: {:,d}'.format(int(total_samples)))
+        print('')
+
+        for i in range(0, bins):
+
+            if the_hist[i] > 0:
+
+                if is_cdl:
+
+                    if i not in CDL_DICT_r:
+                        cdl_label = 'unknown'
+                    else:
+                        cdl_label = CDL_DICT_r[i]
+
+                    print('{:d} ({}): {:,d} -- {:.2f}%'.format(i, cdl_label, the_hist[i], the_hist_pct[i]))
+
+                else:
+                    print('{:d}: {:,d} -- {:.2f}%'.format(i, the_hist[i], the_hist_pct[i]))
+
     def pca(self, n_components=3):
 
         """
