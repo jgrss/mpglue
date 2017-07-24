@@ -190,7 +190,7 @@ vector-tools
 Installation
 ---
 
-#### Install from source
+#### Install from source (requires Cython)
  
 1) Clone MpGlue
 
