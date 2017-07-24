@@ -129,6 +129,23 @@ CDL_DICT = dict(maize=1,
                 cranberries=250,
                 dbl_barley_soy=254)
 
+CDL_NONCROP_DICT = dict(sod_grass=59,
+                        switchgrass=60,
+                        fallow=61,
+                        open_water=111,
+                        developed_open=121,
+                        developed_low=122,
+                        developed_medium=123,
+                        developed_high=124,
+                        barren=131,
+                        deciduous_forest=141,
+                        evergreen_forest=142,
+                        mixed_forest=143,
+                        shrubland=152,
+                        grassland_pasture=176,
+                        woody_wetlands=190,
+                        herbaceous_wetlands=195)
+
 ITER_DICT = {0: '0',
              10: '0...10',
              20: '0...10...20',

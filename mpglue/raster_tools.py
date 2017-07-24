@@ -1940,8 +1940,11 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
         """
 
         if is_cdl:
-            from .helpers import CDL_DICT
+
+            from .helpers import CDL_DICT#, CDL_NONCROP_DICT
+
             CDL_DICT_r = {v: k for k, v in CDL_DICT.iteritems()}
+            # CDL_NONCROP_DICT_r = {v: k for k, v in CDL_NONCROP_DICT.iteritems()}
 
         if not isinstance(hist_range, tuple):
             hist_range = (0, 255)
