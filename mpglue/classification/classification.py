@@ -513,9 +513,9 @@ class Samples(object):
 
         self.time_stamp = time.asctime(time.localtime(time.time()))
 
-    def split_samples(self, file_name, perc_samp=.9, perc_samp_each=0, scale_data=False, class_subs={},
-                      norm_struct=True, labs_type='int', recode_dict={}, classes2remove=[],
-                      sample_weight=None, ignore_feas=[], use_xy=False, stratified=False, spacing=1000.,
+    def split_samples(self, file_name, perc_samp=.9, perc_samp_each=0, scale_data=False, class_subs=None,
+                      norm_struct=True, labs_type='int', recode_dict=None, classes2remove=None,
+                      sample_weight=None, ignore_feas=None, use_xy=False, stratified=False, spacing=1000.,
                       x_label='X', y_label='Y', response_label='response'):
 
         """
@@ -550,6 +550,18 @@ class Samples(object):
             y_label (str)                
             response_label (str)  
         """
+
+        if not isinstance(class_subs, dict):
+            class_subs = dict()
+
+        if not isinstance(recode_dict, dict):
+            recode_dict = dict()
+
+        if not isinstance(classes2remove, list):
+            classes2remove = list()
+
+        if not isinstance(ignore_feas, list):
+            ignore_feas = list()
 
         # if platform.system() == 'Windows':
         #     self.file_name = file_name.replace('\\', '/')
@@ -856,34 +868,36 @@ class Samples(object):
         self._update_class_counts()
 
         if scale_data:
-
-            d_name, f_name = os.path.split(self.file_name)
-            f_base, f_ext = os.path.splitext(f_name)
-
-            scaler_file = os.path.join(d_name, '{}_scaler.txt'.format(f_base))
-
-            self.scaler = StandardScaler().fit(self.p_vars)
-
-            # pickle scaler to file for later use
-            pickle.dump(self.scaler, file(scaler_file, 'wb'), protocol=pickle.HIGHEST_PROTOCOL)
-
-            # Save the unscaled samples.
-            self.p_vars_original = self.p_vars.copy()
-
-            # Scale the data.
-            self.p_vars = self.scaler.transform(self.p_vars)
-
-            self.scaled = True
-
+            self._scale_p_vars()
         else:
             self.scaled = False
+
+    def _scale_p_vars(self):
+
+        d_name, f_name = os.path.split(self.file_name)
+        f_base, f_ext = os.path.splitext(f_name)
+
+        scaler_file = os.path.join(d_name, '{}_scaler.txt'.format(f_base))
+
+        self.scaler = StandardScaler().fit(self.p_vars)
+
+        # pickle the scaler to file for later use
+        pickle.dump(self.scaler, file(scaler_file, 'wb'), protocol=pickle.HIGHEST_PROTOCOL)
+
+        # Save the unscaled samples.
+        self.p_vars_original = self.p_vars.copy()
+
+        # Scale the data.
+        self.p_vars = self.scaler.transform(self.p_vars)
+
+        self.scaled = True
 
     def _update_class_counts(self):
 
         self.classes = map(int, list(np.unique(self.labels)))
         self.n_classes = len(self.classes)
 
-        self.class_counts = {}
+        self.class_counts = dict()
 
         for indv_class in self.classes:
             self.class_counts[indv_class] = len(np.where(self.labels == indv_class)[0])
