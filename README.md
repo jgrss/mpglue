@@ -179,7 +179,7 @@ vector-tools
 
 ```python
 >>> # Fill a dictionary with image names.
->>> comp_dict = dict(zip(map(str, range(1, 3)), ['/im1.tif', '/im2.tif']))
+>>> comp_dict = dict(zip(map(str, range(1, 3)), [['/im1.tif'], ['/im2.tif']]))
 >>>
 >>> # `comp_dict` = {'1': '/im1.tif', '2': '/im2.tif'}
 >>>

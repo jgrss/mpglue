@@ -1823,9 +1823,6 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
 
         passed = True
 
-        # Initiate the file manager object.
-        # FileManager.__init__(self)
-
         if file_name == 'create':
             self.update_info(**kwargs)
         elif file_name != 'none':

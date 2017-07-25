@@ -74,8 +74,11 @@ class VRTBuilder(object):
         # use only the first list for the extent
         image_list = in_dict['1']
 
+        if not isinstance(image_list, list):
+            raise TypeError('An image list must be given.')
+
         if not image_list:
-            raise ValueError('A list must be given.')
+            raise ValueError('A full image list must be given.')
 
         # get the minimum and maximum extent of all images
 
@@ -171,7 +174,8 @@ class VRTBuilder(object):
         for bdk, bd in self.band_dict.iteritems():
 
             if not be_quiet:
-                print('Building list {} ...'.format(bdk))
+                sys.stdout.write('\rBuilding list {} ...'.format(bdk))
+                sys.stdout.flush()
 
             image_list = in_dict[bdk]
 
@@ -267,9 +271,8 @@ class VRTBuilder(object):
         # add to the XML string
         self.xml_base = '{}{}'.format(self.xml_base, self.xml_end)
 
-        # if subset:
-        #
-        #     self.delete_subs(sub_directory)
+        print('')
+        print('Finished processing')
 
     # def delete_subs(self, sub_directory):
     #
@@ -374,6 +377,14 @@ def vrt_builder(in_dict, out_vrt, bands2include=None, start_band=1, force_type=N
     
     Args:
         in_dict (dict): The input dictionary of images to add to a VRT file.
+
+            Format:
+                {'1': <list of images>,
+                 '2': <list of images>,
+                 ...}
+
+            where,
+                each dictionary key is an separate layer in the VRT output.
         out_vrt (str): The output VRT file.
         bands2include (Optional[list]): A list of bands to include. Default is None, or all bands.
         force_type (Optional[str]): Force the output storage type. Default is None.
@@ -384,10 +395,19 @@ def vrt_builder(in_dict, out_vrt, bands2include=None, start_band=1, force_type=N
         overwrite (Optional[bool]): Whether to overwrite `out_vrt`, if it exists. Default is False.
 
     Examples:
+        >>> # Stack image bands.
+        >>> vrt_builder({'1': ['image1.tif'],
+        >>>             '2': ['image2.tif'],
+        >>>             '3': ['image3.tif']},
+        >>>             '/out_vrt.vrt')
+        >>>
+        >>> # Stack multiple sources and subset.
         >>> vrt_builder({'1': ['image1.tif', 'imag2.tif'],
         >>>             '2': ['srtm1.tif', 'srtm2.tif', 'srtm3.tif']},
-        >>>             '/out_vrt.vrt', bands2include=[1, 3, 4],
-        >>>             force_type='float32', subset=True)
+        >>>             '/out_vrt.vrt',
+        >>>             bands2include=[1, 3, 4],
+        >>>             force_type='float32',
+        >>>             subset=True)
     """
 
     # VRT builder class
