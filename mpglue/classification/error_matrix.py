@@ -676,14 +676,18 @@ class error_matrix(object):
                 write_txt.write('\nOverall Accuracy (%): {:.2f}\n'.format(self.accuracy))
                 write_txt.write('Kappa: {:.2f}\n'.format(self.kappa_score))
 
-                if self.f_beta:
+                if isinstance(self.f_beta, float) or isinstance(self.f_beta, np.ndarray):
 
-                    for fi, fb in enumerate(self.f_beta):
+                    if isinstance(self.f_beta, float):
+                        write_txt.write('F-beta: {:.2f}'.format(self.f_beta))
+                    else:
 
-                        if fi == (len(self.f_beta)-1):
-                            write_txt.write('F-beta: {:.2f}\n'.format(fb))
-                        else:
-                            write_txt.write('F-beta: {:.2f},'.format(fb))
+                        for fi, fb in enumerate(self.f_beta):
+
+                            if fi == (len(self.f_beta)-1):
+                                write_txt.write('F-beta: {:.2f}\n'.format(fb))
+                            else:
+                                write_txt.write('F-beta: {:.2f},'.format(fb))
 
                 write_txt.write('Hamming loss: {:.2f}\n'.format(self.hamming))
 
