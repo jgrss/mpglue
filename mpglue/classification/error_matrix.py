@@ -679,7 +679,7 @@ class error_matrix(object):
                 if isinstance(self.f_beta, float) or isinstance(self.f_beta, np.ndarray):
 
                     if isinstance(self.f_beta, float):
-                        write_txt.write('F-beta: {:.2f}'.format(self.f_beta))
+                        write_txt.write('F-beta: {:.2f}\n'.format(self.f_beta))
                     else:
 
                         for fi, fb in enumerate(self.f_beta):
