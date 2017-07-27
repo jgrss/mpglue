@@ -286,6 +286,20 @@ def julian2date(julian_day, year, jd_dict_date=None):
     return int(m), int(d)
 
 
+def yyyyddd2months(yyyyddd_list):
+
+    """
+    Converts yyyyddd format to yyyymmm format.
+    """
+
+    jd_dict_date = julian_day_dictionary(store='date')
+
+    return ['{}{:03d}'.format(str(yyyyddd)[:4],
+                              julian2date(str(yyyyddd)[4:],
+                                          str(yyyyddd)[:4],
+                                          jd_dict_date=jd_dict_date)[0]) for yyyyddd in yyyyddd_list]
+
+
 def scaled_jd2jd(scaled_jds, return_jd=True):
 
     """
