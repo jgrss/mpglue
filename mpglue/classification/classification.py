@@ -2452,14 +2452,14 @@ class Preprocessing(object):
             with open(compare_samples.replace('.txt', '_w.txt'), 'wb') as p_dump:
                 pickle.dump(weights_out, p_dump, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def index_samples(self, base_samples, id_label='Id', x_label='X', y_label='Y'):
+    def _index_samples(self, base_samples, id_label='Id', x_label='X', y_label='Y'):
 
         """
+        Indexes samples into a RTree database
+
         Args:
             base_samples (DataFrame): It should only contain 'good' points.
         """
-
-        base_samples[id_label] = base_samples[id_label].astype(int)
 
         self.rtree_index = rtree.index.Index(interleaved=False)
 
@@ -2469,39 +2469,86 @@ class Preprocessing(object):
             x = float(df_row[x_label])
             y = float(df_row[y_label])
 
-            self.rtree_index.insert(int(df_row[id_label]), (x, y))
+            self.rtree_index.insert(int(df_row['UNQ']), (x, y))
 
-    def weight_samples(self, base_samples, compare_samples, id_label='Id', x_label='X', y_label='Y', n_nearest=1):
+    def weight_samples(self,
+                       df_samples,
+                       base_query,
+                       compare_query,
+                       id_label='Id',
+                       x_label='X',
+                       y_label='Y',
+                       w_label='WEIGHT'):
 
         """
+        Weights samples by inverse euclidean distance
+
+        Assumptions:
+            The input dataframe (`df_samples`) should have columns for X and Y coordinates, id labels,
+            and predefined weights.
+
         Args:
-            compare_samples (DataFrame): It should only contain points to compare against 'good' points.
+            df_samples (Pandas DataFrame): The samples.
+            base_query (str)
+            compare_query (str)
+            id_label (Optional[str]): The id column header.
+            x_label (Optional[str]): The x coordinate column header.
+            y_label (Optional[str]): The y coordinate column header.
+            w_label (Optional[str]): The weights column header.
+
+        Examples:
+            >>> import mpglue as gl
+            >>>
+            >>> cl = gl.classification()
+            >>>
+            >>> # print(df.head())
+            >>> #  X,  Y,  Id,  WEIGHT
+            >>> # [x,  y,  l,   w]
+            >>> # where,
+            >>> #   WEIGHT is a predefined weight for each sample.
+            >>>
+            >>> # Get spatial weights.
+            >>> df = cl.weight_samples(df, 'WEIGHT == 1', 'WEIGHT != 1')
         """
 
-        from scipy.spatial.distance import euclidean
+        base_samples = df_samples.query(base_query)
+        compare_samples = df_samples.query(compare_query)
 
-        base_samples[id_label] = base_samples[id_label].astype(int)
-        compare_samples[id_label] = compare_samples[id_label].astype(int)
+        base_samples['UNQ'] = range(0, base_samples.shape[0])
+        compare_samples['UNQ'] = range(0, compare_samples.shape[0])
 
-        sp_dists = []
+        # Create a RTree indexer.
+        self._index_samples(base_samples,
+                            id_label=id_label,
+                            x_label=x_label,
+                            y_label=y_label)
+
+        sp_dists = list()
 
         # Iterate over each sample.
         for di, df_row in compare_samples.iterrows():
 
+            # Get the x and y coordinates.
             x1 = float(df_row[x_label])
             y1 = float(df_row[y_label])
 
-            id = list(self.rtree_index.nearest((x1, y1), n_nearest))
+            # Get the nearest sample.
+            n_sample_id = list(self.rtree_index.nearest((x1, y1), 1))
 
-            x2 = float(base_samples.loc[base_samples[id_label] == id[0], x_label])
-            y2 = float(base_samples.loc[base_samples[id_label] == id[0], y_label])
+            # Get the base sample x and y coordinates.
+            x2 = float(base_samples.loc[base_samples['UNQ'] == n_sample_id[0], x_label])
+            y2 = float(base_samples.loc[base_samples['UNQ'] == n_sample_id[0], y_label])
 
-            # Calculate the distance.
-            sp_dists.append(euclidean([x1, y1], [x2, y2]))
+            # Calculate the euclidean distance
+            #   between the two samples.
+            sp_dists.append(sci_dist.euclidean([x1, y1], [x2, y2]))
 
         compare_samples['SP_DIST'] = sp_dists
 
-        return compare_samples
+        df_samples.loc[df_samples[w_label] != 1, w_label] = \
+            1. - (compare_samples['SP_DIST'] / compare_samples['SP_DIST'].max())
+
+        return df_samples
 
     def remove_outliers(self, outliers_fraction=.25, locate_only=False):
 

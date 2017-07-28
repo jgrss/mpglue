@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import sys
 import unittest
 
 import mpglue as gl
@@ -17,7 +18,7 @@ weights_df = pd.read_csv(weights_data)
 cl = gl.classification()
 
 cl.split_samples(sample_data,
-                 perc_samp=.9,
+                 perc_samp=1.,
                  perc_samp_each=0,
                  scale_data=False,
                  class_subs=None,
@@ -36,12 +37,20 @@ cl.split_samples(sample_data,
                  clear_observations=clear_df.clear.values,
                  min_observations=0)
 
-print(cl.p_vars)
-print('')
+print(cl.XY.shape)
+print(cl.p_vars.shape)
+print(cl.labels.shape)
 print(cl.sample_weight)
-print('')
-print(cl.train_clear)
-print('')
+
+df_weights = pd.DataFrame(np.hstack((cl.XY,
+                                     cl.p_vars,
+                                     cl.labels.reshape(cl.n_samps, 1),
+                                     cl.sample_weight.reshape(cl.n_samps, 1))),
+                          columns=['X', 'Y', 'a1', 'a2', 'a3', 'a4', 'Id', 'WEIGHT'])
+
+df_weights = cl.weight_samples(df_weights, 'WEIGHT == 1', 'WEIGHT != 1')
+print(df_weights)
+sys.exit()
 
 
 class TestUM(unittest.TestCase):
@@ -49,11 +58,15 @@ class TestUM(unittest.TestCase):
     def setUp(self):
         pass
 
+    # def test_spatial_weights(self):
+    #
+    #     cl.
+
     def test_instance_pvars(self):
         self.assertIsInstance(cl.p_vars, np.ndarray)
 
     def test_nsamps(self):
-        self.assertEqual(cl.n_samps, 35)
+        self.assertEqual(cl.n_samps, 39)
 
     def test_nfeas(self):
         self.assertEqual(cl.n_feas, 4)
