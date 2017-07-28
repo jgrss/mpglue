@@ -127,7 +127,7 @@ vector-tools
 >>> cl = gl.classification()
 >>>
 >>> # Load and split land cover samples.
->>> cl.split_samples('/land_cover_samples.shp', perc_samp=.7)
+>>> cl.split_samples('/land_cover_samples.txt', perc_samp=.7)
 >>> 
 >>> # Train a classification model.
 >>> cl.construct_model(classifier_info={'classifier': 'RF', 'trees': 100})
