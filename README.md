@@ -99,7 +99,7 @@ vector-tools
 >>> with gl.create_raster('/output_image.tif', o_info) as out_raster:
 >>>
 >>>     # Write an array block to band 1.
->>>     array2write = <some 2d array data>
+>>>     array2write = <some 3d array data>
 >>>     out_raster.write_array(array2write, i=0, j=0, band=1)
 ```
 
