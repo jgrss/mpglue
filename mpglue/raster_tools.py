@@ -184,9 +184,21 @@ SENSOR_DICT = {'landsat_tm': 'tm',
 
 class ReadWrite(object):
 
-    def read(self, bands2open=1, i=0, j=0, rows=-1, cols=-1, d_type=None,
-             compute_index='none', sensor='Landsat', sort_bands2open=True,
-             predictions=False, y=0., x=0., check_x=None, check_y=None):
+    def read(self,
+             bands2open=1,
+             i=0,
+             j=0,
+             rows=-1,
+             cols=-1,
+             d_type=None,
+             compute_index='none',
+             sensor='Landsat',
+             sort_bands2open=True,
+             predictions=False,
+             y=0.,
+             x=0.,
+             check_x=None,
+             check_y=None):
 
         """
         Reads a raster as an array
@@ -424,7 +436,7 @@ class ReadWrite(object):
                                                                           self.rrows)
 
                     if not isinstance(arr, np.ndarray):
-                        raise TypeError('Band {:d} is not a ndarray.'.format(band))
+                        raise TypeError('Band {:d} is not a NumPy array.'.format(band))
 
                     self.array.append(arr)
 
@@ -2990,9 +3002,12 @@ def _read_parallel(image, image_info, bands2open, y, x, rows2open, columns2open,
     """
 
     if isinstance(bands2open, list):
+
         if max(bands2open) > image_info.bands:
             raise ValueError('\nCannot open more bands than exist in the image.\n')
+
     else:
+
         if bands2open == -1:
             bands2open = range(1, image_info.bands+1)
 
@@ -3022,9 +3037,19 @@ def _read_parallel(image, image_info, bands2open, y, x, rows2open, columns2open,
         return np.array(band_arrays, dtype=d_type).reshape(len(bands2open), rows2open, columns2open)
 
 
-def read(image2open=None, i_info=None, bands2open=1, i=0, j=0,
-         rows=-1, cols=-1, d_type=None, n_jobs=0,
-         predictions=False, sort_bands2open=True, y=0., x=0.):
+def read(image2open=None,
+         i_info=None,
+         bands2open=1,
+         i=0,
+         j=0,
+         rows=-1,
+         cols=-1,
+         d_type=None,
+         predictions=False,
+         sort_bands2open=True,
+         y=0.,
+         x=0.,
+         n_jobs=0):
 
     """
     Reads a raster as an array
@@ -3043,11 +3068,11 @@ def read(image2open=None, i_info=None, bands2open=1, i=0, j=0,
         cols (Optional[int]): Number of columns to extract. Default is all columns.
         d_type (Optional[str]): Type of array to return. Default is None, or gathered from <i_info>.
             Choices are ['uint8', 'int8', 'uint16', 'uint32', 'int16', 'float32', 'float64'].
-        n_jobs (Optional[int]): The number of bands to open in parallel. Default is 0.
         predictions (Optional[bool]): Whether to return reshaped array for predictions.
         sort_bands2open (Optional[bool]): Whether to sort ``bands2open``. Default is True.
         y (Optional[float]): A y index coordinate. Default is 0. If greater than 0, overrides ``i``.
         x (Optional[float]): A x index coordinate. Default is 0. If greater than 0, overrides ``j``.
+        n_jobs (Optional[int]): The number of bands to open in parallel. Default is 0.
 
     Attributes:
         array (ndarray)
@@ -3081,6 +3106,58 @@ def read(image2open=None, i_info=None, bands2open=1, i=0, j=0,
     elif not isinstance(i_info, ropen) and isinstance(image2open, str):
         i_info = ropen(image2open)
 
+    if isinstance(d_type, str):
+        d_type = STORAGE_DICT[d_type]
+    else:
+        d_type = STORAGE_DICT[i_info.storage.lower()]
+
+    if i < 0:
+        i = 0
+
+    if j < 0:
+        j = 0
+
+    if rows == -1:
+        rows = i_info.rows
+    else:
+
+        if rows > i_info.rows:
+            raise ValueError('\nThe requested rows cannot be larger than the image rows.\n')
+
+    if cols == -1:
+        cols = i_info.cols
+    else:
+        if cols > i_info.cols:
+            raise ValueError('\nThe requested columns cannot be larger than the image columns.\n')
+
+    if isinstance(bands2open, list):
+
+        if len(bands2open) == 0:
+            raise ValueError('\nA band list must be declared.\n')
+
+        if max(bands2open) > i_info.bands:
+            raise ValueError('\nThe requested band position cannot be greater than the image bands.\n')
+
+    elif isinstance(bands2open, int):
+
+        if bands2open > i_info.bands:
+            raise ValueError('\nThe requested band position cannot be greater than the image bands.\n')
+
+        if bands2open == -1:
+            bands2open = range(1, i_info.bands+1)
+        else:
+            bands2open = [bands2open]
+
+    if sort_bands2open:
+        bands2open = sorted(bands2open)
+
+    # Index the image by x, y coodinates (in map units).
+    if abs(y) > 0:
+        __, __, __, i = get_xy_offsets(i_info, x=x, y=y)
+
+    if abs(x) > 0:
+        __, __, j, __ = get_xy_offsets(i_info, x=x, y=y)
+
     if (n_jobs == 0) and not predictions:
 
         kwargs = dict(bands2open=bands2open,
@@ -3097,59 +3174,7 @@ def read(image2open=None, i_info=None, bands2open=1, i=0, j=0,
 
     else:
 
-        if isinstance(d_type, str):
-            d_type = STORAGE_DICT[d_type]
-        else:
-            d_type = STORAGE_DICT[i_info.storage.lower()]
-
-        if i < 0:
-            i = 0
-
-        if j < 0:
-            j = 0
-
-        if rows == -1:
-            rows = i_info.rows
-        else:
-
-            if rows > i_info.rows:
-                raise ValueError('\nThe requested rows cannot be larger than the image rows.\n')
-
-        if cols == -1:
-            cols = i_info.cols
-        else:
-            if cols > i_info.cols:
-                raise ValueError('\nThe requested columns cannot be larger than the image columns.\n')
-
         # format_dict = {'byte': 'B', 'int16': 'i', 'uint16': 'I', 'float32': 'f', 'float64': 'd'}
-
-        if isinstance(bands2open, list):
-
-            if len(bands2open) == 0:
-                raise ValueError('\nA band list must be declared.\n')
-
-            if max(bands2open) > i_info.bands:
-                raise ValueError('\nThe requested band position cannot be greater than the image bands.\n')
-
-        elif isinstance(bands2open, int):
-
-            if bands2open > i_info.bands:
-                raise ValueError('\nThe requested band position cannot be greater than the image bands.\n')
-
-            if bands2open == -1:
-                bands2open = range(1, i_info.bands+1)
-            else:
-                bands2open = [bands2open]
-
-        if sort_bands2open:
-            bands2open = sorted(bands2open)
-
-        # Index the image by x, y coodinates (in map units).
-        if abs(y) > 0:
-            __, __, __, i = get_xy_offsets(i_info, x=x, y=y)
-
-        if abs(x) > 0:
-            __, __, j, __ = get_xy_offsets(i_info, x=x, y=y)
 
         if n_jobs == 0:
 
