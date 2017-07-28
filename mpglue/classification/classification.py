@@ -510,13 +510,28 @@ class Samples(object):
     """
 
     def __init__(self):
-
         self.time_stamp = time.asctime(time.localtime(time.time()))
 
-    def split_samples(self, file_name, perc_samp=.9, perc_samp_each=0, scale_data=False, class_subs=None,
-                      norm_struct=True, labs_type='int', recode_dict=None, classes2remove=None,
-                      sample_weight=None, ignore_feas=None, use_xy=False, stratified=False, spacing=1000.,
-                      x_label='X', y_label='Y', response_label='response'):
+    def split_samples(self,
+                      file_name,
+                      perc_samp=.9,
+                      perc_samp_each=0,
+                      scale_data=False,
+                      class_subs=None,
+                      norm_struct=True,
+                      labs_type='int',
+                      recode_dict=None,
+                      classes2remove=None,
+                      sample_weight=None,
+                      ignore_feas=None,
+                      use_xy=False,
+                      stratified=False,
+                      spacing=1000.,
+                      x_label='X',
+                      y_label='Y',
+                      response_label='response',
+                      clear_observations=None,
+                      min_observations=10):
 
         """
         Split samples for training and testing.
@@ -546,9 +561,13 @@ class Samples(object):
             stratified (Optional[bool]): Whether to stratify the samples. Default is False.
             spacing (Optional[float]): The grid spacing (meters) to use for stratification (in ``stratified``).
                 Default is 1000.
-            x_label (str)        
-            y_label (str)                
-            response_label (str)  
+            x_label (str): The x coordinate label. Default is 'X'.
+            y_label (str): The y coordinate label. Default is 'Y'.
+            response_label (str): The response label. Default is 'response'.
+            clear_observations (Optional[array like]): Clear observations to filter samples by. Default is None.
+                *The array will be flattened if not 1d.
+            min_observations (Optional[int]): The minimum number of observations required in a time series.
+                *Uses `clear_observations`.
         """
 
         if not isinstance(class_subs, dict):
@@ -577,10 +596,10 @@ class Samples(object):
         self.perc_samp_each = perc_samp_each
         self.classes2remove = classes2remove
         self.sample_weight = sample_weight
+        self.min_observations = min_observations
 
+        # Open the data samples.
         if isinstance(self.file_name, str):
-
-            # Open the data samples.
             df = pd.read_csv(self.file_name, sep=',')
 
         elif isinstance(self.file_name, np.ndarray):
@@ -624,6 +643,13 @@ class Samples(object):
         # Parse the x, y coordinates.
         self.XY = df[[x_label, y_label]].values
 
+        if isinstance(clear_observations, np.ndarray) or isinstance(clear_observations, list):
+
+            clear_observations = np.array(clear_observations, dtype='uint64').ravel()
+
+            if self.all_samps.shape[0] != len(clear_observations):
+                raise AssertionError('The clear observation and sample lengths do no match.')
+
         # Spatial stratified sampling.
         if stratified:
 
@@ -655,19 +681,27 @@ class Samples(object):
 
         # Append the x, y coordinates to the x variables.
         if self.use_xy:
+
             self.all_samps = np.c_[self.all_samps[:, :-1], self.XY, self.all_samps[:, -1]]
             self.headers = self.headers[2:-1] + self.headers[:2] + [self.headers[-1]]
+
         else:
+
             # Remove x, y
             self.headers = self.headers[2:]
 
         # Remove unwanted classes.
         if self.classes2remove:
-            self._remove_classes(self.classes2remove)
+            clear_observations = self._remove_classes(self.classes2remove, clear_observations)
+
+        # Remove samples with less than
+        #   minimum time series requirement.
+        if isinstance(clear_observations, np.ndarray) and (min_observations > 0):
+            clear_observations = self._remove_min_observations(clear_observations)
 
         # Get the number of samples and x variables.
-        #   rows = number of samples
-        #   cols = number of features
+        #   n_samps = number of samples
+        #   n_feas = number of features minus the labels
         self.n_samps = self.all_samps.shape[0]
         self.n_feas = self.all_samps.shape[1] - 1
 
@@ -677,56 +711,59 @@ class Samples(object):
         if isinstance(self.sample_weight, list) and len(self.sample_weight) > 0:
             self.sample_weight = np.array(self.sample_weight, dtype='float32')
 
-        # Recode specified classes.
+        # Recode response labels.
         if recode_dict:
-
-            new_samps = np.zeros(self.all_samps.shape[0], dtype='int16')
-            temp_labels = self.all_samps[:, -1]
-
-            for recode_key, cl in sorted(recode_dict.iteritems()):
-                new_samps[temp_labels == recode_key] = cl
-
-            self.all_samps[:, -1] = new_samps
+            self._recode_labels(recode_dict)
 
         # Sample a specified number per class.
         if class_subs:
 
             counter = 1
 
+            test_stk = None
+            train_stk = None
+            clear_test_stk = None
+            clear_train_stk = None
+            weights_train_stk = None
+
             for class_key, cl in sorted(class_subs.iteritems()):
 
-                # Get all the samples that match the current class.
-                curr_cl = self.all_samps[np.where(self.all_samps[:, self.label_idx] == class_key)]
+                # Get the samples for the current class.
+                curr_cl, curr_weights, curr_clear, do_continue = self.get_class_subsample(class_key, clear_observations)
 
-                if curr_cl.shape[0] == 0:
+                if do_continue:
                     continue
 
-                # Shuffle rows (samples) for randomness.
-                np.random.shuffle(curr_cl)
+                # Get the sub-sample indices
+                #   for the current class.
+                test_samples_temp, train_samples_temp, test_clear_temp, train_clear_temp, train_weights_temp = \
+                    self.get_test_train(curr_cl, cl, curr_weights, curr_clear)
 
-                # Check for float or integer.
-                if isinstance(cl, float):
-                    ran = np.random.choice(range(curr_cl.shape[0]), size=int(cl * curr_cl.shape[0]), replace=False)
-                elif isinstance(cl, int):
-                    ran = np.random.choice(range(curr_cl.shape[0]), size=cl, replace=False)
-
-                # Create the test samples.
-                test_samps_temp = np.delete(curr_cl, ran, axis=0)
-
-                # Get the current samples.
-                curr_cl = curr_cl[ran]
-
-                if counter == 1:
-                    train_stk = curr_cl.copy()
-                    test_stk = test_samps_temp.copy()
-                else:
-                    train_stk = np.vstack((train_stk, curr_cl))
-                    test_stk = np.vstack((test_stk, test_samps_temp))
+                # Stack the sub-samples.
+                test_stk, train_stk, clear_test_stk, clear_train_stk, weights_train_stk = self._stack_samples(counter,
+                                                                                                              test_stk,
+                                                                                                              train_stk,
+                                                                                                              test_samples_temp,
+                                                                                                              train_samples_temp,
+                                                                                                              clear_test_stk,
+                                                                                                              clear_train_stk,
+                                                                                                              test_clear_temp,
+                                                                                                              train_clear_temp,
+                                                                                                              weights_train_stk,
+                                                                                                              train_weights_temp)
 
                 counter += 1
 
             self.all_samps = train_stk.copy()
             test_samps = test_stk.copy()
+
+            if isinstance(clear_observations, np.ndarray):
+
+                self.test_clear = np.uint64(clear_test_stk)
+                self.train_clear = np.uint64(clear_train_stk)
+
+            if isinstance(self.sample_weight, np.ndarray):
+                self.sample_weight = np.float32(weights_train_stk)
 
         elif 0 < perc_samp_each < 1:
 
@@ -740,42 +777,46 @@ class Samples(object):
 
             self.classes = list(np.unique(self.labels))
 
-            class_subs = {}
+            class_subs = dict()
 
             for clp in self.classes:
                 class_subs[clp] = perc_samp_each
 
             counter = 1
 
+            test_stk = None
+            train_stk = None
+            clear_test_stk = None
+            clear_train_stk = None
+
             if isinstance(self.sample_weight, np.ndarray):
                 self.all_samps = np.c_[self.sample_weight, self.all_samps]
 
             for class_key, cl in sorted(class_subs.iteritems()):
 
-                # Get all the samples that match the current class.
-                curr_cl = self.all_samps[np.where(self.all_samps[:, self.label_idx] == class_key)]
+                # Get the samples for the current class.
+                curr_cl, curr_weights, curr_clear, do_continue = self.get_class_subsample(class_key, clear_observations)
 
-                # Shuffle rows (samples).
-                np.random.shuffle(curr_cl)
+                if do_continue:
+                    continue
 
-                # Check for float or integer.
-                if isinstance(cl, float):
-                    ran = np.random.choice(range(curr_cl.shape[0]), size=int(cl * curr_cl.shape[0]), replace=False)
-                elif isinstance(cl, int):
-                    ran = np.random.choice(range(curr_cl.shape[0]), size=cl, replace=False)
+                # Get the sub-sample indices
+                #   for the current class.
+                test_samples_temp, train_samples_temp, test_clear_temp, train_clear_temp, train_weights_temp = \
+                    self.get_test_train(curr_cl, cl, curr_weights, curr_clear)
 
-                # Create the test samples.
-                test_samps_temp = np.delete(curr_cl, ran, axis=0)
-
-                # Get the current samples.
-                curr_cl = curr_cl[ran]
-
-                if counter == 1:
-                    train_stk = np.copy(curr_cl)
-                    test_stk = np.copy(test_samps_temp)
-                else:
-                    train_stk = np.vstack((train_stk, curr_cl))
-                    test_stk = np.vstack((test_stk, test_samps_temp))
+                # Stack the sub-samples.
+                test_stk, train_stk, clear_test_stk, clear_train_stk, weights_train_stk = self._stack_samples(counter,
+                                                                                                              test_stk,
+                                                                                                              train_stk,
+                                                                                                              test_samples_temp,
+                                                                                                              train_samples_temp,
+                                                                                                              clear_test_stk,
+                                                                                                              clear_train_stk,
+                                                                                                              test_clear_temp,
+                                                                                                              train_clear_temp,
+                                                                                                              weights_train_stk,
+                                                                                                              train_weights_temp)
 
                 counter += 1
 
@@ -791,7 +832,13 @@ class Samples(object):
                 self.all_samps = np.copy(train_stk)
                 test_samps = np.copy(test_stk)
 
-        elif (perc_samp < 1) and (perc_samp_each == 0):
+            if isinstance(clear_observations, np.ndarray):
+
+                self.test_clear = np.uint64(clear_test_stk)
+                self.train_clear = np.uint64(clear_train_stk)
+
+        elif ((isinstance(perc_samp, float) and (perc_samp < 1)) or (isinstance(perc_samp, int) and (perc_samp > 0))) \
+                and (perc_samp_each == 0):
 
             if stratified:
 
@@ -812,20 +859,26 @@ class Samples(object):
 
             else:
 
-                # Shuffle rows (samples).
-                np.random.shuffle(self.all_samps)
+                test_samps, self.all_samps, test_clear, train_clear, self.sample_weight = \
+                    self.get_test_train(self.all_samps, perc_samp, self.sample_weight, clear_observations)
 
-                # Get random indices.
-                ran = np.random.choice(range(self.n_samps), size=int(perc_samp * self.n_samps), replace=False)
+                n_samples = self.all_samps.shape[0]
 
-                # Extract test samples.
-                test_samps = np.delete(self.all_samps, ran, axis=0)
+                # Add a bit of randomness.
+                shuffle_permutations = np.random.permutation(n_samples)
 
-                # Extract training samples.
-                self.all_samps = self.all_samps[ran]
+                self.all_samps = self.all_samps[shuffle_permutations]
+
+                if isinstance(clear_observations, np.ndarray):
+
+                    self.test_clear = np.uint64(test_clear)
+                    self.train_clear = np.uint64(train_clear[shuffle_permutations])
 
                 if isinstance(self.sample_weight, np.ndarray):
-                    self.sample_weight = self.sample_weight[ran]
+                    self.sample_weight = self.sample_weight[shuffle_permutations]
+
+        else:
+            self.train_clear = clear_observations
 
         self.n_samps = self.all_samps.shape[0]
 
@@ -871,6 +924,154 @@ class Samples(object):
             self._scale_p_vars()
         else:
             self.scaled = False
+
+    def _stack_samples(self,
+                       counter,
+                       test_stk,
+                       train_stk,
+                       test_samples_temp,
+                       train_samples_temp,
+                       clear_test_stk,
+                       clear_train_stk,
+                       test_clear_temp,
+                       train_clear_temp,
+                       weights_train_stk,
+                       train_weights_temp):
+
+        """
+        Stacks sub-samples
+        """
+
+        if counter == 1:
+
+            test_stk = test_samples_temp.copy()
+            train_stk = train_samples_temp.copy()
+
+            if isinstance(train_clear_temp, np.ndarray):
+
+                clear_test_stk = test_clear_temp.copy()
+                clear_train_stk = train_clear_temp.copy()
+
+            if isinstance(train_weights_temp, np.ndarray):
+                weights_train_stk = train_weights_temp.copy()
+
+        else:
+
+            test_stk = np.vstack((test_stk, test_samples_temp))
+            train_stk = np.vstack((train_stk, train_samples_temp))
+
+            if isinstance(train_clear_temp, np.ndarray):
+
+                clear_test_stk = np.hstack((clear_test_stk, test_clear_temp))
+                clear_train_stk = np.hstack((clear_train_stk, train_clear_temp))
+
+            if isinstance(train_weights_temp, np.ndarray):
+                weights_train_stk = np.hstack((weights_train_stk, train_weights_temp))
+
+        return test_stk, train_stk, clear_test_stk, clear_train_stk, weights_train_stk
+
+    def get_test_train(self, array2sample, sample, weights2sample, clear2sample):
+
+        """
+        Randomly sub-samples by integer or percentage
+
+        Args:
+            array2sample (2d array): The array to sub-sample. Includes the X predictors and the y labels.
+            sample (int or float): The number or percentage to randomly sample.
+            weights2sample (1d array): The sample weights to sub-sample.
+            clear2sample (1d array): Clear observations to sub-sample.
+
+        Returns:
+            test, train, clear test, clear train
+        """
+
+        n_samples = array2sample.shape[0]
+
+        if isinstance(sample, float):
+            random_subsample = np.random.choice(range(0, n_samples), size=int(sample*n_samples), replace=False)
+        elif isinstance(sample, int):
+            random_subsample = np.random.choice(range(0, n_samples), size=sample, replace=False)
+        else:
+            raise TypeError('The sample number must be an integer or float.')
+
+        # Create the test samples.
+        test_samples = np.delete(array2sample, random_subsample, axis=0)
+
+        # Create the train samples.
+        train_samples = array2sample[random_subsample]
+
+        if isinstance(weights2sample, np.ndarray):
+            train_weight_samples = weights2sample[random_subsample]
+        else:
+            train_weight_samples = None
+
+        if isinstance(clear2sample, np.ndarray):
+
+            test_clear_samples = np.delete(clear2sample, random_subsample)
+            train_clear_samples = clear2sample[random_subsample]
+
+        else:
+
+            test_clear_samples = None
+            train_clear_samples = None
+
+        return test_samples, train_samples, test_clear_samples, train_clear_samples, train_weight_samples
+
+    def get_class_subsample(self, class_key, clear_observations):
+
+        """
+        Sub-samples by `response` class.
+
+        Args:
+            class_key (int): The class to sub-sample.
+            clear_observations (1d array): Clear observations.
+
+        Returns:
+            Shuffled & sub-sampled ...
+                X predictors, weights, clear observations, `continue`
+        """
+
+        # Get the indices of samples that
+        #   match the current class.
+        cl_indices = np.where(self.all_samps[:, self.label_idx] == class_key)
+
+        # Continue to the next class
+        #   if there are no matches.
+        if not np.any(cl_indices):
+            return None, None, None, True
+
+        # Get the samples for the current class.
+        curr_cl = self.all_samps[cl_indices]
+
+        # Add a bit of randomness.
+        shuffle_permutations = np.random.permutation(curr_cl.shape[0])
+
+        curr_cl = curr_cl[shuffle_permutations]
+
+        # Sub-sample the clear observations and
+        #   stack them with the labels.
+        if isinstance(clear_observations, np.ndarray):
+
+            current_clear = clear_observations[cl_indices]
+            current_clear = current_clear[shuffle_permutations]
+
+        else:
+            current_clear = None
+
+        # Sub-sample the sample weights and
+        #   stack them with the labels.
+        if isinstance(self.sample_weight, np.ndarray):
+
+            current_weights = self.sample_weight[cl_indices]
+            current_weights = current_weights[shuffle_permutations]
+
+        else:
+            current_weights = None
+
+        if not isinstance(clear_observations, np.ndarray) and not isinstance(self.sample_weight, np.ndarray):
+            return curr_cl, None, None, False
+        else:
+            return curr_cl, current_weights, current_clear, False
 
     def _scale_p_vars(self):
 
@@ -942,10 +1143,45 @@ class Samples(object):
 
         return n_match_samps
 
-    def _remove_classes(self, classes2remove):
+    def _recode_labels(self, recode_dict):
 
         """
-        Remove specific classes from the data
+        Recodes response labels
+
+        Args:
+            recode_dict (dict): The recode dictionary.
+        """
+
+        new_samps = np.zeros(self.n_samps, dtype='int16')
+        temp_labels = self.all_samps[:, -1]
+
+        for recode_key, cl in sorted(recode_dict.iteritems()):
+            new_samps[temp_labels == recode_key] = cl
+
+        self.all_samps[:, -1] = new_samps
+
+    def _remove_min_observations(self, clear_observations):
+
+        """
+        Removes samples with less than minimum time series requirement
+
+        Args:
+            clear_observations (1d array): The clear observations.
+        """
+
+        good_indices = np.where(clear_observations >= self.min_observations)
+
+        self.all_samps = self.all_samps[good_indices]
+
+        if isinstance(self.sample_weight, np.ndarray):
+            self.sample_weight = self.sample_weight[good_indices]
+
+        return clear_observations[good_indices]
+
+    def _remove_classes(self, classes2remove, clear_observations):
+
+        """
+        Removes specific classes from the data
         """
 
         for class2remove in classes2remove:
@@ -961,6 +1197,11 @@ class Samples(object):
 
             if isinstance(self.sample_weight, np.ndarray):
                 self.sample_weight = np.float32(np.delete(self.sample_weight, class2remove_idx, axis=0))
+
+            if isinstance(clear_observations, np.ndarray):
+                clear_observations = np.uint64(np.delete(clear_observations, class2remove_idx, axis=0))
+
+        return clear_observations
 
     def remove_values(self, value2remove, fea_check):
 
@@ -2461,8 +2702,10 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
     """
 
     def __init__(self):
-
         self.time_stamp = time.asctime(time.localtime(time.time()))
+
+    def copy(self):
+        return copy(self)
 
     def model_options(self):
 
