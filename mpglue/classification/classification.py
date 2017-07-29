@@ -3864,6 +3864,10 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
             if self.classifier_info['classifier'] == 'ChainCRF':
                 self._transform4crf()
 
+            print(self.p_vars.shape)
+            print(self.labels.shape)
+            print(self.model)
+
             self.model.fit(self.p_vars, self.labels)
 
         # Scikit-learn models
