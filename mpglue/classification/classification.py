@@ -3859,9 +3859,11 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
             self.model.train_auto(self.p_vars, self.labels, None, None, params=self.parameters, k_fold=10)
 
-        elif self.classifier_info['classifier'] == 'ChainCRF':
+        elif self.classifier_info['classifier'] in ['ChainCRF', 'GridCRF']:
 
-            self._transform4crf()
+            if self.classifier_info['classifier'] == 'ChainCRF':
+                self._transform4crf()
+
             self.model.fit(self.p_vars, self.labels)
 
         # Scikit-learn models
