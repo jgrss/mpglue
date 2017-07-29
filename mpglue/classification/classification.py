@@ -3581,7 +3581,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                 else:
 
                     self.model = ssvm.OneSlackSSVM(GridCRF(inference_method='ogrm',
-                                                             neighborhood=4),
+                                                           neighborhood=4),
                                                    **self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'ORRF':
@@ -3863,10 +3863,6 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
             if self.classifier_info['classifier'] == 'ChainCRF':
                 self._transform4crf()
-
-            print(self.p_vars.shape)
-            print(self.labels.shape)
-            print(self.model)
 
             self.model.fit(self.p_vars, self.labels)
 
