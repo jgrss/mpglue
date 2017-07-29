@@ -120,20 +120,47 @@ vector-tools
 >>> gl.sample_raster('/train_samples.shp', '/image_variables.tif', class_id='Id')
 ```
 
+#### Train and test preparation:
+
+```python
+>>> # Initiate the classification object.
+>>> cl = gl.classification()
+>>>
+>>> # Load and split land cover samples into test and train.
+>>> # train = 70%
+>>> # test = 30%
+>>> cl.split_samples('/land_cover_samples.txt', perc_samp=.7)
+>>>
+>>> # Sample 70% from each class.
+>>> cl.split_samples('/land_cover_samples.txt', perc_samp_each=.7)
+>>>
+>>> # Specify sampling percentage for each class.
+>>> cl.split_samples('/land_cover_samples.txt', class_subs={1: .5, 2: .5, 3: .3})
+>>>
+>>> # Merge class 3 into class 2.
+>>> cl.split_samples('/land_cover_samples.txt', recode_dict={1:1, 2:2, 3:2})
+>>>
+>>> # Remove classes 2 and 3.
+>>> cl.split_samples('/land_cover_samples.txt', classes2remove=[2, 3])
+>>>
+>>> # Ignore predictive features 1 and 10.
+>>> cl.split_samples('/land_cover_samples.txt', ignore_feas=[1, 10])
+```
+
 #### Image classification:
 
 ```python
 >>> # Initiate the classification object.
 >>> cl = gl.classification()
 >>>
->>> # Load and split land cover samples.
+>>> # Load and split land cover samples into test and train.
 >>> cl.split_samples('/land_cover_samples.txt', perc_samp=.7)
->>> 
+>>>
 >>> # Train a classification model.
 >>> cl.construct_model(classifier_info={'classifier': 'RF', 'trees': 100})
 >>>
 >>> # Print the error matrix report.
->>> print(cl.emat.report)
+>>> cl.emat.write_stats('/text_report.txt')
 >>>
 >>> # Predict class labels.
 >>> cl.predict('/input_image.tif', '/output_map.tif')

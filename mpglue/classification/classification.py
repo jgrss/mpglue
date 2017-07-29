@@ -2846,10 +2846,22 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
         """
 
-    def construct_model(self, input_model=None, output_model=None, classifier_info=None,
-                        class_weight=None, var_imp=True, rank_method=None, top_feas=.5,
-                        get_probs=False, input_image=None, in_shapefile=None, out_stats=None,
-                        stats_from_image=False, calibrate_proba=False, be_quiet=False, n_jobs=-1):
+    def construct_model(self,
+                        input_model=None,
+                        output_model=None,
+                        classifier_info=None,
+                        class_weight=None,
+                        var_imp=True,
+                        rank_method=None,
+                        top_feas=.5,
+                        get_probs=False,
+                        input_image=None,
+                        in_shapefile=None,
+                        out_stats=None,
+                        stats_from_image=False,
+                        calibrate_proba=False,
+                        be_quiet=False,
+                        n_jobs=-1):
 
         """
         Loads, trains, and saves a predictive model.
@@ -4442,7 +4454,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
         Examples:
             >>> # get test accuracy
-            >>> cl.test_accuracy('/out_accuracy.txt')
+            >>> cl.test_accuracy(out_acc='/out_accuracy.txt')
             >>> print cl.emat.accuracy
         """
 

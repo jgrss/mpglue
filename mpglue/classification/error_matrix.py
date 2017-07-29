@@ -291,12 +291,12 @@ class error_matrix(object):
         observed = []
         predicted = []
 
-        for ei in xrange(0, self.e_matrix.shape[0]):
-            for ej in xrange(0, self.e_matrix.shape[1]):
+        for ei in range(0, self.e_matrix.shape[0]):
+            for ej in range(0, self.e_matrix.shape[1]):
 
                 n_ = self.e_matrix[ei, ej]
 
-                for n in xrange(0, n_):
+                for n in range(0, n_):
                     observed.append(ei+1)
                     predicted.append(ej+1)
 
@@ -341,7 +341,7 @@ class error_matrix(object):
 
         # Estimate the class proportions.
         e_matrix_pr = np.array([self.area_weights * (e_matrix_float[:, ci] / emat_row_sum)
-                                for ci in xrange(e_matrix_float.shape[1])], dtype='float32')
+                                for ci in range(e_matrix_float.shape[1])], dtype='float32')
 
         # User and producer weights
         # Equation 9
@@ -355,7 +355,7 @@ class error_matrix(object):
 
         self.standard_errors = []
 
-        for ci in xrange(e_matrix_float.shape[0]):
+        for ci in range(e_matrix_float.shape[0]):
 
             a = np.power(self.area_weights, 2)
             b = e_matrix_float[:, ci] / emat_row_sum
@@ -378,7 +378,7 @@ class error_matrix(object):
 
         producer_sums = self.e_matrix.sum(axis=0)
 
-        for pr_j in xrange(0, self.n_classes):
+        for pr_j in range(0, self.n_classes):
             self.producers[pr_j] = (self.e_matrix[pr_j, pr_j] / float(producer_sums[pr_j])) * 100.
 
         self.producers[np.isnan(self.producers) | np.isinf(self.producers)] = 0.
@@ -389,7 +389,7 @@ class error_matrix(object):
 
         user_sums = self.e_matrix.sum(axis=1)
 
-        for pr_i in xrange(0, self.n_classes):
+        for pr_i in range(0, self.n_classes):
             self.users[pr_i] = (self.e_matrix[pr_i, pr_i] / float(user_sums[pr_i])) * 100.
 
         self.users[np.isnan(self.users) | np.isinf(self.users)] = 0.
@@ -530,7 +530,7 @@ class error_matrix(object):
                 write_txt.write('               --------\n')
                 write_txt.write('               Class %d   ' % self.class_list[0])
 
-                for c in xrange(1, self.n_classes):
+                for c in range(1, self.n_classes):
 
                     write_txt.write('Class %d   ' % self.class_list[c])
 
@@ -538,13 +538,13 @@ class error_matrix(object):
 
                 write_txt.write('               -------   ')
 
-                for c in xrange(0, self.n_classes-1):
+                for c in range(0, self.n_classes-1):
 
                     write_txt.write('-------   ')
 
                 write_txt.write('-----   -------\n')
 
-                for i in xrange(0, self.n_classes):
+                for i in range(0, self.n_classes):
 
                     if i == 0:
                         write_txt.write('Predicted| C%d| (' % self.class_list[0])
@@ -553,7 +553,7 @@ class error_matrix(object):
                     else:
                         write_txt.write('           C%d| ' % self.class_list[i])
 
-                    for j in xrange(0, self.n_classes):
+                    for j in range(0, self.n_classes):
 
                         spacer = len(str(int(self.e_matrix[i, j])))
 
@@ -572,12 +572,12 @@ class error_matrix(object):
                         if i == j:
                             write_txt.write(str(int(self.e_matrix[i, j])) + ')')
 
-                            for s in xrange(0, spacer-2):
+                            for s in range(0, spacer-2):
                                 write_txt.write(' ')
                         else:
                             write_txt.write(str(int(self.e_matrix[i, j])))
 
-                            for s in xrange(0, spacer):
+                            for s in range(0, spacer):
                                 write_txt.write(' ')
 
                     write_txt.write('{:d}'.format(self.e_matrix[i, :].sum()))
@@ -592,7 +592,7 @@ class error_matrix(object):
                     elif spacer == 6: spacer = 2
                     elif spacer == 7: spacer = 1
 
-                    for s in xrange(0, spacer):
+                    for s in range(0, spacer):
                         write_txt.write(' ')
 
                     # User's accuracy
@@ -600,7 +600,7 @@ class error_matrix(object):
 
                 write_txt.write('        Total| ')
 
-                for j in xrange(0, self.n_classes):
+                for j in range(0, self.n_classes):
 
                     spacer = len(str(int(self.e_matrix[:, j].sum())))
 
@@ -616,7 +616,7 @@ class error_matrix(object):
 
                     write_txt.write('{:d}'.format(self.e_matrix[:, j].sum()))
 
-                    for s in xrange(0, spacer):
+                    for s in range(0, spacer):
                         write_txt.write(' ')
 
                 write_txt.write('({:d})\n'.format(self.e_matrix.sum(axis=0).sum()))
@@ -642,7 +642,7 @@ class error_matrix(object):
 
                     write_txt.write(pr_jf)
 
-                    for s in xrange(0, spacer):
+                    for s in range(0, spacer):
                         write_txt.write(' ')
 
                 if len(pr_jf) == 1:
@@ -664,7 +664,7 @@ class error_matrix(object):
                 elif len(pr_jf) == 9:
                     sp = 9
 
-                for s in xrange(0, sp-spacer):
+                for s in range(0, sp-spacer):
                     write_txt.write(' ')
 
                 write_txt.write('({:.2f}%)\n'.format(self.accuracy))
