@@ -1246,7 +1246,7 @@ class Samples(object):
         self.p_vars = np.float32(np.delete(self.p_vars, idx, axis=0))
         self.labels = np.float32(np.delete(self.labels, idx, axis=0))
 
-    def load4crf(self, predictors, labels):
+    def load4crf(self, predictors, labels, scale_factor=1.):
 
         """
         Loads data for Conditional Random Fields on a grid
@@ -1257,6 +1257,7 @@ class Samples(object):
                 be given as `layers` x `rows` x `columns.
             labels (list): A list of images to open or a list of arrays. If an `array`, a single image should
                 be given as `rows` x `columns` and must match the length of `predictors`.
+            scale_factor (Optional[float]):
         """
 
         if not isinstance(predictors, list):
@@ -1290,10 +1291,19 @@ class Samples(object):
 
                 with raster_tools.ropen(predictor) as i_info:
 
-                    self.p_vars[pri, :, :, :] = scaler.transform(i_info.read(bands2open=-1,
-                                                                             predictions=True)).reshape(rows,
-                                                                                                        cols,
-                                                                                                        bands)
+                    if scale_factor > 1:
+
+                        self.p_vars[pri, :, :, :] = i_info.read(bands2open=-1,
+                                                                predictions=True).reshape(rows,
+                                                                                          cols,
+                                                                                          bands) / scale_factor
+
+                    else:
+
+                        self.p_vars[pri, :, :, :] = scaler.transform(i_info.read(bands2open=-1,
+                                                                                 predictions=True)).reshape(rows,
+                                                                                                            cols,
+                                                                                                            bands)
 
                 del i_info
 
@@ -1310,8 +1320,15 @@ class Samples(object):
 
             for pri, predictor in enumerate(predictors):
 
-                self.p_vars[pri, :, :, :] = predictor.transpose(1, 2, 0).reshape(rows*cols,
-                                                                                 bands)
+                if scale_factor > 1:
+
+                    self.p_vars[pri, :, :, :] = predictor.transpose(1, 2, 0).reshape(rows * cols,
+                                                                                     bands) / scale_factor
+
+                else:
+
+                    self.p_vars[pri, :, :, :] = predictor.transpose(1, 2, 0).reshape(rows*cols,
+                                                                                     bands)
 
         # Arrange the labels.
         if isinstance(labels[0], str):
