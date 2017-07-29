@@ -18,7 +18,7 @@ weights_df = pd.read_csv(weights_data)
 cl = gl.classification()
 
 cl.split_samples(sample_data,
-                 perc_samp=1.,
+                 perc_samp=.5,
                  perc_samp_each=0,
                  scale_data=False,
                  class_subs=None,
@@ -36,6 +36,16 @@ cl.split_samples(sample_data,
                  response_label='response',
                  clear_observations=clear_df.clear.values,
                  min_observations=0)
+
+import itertools
+cl.construct_model(classifier_info={'classifier': 'ChainCRF'})
+pr = cl.model.predict(cl.p_vars)
+pr = np.array(list(itertools.chain.from_iterable(pr)))
+
+print(pr)
+print(cl.n_samps)
+print(len(cl.labels_test))
+sys.exit()
 
 print(cl.XY.shape)
 print(cl.p_vars.shape)

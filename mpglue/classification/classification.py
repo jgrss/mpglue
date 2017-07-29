@@ -76,10 +76,21 @@ except ImportError:
     raise ImportError('GDAL must be installed')
 
 # OpenCV
-#try:
-#    import cv2
-#except ImportError:
-#    raise ImportError('OpenCV must be installed')
+try:
+   import cv2
+except ImportError:
+   raise ImportError('OpenCV must be installed')
+
+# Pystruct
+try:
+
+    from pystruct.models import ChainCRF, GridCRF
+    import pystruct.learners as ssvm
+
+    pystruct_installed = True
+
+except:
+    pystruct_installed = False
 
 # Scikit-learn
 try:
@@ -367,9 +378,7 @@ def predict_cv(ci, cs, fn, pc, cr, ig, xy, cinfo, wc):
 
 def get_available_models():
 
-    """
-    Get a list of available models
-    """
+    """Gets a list of available models"""
 
     return ['AB_DT', 'AB_EX_DT', 'AB_RF', 'AB_EX_RF', 'AB_Bag', 'AB_DTR', 'AB_EX_DTR',
             'AB_RFR', 'AB_EX_RFR', 'AB_BagR',
@@ -378,7 +387,8 @@ def get_available_models():
             'EX_RF', 'CVEX_RF', 'EX_RFR',
             'Logistic', 'NN',
             'RF', 'CVGBoost', 'CVRF', 'RFR', 'CVMLP',
-            'SVM', 'SVMR', 'CVSVM', 'CVSVMA', 'CVSVR', 'CVSVRA', 'QDA']
+            'SVM', 'SVMR', 'CVSVM', 'CVSVMA', 'CVSVR', 'CVSVRA', 'QDA',
+            'ChainCRF', 'GridCRF']
 
 
 class ParameterHandler(object):
@@ -461,6 +471,10 @@ class ParameterHandler(object):
                                  'class_weight', 'random_state', 'solver', 'max_iter', 'multi_class',
                                  'verbose', 'warm_start', 'n_jobs']
 
+        elif classifier == 'ChainCRF':
+
+            self.valid_params = ['max_iter', 'C', 'n_jobs', 'show_loss_every', 'tol']
+
         else:
             raise NameError('The classifier is not supported.')
 
@@ -484,7 +498,9 @@ class ParameterHandler(object):
                         del cinfo[param_key]
 
                 else:
+
                     if self.equal_params[param_key] in cinfo:
+
                         param_key_ = copy(param_key)
                         param_key = self.equal_params[param_key]
                         del cinfo[param_key_]
@@ -1229,6 +1245,102 @@ class Samples(object):
 
         self.p_vars = np.float32(np.delete(self.p_vars, idx, axis=0))
         self.labels = np.float32(np.delete(self.labels, idx, axis=0))
+
+    def load4crf(self, predictors, labels):
+
+        """
+        Loads data for Conditional Random Fields on a grid
+
+        Args:
+            predictors (list): A list of images to open or a list of arrays.
+                If an `array`, a single image should be given as `rows` x `columns`. A multi-layer image should
+                be given as `layers` x `rows` x `columns.
+            labels (list): A list of images to open or a list of arrays. If an `array`, a single image should
+                be given as `rows` x `columns` and must match the length of `predictors`.
+        """
+
+        if not isinstance(predictors, list):
+            raise TypeError('The predictors should be a list.')
+
+        if not isinstance(labels, list):
+            raise TypeError('The labels should be a list.')
+
+        if len(predictors) != len(labels):
+            raise AssertionError('The list lengths do not match.')
+
+        n_patches = len(predictors)
+
+        # Arrange the predictors.
+        if isinstance(predictors[0], str):
+
+            with raster_tools.ropen(predictors[0]) as i_info:
+
+                bands = i_info.bands
+                rows = i_info.rows
+                cols = i_info.cols
+
+                data_array = i_info.read(bands2open=-1, predictions=True)
+                scaler = StandardScaler().fit(data_array)
+
+            del data_array, i_info
+
+            self.p_vars = np.zeros((n_patches, rows, cols, bands), dtype='float32')
+
+            for pri, predictor in enumerate(predictors):
+
+                with raster_tools.ropen(predictor) as i_info:
+
+                    self.p_vars[pri, :, :, :] = scaler.transform(i_info.read(bands2open=-1,
+                                                                             predictions=True)).reshape(rows,
+                                                                                                        cols,
+                                                                                                        bands)
+
+                del i_info
+
+        elif isinstance(predictors[0], np.ndarray):
+
+            if len(predictors[0].shape) == 3:
+                bands, rows, cols = predictors[0].shape
+            else:
+
+                bands = 1
+                rows, cols = predictors[0].shape
+
+            self.p_vars = np.zeros((n_patches, rows, cols, bands), dtype='float32')
+
+            for pri, predictor in enumerate(predictors):
+
+                self.p_vars[pri, :, :, :] = predictor.transpose(1, 2, 0).reshape(rows*cols,
+                                                                                 bands)
+
+        # Arrange the labels.
+        if isinstance(labels[0], str):
+
+            with raster_tools.ropen(labels[0]) as i_info:
+
+                # Create the label array.
+                self.labels = np.zeros((n_patches, i_info.rows, i_info.cols), dtype='uint8')
+
+            del i_info
+
+            for li, label in enumerate(labels):
+
+                with raster_tools.ropen(label) as i_info:
+                    self.labels[li] = i_info.read()
+
+                del i_info
+
+        elif isinstance(labels[0], np.ndarray):
+
+            rows, cols = labels[0].shape
+
+            self.labels = np.zeros((n_patches, rows, cols), dtype='uint8')
+
+            for li, label in enumerate(labels):
+                self.labels[li] = label
+
+        self.p_vars[np.isnan(self.p_vars) | np.isinf(self.p_vars)] = 0
+        self.labels[np.isnan(self.labels) | np.isinf(self.labels)] = 0
 
 
 class EndMembers(object):
@@ -2843,6 +2955,10 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
               {classifier:CVSVMRA}
         QDA   -- Quadratic Discriminant Analysis (classification problems)
               *Scikit-learn
+        ChainCRF-- Linear-chain Conditional Random Fields (classification problems)
+              *Pystruct
+        GridCRF -- Pairwise Conditional Random Fields on a 2d grid (classification problems)
+              *Pystruct
 
         """
 
@@ -2955,8 +3071,9 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                 raise ValueError('\nThe model must be declared.\n')
 
             if not isinstance(self.classifier_info['classifier'], list):
+
                 if self.classifier_info['classifier'] not in get_available_models():
-                    raise NameError('\n{} is not an option.\n'.format(self.classifier_info['classifier']))
+                    raise NameError('\n{} is not a model option.\n'.format(self.classifier_info['classifier']))
 
         if isinstance(self.output_model, str):
 
@@ -3000,7 +3117,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
                 # swap the proportions of the largest class counts to the smallest
 
-                self.class_weight = {}
+                self.class_weight = dict()
 
                 for (k1, v1), (k2, v2) in zip(class_counts_ordered.items(), class_proportions.items()):
                     self.class_weight[k1] = v2
@@ -3080,16 +3197,14 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
     def _default_parameters(self):
         
-        """
-        Sets model parameters
-        """
+        """Sets model parameters"""
 
-        defaults_ = {'n_estimators': 500,
-                     'trials': 10,
-                     'max_depth': 25,
-                     'min_samples_split': 2,
-                     'learning_rate': .1,
-                     'n_jobs': -1}
+        defaults_ = dict(n_estimators=500,
+                         trials=10,
+                         max_depth=25,
+                         min_samples_split=2,
+                         learning_rate=.1,
+                         n_jobs=-1)
 
         # Check if model parameters are set,
         #   otherwise, set defaults.
@@ -3127,7 +3242,9 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
             vp_base = ParameterHandler(self.classifier_info_base['classifier'])
 
-            self.classifier_info_base = vp_base.check_parameters(self.classifier_info_base, defaults_, trials_set=True)
+            self.classifier_info_base = vp_base.check_parameters(self.classifier_info_base,
+                                                                 defaults_,
+                                                                 trials_set=True)
 
             if 'base_estimator' in self.classifier_info_base:
                 del self.classifier_info_base['base_estimator']
@@ -3186,11 +3303,23 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                         except ValueError:
                             raise ValueError('\nCannot infer number of hidden nodes.\n')
 
+        elif self.classifier_info['classifier'] in ['ChainCRF', 'GridCRF']:
+
+            if 'max_iter' not in self.classifier_info_:
+                self.classifier_info_['max_iter'] = 1000
+
+            if 'C' not in self.classifier_info_:
+                self.classifier_info_['C'] = 1.
+
+            if 'n_jobs' not in self.classifier_info_:
+                self.classifier_info_['n_jobs'] = -1
+
+            if 'tol' not in self.classifier_info_:
+                self.classifier_info_['tol'] = .001
+
     def _set_model(self):
 
-        """
-        Sets the model object
-        """
+        """Sets the model object"""
 
         if self.classifier_info['classifier'] in ['ABR', 'GBR', 'EX_RFR', 'RFR', 'EX_RFR', 'SVR', 'SVRA']:
             self.discrete = False
@@ -3200,7 +3329,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
         # Create the model object.
         if isinstance(self.classifier_info['classifier'], list):
 
-            classifier_list = []
+            classifier_list = list()
 
             for ci, classifier in enumerate(self.classifier_info['classifier']):
 
@@ -3412,6 +3541,32 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
                 self.model = QDA()
 
+            elif self.classifier_info['classifier'] == 'ChainCRF':
+
+                if self.classifier_info_['n_jobs'] == 1:
+
+                    self.model = ssvm.FrankWolfeSSVM(ChainCRF(directed=True),
+                                                     **self.classifier_info_)
+
+                else:
+
+                    self.model = ssvm.OneSlackSSVM(ChainCRF(directed=True),
+                                                   **self.classifier_info_)
+
+            elif self.classifier_info['classifier'] == 'GridCRF':
+
+                if self.classifier_info_['n_jobs'] == 1:
+
+                    self.model = ssvm.FrankWolfeSSVM(GridCRF(inference_method='ogrm',
+                                                             neighborhood=4),
+                                                     **self.classifier_info_)
+
+                else:
+
+                    self.model = ssvm.OneSlackSSVM(GridCRF(inference_method='ogrm',
+                                                             neighborhood=4),
+                                                   **self.classifier_info_)
+
             elif self.classifier_info['classifier'] == 'ORRF':
 
                 # try:
@@ -3512,9 +3667,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
     def _set_parameters(self):
 
-        """
-        Sets model parameters for OpenCV
-        """
+        """Sets model parameters for OpenCV"""
 
         #############################################
         # Set algorithm parameters for OpenCV models.
@@ -3608,9 +3761,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
     def _train_model(self):
 
-        """
-        Trains a model and saves to file if prompted
-        """
+        """Trains a model and saves to file if prompted"""
 
         if not self.be_quiet:
 
@@ -3691,6 +3842,11 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
             self.model.train_auto(self.p_vars, self.labels, None, None, params=self.parameters, k_fold=10)
 
+        elif self.classifier_info['classifier'] == 'ChainCRF':
+
+            self._transform4crf()
+            self.model.fit(self.p_vars, self.labels)
+
         # Scikit-learn models
         else:
 
@@ -3764,6 +3920,15 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
             if isinstance(self.p_vars_test, np.ndarray):
                 self.test_accuracy(out_acc=self.out_acc, discrete=self.discrete)
+
+    def _transform4crf(self):
+
+        self.p_vars = np.array([pv_.reshape(1, self.n_feas) for pv_ in self.p_vars], dtype='float64')
+
+        self.labels = np.array([np.array([label_], dtype='int64') for label_ in self.labels], dtype='int64')
+
+        if isinstance(self.p_vars_test, np.ndarray):
+            self.p_vars_test = np.array([pv.reshape(1, self.n_feas) for pv in self.p_vars_test], dtype='float64')
 
     def predict_array(self, array2predict):
 

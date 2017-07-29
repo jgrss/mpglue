@@ -470,7 +470,7 @@ class ReadWrite(object):
 
             self.array = self.array.reshape(n_bands,
                                             self.rrows,
-                                            self.ccols).transpose(1, 2, 0).reshape(self.rrows * self.ccols, n_bands)
+                                            self.ccols).transpose(1, 2, 0).reshape(self.rrows*self.ccols, n_bands)
 
         self.array_shape = [1, self.rrows*self.ccols, n_bands]
 
