@@ -471,7 +471,7 @@ class ParameterHandler(object):
                                  'class_weight', 'random_state', 'solver', 'max_iter', 'multi_class',
                                  'verbose', 'warm_start', 'n_jobs']
 
-        elif classifier == 'ChainCRF':
+        elif classifier in ['ChainCRF', 'GridCRF']:
 
             self.valid_params = ['max_iter', 'C', 'n_jobs', 'show_loss_every', 'tol']
 
