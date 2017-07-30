@@ -3598,13 +3598,13 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
                     if self.classifier_info_['n_jobs'] == 1:
 
-                        self.model = ssvm.FrankWolfeSSVM(GridCRF(inference_method='ogm',
+                        self.model = ssvm.FrankWolfeSSVM(GridCRF(inference_method='ad3',
                                                                  neighborhood=4),
                                                          **self.classifier_info_)
 
                     else:
 
-                        self.model = ssvm.OneSlackSSVM(GridCRF(inference_method='ogm',
+                        self.model = ssvm.OneSlackSSVM(GridCRF(inference_method='ad3',
                                                                neighborhood=4),
                                                        **self.classifier_info_)
 
