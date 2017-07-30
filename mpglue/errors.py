@@ -1,7 +1,7 @@
 import os
 import logging
 
-from paths import get_main_path
+from .paths import get_main_path
 
 _FORMAT = '%(asctime)s:%(levelname)s:%(lineno)s:%(module)s.%(funcName)s:%(message)s'
 _formatter = logging.Formatter(_FORMAT, '%H:%M:%S')
