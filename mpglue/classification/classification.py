@@ -3351,8 +3351,8 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
             if 'tol' not in self.classifier_info_:
                 self.classifier_info_['tol'] = .001
 
-            if 'break_on_bad' not in self.classifier_info_:
-                self.classifier_info_['break_on_bad'] = True
+            # if 'break_on_bad' not in self.classifier_info_:
+            #     self.classifier_info_['break_on_bad'] = True
 
             # self.classifier_info_['verbose'] = 1
 
