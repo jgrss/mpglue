@@ -3596,17 +3596,17 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
                 try:
 
-                    if self.classifier_info_['n_jobs'] == 1:
+                    # if self.classifier_info_['n_jobs'] == 1:
+                    # 
+                    #     self.model = ssvm.FrankWolfeSSVM(GridCRF(inference_method='qpbo',
+                    #                                              neighborhood=4),
+                    #                                      **self.classifier_info_)
+                    #
+                    # else:
 
-                        self.model = ssvm.FrankWolfeSSVM(GridCRF(inference_method='qpbo',
-                                                                 neighborhood=4),
-                                                         **self.classifier_info_)
-
-                    else:
-
-                        self.model = ssvm.OneSlackSSVM(GridCRF(inference_method='qpbo',
-                                                               neighborhood=4),
-                                                       **self.classifier_info_)
+                    self.model = ssvm.OneSlackSSVM(GridCRF(inference_method='qpbo',
+                                                           neighborhood=4),
+                                                   **self.classifier_info_)
 
                 except RuntimeError:
                     raise RuntimeError('The Grid CRF failed.')
