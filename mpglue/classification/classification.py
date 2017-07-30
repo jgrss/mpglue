@@ -1318,17 +1318,34 @@ class Samples(object):
 
             self.p_vars = np.zeros((n_patches, rows, cols, bands), dtype='float32')
 
+            # Setup a scaler for all inputs.
+            if scale_factor <= 1:
+
+                for pri, predictor in enumerate(predictors):
+
+                    if pri == 0:
+                        predictor_stack = predictor.transpose(1, 2, 0).reshape(rows*cols, bands).copy()
+                    else:
+                        predictor_stack = np.vstack((predictor_stack,
+                                                     predictor.transpose(1, 2, 0).reshape(rows*cols, bands)))
+
+                scaler = StandardScaler().fit(predictor_stack)
+
             for pri, predictor in enumerate(predictors):
 
                 if scale_factor > 1:
 
-                    self.p_vars[pri, :, :, :] = predictor.transpose(1, 2, 0).reshape(rows * cols,
-                                                                                     bands) / scale_factor
+                    self.p_vars[pri, :, :, :] = predictor.transpose(1, 2, 0).reshape(rows*cols,
+                                                                                     bands).reshape(rows,
+                                                                                                    cols,
+                                                                                                    bands) / scale_factor
 
                 else:
 
-                    self.p_vars[pri, :, :, :] = predictor.transpose(1, 2, 0).reshape(rows*cols,
-                                                                                     bands)
+                    self.p_vars[pri, :, :, :] = scaler.transform(predictor.transpose(1, 2, 0).reshape(rows*cols,
+                                                                                                      bands)).reshape(rows,
+                                                                                                                      cols,
+                                                                                                                      bands)
 
         # Arrange the labels.
         if isinstance(labels[0], str):
@@ -3323,7 +3340,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
         elif self.classifier_info['classifier'] in ['ChainCRF', 'GridCRF']:
 
             if 'max_iter' not in self.classifier_info_:
-                self.classifier_info_['max_iter'] = 1000
+                self.classifier_info_['max_iter'] = 100
 
             if 'C' not in self.classifier_info_:
                 self.classifier_info_['C'] = 1.
@@ -3333,6 +3350,11 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
             if 'tol' not in self.classifier_info_:
                 self.classifier_info_['tol'] = .001
+
+            if 'break_on_bad' not in self.classifier_info_:
+                self.classifier_info_['break_on_bad'] = True
+
+            # self.classifier_info_['verbose'] = 1
 
     def _set_model(self):
 
@@ -3572,17 +3594,22 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
             elif self.classifier_info['classifier'] == 'GridCRF':
 
-                if self.classifier_info_['n_jobs'] == 1:
+                try:
 
-                    self.model = ssvm.FrankWolfeSSVM(GridCRF(inference_method='ogrm',
-                                                             neighborhood=4),
-                                                     **self.classifier_info_)
+                    if self.classifier_info_['n_jobs'] == 1:
 
-                else:
+                        self.model = ssvm.FrankWolfeSSVM(GridCRF(inference_method='ogrm',
+                                                                 neighborhood=4),
+                                                         **self.classifier_info_)
 
-                    self.model = ssvm.OneSlackSSVM(GridCRF(inference_method='ogrm',
-                                                           neighborhood=4),
-                                                   **self.classifier_info_)
+                    else:
+
+                        self.model = ssvm.OneSlackSSVM(GridCRF(inference_method='ogrm',
+                                                               neighborhood=4),
+                                                       **self.classifier_info_)
+
+                except RuntimeError:
+                    raise RuntimeError('The Grid CRF failed.')
 
             elif self.classifier_info['classifier'] == 'ORRF':
 

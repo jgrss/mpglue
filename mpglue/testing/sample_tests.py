@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys
+import itertools
 import unittest
 
 import mpglue as gl
@@ -37,14 +38,20 @@ cl.split_samples(sample_data,
                  clear_observations=clear_df.clear.values,
                  min_observations=0)
 
-import itertools
-cl.construct_model(classifier_info={'classifier': 'ChainCRF'})
-pr = cl.model.predict(cl.p_vars)
-pr = np.array(list(itertools.chain.from_iterable(pr)))
+"""Chain CRF"""
+# cl.construct_model(classifier_info={'classifier': 'ChainCRF'})
+# pr = cl.model.predict(cl.p_vars)
+# pr = np.array(list(itertools.chain.from_iterable(pr)))
 
+"""Grid CRF"""
+var_im = np.random.uniform(low=0, high=10000, size=3*100*100).reshape(3, 100, 100).astype(np.float32)
+labels_im = np.random.uniform(low=0, high=3, size=100*100).reshape(100, 100).astype(np.uint8)
+cl.load4crf([var_im], [labels_im], scale_factor=10000.)
+cl.construct_model(classifier_info={'classifier': 'GridCRF'})
+pr = cl.model.predict(cl.p_vars)
+
+print(cl.model)
 print(pr)
-print(cl.n_samps)
-print(len(cl.labels_test))
 sys.exit()
 
 print(cl.XY.shape)
