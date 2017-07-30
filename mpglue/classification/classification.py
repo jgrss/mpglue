@@ -1132,7 +1132,7 @@ class Samples(object):
         self.class_counts = dict()
 
         for indv_class in self.classes:
-            self.class_counts[indv_class] = len(np.where(self.labels == indv_class)[0])
+            self.class_counts[indv_class] = (self.labels == indv_class).sum()
 
     def _stratify(self, y_grids, x_grids, n_match_samps, n_total_samps):
 
@@ -1385,6 +1385,16 @@ class Samples(object):
 
         self.p_vars[np.isnan(self.p_vars) | np.isinf(self.p_vars)] = 0
         self.labels[np.isnan(self.labels) | np.isinf(self.labels)] = 0
+
+        self.n_feas = n_patches * bands
+        self.n_samps = self.labels.size
+        self.classes = list(np.unique(self.labels))
+        self.n_classes = len(self.classes)
+
+        self.class_counts = dict()
+
+        for indv_class in self.classes:
+            self.class_counts[indv_class] = (self.labels == indv_class).sum()
 
 
 class EndMembers(object):
