@@ -533,7 +533,7 @@ class ReadWrite(object):
         return bands2open
 
     def write2raster(self, out_name, write_which='array', o_info=None, x=0, y=0, out_rst=None, write2bands=[],
-                     compress='LZW', tile=False, close_band=True, flush_final=False, write_chunks=False, **kwargs):
+                     compress='deflate', tile=False, close_band=True, flush_final=False, write_chunks=False, **kwargs):
 
         """
         Writes an array to file.
@@ -549,7 +549,7 @@ class ReadWrite(object):
             out_rst (Optional[object]): GDAL object to right to, otherwise created. Default is None.
             write2bands (Optional[int or int list]): Band positions to write to, otherwise takes the order of the input
                 array dimensions. Default is None.
-            compress (Optional[str]): Needed if <out_rst> not given. Default is 'LZW'.
+            compress (Optional[str]): Needed if <out_rst> not given. Default is 'deflate'.
             tile (Optional[bool]): Needed if <out_rst> not given. Default is False.
             close_band (Optional[bool]): Whether to flush the band cache. Default is True.
             flush_final (Optional[bool]): Whether to flush the raster cache. Default is False.
@@ -3383,7 +3383,7 @@ class create_raster(CreateDriver, FileManager):
     Args:
         out_name (str): Output raster name.
         o_info (object): Instance of ``ropen``.
-        compress (Optional[str]): The type of compression to use. Default is 'lzw'.
+        compress (Optional[str]): The type of compression to use. Default is 'deflate'.
             Choices are ['none' 'lzw', 'packbits', 'deflate'].
         bigtiff (Optional[str]): How to manage large TIFF files. Default is 'no'.
             Choices are ['yes', 'no', 'if_needed', 'if_safer'].
@@ -3627,7 +3627,7 @@ class create_raster(CreateDriver, FileManager):
         self.close_all()
 
 
-def write2raster(out_arr, out_name, o_info=None, x=0, y=0, out_rst=None, write2bands=[], compress='lzw',
+def write2raster(out_arr, out_name, o_info=None, x=0, y=0, out_rst=None, write2bands=None, compress='deflate',
                  tile=True, close_band=True, flush_final=False, write_chunks=False, **kwargs):
 
     """
@@ -3642,7 +3642,7 @@ def write2raster(out_arr, out_name, o_info=None, x=0, y=0, out_rst=None, write2b
         out_rst (Optional[object]): GDAL object to right to, otherwise created. Default is None.
         write2bands (Optional[int or int list]): Band positions to write to, otherwise takes the order of the input
             array dimensions. Default is None.
-        compress (Optional[str]): Needed if <out_rst> not given. Default is 'lzw'.
+        compress (Optional[str]): Needed if <out_rst> not given. Default is 'deflate'.
         tile (Optional[bool]): Needed if <out_rst> not given. Default is False.
         close_band (Optional[bool]): Whether to flush the band cache. Default is True.
         flush_final (Optional[bool]): Whether to flush the raster cache. Default is False.
