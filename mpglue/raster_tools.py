@@ -1221,6 +1221,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
         """
 
         if not isinstance(band_position, int) or band_position < 1:
+
             logger.error('The band position must be an integer > 0.')
             raise ValueError
 
@@ -1230,6 +1231,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
             self.band_open = True
 
         except:
+
             logger.error(gdal.GetLastErrorMsg())
             raise ValueError('Failed to load the band.')
 
@@ -1286,13 +1288,16 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
         """
 
         if not isinstance(array2write, np.ndarray):
-            raise TypeError('\nThe array must be an ndarray.\n')
+            logger.error('\nThe array must be an ndarray.\n')
+            raise ValueError
 
         if not isinstance(i, int) or (i < 0):
-            raise TypeError('\nThe row index must be a positive integer.\n')
+            logger.error('\nThe row index must be a positive integer.\n')
+            raise ValueError
 
         if not isinstance(j, int) or (j < 0):
-            raise TypeError('\nThe column index must be a positive integer.\n')
+            logger.error('\nThe column index must be a positive integer.\n')
+            raise ValueError
 
         if isinstance(band, int):
             self.get_band(band_position=band)
@@ -1304,9 +1309,14 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
             logger.error(gdal.GetLastErrorMsg())
 
             if (array2write.shape[0] > self.rows) or (array2write.shape[1] > self.cols):
-                raise ValueError('\nThe array is larger than the file size.\n')
+
+                logger.error('\nThe array is larger than the file size.\n')
+                raise ValueError
+
             else:
-                raise ValueError('\nThe band must be set either with get_band() or write_array(band=)\n')
+
+                logger.error('\nThe band must be set either with get_band() or write_array(band=)\n')
+                raise ValueError
 
     def close_band(self):
 
@@ -3719,11 +3729,11 @@ def write2raster(out_arr, out_name, o_info=None, x=0, y=0, out_rst=None, write2b
 
                 out_rst.get_chunk_size()
 
-                for i in xrange(0, out_rst.rows, out_rst.chunk_size):
+                for i in range(0, out_rst.rows, out_rst.chunk_size):
 
                     n_rows = n_rows_cols(i, out_rst.chunk_size, out_rst.rows)
 
-                    for j in xrange(0, out_rst.cols, out_rst.chunk_size):
+                    for j in range(0, out_rst.cols, out_rst.chunk_size):
 
                         n_cols = n_rows_cols(j, out_rst.chunk_size, out_rst.cols)
 
