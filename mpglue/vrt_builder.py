@@ -174,7 +174,8 @@ class VRTBuilder(object):
         for bdk, bd in self.band_dict.iteritems():
 
             if not be_quiet:
-                sys.stdout.write('\rBuilding list {} ...'.format(bdk))
+
+                sys.stdout.write('\rBuilding list {} of {:d} ...'.format(bdk, len(self.band_dict)))
                 sys.stdout.flush()
 
             image_list = in_dict[bdk]
@@ -272,7 +273,7 @@ class VRTBuilder(object):
         self.xml_base = '{}{}'.format(self.xml_base, self.xml_end)
 
         print('')
-        print('Finished processing')
+        print('Finished processing VRT file')
 
     # def delete_subs(self, sub_directory):
     #
