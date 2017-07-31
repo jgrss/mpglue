@@ -32,7 +32,7 @@ import subprocess
 from .helpers import random_float, overwrite_file, check_and_create_dir, _iteration_parameters
 from .vector_tools import vopen, get_xy_offsets, intersects_boundary
 
-from .errors import EmptyImage, LenError, MissingRequirement, ropenError, ArrayShapeError, logger
+from .errors import EmptyImage, LenError, MissingRequirement, ropenError, ArrayShapeError, ArrayOffsetError, logger
 from .version import __version__
 from mpglue.veg_indices import BandHandler, VegIndicesEquations
 
@@ -1329,12 +1329,27 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
             if (array2write.shape[0] > self.rows) or (array2write.shape[1] > self.cols):
 
                 logger.error('\nThe array is larger than the file size.\n')
-                raise ValueError
+                raise ArrayShapeError
+
+            elif (i + array2write.shape[0]) > self.rows:
+
+                logger.error('\nThe starting row position + the array rows spills over.\n')
+                raise ArrayOffsetError
+
+            elif (j + array2write.shape[j]) > self.cols:
+
+                logger.error('\nThe starting column position + the array columns spills over.\n')
+                raise ArrayOffsetError
 
             else:
 
-                logger.error('\nThe band must be set either with get_band() or write_array(band=)\n')
-                raise ValueError
+                if not hasattr(self.band):
+
+                    logger.error('\nThe band must be set either with `get_band` or `write_array`.\n')
+                    raise AttributeError
+
+                else:
+                    logger.error('\nFailed to write the array to file (issue not apparent).')
 
     def close_band(self):
 
