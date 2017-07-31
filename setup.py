@@ -37,19 +37,23 @@ with open('LICENSE.txt') as f:
 with open('AUTHORS.txt') as f:
     author_file = f.read()
 
-required_packages = ['matplotlib', 'joblib', 'BeautifulSoup4']
+required_packages = ['matplotlib>=2.0.0',
+                     'joblib>=0.11.0',
+                     'BeautifulSoup4>=4.5.1',
+                     'decorator>=4.1.1',
+                     'deprecation>=1.0.1']
 
 if platform.system() != 'Windows':
 
-    for pkg in ['numpy>=1.12.0',
-                'scipy>=0.17.0',
-                'scikit-image>=0.10.0',
+    for pkg in ['numpy>=1.13',
+                'scipy>=0.19.0',
+                'scikit-image>=0.13',
                 'gdal>=2.1',
-                'tables>=3.3',
-                'statsmodels>=0.8.0rc1',
-                'cython>=0.25.2',
+                'tables>=3.4.2',
+                'statsmodels>=0.8.0',
+                'cython>=0.26',
                 'scikit-learn>=0.18.1',
-                'pandas>=0.19.2']:
+                'pandas>=0.20.0']:
 
         required_packages.append(pkg)
 
