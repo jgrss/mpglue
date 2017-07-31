@@ -3,6 +3,12 @@ MpGlue
 
 The **glue** of [MapPy](https://github.com/jgrss/mappy).
 
+The MapPy project is heavily reliant on 3rd party libraries, many of which are not on the PyPI repository. 
+Therefore, MapPy was stripped to its core processing, which became MpGlue. The goal of MpGlue is to restrict 
+3rd party library usage to those readily available via PyPI or Conda. MpGlue will be the base for projects such
+as [MapPy](https://github.com/jgrss/mappy), [MapPy-dev](https://github.com/jgrss/mappydev), [MapPy-time](https://github.com/jgrss/MapPy-time), 
+and [SpFeas](https://github.com/jgrss/spfeas).
+
 Usage examples
 ---
 
