@@ -11,6 +11,7 @@ from .classification.sample_raster import sample_raster
 from .raster_calc import raster_calc
 from .veg_indices import veg_indices, VegIndicesEquations
 from .vrt_builder import vrt_builder
+from .version import __version__
 
 __all__ = ['ropen', 'read',
            'vopen',
@@ -19,6 +20,5 @@ __all__ = ['ropen', 'read',
            'focal_statistics', 'morph_cells', 'change', 'reclassify', 'recode',
            'raster_calc',
            'veg_indices', 'VegIndicesEquations',
-           'vrt_builder']
-
-__version__ = '0.1.3'
+           'vrt_builder',
+           '__version__']

@@ -32,8 +32,11 @@ import subprocess
 from .helpers import random_float, overwrite_file, check_and_create_dir, _iteration_parameters
 from .vector_tools import vopen, get_xy_offsets, intersects_boundary
 
-from .errors import EmptyImage, LenError, MissingRequirement, ropenError, logger
+from .errors import EmptyImage, LenError, MissingRequirement, ropenError, ArrayShapeError, logger
+from .version import __version__
 from mpglue.veg_indices import BandHandler, VegIndicesEquations
+
+import deprecation
 
 # GDAL
 try:
@@ -866,7 +869,10 @@ class RegisterDriver(object):
     def _get_driver_name(file_extension):
 
         if file_extension.lower() not in DRIVER_DICT:
-            raise TypeError('{} is not an image, or is not a supported raster format.'.format(file_extension))
+
+            logger.error('{} is not an image, or is not a supported raster format.'.format(file_extension))
+            raise TypeError
+
         else:
             return DRIVER_DICT[file_extension.lower()]
 
@@ -913,13 +919,19 @@ class DatasourceInfo(object):
         if self.datasource is None:
 
             if hasattr(self, 'file_name'):
-                raise OSError('2) {} appears to be empty.'.format(self.file_name))
+
+                logger.error('2) {} appears to be empty.'.format(self.file_name))
+                raise EmptyImage
+
             else:
-                raise OSError('2) The datasource appears to be empty.')
+
+                logger.error('2) The datasource appears to be empty.')
+                raise EmptyImage
 
         try:
             self.meta_dict = self.datasource.GetMetadata_Dict()
         except:
+
             logger.error(gdal.GetLastErrorMsg())
             self.meta_dict = 'none'
 
@@ -1088,7 +1100,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
         except:
 
             logger.error(gdal.GetLastErrorMsg())
-            print('\nCould not open {}.\n'.format(self.file_name))
+            logger.warning('\nCould not open {}.\n'.format(self.file_name))
 
             return
 
@@ -1097,7 +1109,8 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
             self.hdf_file = True
 
             if self.datasource is None:
-                print('\n1) {} appears to be empty.\n'.format(self.file_name))
+
+                logger.warning('\n1) {} appears to be empty.\n'.format(self.file_name))
                 return
 
             # self.hdf_layers = self.datasource.GetSubDatasets()
@@ -1264,14 +1277,14 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
                 if gdal.GetLastErrorType() != 0:
 
-                    print('\nBand {:d} of {} appears to be corrupted.\n'.format(band, self.file_name))
+                    logger.info('\nBand {:d} of {} appears to be corrupted.\n'.format(band, self.file_name))
                     self.corrupted_bands.append(str(band))
 
             except:
 
                 logger.error(gdal.GetLastErrorMsg())
 
-                print('\nBand {:d} of {} appears to be corrupted.\n'.format(band, self.file_name))
+                logger.info('\nBand {:d} of {} appears to be corrupted.\n'.format(band, self.file_name))
                 self.corrupted_bands.append(str(band))
 
     def write_array(self, array2write, i=0, j=0, band=None):
@@ -1855,8 +1868,9 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
         if isinstance(metadata, str):
             self.get_metadata(metadata, sensor)
         else:
+
             if not passed:
-                print('\nNo image or metadata file was given.\n')
+                logger.info('\nNo image or metadata file was given.\n')
 
         # Check open files before closing.
         atexit.register(self.close)
@@ -1989,8 +2003,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
         total_samples = float(the_hist.sum())
         the_hist_pct = (the_hist / total_samples) * 100.
 
-        print('Total samples: {:,d}'.format(int(total_samples)))
-        print('')
+        logger.info('\nTotal samples: {:,d}\n'.format(int(total_samples)))
 
         for i in range(0, bins):
 
@@ -2003,10 +2016,10 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
                     else:
                         cdl_label = CDL_DICT_r[i]
 
-                    print('{:d} ({}): {:,d} -- {:.2f}%'.format(i, cdl_label, the_hist[i], the_hist_pct[i]))
+                    logger.info('{:d} ({}): {:,d} -- {:.2f}%'.format(i, cdl_label, the_hist[i], the_hist_pct[i]))
 
                 else:
-                    print('{:d}: {:,d} -- {:.2f}%'.format(i, the_hist[i], the_hist_pct[i]))
+                    logger.info('{:d}: {:,d} -- {:.2f}%'.format(i, the_hist[i], the_hist_pct[i]))
 
     def pca(self, n_components=3):
 
@@ -2296,7 +2309,7 @@ class PanSharpen(object):
 
         m_info = None
 
-        print('\nPan-sharpening ...\n')
+        logger.info('\nPan-sharpening ...\n')
 
         if m_bands == 4:
 
@@ -2407,7 +2420,7 @@ class PanSharpen(object):
 
         self.multi_warped = os.path.join(self.out_dir, '{}_warped.tif'.format(self.f_base))
 
-        print('Resampling to pan scale ...')
+        logger.info('Resampling to pan scale ...')
 
         # Resample the multi-spectral bands.
         warp(self.multi_image,
@@ -2805,7 +2818,7 @@ class BlockFunc(object):
         # n_block = 1
 
         if isinstance(self.print_statement, str):
-            print(self.print_statement)
+            logger.info(self.print_statement)
 
         # set widget and pbar
         if not self.be_quiet:
@@ -3414,8 +3427,16 @@ class create_raster(CreateDriver, FileManager):
         Raster driver GDAL object or list of GDAL objects (if create_tiles > 0).
     """
 
-    def __init__(self, out_name, o_info, compress='deflate', tile=True, bigtiff='no',
-                 project_epsg=None, create_tiles=0, overwrite=False, in_memory=False,
+    def __init__(self,
+                 out_name,
+                 o_info,
+                 compress='deflate',
+                 tile=True,
+                 bigtiff='no',
+                 project_epsg=None,
+                 create_tiles=0,
+                 overwrite=False,
+                 in_memory=False,
                  **kwargs):
 
         if not in_memory:
@@ -3529,13 +3550,13 @@ class create_raster(CreateDriver, FileManager):
 
             image_counter = 1
 
-            for i in xrange(0, out_rows, blk_size_rows):
+            for i in range(0, out_rows, blk_size_rows):
 
                 lefto = copy.copy(left)
 
                 out_rows = n_rows_cols(i, blk_size_rows, out_rows)
 
-                for j in xrange(0, out_cols, blk_size_cols):
+                for j in range(0, out_cols, blk_size_cols):
 
                     out_cols = n_rows_cols(j, blk_size_cols, out_cols)
 
@@ -3558,8 +3579,7 @@ class create_raster(CreateDriver, FileManager):
 
                         if os.path.isfile(out_name):
 
-                            print('\n{} already exists.'.format(out_name))
-
+                            logger.warning('\n{} already exists.'.format(out_name))
                             continue
 
                     CreateDriver.__init__(self, out_name, out_rows, out_cols, n_bands,
@@ -3591,13 +3611,14 @@ class create_raster(CreateDriver, FileManager):
 
                         try:
                             os.remove(out_name)
-                        except OSError:
-                            raise OSError('\nCould not delete {}.'.format(out_name))
+                        except:
+                            logger.warning('\nCould not delete {}.\nWill attempt to write over the image'.format(out_name))
 
                 else:
 
                     if os.path.isfile(out_name):
-                        print('\n{} already exists.\n'.format(out_name))
+                        logger.warning('\n{} already exists.\nWill not attempt to overwrite.'.format(out_name))
+                        return
 
             CreateDriver.__init__(self, out_name, out_rows, out_cols, n_bands,
                                   storage_type, in_memory, overwrite, parameters)
@@ -3637,14 +3658,27 @@ class create_raster(CreateDriver, FileManager):
         self.close_all()
 
 
-def write2raster(out_arr, out_name, o_info=None, x=0, y=0, out_rst=None, write2bands=None, compress='deflate',
-                 tile=True, close_band=True, flush_final=False, write_chunks=False, **kwargs):
+@deprecation.deprecated(deprecated_in='0.1.3',
+                        removed_in='0.1.4',
+                        current_version=__version__,
+                        details='Variables `x` and `y` will be replaced with `j` and `i`, respectively.')
+def write2raster(out_array,
+                 out_name,
+                 o_info=None,
+                 x=0,
+                 y=0,
+                 out_rst=None,
+                 write2bands=None,
+                 close_band=True,
+                 flush_final=False,
+                 write_chunks=False,
+                 **kwargs):
 
     """
     Writes an ndarray to file.
 
     Args:
-        out_arr (ndarray): The array to write to file.
+        out_array (ndarray): The array to write to file.
         out_name (str): The output image name.
         o_info (Optional[object]): Output image information. Needed if ``out_rst`` not given. Default is None.
         x (Optional[int]): Column starting position. Default is 0.
@@ -3652,63 +3686,67 @@ def write2raster(out_arr, out_name, o_info=None, x=0, y=0, out_rst=None, write2b
         out_rst (Optional[object]): GDAL object to right to, otherwise created. Default is None.
         write2bands (Optional[int or int list]): Band positions to write to, otherwise takes the order of the input
             array dimensions. Default is None.
-        compress (Optional[str]): Needed if <out_rst> not given. Default is 'deflate'.
-        tile (Optional[bool]): Needed if <out_rst> not given. Default is False.
         close_band (Optional[bool]): Whether to flush the band cache. Default is True.
         flush_final (Optional[bool]): Whether to flush the raster cache. Default is False.
         write_chunks (Optional[bool]): Whether to write to file in <write_chunks> chunks. Default is False.
+        kwargs (Optional[dict]): Arguments passed to `create_raster`.
 
     Returns:
         None, writes <out_name>.
 
     Examples:
         >>> # Example
-        >>> import mpglue as gl
-        >>> i_info = mp.ropen('/in_raster.tif')
+        >>> from mpglue import raster_tools
+        >>> i_info = raster_tools.ropen('/in_raster.tif')
         >>>
         >>> out_array = np.random.randn(3, 100, 100).astype(np.float32)
-        >>> mp.write2raster(out_array, '/out_name.tif', o_info=copy(i_info),
-        >>>                 flush_final=True)
+        >>>
+        >>> raster_tools.write2raster(out_array,
+        >>>                           '/out_name.tif',
+        >>>                           o_info=i_info.copy())
     """
 
+    # Get the output information.
     d_name, f_name = os.path.split(out_name)
 
-    if not os.path.isdir(d_name):
-        os.makedirs(d_name)
+    check_and_create_dir(d_name)
 
-    array_shape = out_arr.shape
+    array_shape = out_array.shape
+
+    if len(array_shape) > 3:
+        logger.error('The array shape should be 2d or 3d.')
+        raise ArrayShapeError
 
     if len(array_shape) == 2:
 
-        out_rows, out_cols = out_arr.shape
+        out_rows, out_cols = out_array.shape
         out_dims = 1
 
     else:
-
-        out_dims, out_rows, out_cols = out_arr.shape
+        out_dims, out_rows, out_cols = out_array.shape
 
     new_file = False
 
+    # Does the file need to be created?
     if not out_rst:
+
+        if not isinstance(o_info, ropen):
+            logger.error('The output information must be set.')
+            raise ropenError
 
         new_file = True
 
-        if kwargs:
+        STORAGE_DICT_r = {v: k for k, v in STORAGE_DICT.items()}
 
-            try:
-                o_info.storage = kwargs['storage']
-            except:
-                pass
-
-            try:
-                o_info.bands = kwargs['bands']
-            except:
-                o_info.bands = out_dims
-
+        o_info.storage = STORAGE_DICT_GDAL[STORAGE_DICT_r[out_array.dtype]]
+        o_info.bands = out_dims
         o_info.rows = out_rows
         o_info.cols = out_cols
 
-        out_rst = create_raster(out_name, o_info, compress=compress, tile=tile)
+        if kwargs:
+            out_rst = create_raster(out_name, o_info, **kwargs)
+        else:
+            out_rst = create_raster(out_name, o_info)
 
     ##########################
     # pack the data to binary
@@ -3716,7 +3754,7 @@ def write2raster(out_arr, out_name, o_info=None, x=0, y=0, out_rst=None, write2b
     # format_dict = {'byte': 'B', 'int16': 'i', 'uint16': 'I', 'float32': 'f', 'float64': 'd'}
 
     # specifiy a band to write to
-    if isinstance(write2bands, int) or (isinstance(write2bands, list) and write2bands):
+    if isinstance(write2bands, int) or isinstance(write2bands, list):
 
         if isinstance(write2bands, int):
             write2bands = [write2bands]
@@ -3737,35 +3775,30 @@ def write2raster(out_arr, out_name, o_info=None, x=0, y=0, out_rst=None, write2b
 
                         n_cols = n_rows_cols(j, out_rst.chunk_size, out_rst.cols)
 
-                        out_rst.write_array(out_arr[i:i+n_rows, j:j+n_cols], i=i, j=j)
+                        out_rst.write_array(out_array[i:i+n_rows, j:j+n_cols], i=i, j=j)
 
             else:
 
-                out_rst.write_array(out_arr, i=y, j=x)
+                out_rst.write_array(out_array, i=y, j=x)
 
             if close_band:
 
                 out_rst.close_band()
 
-    # write in order of the 3rd array dimension
     else:
 
-        arr_shape = out_arr.shape
+        if out_dims > 2:
 
-        if len(arr_shape) > 2:
+            for n_band in range(1, out_dims+1):
 
-            out_bands = arr_shape[0]
-
-            for n_band in xrange(1, out_bands+1):
-
-                out_rst.write_array(out_arr[n_band-1], i=y, j=x, band=n_band)
+                out_rst.write_array(out_array[n_band-1], i=y, j=x, band=n_band)
 
                 if close_band:
                     out_rst.close_band()
 
         else:
 
-            out_rst.write_array(out_arr, i=y, j=x, band=1)
+            out_rst.write_array(out_array, i=y, j=x, band=1)
 
             if close_band:
                 out_rst.close_band()
@@ -3773,6 +3806,8 @@ def write2raster(out_arr, out_name, o_info=None, x=0, y=0, out_rst=None, write2b
     # close the dataset if it was created or prompted by <flush_final>
     if flush_final or new_file:
         out_rst.close_file()
+
+    del out_rst
 
 
 class GetMinExtent(UpdateInfo):
@@ -4163,7 +4198,8 @@ def pixel_stats(input_image, output_image, stat='mean', bands2process=-1,
         raise ImportError('Bottleneck must be installed to use pixel stats.')
 
     if stat not in ['min', 'max', 'mean', 'median', 'mode', 'var', 'std', 'cv', 'sum']:
-        raise NameError('{} is not an option.'.format(stat))
+        logger.error('{} is not an option.'.format(stat))
+        raise NameError
 
     with ropen(input_image) as i_info:
 
@@ -4179,7 +4215,8 @@ def pixel_stats(input_image, output_image, stat='mean', bands2process=-1,
                 bands2process = [bands2process]
 
         if i_info.bands <= 1:
-            raise ValueError('The input image only has {:d} band. It should have at least 2.'.format(i_info.bands))
+            logger.error('The input image only has {:d} band. It should have at least 2.'.format(i_info.bands))
+            raise ValueError
 
         # Copy the input information.
         o_info = i_info.copy()

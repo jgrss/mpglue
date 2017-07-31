@@ -509,14 +509,12 @@ def move_files2back(image_list, list2move):
 
 def check_and_create_dir(dir2create):
 
-    if len(dir2create) > 0:
+    if not os.path.isdir(dir2create):
 
-        if not os.path.isdir(dir2create):
-
-            try:
-                os.makedirs(dir2create)
-            except OSError:
-                raise OSError('Could not create the directory {}'.format(dir2create))
+        try:
+            os.makedirs(dir2create)
+        except OSError:
+            raise OSError('Could not create the directory {}'.format(dir2create))
 
 
 def _iteration_parameters_1d(rows, marker='*'):

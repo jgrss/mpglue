@@ -17,7 +17,7 @@ logger.addHandler(_handler)
 logger.setLevel(logging.INFO)
 
 
-class ArrayOffsetError(TypeError):
+class ArrayOffsetError(OverflowError):
     """Raised when indices are outside the bounds of an array"""
 
 
@@ -25,7 +25,7 @@ class EmptyImage(OSError):
     """Raised when an input image is empty."""
 
 
-class LenError(Exception):
+class LenError(AssertionError):
     """Raised when lists are not of equal length"""
 
 
@@ -39,3 +39,7 @@ class ropenError(TypeError):
 
 class TransformError(ValueError):
     """Raised when coordinates cannot be transformed via ogr"""
+
+
+class ArrayShapeError(AssertionError):
+    """Raised when an array does not conform to correct shape requirements"""
