@@ -1462,7 +1462,7 @@ class Samples(object):
                 self.class_counts[indv_class] = (self.labels == indv_class).sum()
 
         if isinstance(bands, int):
-            self.n_feas = n_patches * bands
+            self.n_feas = bands
 
 
 class EndMembers(object):
