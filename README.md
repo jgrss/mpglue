@@ -69,7 +69,7 @@ vector-tools
 >>>
 >>> # Open all bands (i.e., `bands2open` = -1) and index by map coordinates.
 >>> with gl.ropen('/your/image.tif') as i_info:
->>>     my_array = i_info.read(bands2open=-1, y=1200000, x=4230000, rows=500, cols=500)
+>>>     my_array = i_info.read(bands2open=-1, y=1200000., x=4230000., rows=500, cols=500)
 >>>
 >>> # Open image bands as arrays with dictionary mappings.
 >>> with gl.ropen('/your/image.tif') as i_info:
@@ -101,6 +101,12 @@ vector-tools
 >>>     # Write an array block to band 1.
 >>>     array2write = <some 3d array data>
 >>>     out_raster.write_array(array2write, i=0, j=0, band=1)
+>>>
+>>> # or
+>>>
+>>> from mpglue import raster_tools
+>>>
+>>> raster_tools.write2raster(array2write, '/output_image.tif', o_info=o_info)
 ```
 
 #### Vegetation indices:

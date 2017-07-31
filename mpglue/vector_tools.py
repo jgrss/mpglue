@@ -29,25 +29,19 @@ try:
     from osgeo import gdal, ogr, osr
     from osgeo.gdalconst import GA_ReadOnly, GA_Update
 except ImportError:
-    raise ImportError('GDAL must be installed')
+    logger.error('GDAL Python must be installed')
 
 # NumPy
 try:
     import numpy as np
 except ImportError:
-    raise ImportError('NumPy must be installed')
+    logger.error('NumPy must be installed')
 
 # Pandas
 try:
     import pandas as pd
-except ImportError:
-    raise ImportError('Pandas must be installed')
-
-# SciPy
-try:
-    from scipy import stats
-except ImportError:
-    raise ImportError('SciPy must be installed')
+except ImportWarning:
+    logger.warning('Pandas must be installed for shapefile parsing')
 
 # Rtree
 try:
@@ -55,6 +49,7 @@ try:
     rtree_installed = True
 except:
     rtree_installed = False
+    logger.warning('Rtree must be installed for spatial indexing')
 
 # Pickle
 try:
@@ -162,7 +157,8 @@ class vopen(RegisterDriver):
             self.shp = ogr.Open(self.file_name, GA_Update)
 
         if self.shp is None:
-            raise NameError('Unable to open {}.'.format(self.file_name))
+            logger.error('Unable to open {}.'.format(self.file_name))
+            raise NameError
 
         self.file_open = True
 
@@ -215,13 +211,11 @@ class vopen(RegisterDriver):
         self.right = self.extent[1]
         self.bottom = self.extent[2]
 
-        self.field_names = [self.lyr_def.GetFieldDefn(i).GetName() for i in xrange(0, self.lyr_def.GetFieldCount())]
+        self.field_names = [self.lyr_def.GetFieldDefn(i).GetName() for i in range(0, self.lyr_def.GetFieldCount())]
 
     def copy(self):
 
-        """
-        Copies the object instance
-        """
+        """Copies the object instance"""
 
         return copy.copy(self)
 
@@ -254,26 +248,24 @@ class vopen(RegisterDriver):
 
     def delete(self):
 
-        """
-        Deletes an open file
-        """
+        """Deletes an open file"""
 
         if not self.open2read:
-            raise NameError('The file must be opened in read-only mode.')
+            logger.error('The file must be opened in read-only mode.')
+            raise IOError
 
         try:
             self.driver.DeleteDataSource(self.file_name)
-        except IOError:
+        except:
             logger.error(gdal.GetLastErrorMsg())
-            raise IOError('{} could not be deleted. Check for a file lock.'.format(self.file_name))
+            logger.error('{} could not be deleted. Check for a file lock.'.format(self.file_name))
+            raise IOError
 
         self._cleanup()
 
     def _cleanup(self):
 
-        """
-        Cleans undeleted files
-        """
+        """Cleans undeleted files"""
 
         file_list = fnmatch.filter(os.listdir(self.d_name), '{}*'.format(self.f_name))
 
@@ -458,7 +450,7 @@ class create_vector(CreateDriver):
 
         elif field_type == 'string':
 
-            self.field_defs = []
+            self.field_defs = list()
 
             for field in field_names:
 
@@ -503,9 +495,10 @@ def rename_vector(input_file, output_file):
 
             try:
                 os.rename(os.path.join(d_name, associated_file), os.path.join(od_name, '{}{}'.format(of_base, a_ext)))
-            except OSError:
+            except:
                 logger.error(gdal.GetLastErrorMsg())
-                raise OSError('Could not write {} to file.'.format(of_base))
+                logger.error('Could not write {} to file.'.format(of_base))
+                raise IOError
 
 
 def merge_vectors(shps2merge, merged_shapefile):
@@ -548,7 +541,14 @@ def merge_vectors(shps2merge, merged_shapefile):
             out_file = os.path.join(od_name, '{}{}'.format(of_base, a_ext))
 
             if not os.path.isfile(out_file):
-                shutil.copy2(os.path.join(d_name, associated_file), out_file)
+
+                try:
+                    shutil.copy2(os.path.join(d_name, associated_file), out_file)
+                except:
+
+                    logger.error('Could not copy {} to {}'.format(os.path.join(d_name, associated_file),
+                                                                  out_file))
+                    raise IOError
 
     # Then merge each shapefile into the
     # output file.
@@ -556,7 +556,10 @@ def merge_vectors(shps2merge, merged_shapefile):
 
         print('Merging {} ...'.format(shp2merge))
 
-        ogr2ogr.main(['', '-f', 'ESRI Shapefile', '-update', '-append', merged_shapefile, shp2merge, '-nln', of_base])
+        try:
+            ogr2ogr.main(['', '-f', 'ESRI Shapefile', '-update', '-append', merged_shapefile, shp2merge, '-nln', of_base])
+        except:
+            logger.error('Could not merge the vector files.')
 
 
 def add_point(x, y, layer_object, field, value2write):
@@ -732,12 +735,14 @@ def is_within(x, y, image_info):
     """
 
     if not isinstance(image_info, raster_tools.ropen):
-        raise TypeError('`image_info` must be an instance of `ropen`.')
+        logger.error('`image_info` must be an instance of `ropen`.')
+        raise TypeError
 
     if not hasattr(image_info, 'left') or not hasattr(image_info, 'right') \
             or not hasattr(image_info, 'bottom') or not hasattr(image_info, 'top'):
 
-        raise AttributeError('The `image_info` object must have left, right, bottom, top attributes.')
+        logger.error('The `image_info` object must have left, right, bottom, top attributes.')
+        raise AttributeError
 
     if (x > image_info.left) and (x < image_info.right) and (y > image_info.bottom) and (y < image_info.top):
         return True
@@ -806,9 +811,11 @@ class Transform(object):
                 source_sr.ImportFromWkt(source_epsg)
 
         except:
+
             logger.error(gdal.GetLastErrorMsg())
-            print('EPSG:{:d}'.format(source_epsg))
-            raise ValueError('The source EPSG code could not be read.')
+            logger.info('EPSG:{:d}'.format(source_epsg))
+            logger.error('The source EPSG code could not be read.')
+            raise ValueError
 
         try:
 
@@ -819,15 +826,19 @@ class Transform(object):
                 target_sr.ImportFromWkt(target_epsg)
 
         except:
+
             logger.error(gdal.GetLastErrorMsg())
-            print('EPSG:{:d}'.format(target_epsg))
-            raise ValueError('The target EPSG code could not be read.')
+            logger.info('EPSG:{:d}'.format(target_epsg))
+            logger.error('The target EPSG code could not be read.')
+            raise ValueError
 
         try:
             coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
         except:
+
             logger.error(gdal.GetLastErrorMsg())
-            raise TransformError('The coordinates could not be transformed.')
+            logger.error('The coordinates could not be transformed.')
+            raise TransformError
 
         self.point = ogr.Geometry(ogr.wkbPoint)
         
@@ -905,7 +916,8 @@ class TransformUTM(object):
                     self.to_epsg = int('327{}'.format(str(utm_zone)))
 
         else:
-            raise NameError('The to or from EPSG code must be given.')
+            logger.error('The to or from EPSG code must be given.')
+            raise NameError
 
         ptr = Transform(grid_envelope['left'], grid_envelope['top'], self.from_epsg, self.to_epsg)
 
@@ -954,7 +966,7 @@ class TransformExtent(object):
         if not grid_envelope:
 
             logger.error('The grid envelope list must be set.')
-            raise TypeError('The grid envelope list must be set.')
+            raise TypeError
 
         self.from_epsg = from_epsg
         self.to_epsg = to_epsg
@@ -1421,8 +1433,11 @@ def get_xy_offsets(image_info=None, image_list=None, x=None, y=None, feature=Non
         y = xy_info.top
 
     else:
+        
         if not isinstance(x, float):
-            raise ValueError('A coordinate or feature object must be given.')
+            
+            logger.error('A coordinate or feature object must be given.')
+            raise ValueError
 
     # Check if a list or an
     #   object/instance is given.
@@ -1530,7 +1545,7 @@ def spatial_intersection(select_shp, intersect_shp, output_shp, epsg=None):
                                   geom_type=select_info.shp_geom_name.lower())
 
         # Iterate over each select feature in the polygon.
-        for m in xrange(0, select_info.n_feas):
+        for m in range(0, select_info.n_feas):
 
             if m % 500 == 0:
 
@@ -1548,7 +1563,7 @@ def spatial_intersection(select_shp, intersect_shp, output_shp, epsg=None):
             select_geometry = select_feature.GetGeometryRef()
 
             # Iterate over each intersecting feature in the polygon.
-            for n in xrange(0, intersect_info.n_feas):
+            for n in range(0, intersect_info.n_feas):
 
                 # Get the current polygon feature.
                 intersect_feature = intersect_info.lyr.GetFeature(n)
@@ -1613,7 +1628,9 @@ def select_and_save(file_name, out_vector, select_field=None, select_value=None,
     """
 
     if not os.path.isfile(file_name):
-        raise NameError('{} does not exist'.format(file_name))
+        
+        logger.error('{} does not exist'.format(file_name))
+        raise NameError
 
     d_name, f_name = os.path.split(out_vector)
     f_base, f_ext = os.path.splitext(f_name)
@@ -1661,7 +1678,7 @@ def list_field_names(in_shapefile, be_quiet=False, epsg=None):
 
         df_fields = pd.DataFrame(columns=['Name', 'Type', 'Length'])
 
-        for i in xrange(0, v_info.lyr_def.GetFieldCount()):
+        for i in range(0, v_info.lyr_def.GetFieldCount()):
 
             df_fields.loc[i, 'Name'] = v_info.lyr_def.GetFieldDefn(i).GetName()
             df_fields.loc[i, 'Type'] = v_info.lyr_def.GetFieldDefn(i).GetTypeName()
@@ -1701,10 +1718,12 @@ def buffer_vector(file_name, out_vector, distance=None, epsg=None, field_name=No
     """
 
     if not os.path.isfile(file_name):
-        raise NameError('{} does not exist'.format(file_name))
+        logger.error('{} does not exist'.format(file_name))
+        raise NameError
 
     if not isinstance(distance, float) and not isinstance(field_name, str):
-        raise ValueError('Either the distance or field name must be given.')
+        logger.error('Either the distance or field name must be given.')
+        raise ValueError
 
     d_name, f_name = os.path.split(out_vector)
 
@@ -1793,7 +1812,7 @@ def convex_hull(in_shp, out_shp):
     multipoint = ogr.Geometry(ogr.wkbMultiPoint)
 
     # iterate over each feature
-    for each_feature in xrange(0, v_info.n_feas):
+    for each_feature in range(0, v_info.n_feas):
 
         shp_feature = v_info.lyr.GetFeature(each_feature)
 
@@ -1890,7 +1909,7 @@ def create_fields(v_info, field_names, field_types, field_widths):
                  'str': ogr.OFTString, 'String': ogr.OFTString}
 
     # Create the fields.
-    field_defs = []
+    field_defs = list()
 
     for field_name, field_type, field_width in zip(field_names, field_types, field_widths):
 
@@ -1958,7 +1977,7 @@ def add_fields(input_vector, output_vector=None, field_names=['x', 'y'], method=
     v_info = vopen(input_vector, open2read=False, epsg=epsg)
 
     # Create the new id field.
-    field_names_ = [v_info.lyr_def.GetFieldDefn(i).GetName() for i in xrange(0, v_info.lyr_def.GetFieldCount())]
+    field_names_ = [v_info.lyr_def.GetFieldDefn(i).GetName() for i in range(0, v_info.lyr_def.GetFieldCount())]
 
     if method == 'field-xy':
 
@@ -2141,10 +2160,12 @@ def add_fields(input_vector, output_vector=None, field_names=['x', 'y'], method=
     elif method == 'field-dissolve':
 
         if len(field_names) != 1:
-            raise ValueError('There should be one {} field name'.format(method))
+            logger.error('There should be one {} field name'.format(method))
+            raise ValueError
 
         if not isinstance(output_vector, str):
-            raise ValueError('The output vector must be given.')
+            logger.error('The output vector must be given.')
+            raise ValueError
 
         # Dissolve the field.
         com = 'ogr2ogr {} {} -dialect sqlite -sql "SELECT ST_Union(geometry), \
@@ -2196,7 +2217,8 @@ def add_fields(input_vector, output_vector=None, field_names=['x', 'y'], method=
     elif method == 'field-merge':
 
         if len(field_names) != 3:
-            raise ValueError('There should be three {} field names'.format(method))
+            logger.error('There should be three {} field names'.format(method))
+            raise ValueError
 
         if field_names[2] not in field_names_:
             v_info = create_fields(v_info, [field_names[2]], [field_type], [20])
@@ -2220,7 +2242,9 @@ def add_fields(input_vector, output_vector=None, field_names=['x', 'y'], method=
             feature.Destroy()
 
     else:
-        raise NameError('{} is not a method'.format(method))
+
+        logger.error('{} is not a method'.format(method))
+        raise NameError
 
     v_info.close()
 

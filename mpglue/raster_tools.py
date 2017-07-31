@@ -36,20 +36,25 @@ from .errors import EmptyImage, LenError, MissingRequirement, ropenError, ArrayS
 from .version import __version__
 from mpglue.veg_indices import BandHandler, VegIndicesEquations
 
-import deprecation
+try:
+    import deprecation
+except ImportError:
+    raise ImportError('deprecation must be installed (pip install deprecation)')
 
 # GDAL
 try:
     from osgeo import gdal, osr
     from osgeo.gdalconst import GA_ReadOnly, GA_Update
 except ImportError:
-    raise ImportError('GDAL must be installed')
+    logger.error('GDAL Python must be installed')
+    raise ImportError
 
 # NumPy
 try:
     import numpy as np
 except ImportError:
-    raise ImportError('NumPy must be installed')
+    logger.error('NumPy must be installed')
+    raise ImportError
 
 # Matplotlib
 try:
@@ -63,14 +68,14 @@ try:
     from matplotlib import ticker, colors, colorbar
     import matplotlib.cm as cm
     from mpl_toolkits.axes_grid1 import make_axes_locatable
-except ImportError:
-    raise ImportError('Matplotlib must be installed')
+except ImportWarning:
+    logger.warning('Matplotlib must be installed for plotting')
 
 # Scikit-image
 try:
     from skimage import exposure
-except:
-    pass
+except ImportWarning:
+    logger.warning('Scikit-image must be installed for image color balancing.')
 
 # SciPy
 try:
@@ -82,14 +87,14 @@ except ImportError:
 # Pandas
 try:
     import pandas as pd
-except ImportError:
-    raise ImportError('Pandas must be installed to parse metadata')
+except ImportWarning:
+    logger.warning('Pandas must be installed to parse metadata')
 
 # BeautifulSoup4
 try:
     from bs4 import BeautifulSoup
-except:
-    print('BeautifulSoup4 must be installed to parse metadata')
+except ImportWarning:
+    logger.warning('BeautifulSoup4 must be installed to parse metadata')
 
 
 gdal.UseExceptions()
@@ -3738,7 +3743,7 @@ def write2raster(out_array,
 
         STORAGE_DICT_r = {v: k for k, v in STORAGE_DICT.items()}
 
-        o_info.storage = STORAGE_DICT_GDAL[STORAGE_DICT_r[out_array.dtype]]
+        o_info.storage = STORAGE_DICT_GDAL[STORAGE_DICT_r[out_array.dtype.name]]
         o_info.bands = out_dims
         o_info.rows = out_rows
         o_info.cols = out_cols

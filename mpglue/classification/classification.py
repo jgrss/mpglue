@@ -29,7 +29,7 @@ from .error_matrix import error_matrix
 from .. import raster_tools
 from .. import vector_tools
 from ..helpers import get_path
-from .. import errors
+from ..errors import logger
 
 SPFEAS_PATH = get_path()
 
@@ -477,7 +477,7 @@ class ParameterHandler(object):
             self.valid_params = ['max_iter', 'C', 'n_jobs', 'show_loss_every', 'tol']
 
         else:
-            errors.logger.info('The classifier is not supported.')
+            logger.info('The classifier is not supported.')
 
     def check_parameters(self, cinfo, default_params, trials_set=False):
 
@@ -629,7 +629,7 @@ class Samples(object):
         elif isinstance(self.file_name, np.ndarray):
 
             if len(self.file_name.shape) != 2:
-                errors.logger.error('The samples array must be a 2d array.')
+                logger.error('The samples array must be a 2d array.')
                 raise TypeError
 
             headers = [x_label, y_label] + map(str, range(1, self.file_name.shape[1]-2)) + [response_label]
@@ -639,7 +639,7 @@ class Samples(object):
             del self.file_name
 
         else:
-            errors.logger.error('The samples file must be a text file or a 2d array.')
+            logger.error('The samples file must be a text file or a 2d array.')
             raise TypeError
 
         # Parse the headers.
@@ -674,7 +674,7 @@ class Samples(object):
             clear_observations = np.array(clear_observations, dtype='uint64').ravel()
 
             if self.all_samps.shape[0] != len(clear_observations):
-                errors.logger.error('The clear observation and sample lengths do no match.')
+                logger.error('The clear observation and sample lengths do no match.')
                 raise AssertionError
 
         # Spatial stratified sampling.
@@ -800,7 +800,7 @@ class Samples(object):
             elif labs_type == 'float':
                 self.labels = np.asarray([float(l) for l in self.all_samps[:, self.label_idx]]).astype(np.float32)
             else:
-                errors.logger.error('\n``labs_type`` should be int or float\n')
+                logger.error('\n``labs_type`` should be int or float\n')
                 raise TypeError
 
             self.classes = list(np.unique(self.labels))
@@ -916,7 +916,7 @@ class Samples(object):
         elif labs_type == 'float':
             self.labels = np.float32(np.asarray([float(l) for l in self.all_samps[:, self.label_idx]]))
         else:
-            errors.logger.error('\n``labs_type`` should be int or float\n')
+            logger.error('\n``labs_type`` should be int or float\n')
             raise ValueError
 
         self.classes = list(np.unique(self.labels))
@@ -1021,7 +1021,7 @@ class Samples(object):
         elif isinstance(sample, int):
             random_subsample = np.random.choice(range(0, n_samples), size=sample, replace=False)
         else:
-            errors.logger.error('The sample number must be an integer or float.')
+            logger.error('The sample number must be an integer or float.')
             raise TypeError
 
         # Create the test samples.
@@ -1268,15 +1268,15 @@ class Samples(object):
         """
 
         if not isinstance(predictors, list):
-            errors.logger.error('The predictors should be a list.')
+            logger.error('The predictors should be a list.')
             raise TypeError
 
         if not isinstance(labels, list):
-            errors.logger.error('The labels should be a list.')
+            logger.error('The labels should be a list.')
             raise TypeError
 
         if len(predictors) != len(labels):
-            errors.logger.error('The list lengths do not match.')
+            logger.error('The list lengths do not match.')
             raise AssertionError
 
         n_patches = len(predictors)
@@ -1391,6 +1391,19 @@ class Samples(object):
         self.classes = list(np.unique(self.labels))
         self.n_classes = len(self.classes)
 
+        # Check whether there are any
+        #   negative class labels.
+        if np.min(self.classes) < 0:
+            logger.error('The class labels should not contain negative values.')
+
+        # Check whether the classes begin with 0.
+        if self.classes[0] != 0:
+            logger.error('The class labels must begin with 0 when using CRF models.')
+
+        # Check whether the classes are increasing by 1.
+        if np.any(np.abs(np.diff(self.classes)) > 1):
+            logger.error('The class labels should increase by 1, starting with 0.')
+
         self.class_counts = dict()
 
         for indv_class in self.classes:
@@ -1399,12 +1412,9 @@ class Samples(object):
 
 class EndMembers(object):
 
-    """
-    A class for endmember extraction
-    """
+    """A class for endmember extraction"""
 
     def __init__(self):
-
         self.time_stamp = time.asctime(time.localtime(time.time()))
 
     def extract_endmembers(self, n_members=2, method='nfindr'):
@@ -1437,23 +1447,32 @@ class EndMembers(object):
         try:
             import pysptools.eea as eea
         except:
-            errors.logger.error('Pysptools needs to be installed to extract endmembers')
+            logger.error('Pysptools needs to be installed to extract endmembers')
             raise ImportError
 
-        map_methods = {'fippi': eea.FIPPI(), 'nfinder': eea.NFINDR()}
+        map_methods = dict(fippi=eea.FIPPI(),
+                           nfinder=eea.NFINDR())
 
-        try:
-            end_finder = map_methods[method]
-        except:
-            errors.logger.error('The {} method is not an option.'.format(method))
+        if method not in map_methods:
+            logger.error('The {} method is not an option. Choose from fippi or nfinder.'.format(method))
             raise NameError
+
+        end_finder = map_methods[method]
 
         # for an image
         # image.T.reshape(i_info.rows, i_info.cols, i_info.bands)
 
-        self.endmembers = end_finder.extract(self.p_vars.reshape(1, self.n_samps, self.n_feas), n_members, maxit=5)
+        self.endmembers = end_finder.extract(self.p_vars.reshape(1, self.n_samps, self.n_feas),
+                                             n_members,
+                                             maxit=5)
 
-    def get_abundance(self, input_image, out_image, mask=None, method='nnls', class2keep=1, ignore_feas=[]):
+    def get_abundance(self,
+                      input_image,
+                      out_image,
+                      mask=None,
+                      method='nnls',
+                      class2keep=1,
+                      ignore_feas=None):
 
         """
         Gets the land cover abundance based on extracted endmembers.
@@ -1493,16 +1512,18 @@ class EndMembers(object):
         try:
             import pysptools.abundance_maps as amp
         except:
-            errors.logger.error('Pysptools needs to be installed to extract endmembers')
+            logger.error('Pysptools needs to be installed to extract endmembers')
             raise ImportError
 
-        map_methods = dict(fcls=amp.FCLS(), nnls=amp.NNLS(), ucls=amp.UCLS())
+        map_methods = dict(fcls=amp.FCLS(),
+                           nnls=amp.NNLS(),
+                           ucls=amp.UCLS())
 
-        try:
-            mapper = map_methods[method]
-        except:
-            errors.logger.error('The {} method is not an option.'.format(method))
+        if method not in map_methods:
+            logger.error('The {} method is not an option. Choose from fcls, nnls, or ucls.'.format(method))
             raise NameError
+
+        mapper = map_methods[method]
 
         # open the input image
         with raster_tools.ropen(input_image) as i_info:
@@ -1516,14 +1537,20 @@ class EndMembers(object):
 
             arr_dims, arr_rows, arr_cols = arr.shape
 
-            self.abundance_maps = mapper.map(arr.T.reshape(arr_rows, arr_cols, arr_dims), self.endmembers, normalize=True)
+            self.abundance_maps = mapper.map(arr.T.reshape(arr_rows,
+                                                           arr_cols,
+                                                           arr_dims),
+                                             self.endmembers,
+                                             normalize=True)
 
             r, c, b = self.abundance_maps.shape
 
             self.abundance_maps = self.abundance_maps.reshape(c, r, b).T
 
             o_info = i_info.copy()
-            o_info.update_info(storage='float32', bands=1)
+
+            o_info.update_info(storage='float32',
+                               bands=1)
 
             if isinstance(mask, str):
 
@@ -1532,11 +1559,17 @@ class EndMembers(object):
 
                 out_img_not_masked = os.path.join(d_name, '{}_not_masked{}'.format(f_base, f_ext))
 
-                raster_tools.write2raster(self.abundance_maps[1], out_img_not_masked, o_info=o_info, flush_final=True)
+                raster_tools.write2raster(self.abundance_maps[1],
+                                          out_img_not_masked,
+                                          o_info=o_info,
+                                          flush_final=True)
 
             else:
 
-                raster_tools.write2raster(self.abundance_maps[1], out_image, o_info=o_info, flush_final=True)
+                raster_tools.write2raster(self.abundance_maps[1],
+                                          out_image,
+                                          o_info=o_info,
+                                          flush_final=True)
 
             if isinstance(mask, str):
 
@@ -1545,22 +1578,26 @@ class EndMembers(object):
                     a_arr = a_info.read()
                     m_arr = m_info.read()
 
+                del a_info, m_info
+
                 a_arr[m_arr != class2keep] = 0
 
-                raster_tools.write2raster(a_arr, out_image, o_info=o_info, flush_final=True)
+                raster_tools.write2raster(a_arr,
+                                          out_image,
+                                          o_info=o_info,
+                                          flush_final=True)
 
             # plt.imshow(amaps.reshape(c, r, b).T[1])
             # plt.show()
 
+        del i_info
+
 
 class Visualization(object):
 
-    """
-    A class for data visualization
-    """
+    """A class for data visualization"""
 
     def __init__(self):
-
         self.time_stamp = time.asctime(time.localtime(time.time()))
 
     def vis_parallel_coordinates(self):
@@ -2445,8 +2482,9 @@ class Visualization(object):
 
 class Preprocessing(object):
 
-    def __init__(self):
+    """A class for data preprocessing"""
 
+    def __init__(self):
         self.time_stamp = time.asctime(time.localtime(time.time()))
 
     def compare_features(self, f1, f2, method='mahalanobis'):
@@ -2748,7 +2786,7 @@ class Preprocessing(object):
         """
 
         if not self.scaled:
-            errors.logger.error('The data should be scaled prior to outlier removal.')
+            logger.error('The data should be scaled prior to outlier removal.')
             raise NameError
 
         self.outliers_fraction = outliers_fraction
@@ -2768,7 +2806,7 @@ class Preprocessing(object):
             try:
                 new_p_vars, new_labels = self._remove_outliers(check_class, new_p_vars, new_labels)
             except:
-                errors.logger.error('Could not fit the data for class {:d}'.format(check_class))
+                logger.error('Could not fit the data for class {:d}'.format(check_class))
                 raise RuntimeError
 
         if not locate_only:
@@ -2899,41 +2937,7 @@ class Preprocessing(object):
         self.n_classes = len(self.classes)
 
 
-class classification(Samples, EndMembers, Visualization, Preprocessing):
-
-    """
-    A class for image sampling and classification
-
-    Example:
-        >>> from mappy.classifiers import classification
-        >>>
-        >>> # Create the classification object.
-        >>> cl = classification()
-        >>>
-        >>> # Open land cover samples and split
-        >>> #   into train and test datasets.
-        >>> cl.split_samples('/samples.txt')
-        >>>
-        >>> # Train a Random Forest classification model.
-        >>> # *Note that the model is NOT saved to file in
-        >>> #   this example. However, the model IS passed
-        >>> #   to the ``cl`` instance. To use the same model
-        >>> #   after Python cleanup, save the model to file
-        >>> #   with the ``output_model`` keyword. See the
-        >>> #   ``construct_model`` function more details.
-        >>> cl.construct_model(classifier_info={'classifier': 'RF',
-        >>>                                     'trees': 1000,
-        >>>                                     'max_depth': 25})
-        >>>
-        >>> # Apply the model to predict an entire image.
-        >>> cl.predict('/image_variables.tif', '/image_labels.tif')
-    """
-
-    def __init__(self):
-        self.time_stamp = time.asctime(time.localtime(time.time()))
-
-    def copy(self):
-        return copy(self)
+class ModelOptions(object):
 
     def model_options(self):
 
@@ -3021,6 +3025,43 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
               *Pystruct
 
         """
+
+
+class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualization):
+
+    """
+    A class for image sampling and classification
+
+    Example:
+        >>> from mappy.classifiers import classification
+        >>>
+        >>> # Create the classification object.
+        >>> cl = classification()
+        >>>
+        >>> # Open land cover samples and split
+        >>> #   into train and test datasets.
+        >>> cl.split_samples('/samples.txt')
+        >>>
+        >>> # Train a Random Forest classification model.
+        >>> # *Note that the model is NOT saved to file in
+        >>> #   this example. However, the model IS passed
+        >>> #   to the ``cl`` instance. To use the same model
+        >>> #   after Python cleanup, save the model to file
+        >>> #   with the ``output_model`` keyword. See the
+        >>> #   ``construct_model`` function more details.
+        >>> cl.construct_model(classifier_info={'classifier': 'RF',
+        >>>                                     'trees': 1000,
+        >>>                                     'max_depth': 25})
+        >>>
+        >>> # Apply the model to predict an entire image.
+        >>> cl.predict('/image_variables.tif', '/image_labels.tif')
+    """
+
+    def __init__(self):
+        self.time_stamp = time.asctime(time.localtime(time.time()))
+
+    def copy(self):
+        return copy(self)
 
     def construct_model(self,
                         input_model=None,
@@ -3120,7 +3161,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
         if isinstance(self.input_model, str):
 
             if not os.path.isfile(self.input_model):
-                errors.logger.error('\n{} does not exist.\n'.format(self.input_model))
+                logger.error('\n{} does not exist.\n'.format(self.input_model))
                 raise OSError
 
         if not isinstance(self.input_model, str):
@@ -3129,13 +3170,13 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
             try:
                 __ = self.classifier_info['classifier']
             except:
-                errors.logger.error('\nThe model must be declared.\n')
+                logger.error('\nThe model must be declared.\n')
                 raise ValueError
 
             if not isinstance(self.classifier_info['classifier'], list):
 
                 if self.classifier_info['classifier'] not in get_available_models():
-                    errors.logger.error('\n{} is not a model option.\n'.format(self.classifier_info['classifier']))
+                    logger.error('\n{} is not a model option.\n'.format(self.classifier_info['classifier']))
                     raise NameError
 
         if isinstance(self.output_model, str):
@@ -3151,7 +3192,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
             if 'CV' in self.classifier_info['classifier']:
 
                 if 'xml' not in f_ext.lower():
-                    errors.logger.error('\nThe output model for OpenCV models must be XML.\n')
+                    logger.error('\nThe output model for OpenCV models must be XML.\n')
                     raise TypeError
 
             if not os.path.isdir(d_name):
@@ -3198,7 +3239,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                     self.class_weight = class_proportions
 
             else:
-                errors.logger.error('The weight method is not supported.')
+                logger.error('The weight method is not supported.')
                 raise NameError
 
         if isinstance(self.input_model, str):
@@ -3238,7 +3279,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                     self.classifier_info, __ = pickle.load(p_load)
 
             except:
-                errors.logger.error('\nCould not load {}\n'.format(self.input_model))
+                logger.error('\nCould not load {}\n'.format(self.input_model))
                 raise OSError
 
             # load the correct model
@@ -3248,7 +3289,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
             try:
                 self.model.load(self.input_model)
             except:
-                errors.logger.error('\nCould not load {}\n'.format(self.input_model))
+                logger.error('\nCould not load {}\n'.format(self.input_model))
                 raise OSError
 
         else:
@@ -3260,7 +3301,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                     self.classifier_info, self.model = pickle.load(p_load)
 
             except:
-                errors.logger.error('\nCould not load {}\n'.format(self.input_model))
+                logger.error('\nCould not load {}\n'.format(self.input_model))
                 raise OSError
 
     def _default_parameters(self):
@@ -3369,13 +3410,13 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                         try:
                             self.classifier_info['n_hidden'] = (self.n_feas + self.n_classes) / 2
                         except:
-                            errors.logger.error('\nCannot infer number of hidden nodes.\n')
+                            logger.error('\nCannot infer number of hidden nodes.\n')
                             raise ValueError
 
         elif self.classifier_info['classifier'] in ['ChainCRF', 'GridCRF']:
 
             if not pystruct_installed:
-                errors.logger.warning('Pystruct must be installed to used CRF models.')
+                logger.warning('Pystruct must be installed to used CRF models.')
                 return
 
             if 'max_iter' not in self.classifier_info_:
@@ -3650,7 +3691,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                                                    **self.classifier_info_)
 
                 except:
-                    errors.logger.error('The Grid CRF failed.')
+                    logger.error('The Grid CRF failed.')
                     raise RuntimeError
 
             elif self.classifier_info['classifier'] == 'ORRF':
@@ -3749,7 +3790,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                 # app.ExecuteAndWriteOutput()
 
             else:
-                errors.logger.error('\nThe model {} is not supported'.format(self.classifier_info['classifier']))
+                logger.error('\nThe model {} is not supported'.format(self.classifier_info['classifier']))
                 raise NameError
 
     def _set_parameters(self):
@@ -3975,7 +4016,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
             if 'CV' in self.classifier_info['classifier']:
 
                 if '.xml' not in self.output_model.lower():
-                    errors.logger.error('\nAn OpenCV model should be .xml.\n')
+                    logger.error('\nAn OpenCV model should be .xml.\n')
                     raise NameError
 
                 try:
@@ -3990,13 +4031,13 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                                     protocol=pickle.HIGHEST_PROTOCOL)
 
                 except:
-                    errors.logger.error('\nCould not save {} to file.\n'.format(self.output_model))
+                    logger.error('\nCould not save {} to file.\n'.format(self.output_model))
                     raise OSError
 
             else:
 
                 if '.txt' not in self.output_model.lower():
-                    errors.logger.error('\nA Scikit-learn model should be .txt.\n')
+                    logger.error('\nA Scikit-learn model should be .txt.\n')
                     raise TypeError
 
                 try:
@@ -4008,7 +4049,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                                     protocol=pickle.HIGHEST_PROTOCOL)
 
                 except:
-                    errors.logger.error('\nCould not save {} to file.\n'.format(self.output_model))
+                    logger.error('\nCould not save {} to file.\n'.format(self.output_model))
                     raise OSError
 
             if isinstance(self.p_vars_test, np.ndarray):
@@ -4130,7 +4171,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
         if not hasattr(self, 'classifier_info'):
 
-            errors.logger.warning("""\
+            logger.warning("""\
             There is no `classifier_info` object. Be sure to run `construct_model`
             or `construct_r_model` before running `predict`.
             """)
@@ -4178,7 +4219,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
             try:
                 subprocess.call(com, shell=True)
             except:
-                errors.logger.warning('Are you sure the Orfeo Toolbox is installed?')
+                logger.warning('Are you sure the Orfeo Toolbox is installed?')
                 return
 
             if isinstance(self.mask_background, str):
@@ -4332,7 +4373,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                 if 'CV' in self.classifier_info['classifier']:
 
                     if len(bands2open) != self.model.getVarCount():
-                        errors.logger.error('\nThe number of predictive layers does not match the number of model estimators.\n')
+                        logger.error('\nThe number of predictive layers does not match the number of model estimators.\n')
                         raise AssertionError
 
                 elif self.classifier_info['classifier'] not in ['C5', 'Cubist']:
@@ -4343,14 +4384,14 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
 
                             if len(bands2open) != self.model.n_features_:
 
-                                errors.logger.error('\nThe number of predictive layers does not match the number of model estimators.\n')
+                                logger.error('\nThe number of predictive layers does not match the number of model estimators.\n')
                                 raise AssertionError
 
                         except:
 
                             if len(bands2open) != self.model.base_estimator.n_features_:
 
-                                errors.logger.error('\nThe number of predictive layers does not match the number of model estimators.\n')
+                                logger.error('\nThe number of predictive layers does not match the number of model estimators.\n')
                                 raise AssertionError
 
                 # Get all the bands for the tile. The shape
@@ -5165,25 +5206,25 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
         regressors = ['Cubist', 'RFR', 'ABR', 'BagR', 'EX_RFR', 'EX_DTR', 'DTR']
 
         if metric not in ['accuracy', 'r_squared', 'rmse', 'mae', 'medae', 'mse']:
-            errors.logger.error('The metric is not supported.')
+            logger.error('The metric is not supported.')
             raise NameError
 
         if classifier_name in regressors and metric == 'accuracy':
-            errors.logger.error('Overall accuracy is not supported with regression classifiers.')
+            logger.error('Overall accuracy is not supported with regression classifiers.')
             raise NameError
 
         if classifier_name not in regressors and metric in ['r_squared', 'rmse', 'mae', 'medae', 'mse']:
-            errors.logger.error('Overall accuracy is the only option with discrete classifiers.')
+            logger.error('Overall accuracy is the only option with discrete classifiers.')
             raise NameError
 
         if classifier_name in ['C5', 'Cubist']:
 
             if 'R_installed' not in globals():
-                errors.logger.warning('You must use `classification_r` to use C5 and Cubist.')
+                logger.warning('You must use `classification_r` to use C5 and Cubist.')
                 return
 
             if not R_installed:
-                errors.logger.warning('R and rpy2 must be installed to use C5 or Cubist.')
+                logger.warning('R and rpy2 must be installed to use C5 or Cubist.')
                 return
 
         if classifier_name in regressors:
@@ -5449,7 +5490,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
                           'unbiased': bool_list}
 
         else:
-            errors.logger.error('\nThe model cannot be optimized.\n')
+            logger.error('\nThe model cannot be optimized.\n')
             return NameError
 
         print('\nFinding the best paramaters for a {} model ...\n'.format(classifier_info['classifier']))
@@ -5481,7 +5522,7 @@ class classification(Samples, EndMembers, Visualization, Preprocessing):
             print('\nBest parameters: {}\n'.format(grid_search.best_params_))
 
         else:
-            errors.logger.error('The score method {} is not supported.'.format(method))
+            logger.error('The score method {} is not supported.'.format(method))
             raise NameError
 
     def stack_majority(self, img, output_model, out_img, classifier_info, scale_data=False, ignore_feas=[]):
@@ -5746,7 +5787,7 @@ class classification_r(classification):
         """
 
         if not R_installed:
-            errors.logger.warning('R and rpy2 must be installed to use C5 or Cubist.')
+            logger.warning('R and rpy2 must be installed to use C5 or Cubist.')
             return
 
         self.get_probs = get_probs
@@ -5814,7 +5855,7 @@ class classification_r(classification):
                 self.classifier_info['fuzzy'] = False
 
         else:
-            errors.logger.error('\nThe classifier must be C5 or Cubist.\n')
+            logger.error('\nThe classifier must be C5 or Cubist.\n')
             raise NameError
 
         if isinstance(output_model, str):
