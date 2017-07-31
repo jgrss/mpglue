@@ -2124,23 +2124,23 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
 
         if show_which == 'ndvi':
 
-            self.ndvi[self.ndvi != 0] += 1.1
+            self.array[self.array != 0] += 1.1
 
             if equalize_hist:
-                self.ndvi = exposure.equalize_hist(self.ndvi)
+                self.array = exposure.equalize_hist(self.array)
 
-            ip = ax.imshow(self.ndvi)
-            im_min = np.percentile(self.ndvi, clip_percentiles[0])
-            im_max = np.percentile(self.ndvi, clip_percentiles[1])
+            ip = ax.imshow(self.array)
+            im_min = np.percentile(self.array, clip_percentiles[0])
+            im_max = np.percentile(self.array, clip_percentiles[1])
 
         elif show_which == 'evi2':
 
             if equalize_hist:
-                self.evi2 = exposure.equalize_hist(self.evi2)
+                self.array = exposure.equalize_hist(self.array)
 
-            ip = ax.imshow(self.evi2)
-            im_min = np.percentile(self.evi2, clip_percentiles[0])
-            im_max = np.percentile(self.evi2, clip_percentiles[1])
+            ip = ax.imshow(self.array)
+            im_min = np.percentile(self.array, clip_percentiles[0])
+            im_max = np.percentile(self.array, clip_percentiles[1])
 
         elif show_which == 'pca':
 
@@ -2239,7 +2239,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
             plt.show()
 
         if show_which == 'ndvi':
-            self.ndvi[self.ndvi != 0] -= 1.1
+            self.array[self.array != 0] -= 1.1
 
         plt.clf()
         plt.close(fig)
@@ -3743,7 +3743,7 @@ def write2raster(out_array,
 
         STORAGE_DICT_r = {v: k for k, v in STORAGE_DICT.items()}
 
-        o_info.storage = STORAGE_DICT_GDAL[STORAGE_DICT_r[out_array.dtype.name]]
+        o_info.storage = STORAGE_DICT_r[out_array.dtype.name]
         o_info.bands = out_dims
         o_info.rows = out_rows
         o_info.cols = out_cols
