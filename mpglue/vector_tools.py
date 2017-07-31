@@ -49,7 +49,7 @@ try:
     rtree_installed = True
 except:
     rtree_installed = False
-    logger.warning('Rtree must be installed for spatial indexing')
+    logger.warning('Rtree and libspatialindex must be installed for spatial indexing')
 
 # Pickle
 try:

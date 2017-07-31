@@ -1253,7 +1253,7 @@ class Samples(object):
         self.p_vars = np.float32(np.delete(self.p_vars, idx, axis=0))
         self.labels = np.float32(np.delete(self.labels, idx, axis=0))
 
-    def load4crf(self, predictors, labels, scale_factor=1.):
+    def load4crf(self, predictors, labels, scale_factor=1., n_jobs=1):
 
         """
         Loads data for Conditional Random Fields on a grid
@@ -1265,149 +1265,198 @@ class Samples(object):
             labels (list): A list of images to open or a list of arrays. If an `array`, a single image should
                 be given as `rows` x `columns` and must match the length of `predictors`.
             scale_factor (Optional[float]):
+            n_jobs (Optional[int]):
         """
 
-        if not isinstance(predictors, list):
-            logger.error('The predictors should be a list.')
-            raise TypeError
+        if isinstance(predictors, list) and isinstance(labels, list):
 
-        if not isinstance(labels, list):
-            logger.error('The labels should be a list.')
-            raise TypeError
+            if len(predictors) != len(labels):
 
-        if len(predictors) != len(labels):
-            logger.error('The list lengths do not match.')
-            raise AssertionError
+                logger.error('The list lengths do not match.')
+                raise AssertionError
 
         n_patches = len(predictors)
 
+        self.p_vars = None
+        self.labels = None
+        bands = None
+
         # Arrange the predictors.
-        if isinstance(predictors[0], str):
+        if isinstance(predictors, list):
 
-            with raster_tools.ropen(predictors[0]) as i_info:
+            if isinstance(predictors[0], str):
 
-                bands = i_info.bands
-                rows = i_info.rows
-                cols = i_info.cols
+                with raster_tools.ropen(predictors[0]) as i_info:
 
-                data_array = i_info.read(bands2open=-1, predictions=True)
-                scaler = StandardScaler().fit(data_array)
+                    bands = i_info.bands
+                    self.im_rows = i_info.rows
+                    self.im_cols = i_info.cols
 
-            del data_array, i_info
+                    if scale_factor <= 1:
 
-            self.p_vars = np.zeros((n_patches, rows, cols, bands), dtype='float32')
+                        data_array = i_info.read(bands2open=-1, predictions=True)
+                        scaler = StandardScaler().fit(data_array)
 
-            for pri, predictor in enumerate(predictors):
+                data_array = None
+                i_info = None
 
-                with raster_tools.ropen(predictor) as i_info:
-
-                    if scale_factor > 1:
-
-                        self.p_vars[pri, :, :, :] = i_info.read(bands2open=-1,
-                                                                predictions=True).reshape(rows,
-                                                                                          cols,
-                                                                                          bands) / scale_factor
-
-                    else:
-
-                        self.p_vars[pri, :, :, :] = scaler.transform(i_info.read(bands2open=-1,
-                                                                                 predictions=True)).reshape(rows,
-                                                                                                            cols,
-                                                                                                            bands)
-
-                del i_info
-
-        elif isinstance(predictors[0], np.ndarray):
-
-            if len(predictors[0].shape) == 3:
-                bands, rows, cols = predictors[0].shape
-            else:
-
-                bands = 1
-                rows, cols = predictors[0].shape
-
-            self.p_vars = np.zeros((n_patches, rows, cols, bands), dtype='float32')
-
-            # Setup a scaler for all inputs.
-            if scale_factor <= 1:
+                self.p_vars = np.zeros((n_patches,
+                                        self.im_rows,
+                                        self.im_cols,
+                                        bands),
+                                       dtype='float32')
 
                 for pri, predictor in enumerate(predictors):
 
-                    if pri == 0:
-                        predictor_stack = predictor.transpose(1, 2, 0).reshape(rows*cols, bands).copy()
+                    if n_jobs not in [0, 1]:
+
+                        if scale_factor > 1:
+
+                            self.p_vars[pri, :, :, :] = raster_tools.read(image2open=predictor,
+                                                                          bands2open=-1,
+                                                                          predictions=True,
+                                                                          n_jobs=n_jobs).reshape(self.im_rows,
+                                                                                                 self.im_cols,
+                                                                                                 bands) / scale_factor
+
+                        else:
+
+                            self.p_vars[pri, :, :, :] = scaler.transform(raster_tools.read(image2open=predictor,
+                                                                                           bands2open=-1,
+                                                                                           predictions=True,
+                                                                                           n_jobs=n_jobs)).reshape(self.im_rows,
+                                                                                                                   self.im_cols,
+                                                                                                                   bands)
+
                     else:
-                        predictor_stack = np.vstack((predictor_stack,
-                                                     predictor.transpose(1, 2, 0).reshape(rows*cols, bands)))
 
-                scaler = StandardScaler().fit(predictor_stack)
+                        with raster_tools.ropen(predictor) as i_info:
 
-            for pri, predictor in enumerate(predictors):
+                            if scale_factor > 1:
 
-                if scale_factor > 1:
+                                self.p_vars[pri, :, :, :] = i_info.read(bands2open=-1,
+                                                                        predictions=True).reshape(self.im_rows,
+                                                                                                  self.im_cols,
+                                                                                                  bands) / scale_factor
 
-                    self.p_vars[pri, :, :, :] = predictor.transpose(1, 2, 0).reshape(rows*cols,
-                                                                                     bands).reshape(rows,
-                                                                                                    cols,
-                                                                                                    bands) / scale_factor
+                            else:
 
+                                self.p_vars[pri, :, :, :] = scaler.transform(i_info.read(bands2open=-1,
+                                                                                         predictions=True)).reshape(self.im_rows,
+                                                                                                                    self.im_cols,
+                                                                                                                    bands)
+
+                        del i_info
+
+            elif isinstance(predictors[0], np.ndarray):
+
+                if len(predictors[0].shape) == 3:
+                    bands, self.im_rows, self.im_cols = predictors[0].shape
                 else:
 
-                    self.p_vars[pri, :, :, :] = scaler.transform(predictor.transpose(1, 2, 0).reshape(rows*cols,
-                                                                                                      bands)).reshape(rows,
-                                                                                                                      cols,
-                                                                                                                      bands)
+                    bands = 1
+                    self.im_rows, self.im_cols = predictors[0].shape
+
+                self.p_vars = np.zeros((n_patches, self.im_rows, self.im_cols, bands), dtype='float32')
+
+                # Setup a scaler for all inputs.
+                if scale_factor <= 1:
+
+                    for pri, predictor in enumerate(predictors):
+
+                        if pri == 0:
+
+                            predictor_stack = predictor.transpose(1, 2, 0).reshape(self.im_rows*self.im_cols,
+                                                                                   bands).copy()
+
+                        else:
+
+                            predictor_stack = np.vstack((predictor_stack,
+                                                         predictor.transpose(1, 2, 0).reshape(self.im_rows*self.im_cols,
+                                                                                              bands)))
+
+                    scaler = StandardScaler().fit(predictor_stack)
+
+                for pri, predictor in enumerate(predictors):
+
+                    if scale_factor > 1:
+
+                        self.p_vars[pri, :, :, :] = predictor.transpose(1, 2, 0).reshape(self.im_rows*self.im_cols,
+                                                                                         bands).reshape(self.im_rows,
+                                                                                                        self.im_cols,
+                                                                                                        bands) / scale_factor
+
+                    else:
+
+                        self.p_vars[pri, :, :, :] = scaler.transform(predictor.transpose(1, 2, 0).reshape(self.im_rows*self.im_cols,
+                                                                                                          bands)).reshape(self.im_rows,
+                                                                                                                          self.im_cols,
+                                                                                                                          bands)
+
+        else:
+            logger.warning('No variables were shaped.')
 
         # Arrange the labels.
-        if isinstance(labels[0], str):
+        if isinstance(labels, list):
 
-            with raster_tools.ropen(labels[0]) as i_info:
+            if isinstance(labels[0], str):
 
-                # Create the label array.
-                self.labels = np.zeros((n_patches, i_info.rows, i_info.cols), dtype='uint8')
+                with raster_tools.ropen(labels[0]) as i_info:
 
-            del i_info
-
-            for li, label in enumerate(labels):
-
-                with raster_tools.ropen(label) as i_info:
-                    self.labels[li] = i_info.read()
+                    # Create the label array.
+                    self.labels = np.zeros((n_patches, i_info.rows, i_info.cols), dtype='uint8')
 
                 del i_info
 
-        elif isinstance(labels[0], np.ndarray):
+                for li, label in enumerate(labels):
 
-            rows, cols = labels[0].shape
+                    with raster_tools.ropen(label) as i_info:
+                        self.labels[li] = i_info.read()
 
-            self.labels = np.zeros((n_patches, rows, cols), dtype='uint8')
+                    del i_info
 
-            for li, label in enumerate(labels):
-                self.labels[li] = label
+            elif isinstance(labels[0], np.ndarray):
 
-        self.p_vars[np.isnan(self.p_vars) | np.isinf(self.p_vars)] = 0
-        self.labels[np.isnan(self.labels) | np.isinf(self.labels)] = 0
+                rows, cols = labels[0].shape
 
-        self.n_feas = n_patches * bands
-        self.n_samps = self.labels.size
-        self.classes = list(np.unique(self.labels))
-        self.n_classes = len(self.classes)
+                self.labels = np.zeros((n_patches, rows, cols), dtype='uint8')
 
-        # Check whether there are any
-        #   negative class labels.
-        if np.min(self.classes) < 0:
-            logger.error('The class labels should not contain negative values.')
+                for li, label in enumerate(labels):
+                    self.labels[li] = label
 
-        # Check whether the classes begin with 0.
-        if self.classes[0] != 0:
-            logger.error('The class labels must begin with 0 when using CRF models.')
+        else:
+            logger.warning('No labels were shaped.')
 
-        # Check whether the classes are increasing by 1.
-        if np.any(np.abs(np.diff(self.classes)) > 1):
-            logger.error('The class labels should increase by 1, starting with 0.')
+        if isinstance(self.p_vars, np.ndarray):
+            self.p_vars[np.isnan(self.p_vars) | np.isinf(self.p_vars)] = 0
 
-        self.class_counts = dict()
+        if isinstance(self.labels, np.ndarray):
 
-        for indv_class in self.classes:
-            self.class_counts[indv_class] = (self.labels == indv_class).sum()
+            self.labels[np.isnan(self.labels) | np.isinf(self.labels)] = 0
+            self.n_samps = self.labels.size
+            self.classes = list(np.unique(self.labels))
+            self.n_classes = len(self.classes)
+
+            # Check whether there are any
+            #   negative class labels.
+            if np.min(self.classes) < 0:
+                logger.error('The class labels should not contain negative values.')
+
+            # Check whether the classes begin with 0.
+            if self.classes[0] != 0:
+                logger.error('The class labels must begin with 0 when using CRF models.')
+
+            # Check whether the classes are increasing by 1.
+            if np.any(np.abs(np.diff(self.classes)) > 1):
+                logger.error('The class labels should increase by 1, starting with 0.')
+
+            self.class_counts = dict()
+
+            for indv_class in self.classes:
+                self.class_counts[indv_class] = (self.labels == indv_class).sum()
+
+        if isinstance(bands, int):
+            self.n_feas = n_patches * bands
 
 
 class EndMembers(object):
@@ -1549,8 +1598,8 @@ class EndMembers(object):
 
             o_info = i_info.copy()
 
-            o_info.update_info(storage='float32',
-                               bands=1)
+            o_info.update_info(bands=1,
+                               storage='float32',)
 
             if isinstance(mask, str):
 
@@ -4074,12 +4123,27 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
         else:
             return self.model.predict(array2predict)
 
-    def predict(self, input_image, out_image, additional_layers=[], scale_data=False,
-                band_check=-1, ignore_feas=[], use_xy=False, in_stats=None,
-                in_model=None, mask_background=None, background_band=2,
-                background_value=0, minimum_observations=0, observation_band=0,
-                row_block_size=1024, col_block_size=1024,
-                n_jobs=-1, n_jobs_vars=-1, gdal_cache=256):
+    def predict(self,
+                input_image,
+                out_image,
+                additional_layers=None,
+                scale_data=False,
+                band_check=-1,
+                ignore_feas=None,
+                use_xy=False,
+                in_stats=None,
+                in_model=None,
+                mask_background=None,
+                background_band=2,
+                background_value=0,
+                minimum_observations=0,
+                observation_band=0,
+                scale_factor=1.,
+                row_block_size=1024,
+                col_block_size=1024,
+                n_jobs=-1,
+                n_jobs_vars=-1,
+                gdal_cache=256):
 
         """
         Applies a model to predict class labels
@@ -4105,6 +4169,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                 recoded to 0. Default is 0, or no minimum observation filter.
             observation_band (Optional[int]): The band position in ``mask_background`` of the ``minimum_observations``
                 counts. Default is 0.
+            scale_factor (Optional[float]): The scale factor for CRF models. Default is 1.
             row_block_size (Optional[int]): The row block size (pixels). Default is 1024.
             col_block_size (Optional[int]): The column block size (pixels). Default is 1024.
             n_jobs (Optional[int]): The number of processors to use for parallel mapping. Default is -1, or all
@@ -4117,8 +4182,8 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
             None, writes to ``out_image``.
 
         Examples:
-            >>> from mappy.classifiers import classification
-            >>> cl = classification()
+            >>> import mpglue as gl
+            >>> cl = gl.classification()
             >>>
             >>> # You can use x, y coordinates, but note that these must be
             >>> #   supplied to ``predict`` also.
@@ -4158,6 +4223,8 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
         self.background_value = background_value
         self.minimum_observations = minimum_observations
         self.observation_band = observation_band
+        self.scale_factor = scale_factor
+        self.in_stats = in_stats
         self.n_jobs = n_jobs
         self.n_jobs_vars = n_jobs_vars
         self.chunk_size = (self.row_block_size * self.col_block_size) / 100
@@ -4174,6 +4241,15 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
             return
 
+        if not hasattr(self, 'model'):
+
+            logger.warning("""\
+            There is no trained `model` object. Be sure to run `construct_model`
+            or `construct_r_model` before running `predict`.
+            """)
+
+            return
+
         d_name, f_name = os.path.split(self.out_image)
         f_base, f_ext = os.path.splitext(f_name)
 
@@ -4182,55 +4258,16 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
         if not os.path.isdir(d_name):
             os.makedirs(d_name)
-        
+
+        # Conditional Random Fields
+        if self.classifier_info['classifier'] == 'GridCRF':
+            self._predict4crf()
+
         # Orfeo Toolbox application
-        if 'OR' in self.classifier_info['classifier']:
+        elif 'OR' in self.classifier_info['classifier']:
+            self._predict4orf()
 
-            # make predictions
-            if isinstance(in_stats, str):
-
-                if isinstance(self.mask_background, str):
-
-                    com = 'otbcli_ImageClassifier -in {} -imstat {} \
-                    -model {} -out {} -ram {:d}'.format(input_image, in_stats, in_model,
-                                                        self.out_image_temp, gdal_cache)
-
-                else:
-                    com = 'otbcli_ImageClassifier -in {} -imstat {} \
-                    -model {} -out {} -ram {:d}'.format(input_image, in_stats, in_model, self.out_image, gdal_cache)
-
-            else:
-
-                if isinstance(self.mask_background, str):
-
-                    com = 'otbcli_ImageClassifier -in {} -model {} -out {} -ram {:d}'.format(input_image, in_model,
-                                                                                             self.out_image_temp,
-                                                                                             gdal_cache)
-
-                else:
-
-                    com = 'otbcli_ImageClassifier -in {} -model {} -out {} -ram {:d}'.format(input_image, in_model,
-                                                                                             self.out_image, gdal_cache)
-
-            try:
-                subprocess.call(com, shell=True)
-            except:
-                logger.warning('Are you sure the Orfeo Toolbox is installed?')
-                return
-
-            if isinstance(self.mask_background, str):
-
-                self._mask_background(self.out_image_temp, self.out_image, self.mask_background,
-                                      self.background_band, self.background_value,
-                                      self.minimum_observations, self.observation_band)
-
-            # app = otb.Registry.CreateApplication('ImageClassifier')
-            # app.SetParameterString('in', input_image)
-            # app.SetParameterString('imstat', output_stats)
-            # app.SetParameterString('model', output_model)
-            # app.SetParameterString('out', output_map)
-            # app.ExecuteAndWriteOutput()
-
+        # Scikit-learn or OpenCV
         else:
 
             self.open_image = False
@@ -4264,7 +4301,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
             else:
                 self.o_info.storage = 'byte'
 
-            print('\nMapping labels ...\n')
+            logger.info('\nMapping class labels ...\n')
 
             self._predict()
 
@@ -4272,6 +4309,91 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                 self.i_info.close()
 
             self.o_info.close()
+
+    def _predict4crf(self):
+
+        logger.info('\nLoading image variables ...\n')
+
+        self.load4crf([self.input_image],
+                      None,
+                      scale_factor=self.scale_factor,
+                      n_jobs=self.n_jobs_vars)
+
+        logger.info('\nMapping class labels ...\n')
+
+        with raster_tools.ropen(self.input_image) as i_info:
+
+            o_info = i_info.copy()
+
+            # Update the output information.
+            o_info.update_info(bands=1,
+                               storage='byte')
+
+        del i_info
+
+        # Make class predictions and write to file.
+        raster_tools.write2raster(np.array(self.model.predict(self.p_vars),
+                                           dtype='uint8').reshape(self.im_rows,
+                                                                  self.im_cols),
+                                  self.out_image,
+                                  o_info=o_info)
+
+    def _predict4orf(self):
+
+        # make predictions
+        if isinstance(self.in_stats, str):
+
+            if isinstance(self.mask_background, str):
+
+                com = 'otbcli_ImageClassifier -in {} -imstat {} \
+                                        -model {} -out {} -ram {:d}'.format(self.input_image,
+                                                                            self.in_stats,
+                                                                            self.in_model,
+                                                                            self.out_image_temp,
+                                                                            self.gdal_cache)
+
+            else:
+                com = 'otbcli_ImageClassifier -in {} -imstat {} \
+                                        -model {} -out {} -ram {:d}'.format(self.input_image,
+                                                                            self.in_stats,
+                                                                            self.in_model,
+                                                                            self.out_image,
+                                                                            self.gdal_cache)
+
+        else:
+
+            if isinstance(self.mask_background, str):
+
+                com = 'otbcli_ImageClassifier -in {} -model {} -out {} -ram {:d}'.format(self.input_image,
+                                                                                         self.in_model,
+                                                                                         self.out_image_temp,
+                                                                                         self.gdal_cache)
+
+            else:
+
+                com = 'otbcli_ImageClassifier -in {} -model {} -out {} -ram {:d}'.format(self.input_image,
+                                                                                         self.in_model,
+                                                                                         self.out_image,
+                                                                                         self.gdal_cache)
+
+        try:
+            subprocess.call(com, shell=True)
+        except:
+            logger.warning('Are you sure the Orfeo Toolbox is installed?')
+            return
+
+        if isinstance(self.mask_background, str):
+
+            self._mask_background(self.out_image_temp, self.out_image, self.mask_background,
+                                  self.background_band, self.background_value,
+                                  self.minimum_observations, self.observation_band)
+
+            # app = otb.Registry.CreateApplication('ImageClassifier')
+            # app.SetParameterString('in', input_image)
+            # app.SetParameterString('imstat', output_stats)
+            # app.SetParameterString('model', output_model)
+            # app.SetParameterString('out', output_map)
+            # app.ExecuteAndWriteOutput()
 
     def _predict(self):
 
@@ -4284,20 +4406,25 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
         rows, cols = self.i_info.rows, self.i_info.cols
 
         if self.ignore_feas:
-            bands2open = sorted([bd for bd in xrange(1, self.i_info.bands+1) if bd not in self.ignore_feas])
+            bands2open = sorted([bd for bd in range(1, self.i_info.bands+1) if bd not in self.ignore_feas])
         else:
             bands2open = range(1, self.i_info.bands+1)
 
         if isinstance(self.mask_background, str):
-            out_raster_object = raster_tools.create_raster(self.out_image_temp, self.o_info,
-                                                           compress='none', tile=False, bigtiff='yes')
+
+            out_raster_object = raster_tools.create_raster(self.out_image_temp,
+                                                           self.o_info,
+                                                           compress='none',
+                                                           tile=False,
+                                                           bigtiff='yes')
+
         else:
             out_raster_object = raster_tools.create_raster(self.out_image, self.o_info, tile=False)
 
         # if hasattr(self, 'get_probs'):
 
         if self.get_probs:
-            out_bands = [out_raster_object.datasource.GetRasterBand(bd) for bd in xrange(1, self.o_info.bands+1)]
+            out_bands = [out_raster_object.datasource.GetRasterBand(bd) for bd in range(1, self.o_info.bands+1)]
         else:
             out_raster_object.get_band(1)
 
@@ -4319,16 +4446,16 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
         #ttl_blks_ct, pbar = _iteration_parameters(rows, cols, block_rows, block_cols)
 
         n_blocks = 0
-        for i in xrange(0, rows, block_rows):
-            for j in xrange(0, cols, block_cols):
+        for i in range(0, rows, block_rows):
+            for j in range(0, cols, block_cols):
                 n_blocks += 1
 
         n_block = 1
-        for i in xrange(0, rows, block_rows):
+        for i in range(0, rows, block_rows):
 
             n_rows = self._num_rows_cols(i, block_rows, rows)
 
-            for j in xrange(0, cols, block_cols):
+            for j in range(0, cols, block_cols):
 
                 print('Block {:d} of {:d} ...'.format(n_block, n_blocks))
                 n_block += 1
@@ -4394,7 +4521,8 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                 #   of the features is (features x rows x columns).
                 features = raster_tools.read(image2open=self.input_image,
                                              bands2open=bands2open,
-                                             i=i, j=j,
+                                             i=i,
+                                             j=j,
                                              rows=n_rows,
                                              cols=n_cols,
                                              predictions=True,
@@ -4413,7 +4541,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
                     predicted = self.model.predict_proba(features)
 
-                    for cl in xrange(0, self.n_classes):
+                    for cl in range(0, self.n_classes):
                         out_bands[cl].WriteArray(predicted[:, cl].reshape(n_rows, n_cols), j, i)
 
                 else:
@@ -4439,7 +4567,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                                                                                       self.ignore_feas, self.use_xy,
                                                                                       self.classifier_info,
                                                                                       self.weight_classes)
-                                                                  for chunk in xrange(0, n_samples, self.chunk_size))
+                                                                  for chunk in range(0, n_samples, self.chunk_size))
 
                         # transpose and reshape the predicted labels to (rows x columns)
                         out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
@@ -4483,8 +4611,8 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                         if (self.n_jobs != 0) and (self.n_jobs != 1):
 
                             # Get chunks for parallel processing.
-                            indice_pairs = []
-                            for i_ in xrange(0, n_samples, self.chunk_size):
+                            indice_pairs = list()
+                            for i_ in range(0, n_samples, self.chunk_size):
                                 n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
                                 indice_pairs.append([i_, n_rows_])
 
@@ -4520,8 +4648,8 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                         else:
 
                             # Get chunks for parallel processing.
-                            indice_pairs = []
-                            for i_ in xrange(0, n_samples, self.chunk_size):
+                            indice_pairs = list()
+                            for i_ in range(0, n_samples, self.chunk_size):
                                 n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
                                 indice_pairs.append([i_, n_rows_])
 
@@ -4560,7 +4688,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
         # if hasattr(self, 'get_probs'):
         if self.get_probs:
 
-            for cl in xrange(0, self.n_classes):
+            for cl in range(0, self.n_classes):
 
                 out_bands[cl].GetStatistics(0, 1)
                 out_bands[cl].FlushCache()
@@ -4611,11 +4739,11 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                                                                    row_block_size=self.row_block_size,
                                                                    col_block_size=self.col_block_size)
 
-            for i in xrange(0, b_rows, block_rows):
+            for i in range(0, b_rows, block_rows):
 
                 n_rows = self._num_rows_cols(i, block_rows, b_rows)
 
-                for j in xrange(0, b_cols, block_cols):
+                for j in range(0, b_cols, block_cols):
 
                     n_cols = self._num_rows_cols(j, block_cols, b_cols)
 
