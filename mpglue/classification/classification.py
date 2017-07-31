@@ -3467,8 +3467,8 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                 elif classifier == 'EX_RF':
                     classifier_list.append(('EX_RF', ensemble.ExtraTreesClassifier(**self.classifier_info_)))
 
-                elif classifier == 'AB':
-                    classifier_list.append(('AB',
+                elif classifier == 'AB_DT':
+                    classifier_list.append(('AB_DT',
                                             ensemble.AdaBoostClassifier(base_estimator=tree.DecisionTreeClassifier(**self.classifier_info_),
                                                                         **self.classifier_info_base)))
 
@@ -3481,10 +3481,6 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                     classifier_list.append(('AB_EX_RF',
                                             ensemble.AdaBoostClassifier(base_estimator=ensemble.ExtraTreesClassifier(**self.classifier_info_),
                                                                         **self.classifier_info_base)))
-
-                elif classifier == 'AB_DT':
-                    classifier_list.append(('AB_DT', ensemble.AdaBoostClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
-                                                                                 **self.classifier_info_base)))
 
                 elif classifier == 'AB_EX_DT':
                     classifier_list.append(('AB_EX_DT',
@@ -3599,7 +3595,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
                 self.model = ensemble.ExtraTreesRegressor(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'AB':
+            elif self.classifier_info['classifier'] == 'AB_DT':
 
                 self.model = ensemble.AdaBoostClassifier(base_estimator=tree.DecisionTreeClassifier(**self.classifier_info_),
                                                          **self.classifier_info_base)
@@ -5398,7 +5394,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                                  'EX_RRF': ensemble.ExtraTreesRegressor(n_jobs=-1),
                                  'Bag': ensemble.BaggingClassifier(base_estimator=tree.DecisionTreeClassifier(),
                                                                    n_jobs=-1),
-                                 'AB': ensemble.AdaBoostClassifier(base_estimator=tree.DecisionTreeClassifier()),
+                                 'AB_DT': ensemble.AdaBoostClassifier(base_estimator=tree.DecisionTreeClassifier()),
                                  'GB': ensemble.GradientBoostingClassifier(),
                                  'DT': tree.DecisionTreeClassifier(),
                                  'SVM': SVC(kernel='rbf')}
@@ -5419,7 +5415,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                           'rand_vars': rand_vars_list,
                           'min_samps': min_samps_list}
 
-        elif classifier_info['classifier'] in ['AB', 'AB_DT', 'AB_EX_DT', 'AB_RF', 'AB_EX_RF']:
+        elif classifier_info['classifier'] in ['AB_DT', 'AB_DT', 'AB_EX_DT', 'AB_RF', 'AB_EX_RF']:
 
             parameters = {'n_estimators': n_trees_list,
                           'trials': trials_list,
@@ -5496,7 +5492,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
         print('\nFinding the best paramaters for a {} model ...\n'.format(classifier_info['classifier']))
 
         core_classifiers = ['C5', 'Cubist', 'RF', 'RFR',
-                            'AB', 'AB_RF', 'AB_EX_RF', 'AB_DT', 'AB_EX_DT',
+                            'AB_RF', 'AB_EX_RF', 'AB_DT', 'AB_EX_DT',
                             'ABR', 'BagR', 'EX_RF', 'EX_RFR', 'EX_DTR', 'DTR']
 
         if classifier_info['classifier'] in core_classifiers:
