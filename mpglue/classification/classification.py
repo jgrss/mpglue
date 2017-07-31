@@ -1253,7 +1253,7 @@ class Samples(object):
         self.p_vars = np.float32(np.delete(self.p_vars, idx, axis=0))
         self.labels = np.float32(np.delete(self.labels, idx, axis=0))
 
-    def load4crf(self, predictors, labels, scale_factor=1., n_jobs=1):
+    def load4crf(self, predictors, labels, bands2open=None, scale_factor=1., n_jobs=1):
 
         """
         Loads data for Conditional Random Fields on a grid
@@ -1262,6 +1262,7 @@ class Samples(object):
             predictors (list): A list of images to open or a list of arrays.
                 If an `array`, a single image should be given as `rows` x `columns`. A multi-layer image should
                 be given as `layers` x `rows` x `columns.
+            bands2open (Optional[list]): A list of bands to open, otherwise opens all bands.
             labels (list): A list of images to open or a list of arrays. If an `array`, a single image should
                 be given as `rows` x `columns` and must match the length of `predictors`.
             scale_factor (Optional[float]):
@@ -1288,13 +1289,16 @@ class Samples(object):
 
                 with raster_tools.ropen(predictors[0]) as i_info:
 
-                    bands = i_info.bands
+                    if not isinstance(bands2open, list):
+                        bands2open = range(1, i_info.bands+1)
+
+                    bands = len(bands2open)
                     self.im_rows = i_info.rows
                     self.im_cols = i_info.cols
 
                     if scale_factor <= 1:
 
-                        data_array = i_info.read(bands2open=-1, predictions=True)
+                        data_array = i_info.read(bands2open=bands2open, predictions=True)
                         scaler = StandardScaler().fit(data_array)
 
                 data_array = None
@@ -1313,7 +1317,7 @@ class Samples(object):
                         if scale_factor > 1:
 
                             self.p_vars[pri, :, :, :] = raster_tools.read(image2open=predictor,
-                                                                          bands2open=-1,
+                                                                          bands2open=bands2open,
                                                                           predictions=True,
                                                                           n_jobs=n_jobs).reshape(self.im_rows,
                                                                                                  self.im_cols,
@@ -1322,7 +1326,7 @@ class Samples(object):
                         else:
 
                             self.p_vars[pri, :, :, :] = scaler.transform(raster_tools.read(image2open=predictor,
-                                                                                           bands2open=-1,
+                                                                                           bands2open=bands2open,
                                                                                            predictions=True,
                                                                                            n_jobs=n_jobs)).reshape(self.im_rows,
                                                                                                                    self.im_cols,
@@ -1334,14 +1338,14 @@ class Samples(object):
 
                             if scale_factor > 1:
 
-                                self.p_vars[pri, :, :, :] = i_info.read(bands2open=-1,
+                                self.p_vars[pri, :, :, :] = i_info.read(bands2open=bands2open,
                                                                         predictions=True).reshape(self.im_rows,
                                                                                                   self.im_cols,
                                                                                                   bands) / scale_factor
 
                             else:
 
-                                self.p_vars[pri, :, :, :] = scaler.transform(i_info.read(bands2open=-1,
+                                self.p_vars[pri, :, :, :] = scaler.transform(i_info.read(bands2open=bands2open,
                                                                                          predictions=True)).reshape(self.im_rows,
                                                                                                                     self.im_cols,
                                                                                                                     bands)
@@ -1376,6 +1380,8 @@ class Samples(object):
                                                                                               bands)))
 
                     scaler = StandardScaler().fit(predictor_stack)
+
+                    del predictor_stack
 
                 for pri, predictor in enumerate(predictors):
 
@@ -4129,6 +4135,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                 additional_layers=None,
                 scale_data=False,
                 band_check=-1,
+                bands2open=None,
                 ignore_feas=None,
                 use_xy=False,
                 in_stats=None,
@@ -4155,7 +4162,8 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                 of ``input_image``.
             scale_data (Optional[bool]): Whether to scale data. Default is False.
             band_check (Optional[int]): The band to check for 'no data'. Default is -1, or do not perform check. 
-            ignore_feas (Optional[list]): A list of features (band layers) to ignore. Default is an empty list, 
+            bands2open (Optional[list]): A list of bands to open, otherwise opens all bands. Default is None.
+            ignore_feas (Optional[list]): A list of features (band layers) to ignore. Default is an empty list,
                 or use all features.
             use_xy (Optional[bool]): Whether to use x, y coordinates as predictive variables. Default is False.
             in_stats (Optional[str]): A XML statistics file. Default is None. *Only applicable to Orfeo models.
@@ -4214,6 +4222,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
         self.additional_layers = additional_layers
         self.ignore_feas = ignore_feas
         self.scale_data = scale_data
+        self.bands2open = bands2open
         self.band_check = band_check
         self.row_block_size = row_block_size
         self.col_block_size = col_block_size
@@ -4316,6 +4325,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
         self.load4crf([self.input_image],
                       None,
+                      bands2open=self.bands2open,
                       scale_factor=self.scale_factor,
                       n_jobs=self.n_jobs_vars)
 
@@ -4406,9 +4416,11 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
         rows, cols = self.i_info.rows, self.i_info.cols
 
         if self.ignore_feas:
-            bands2open = sorted([bd for bd in range(1, self.i_info.bands+1) if bd not in self.ignore_feas])
+            self.bands2open = sorted([bd for bd in range(1, self.i_info.bands+1) if bd not in self.ignore_feas])
         else:
-            bands2open = range(1, self.i_info.bands+1)
+
+            if not isinstance(self.bands2open, list):
+                self.bands2open = range(1, self.i_info.bands+1)
 
         if isinstance(self.mask_background, str):
 
@@ -4495,7 +4507,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
                 if 'CV' in self.classifier_info['classifier']:
 
-                    if len(bands2open) != self.model.getVarCount():
+                    if len(self.bands2open) != self.model.getVarCount():
                         logger.error('\nThe number of predictive layers does not match the number of model estimators.\n')
                         raise AssertionError
 
@@ -4505,14 +4517,14 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
                         try:
 
-                            if len(bands2open) != self.model.n_features_:
+                            if len(self.bands2open) != self.model.n_features_:
 
                                 logger.error('\nThe number of predictive layers does not match the number of model estimators.\n')
                                 raise AssertionError
 
                         except:
 
-                            if len(bands2open) != self.model.base_estimator.n_features_:
+                            if len(self.bands2open) != self.model.base_estimator.n_features_:
 
                                 logger.error('\nThe number of predictive layers does not match the number of model estimators.\n')
                                 raise AssertionError
@@ -4520,7 +4532,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                 # Get all the bands for the tile. The shape
                 #   of the features is (features x rows x columns).
                 features = raster_tools.read(image2open=self.input_image,
-                                             bands2open=bands2open,
+                                             bands2open=self.bands2open,
                                              i=i,
                                              j=j,
                                              rows=n_rows,
@@ -4578,7 +4590,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                         # Load the predictor variables.
                         # predict_samps = pandas2ri.py2ri(pd.DataFrame(features))
 
-                        predict_samps = ro.r.matrix(features, nrow=n_samples, ncol=len(bands2open))
+                        predict_samps = ro.r.matrix(features, nrow=n_samples, ncol=len(self.bands2open))
                         predict_samps.colnames = StrVector(self.headers[:-1])
 
                         # Get chunks for parallel processing.
