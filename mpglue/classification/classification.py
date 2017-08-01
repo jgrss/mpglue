@@ -1253,7 +1253,7 @@ class Samples(object):
         self.p_vars = np.float32(np.delete(self.p_vars, idx, axis=0))
         self.labels = np.float32(np.delete(self.labels, idx, axis=0))
 
-    def load4crf(self, predictors, labels, bands2open=None, scale_factor=1., n_jobs=1):
+    def load4crf(self, predictors, labels, bands2open=None, scale_factor=1., n_jobs=1, **kwargs):
 
         """
         Loads data for Conditional Random Fields on a grid
@@ -1298,11 +1298,26 @@ class Samples(object):
 
                     if scale_factor <= 1:
 
-                        data_array = i_info.read(bands2open=bands2open, predictions=True)
+                        if kwargs:
+
+                            data_array = i_info.read(bands2open=bands2open,
+                                                     predictions=True,
+                                                     **kwargs)
+
+                        else:
+
+                            data_array = i_info.read(bands2open=bands2open,
+                                                     predictions=True)
+
                         scaler = StandardScaler().fit(data_array)
 
-                data_array = None
-                i_info = None
+                del data_array, i_info
+
+                if 'rows' in kwargs:
+                    self.im_rows = kwargs['rows']
+
+                if 'cols' in kwargs:
+                    self.im_cols = kwargs['cols']
 
                 self.p_vars = np.zeros((n_patches,
                                         self.im_rows,
@@ -1316,21 +1331,45 @@ class Samples(object):
 
                         if scale_factor > 1:
 
-                            self.p_vars[pri, :, :, :] = raster_tools.read(image2open=predictor,
-                                                                          bands2open=bands2open,
-                                                                          predictions=True,
-                                                                          n_jobs=n_jobs).reshape(self.im_rows,
-                                                                                                 self.im_cols,
-                                                                                                 bands) / scale_factor
+                            if kwargs:
+
+                                self.p_vars[pri, :, :, :] = raster_tools.read(image2open=predictor,
+                                                                              bands2open=bands2open,
+                                                                              predictions=True,
+                                                                              n_jobs=n_jobs,
+                                                                              **kwargs).reshape(self.im_rows,
+                                                                                                self.im_cols,
+                                                                                                bands) / scale_factor
+
+                            else:
+
+                                self.p_vars[pri, :, :, :] = raster_tools.read(image2open=predictor,
+                                                                              bands2open=bands2open,
+                                                                              predictions=True,
+                                                                              n_jobs=n_jobs).reshape(self.im_rows,
+                                                                                                     self.im_cols,
+                                                                                                     bands) / scale_factor
 
                         else:
 
-                            self.p_vars[pri, :, :, :] = scaler.transform(raster_tools.read(image2open=predictor,
-                                                                                           bands2open=bands2open,
-                                                                                           predictions=True,
-                                                                                           n_jobs=n_jobs)).reshape(self.im_rows,
-                                                                                                                   self.im_cols,
-                                                                                                                   bands)
+                            if kwargs:
+
+                                self.p_vars[pri, :, :, :] = scaler.transform(raster_tools.read(image2open=predictor,
+                                                                                               bands2open=bands2open,
+                                                                                               predictions=True,
+                                                                                               n_jobs=n_jobs,
+                                                                                               **kwargs)).reshape(self.im_rows,
+                                                                                                                  self.im_cols,
+                                                                                                                  bands)
+
+                            else:
+
+                                self.p_vars[pri, :, :, :] = scaler.transform(raster_tools.read(image2open=predictor,
+                                                                                               bands2open=bands2open,
+                                                                                               predictions=True,
+                                                                                               n_jobs=n_jobs)).reshape(self.im_rows,
+                                                                                                                       self.im_cols,
+                                                                                                                       bands)
 
                     else:
 
@@ -1338,17 +1377,37 @@ class Samples(object):
 
                             if scale_factor > 1:
 
-                                self.p_vars[pri, :, :, :] = i_info.read(bands2open=bands2open,
-                                                                        predictions=True).reshape(self.im_rows,
-                                                                                                  self.im_cols,
-                                                                                                  bands) / scale_factor
+                                if kwargs:
+
+                                    self.p_vars[pri, :, :, :] = i_info.read(bands2open=bands2open,
+                                                                            predictions=True,
+                                                                            **kwargs).reshape(self.im_rows,
+                                                                                              self.im_cols,
+                                                                                              bands) / scale_factor
+
+                                else:
+
+                                    self.p_vars[pri, :, :, :] = i_info.read(bands2open=bands2open,
+                                                                            predictions=True).reshape(self.im_rows,
+                                                                                                      self.im_cols,
+                                                                                                      bands) / scale_factor
 
                             else:
 
-                                self.p_vars[pri, :, :, :] = scaler.transform(i_info.read(bands2open=bands2open,
-                                                                                         predictions=True)).reshape(self.im_rows,
-                                                                                                                    self.im_cols,
-                                                                                                                    bands)
+                                if kwargs:
+
+                                    self.p_vars[pri, :, :, :] = scaler.transform(i_info.read(bands2open=bands2open,
+                                                                                             predictions=True,
+                                                                                             **kwargs)).reshape(self.im_rows,
+                                                                                                                self.im_cols,
+                                                                                                                bands)
+
+                                else:
+
+                                    self.p_vars[pri, :, :, :] = scaler.transform(i_info.read(bands2open=bands2open,
+                                                                                             predictions=True)).reshape(self.im_rows,
+                                                                                                                        self.im_cols,
+                                                                                                                        bands)
 
                         del i_info
 
@@ -4149,7 +4208,8 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                 col_block_size=1024,
                 n_jobs=-1,
                 n_jobs_vars=-1,
-                gdal_cache=256):
+                gdal_cache=256,
+                **kwargs):
 
         """
         Applies a model to predict class labels
@@ -4184,6 +4244,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
             n_jobs_vars (Optional[int]): The number of processors to use for parallel band loading.
                 Default is -1, or all available processors.
             gdal_cache (Optional[int]). The GDAL cache (MB). Default is 256.
+            kwargs (Optional): Image read options passed to `mpglue.raster_tools.ropen.read`.
             
         Returns:
             None, writes to ``out_image``.
@@ -4232,6 +4293,8 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
         self.minimum_observations = minimum_observations
         self.observation_band = observation_band
         self.scale_factor = scale_factor
+        self.in_model = in_model
+        self.gdal_cache = gdal_cache
         self.in_stats = in_stats
         self.n_jobs = n_jobs
         self.n_jobs_vars = n_jobs_vars
@@ -4272,7 +4335,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
         # Conditional Random Fields
         if self.classifier_info['classifier'] == 'GridCRF':
-            self._predict4crf()
+            self._predict4crf(**kwargs)
 
         # Orfeo Toolbox application
         elif 'OR' in self.classifier_info['classifier']:
@@ -4324,13 +4387,14 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
             self.o_info.close()
 
-    def _predict4crf(self):
+    def _predict4crf(self, **kwargs):
 
         self.load4crf([self.input_image],
                       None,
                       bands2open=self.bands2open,
                       scale_factor=self.scale_factor,
-                      n_jobs=self.n_jobs_vars)
+                      n_jobs=self.n_jobs_vars,
+                      **kwargs)
 
         with raster_tools.ropen(self.input_image) as i_info:
 
@@ -4339,6 +4403,18 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
             # Update the output information.
             o_info.update_info(bands=1,
                                storage='byte')
+
+            if 'j' in kwargs:
+                o_info.update_info(left=i_info.left + (kwargs['j'] * i_info.cellY))
+
+            if 'i' in kwargs:
+                o_info.update_info(top=i_info.top - (kwargs['i'] * i_info.cellY))
+
+            if 'rows' in kwargs:
+                o_info.update_info(rows=kwargs['rows'])
+
+            if 'cols' in kwargs:
+                o_info.update_info(cols=kwargs['cols'])
 
         del i_info
 

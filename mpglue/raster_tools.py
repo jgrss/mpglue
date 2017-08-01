@@ -3679,7 +3679,7 @@ class create_raster(CreateDriver, FileManager):
 
 
 @deprecation.deprecated(deprecated_in='0.1.3',
-                        removed_in='0.1.4',
+                        removed_in='0.1.5',
                         current_version=__version__,
                         details='Variables `x` and `y` will be replaced with `j` and `i`, respectively.')
 def write2raster(out_array,
