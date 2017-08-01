@@ -3330,7 +3330,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
             # first load the parameters
             try:
 
-                with open(self.input_model.replace('.xml', '.txt'), 'rb') as p_load:
+                with open(self.input_model, 'rb') as p_load:
                     self.classifier_info, __ = pickle.load(p_load)
 
             except:
@@ -4101,7 +4101,9 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
             if hasattr(self, 'p_vars_test'):
 
                 if isinstance(self.p_vars_test, np.ndarray):
-                    self.test_accuracy(out_acc=self.out_acc, discrete=self.discrete)
+
+                    self.test_accuracy(out_acc=self.out_acc,
+                                       discrete=self.discrete)
 
     def _transform4crf(self):
 
@@ -4298,9 +4300,14 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
             self.o_info = self.i_info.copy()
 
             # Set the number of output bands.
-            # if hasattr(self, 'get_probs'):
             if self.get_probs:
+
+                if not hasattr(self.model, 'predict_proba'):
+                    logger.warning('The model must have a `predict_proba` method to prediction class probabilities.')
+                    return
+
                 self.o_info.bands = self.n_classes
+
             else:
                 self.o_info.bands = 1
 
@@ -4431,11 +4438,11 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                                                            tile=False)
 
         if self.get_probs:
-            out_bands = [out_raster_object.datasource.GetRasterBand(bd) for bd in range(1, self.o_info.bands+1)]
+            out_bands = [out_raster_object.get_band(bd) for bd in range(1, self.o_info.bands+1)]
         else:
-            out_raster_object.get_band(1)
 
-        out_raster_object.fill(0)
+            out_raster_object.get_band(1)
+            out_raster_object.fill(0)
 
         if isinstance(self.scale_data, str):
 
@@ -4693,9 +4700,12 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                 out_bands[cl].GetStatistics(0, 1)
                 out_bands[cl].FlushCache()
 
-        out_raster_object.close_all()
+            del out_bands
 
-        out_raster_object = None
+        else:
+
+            out_raster_object.close()
+            del out_raster_object
 
         if isinstance(self.mask_background, str):
 
@@ -4970,41 +4980,52 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
         if method == 'chi2':
 
-            p_vars = np.copy(self.p_vars)
+            if not hasattr(self, 'p_vars'):
+                logger.error('\nBe sure to run `split_samples` to create the `p_vars` variables.\n')
+                raise AttributeError
+
+            if not hasattr(self, 'labels'):
+                logger.error('\nBe sure to run `split_samples` to create the `labels` variables.\n')
+                raise AttributeError
+
+            p_vars = self.p_vars.copy()
 
             # Scale negative values to positive (for Chi Squared)
-            for var_col_pos in xrange(0, p_vars.shape[1]):
+            for var_col_pos in range(0, p_vars.shape[1]):
 
                 col_min = p_vars[:, var_col_pos].min()
 
                 if col_min < 0:
                     p_vars[:, var_col_pos] = np.add(p_vars[:, var_col_pos], abs(col_min))
 
-            try:
-                feas_ranked, p_val = chi2(p_vars, self.labels)
-            except NameError:
-                sys.exit('\nERROR!! Be sure to run split_samples() to create the predictors and predictees.\n')
+            feas_ranked, p_val = chi2(p_vars, self.labels)
 
         elif method == 'RF':
 
-            try:
-                feas_ranked = self.model.feature_importances_
-            except NameError:
-                sys.exit('\nERROR!! A RF model must be trained to use RF feature importance.\n')
+            if not hasattr(self, 'model'):
+                logger.error('\nA RF model must be trained to use RF feature importance.\n')
+
+            if not hasattr(self.model, 'feature_importances_'):
+                logger.error('\nA RF model must be trained to use RF feature importance.\n')
+
+            feas_ranked = self.model.feature_importances_
+
+        else:
+            logger.error('\nThe feature ranking method is not supported.\n')
+            raise NameError
 
         loop_len = len(feas_ranked) + 1
 
         feas_ranked[np.isnan(feas_ranked)] = 0.
 
-        self.fea_rank = {}
+        self.fea_rank = dict()
 
-        for i in xrange(1, loop_len):
-
+        for i in range(1, loop_len):
             self.fea_rank[i] = feas_ranked[i-1]
 
-        indices = []
-        indice_counts = []
-        accuracy_scores = []
+        indices = list()
+        indice_counts = list()
+        accuracy_scores = list()
 
         for i, s in enumerate(sorted(self.fea_rank, key=self.fea_rank.get)):
 
@@ -5083,37 +5104,50 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
         if rank_method == 'chi2':
 
-            p_vars = np.copy(self.p_vars)
+            if not hasattr(self, 'p_vars'):
+                logger.error('\nBe sure to run `split_samples` to create the `p_vars` variables.\n')
+                raise AttributeError
+
+            if not hasattr(self, 'labels'):
+                logger.error('\nBe sure to run `split_samples` to create the `labels` variables.\n')
+                raise AttributeError
+
+            p_vars = self.p_vars.copy()
 
             # Scale negative values to positive (for Chi Squared)
-            for var_col_pos in xrange(0, p_vars.shape[1]):
+            for var_col_pos in range(0, p_vars.shape[1]):
 
                 col_min = p_vars[:, var_col_pos].min()
 
                 if col_min < 0:
                     p_vars[:, var_col_pos] = np.add(p_vars[:, var_col_pos], abs(col_min))
 
-            try:
-                feas_ranked, p_val = chi2(p_vars, self.labels)
-            except NameError:
-                sys.exit('\nERROR!! Be sure to run split_samples() to create the predictors and predictees.\n')
+            feas_ranked, p_val = chi2(p_vars, self.labels)
 
             loop_len = len(feas_ranked) + 1
 
         elif rank_method == 'RF':
 
-            try:
-                feas_ranked = self.model.feature_importances_
-            except NameError:
-                sys.exit('\nERROR!! A RF model must be trained to use RF feature importance.\n')
+            if not hasattr(self, 'model'):
+                logger.error('\nA RF model must be trained to use RF feature importance.\n')
+
+            if not hasattr(self.model, 'feature_importances_'):
+                logger.error('\nA RF model must be trained to use RF feature importance.\n')
+
+            feas_ranked = self.model.feature_importances_
 
             loop_len = len(feas_ranked) + 1
 
+        else:
+
+            logger.error('\nThe feature ranking method is not supported.\n')
+            raise NameError
+
         feas_ranked[np.isnan(feas_ranked)] = 0.
 
-        self.fea_rank = {}
-        for i in xrange(1, loop_len):
+        self.fea_rank = dict()
 
+        for i in range(1, loop_len):
             self.fea_rank[i] = feas_ranked[i-1]
 
         if rank_method == 'chi2':
@@ -5133,7 +5167,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
             n_best_feas = copy(top_feas)
 
         r = 1
-        self.bad_features = []
+        self.bad_features = list()
 
         for s in sorted(self.fea_rank, key=self.fea_rank.get, reverse=True):
 
@@ -5205,7 +5239,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
         """
 
         counter = 1
-        self.variable_names = {}
+        self.variable_names = dict()
 
         for layer_name in layer_names:
 
@@ -5378,7 +5412,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
         else:
             weights = None
 
-        for k_fold in xrange(1, k_folds + 1):
+        for k_fold in range(1, k_folds + 1):
 
             print('Fold {:d} of {:d} ...'.format(k_fold, k_folds))
 
@@ -5391,7 +5425,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                 predict_samps = ro.r.matrix(self.p_vars, nrow=self.n_samps, ncol=self.n_feas)
                 predict_samps.colnames = StrVector(self.headers[:-1])
 
-            # Iteratve over all possible combinations.
+            # Iterate over all possible combinations.
             for param_combo in list(itertools.product(*classifier_parameters.values())):
 
                 # Set the current parameters.
