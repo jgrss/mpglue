@@ -3139,8 +3139,8 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
         Loads, trains, and saves a predictive model.
 
         Args:
-            input_model (Optional[str]): The input model name with .xml extension.
-            output_model (Optional[str]): The output model name with .xml extension.
+            input_model (Optional[str]): The input model name.
+            output_model (Optional[str]): The output model name.
             classifier_info (Optional[dict]): A dictionary of classifier information. Default is {'classifier': 'RF'}.
             class_weight (Optional[bool]): How to weight classes for priors. Default is None. Choices are
                 [None, 'percent', 'inverse'].
@@ -4017,7 +4017,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
         elif self.classifier_info['classifier'] in ['CVSVMA', 'CVSVRA']:
 
-            print('  Be patient. Auto tuning can take a while.\n')
+            logger.info('\nBe patient. Auto tuning can take a while.\n')
 
             self.model.train_auto(self.p_vars, self.labels, None, None, params=self.parameters, k_fold=10)
 
@@ -4083,12 +4083,12 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
                 except:
                     logger.error('\nCould not save {} to file.\n'.format(self.output_model))
-                    raise OSError
+                    raise IOError
 
             else:
 
                 if '.txt' not in self.output_model.lower():
-                    logger.error('\nA Scikit-learn model should be .txt.\n')
+                    logger.error('\nThe model name should end in .txt.\n')
                     raise TypeError
 
                 try:
@@ -4101,7 +4101,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
                 except:
                     logger.error('\nCould not save {} to file.\n'.format(self.output_model))
-                    raise OSError
+                    raise IOError
 
             if isinstance(self.p_vars_test, np.ndarray):
                 self.test_accuracy(out_acc=self.out_acc, discrete=self.discrete)
@@ -4268,6 +4268,9 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
         if not os.path.isdir(d_name):
             os.makedirs(d_name)
 
+        logger.info('\nPredicting class labels from {} and writing to {} ...\n'.format(self.input_image,
+                                                                                       self.out_image))
+
         # Conditional Random Fields
         if self.classifier_info['classifier'] == 'GridCRF':
             self._predict4crf()
@@ -4310,8 +4313,6 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
             else:
                 self.o_info.storage = 'byte'
 
-            logger.info('\nMapping class labels ...\n')
-
             self._predict()
 
             if self.open_image:
@@ -4321,15 +4322,11 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
     def _predict4crf(self):
 
-        logger.info('\nLoading image variables ...\n')
-
         self.load4crf([self.input_image],
                       None,
                       bands2open=self.bands2open,
                       scale_factor=self.scale_factor,
                       n_jobs=self.n_jobs_vars)
-
-        logger.info('\nMapping class labels ...\n')
 
         with raster_tools.ropen(self.input_image) as i_info:
 
@@ -4431,9 +4428,10 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                                                            bigtiff='yes')
 
         else:
-            out_raster_object = raster_tools.create_raster(self.out_image, self.o_info, tile=False)
 
-        # if hasattr(self, 'get_probs'):
+            out_raster_object = raster_tools.create_raster(self.out_image,
+                                                           self.o_info,
+                                                           tile=False)
 
         if self.get_probs:
             out_bands = [out_raster_object.datasource.GetRasterBand(bd) for bd in range(1, self.o_info.bands+1)]
@@ -4469,13 +4467,13 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
             for j in range(0, cols, block_cols):
 
-                print('Block {:d} of {:d} ...'.format(n_block, n_blocks))
+                logger.info('Block {:d} of {:d} ...'.format(n_block, n_blocks))
+
                 n_block += 1
 
                 if n_block in self.record_list:
 
-                    print('  Skipping current block ...')
-
+                    logger.info('  Skipping current block ...')
                     continue
                     
                 n_cols = self._num_rows_cols(j, block_cols, cols)
@@ -4508,6 +4506,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                 if 'CV' in self.classifier_info['classifier']:
 
                     if len(self.bands2open) != self.model.getVarCount():
+
                         logger.error('\nThe number of predictive layers does not match the number of model estimators.\n')
                         raise AssertionError
 
@@ -4690,14 +4689,6 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                 with open(self.record_keeping, 'wb') as p_dump:
                     pickle.dump(self.record_list, p_dump, protocol=pickle.HIGHEST_PROTOCOL)
 
-                #pbar.update(ttl_blks_ct)
-                #ttl_blks_ct += 1
-
-        # os.remove(self.temp_model_file)
-
-        #pbar.finish()
-
-        # if hasattr(self, 'get_probs'):
         if self.get_probs:
 
             for cl in range(0, self.n_classes):
