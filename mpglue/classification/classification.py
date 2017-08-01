@@ -4066,30 +4066,23 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
             if 'CV' in self.classifier_info['classifier']:
 
-                if '.xml' not in self.output_model.lower():
-                    logger.error('\nAn OpenCV model should be .xml.\n')
-                    raise NameError
-
                 try:
 
                     self.model.save(self.output_model)
 
                     # dump the parameters to a text file
-                    with open(self.output_model.replace('.xml', '.txt'), 'wb') as p_dump:
+                    with open(self.output_model, 'wb') as p_dump:
 
                         pickle.dump([self.classifier_info, self.model],
                                     p_dump,
                                     protocol=pickle.HIGHEST_PROTOCOL)
 
                 except:
+
                     logger.error('\nCould not save {} to file.\n'.format(self.output_model))
                     raise IOError
 
             else:
-
-                if '.txt' not in self.output_model.lower():
-                    logger.error('\nThe model name should end in .txt.\n')
-                    raise TypeError
 
                 try:
 
@@ -4100,6 +4093,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                                     protocol=pickle.HIGHEST_PROTOCOL)
 
                 except:
+                    
                     logger.error('\nCould not save {} to file.\n'.format(self.output_model))
                     raise IOError
 
