@@ -1311,7 +1311,9 @@ class Samples(object):
 
                         scaler = StandardScaler().fit(data_array)
 
-                del data_array, i_info
+                        del data_array
+
+                del i_info
 
                 if 'rows' in kwargs:
                     self.im_rows = kwargs['rows']
