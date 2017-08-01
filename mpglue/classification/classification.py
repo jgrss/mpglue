@@ -4093,12 +4093,15 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                                     protocol=pickle.HIGHEST_PROTOCOL)
 
                 except:
-                    
+
                     logger.error('\nCould not save {} to file.\n'.format(self.output_model))
                     raise IOError
 
-            if isinstance(self.p_vars_test, np.ndarray):
-                self.test_accuracy(out_acc=self.out_acc, discrete=self.discrete)
+            # Get test accuracy, if possible.
+            if hasattr(self, 'p_vars_test'):
+
+                if isinstance(self.p_vars_test, np.ndarray):
+                    self.test_accuracy(out_acc=self.out_acc, discrete=self.discrete)
 
     def _transform4crf(self):
 
