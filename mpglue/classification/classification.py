@@ -334,12 +334,16 @@ def predict_scikit_win(feature_sub, input_model):
 
     """
     A Scikit-learn prediction function for parallel predictions
+
+    Args:
+        feature_sub (str)
+        input_model (int)
     """
 
     if isinstance(input_model, str):
 
         with open(input_model, 'rb') as p_load:
-            __, mdl = pickle.load(p_load)
+            mdl = pickle.load(p_load)[1]
 
     else:
         mdl = input_model
@@ -351,12 +355,16 @@ def predict_scikit(input_model, ip):
 
     """
     A Scikit-learn prediction function for parallel predictions
+
+    Args:
+        input_model (str)
+        ip (int)
     """
 
     if isinstance(input_model, str):
 
         with open(input_model, 'rb') as p_load:
-            __, mdl = pickle.load(p_load)
+            mdl = pickle.load(p_load)[1]
 
     else:
         mdl = input_model
@@ -4085,7 +4093,10 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
         elif self.classifier_info['classifier'] in ['ChainCRF', 'GridCRF']:
 
             if self.classifier_info['classifier'] == 'ChainCRF':
-                self._transform4crf()
+
+                self.p_vars, self.labels, self.p_vars_test = self._transform4crf(p_vars2reshape=self.p_vars,
+                                                                                 labels2reshape=self.labels,
+                                                                                 p_vars_test2reshape=self.p_vars_test)
 
             self.model.fit(self.p_vars, self.labels)
 
@@ -4166,14 +4177,31 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                     self.test_accuracy(out_acc=self.out_acc,
                                        discrete=self.discrete)
 
-    def _transform4crf(self):
+    def _transform4crf(self, p_vars2reshape=None, labels2reshape=None, p_vars_test2reshape=None):
 
-        self.p_vars = np.array([pv_.reshape(1, self.n_feas) for pv_ in self.p_vars], dtype='float64')
+        """
+        Transforms variables and labels for linear-chain Conditional Random Fields
 
-        self.labels = np.array([np.array([label_], dtype='int64') for label_ in self.labels], dtype='int64')
+        Args:
+            p_vars2reshape (Optional[2d array])
+            labels2reshape (Optional[1d array like])
+            p_vars_test2reshape (Optional[2d array])
+        """
 
-        if isinstance(self.p_vars_test, np.ndarray):
-            self.p_vars_test = np.array([pv.reshape(1, self.n_feas) for pv in self.p_vars_test], dtype='float64')
+        p_vars_r = None
+        labels_r = None
+        p_vars_test_r = None
+
+        if isinstance(p_vars2reshape, np.ndarray):
+            p_vars_r = np.array([pv_.reshape(1, self.n_feas) for pv_ in p_vars2reshape], dtype='float64')
+
+        if isinstance(labels2reshape, np.ndarray):
+            labels_r = np.array([np.array([label_], dtype='int64') for label_ in labels2reshape], dtype='int64')
+
+        if isinstance(p_vars_test2reshape, np.ndarray):
+            p_vars_test_r = np.array([pv.reshape(1, self.n_feas) for pv in p_vars_test2reshape], dtype='float64')
+
+        return p_vars_r, labels_r, p_vars_test_r
 
     def predict_array(self, array2predict):
 
@@ -4626,9 +4654,11 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                 if isinstance(self.scale_data, str) or self.scale_data:
                     features = self.scaler.transform(features)
 
-                # MLP and SVM give the option to predict all samples at once
-                #   otherwise, pass it to compiled C to predict samples one by one
-                # if hasattr(self, 'get_probs'):
+                # Reshape the features for CRF models.
+                if self.classifier_info['classifier'] == 'ChainCRF':
+                    features = self._transform4crf(p_vars2reshape=features)[0]
+
+                # Predict class conditional probabilities.
                 if self.get_probs:
 
                     predicted = self.model.predict_proba(features)
@@ -4700,20 +4730,18 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
                     else:
 
-                        if (self.n_jobs != 0) and (self.n_jobs != 1):
+                        # Get chunks for parallel processing.
+                        indice_pairs = list()
 
-                            # Get chunks for parallel processing.
-                            indice_pairs = list()
-                            for i_ in range(0, n_samples, self.chunk_size):
-                                n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
-                                indice_pairs.append([i_, n_rows_])
+                        for i_ in range(0, n_samples, self.chunk_size):
+
+                            n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
+                            indice_pairs.append([i_, n_rows_])
+
+                        if (self.n_jobs != 0) and (self.n_jobs != 1):
 
                             # Make the predictions and convert to a NumPy array.
                             if isinstance(self.input_model, str):
-
-                                # predicted = Pool(nodes=1).map(predict_scikit,
-                                #                                         [self.input_model]*len(indice_pairs),
-                                #                                         indice_pairs)
 
                                 if platform.system() == 'Windows':
 
@@ -4739,23 +4767,15 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
                         else:
 
-                            # Get chunks for parallel processing.
-                            indice_pairs = list()
-                            for i_ in range(0, n_samples, self.chunk_size):
-                                n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
-                                indice_pairs.append([i_, n_rows_])
-
                             if isinstance(self.input_model, str):
 
                                 with open(self.input_model, 'rb') as p_load:
-                                    __, m = pickle.load(p_load)
+                                    m = pickle.load(p_load)[1]
 
                             else:
                                 m = self.model
 
                             # Make the predictions and convert to a NumPy array.
-                            # if isinstance(self.input_model, str):
-
                             predicted = [predict_scikit(m, ip) for ip in indice_pairs]
 
                             # Write the predictions to file.
