@@ -4826,7 +4826,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
         else:
 
-            out_raster_object.close()
+            out_raster_object.close_all()
             del out_raster_object
 
         if isinstance(self.mask_background, str):
