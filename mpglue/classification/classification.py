@@ -4177,7 +4177,10 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                     self.test_accuracy(out_acc=self.out_acc,
                                        discrete=self.discrete)
 
-    def _transform4crf(self, p_vars2reshape=None, labels2reshape=None, p_vars_test2reshape=None):
+    def _transform4crf(self,
+                       p_vars2reshape=None,
+                       labels2reshape=None,
+                       p_vars_test2reshape=None):
 
         """
         Transforms variables and labels for linear-chain Conditional Random Fields
@@ -4193,13 +4196,35 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
         p_vars_test_r = None
 
         if isinstance(p_vars2reshape, np.ndarray):
-            p_vars_r = np.array([pv_.reshape(1, self.n_feas) for pv_ in p_vars2reshape], dtype='float64')
+
+            if hasattr(self, 'n_feas'):
+
+                if isinstance(self.n_feas, int):
+                    reshape_features = self.n_feas
+                else:
+                    reshape_features = p_vars2reshape.shape[1]
+
+            else:
+                reshape_features = p_vars2reshape.shape[1]
+
+            p_vars_r = np.array([pv_.reshape(1, reshape_features) for pv_ in p_vars2reshape], dtype='float64')
 
         if isinstance(labels2reshape, np.ndarray):
             labels_r = np.array([np.array([label_], dtype='int64') for label_ in labels2reshape], dtype='int64')
 
         if isinstance(p_vars_test2reshape, np.ndarray):
-            p_vars_test_r = np.array([pv.reshape(1, self.n_feas) for pv in p_vars_test2reshape], dtype='float64')
+
+            if hasattr(self, 'n_feas'):
+
+                if isinstance(self.n_feas, int):
+                    reshape_features = self.n_feas
+                else:
+                    reshape_features = p_vars_test2reshape.shape[1]
+
+            else:
+                reshape_features = p_vars_test2reshape.shape[1]
+
+            p_vars_test_r = np.array([pv.reshape(1, reshape_features) for pv in p_vars_test2reshape], dtype='float64')
 
         return p_vars_r, labels_r, p_vars_test_r
 
