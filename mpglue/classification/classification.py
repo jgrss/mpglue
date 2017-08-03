@@ -5529,7 +5529,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                                           self.labels.ravel()])
 
             if method == 'overall':
-                df.loc[df[df_param_headers] == param_combo, 'Accuracy'] = self.emat.accuracy
+                df.loc[df[df_param_headers] == param_combo, 'Accuracy'] = emat.accuracy
 
         best_score_index = np.argmax(df['Accuracy'].values)
 
