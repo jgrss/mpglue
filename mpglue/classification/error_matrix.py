@@ -59,10 +59,10 @@ class error_matrix(object):
     Computes accuracy statistics
 
     Args:
-        po_text (str): Predicted and observed labels as a text file, where (predicted, observed)
-            are the last two columns.
-        po_array (ndarray): Predicted and observed labels as an array, where (predicted, observed)
-            are the last two columns.
+        po_text (str): Predicted and observed labels as a text file,
+            where (predicted, observed) are the last two columns.
+        po_array (ndarray): Predicted and observed labels as an array,
+            where (predicted, observed) are the last two columns.
         header (Optional[bool]): Whether ``file`` or ``predicted_observed`` contains a header. Default is False.
         class_list (Optional[list])
         discrete (Optional[bool])
@@ -159,8 +159,13 @@ class error_matrix(object):
 
         self.time_stamp = time.asctime(time.localtime(time.time()))
 
-    def get_stats(self, po_text=None, po_array=None, header=False, class_list=None,
-                  discrete=True, e_matrix=None):
+    def get_stats(self,
+                  po_text=None,
+                  po_array=None,
+                  header=False,
+                  class_list=None,
+                  discrete=True,
+                  e_matrix=None):
 
         self.discrete = discrete
 

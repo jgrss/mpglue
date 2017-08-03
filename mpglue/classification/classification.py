@@ -482,7 +482,10 @@ class ParameterHandler(object):
 
         elif classifier in ['ChainCRF', 'GridCRF']:
 
-            self.valid_params = ['max_iter', 'C', 'n_jobs', 'show_loss_every', 'tol']
+            self.valid_params = ['max_iter', 'C', 'n_jobs', 'show_loss_every',
+                                 'tol', 'inference_cache',
+                                 'inference_method',
+                                 'neighborhood']
 
         else:
             logger.info('The classifier is not supported.')
@@ -3555,6 +3558,28 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
             if 'tol' not in self.classifier_info_:
                 self.classifier_info_['tol'] = .001
 
+            if 'inference_cache' not in self.classifier_info_:
+                self.classifier_info_['inference_cache'] = 0
+
+            if 'inference_method' in self.classifier_info_:
+
+                inference_method = self.classifier_info_['inference_method']
+                del self.classifier_info_['inference_method']
+
+            else:
+                inference_method = 'qpbo'
+
+            if 'neighborhood' in self.classifier_info_:
+
+                neighborhood = self.classifier_info_['neighborhood']
+                del self.classifier_info_['neighborhood']
+
+            else:
+                neighborhood = 4
+
+            self.grid_info = dict(inference_method=inference_method,
+                                  neighborhood=neighborhood)
+
             # if 'break_on_bad' not in self.classifier_info_:
             #     self.classifier_info_['break_on_bad'] = True
 
@@ -3806,8 +3831,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                     #
                     # else:
 
-                    self.model = ssvm.OneSlackSSVM(GridCRF(inference_method='qpbo',
-                                                           neighborhood=4),
+                    self.model = ssvm.OneSlackSSVM(GridCRF(**self.grid_info),
                                                    **self.classifier_info_)
 
                 except:
@@ -5453,6 +5477,75 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
             subprocess.call(com, shell=True)
 
+    def grid_search_gridcrf(self, classifier_parameters, method='overall', output_file=None):
+
+        """
+        Conditional Random Field SSVM parameter grid search
+
+        Args:
+            classifier_name (str): The classifier to optimize.
+            classifier_parameters (dict): The classifier parameters.
+            method (Optional[str]): The score method to use, 'overall' (default) or 'f1'. Choices are ['overall', 'f1'].
+            output_file (Optional[str]):
+
+        Examples:
+            >>> cl.load4crf(var_image_list, cdl_labels_list)
+            >>>
+            >>> cl.grid_search_gridcrf(dict(max_iter=[100, 500, 1000],
+            >>>                             C=[.001, .01, .1, 1, 10, 100],
+            >>>                             tol=[.001, .01, .1],
+            >>>                             inference_cache=[0, 100],
+            >>>                             neighborhood=[4, 8]))
+        """
+
+        param_order = classifier_parameters.keys()
+
+        # Setup the output scores table.
+        df_param_headers = '-'.join(classifier_parameters.keys())
+        df = pd.DataFrame(columns=[df_param_headers])
+        df[df_param_headers] = list(itertools.product(*classifier_parameters.values()))
+
+        # Setup the error object.
+        emat = error_matrix()
+
+        # Iterate over all possible parameter combinations.
+        for param_combo in list(itertools.product(*classifier_parameters.values())):
+
+            # Set the current parameters.
+            current_combo = dict(zip(param_order, param_combo))
+
+            # Add the classifier name to the dictionary.
+            current_combo['classifier'] = 'GridCRF'
+            current_combo['n_jobs'] = -1
+
+            # Train the model.
+            self.construct_model(classifier_info=current_combo)
+
+            # Make predictions
+            combo_predictions = np.array(self.model.predict(self.p_vars), dtype='uint8')
+
+            # Get the model accuracy.
+            emat.get_stats(po_array=np.c_[combo_predictions.ravel(),
+                                          self.labels.ravel()])
+
+            if method == 'overall':
+                df.loc[df[df_param_headers] == param_combo, 'Accuracy'] = self.emat.accuracy
+
+        best_score_index = np.argmax(df['Accuracy'].values)
+
+        print('\nBest score: {:f}'.format(df['Accuracy'].values[best_score_index]))
+
+        print('\nBest parameters:\n')
+        print(''.join(['='] * len(df_param_headers)))
+        print(df_param_headers)
+        print(''.join(['='] * len(df_param_headers)))
+        print(df[df_param_headers].values[best_score_index])
+
+        if isinstance(output_file, str):
+            df.to_csv(output_file, sep=',', index=False)
+
+        return df
+
     def grid_search(self, classifier_name, classifier_parameters, file_name, k_folds=3,
                     perc_samp=.5, ignore_feas=[], use_xy=False, classes2remove=[],
                     method='overall', metric='accuracy', f1_class=0, stratified=False, spacing=1000.,
@@ -5470,8 +5563,8 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
             ignore_feas (Optional[int list]): A list of features to ignore. Default is [].
             use_xy (Optional[bool]): Whether to use x, y coordinates. Default is False.
             classes2remove (Optional[int list]): A list of classes to remove. Default is [].
-            method (Optional[str]): The score method to use, 'overall' (default) or 'f1'. Choices are ['overall, 'f1'].
-            metric (Optinoal[str]): The scoring metric to use. Default is 'accuracy'.
+            method (Optional[str]): The score method to use, 'overall' (default) or 'f1'. Choices are ['overall', 'f1'].
+            metric (Optional[str]): The scoring metric to use. Default is 'accuracy'.
                 Choices are ['accuracy', 'r_squared', 'rmse', 'mae', 'medae', 'mse'].
             f1_class (Optional[int]): The class position to evaluate when ``method`` is equal to 'f1'. Default is 0,
                 or first index position.
@@ -5534,7 +5627,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
         else:
             weights = None
 
-        for k_fold in range(1, k_folds + 1):
+        for k_fold in range(1, k_folds+1):
 
             print('Fold {:d} of {:d} ...'.format(k_fold, k_folds))
 
@@ -5792,8 +5885,11 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
             clf = prediction_models[classifier_info['classifier']]
 
-            grid_search = GridSearchCV(clf, param_grid=parameters, n_jobs=-1,
-                                       cv=k_folds, verbose=1)
+            grid_search = GridSearchCV(clf,
+                                       param_grid=parameters,
+                                       n_jobs=-1,
+                                       cv=k_folds,
+                                       verbose=1)
 
             grid_search.fit(self.p_vars, self.labels)
 
