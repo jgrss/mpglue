@@ -5530,7 +5530,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
             if method == 'overall':
                 df.loc[df[df_param_headers] == param_combo, 'Accuracy'] = emat.accuracy
-                
+
             logger.info(param_combo)
             logger.info(df)
             logger.info(emat.accuracy)
