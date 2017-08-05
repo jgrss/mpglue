@@ -11,6 +11,7 @@ import time
 import argparse
 from collections import OrderedDict
 
+from .errors import logger
 from . import raster_tools, vector_tools
 
 FORCE_TYPE_DICT = {'byte': 'Byte',
@@ -272,8 +273,7 @@ class VRTBuilder(object):
         # add to the XML string
         self.xml_base = '{}{}'.format(self.xml_base, self.xml_end)
 
-        print('')
-        print('Finished processing VRT file')
+        logger.info('Finished processing VRT file')
 
     # def delete_subs(self, sub_directory):
     #
