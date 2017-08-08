@@ -30,18 +30,28 @@ try:
     from osgeo.gdalconst import GA_ReadOnly, GA_Update
 except ImportError:
     logger.error('GDAL Python must be installed')
+    raise ImportError
 
 # NumPy
 try:
     import numpy as np
 except ImportError:
     logger.error('NumPy must be installed')
+    raise ImportError
 
 # Pandas
 try:
     import pandas as pd
-except ImportWarning:
-    logger.warning('Pandas must be installed for shapefile parsing')
+    pandas_installed = True
+except:
+    pandas_installed = False
+
+# PySal
+try:
+    import pysal
+    pysal_installed = True
+except:
+    pysal_installed = False
 
 # Rtree
 try:
@@ -662,11 +672,15 @@ def dataframe2dbf(df, dbf_file, my_specs=None):
         None, writes to ``dbf_file``.
     """
 
-    # PySAL
-    try:
-        import pysal
-    except:
-        print('PySAL is not installed')
+    if not pandas_installed:
+
+        logger.warning('Pandas must be installed to convert dataframes to shapefiles.')
+        return
+
+    if not pysal_installed:
+
+        logger.warning('PySAL must be installed to convert dataframes to shapefiles.')
+        return
 
     if my_specs:
         specs = my_specs
@@ -706,11 +720,15 @@ def shp2dataframe(input_shp):
         Pandas dataframe
     """
 
-    # PySAL
-    try:
-        import pysal
-    except:
-        print('PySAL is not installed')
+    if not pandas_installed:
+
+        logger.warning('Pandas must be installed to convert shapefiles to dataframes.')
+        return
+
+    if not pysal_installed:
+
+        logger.warning('PySAL must be installed to convert shapefiles to dataframes.')
+        return
 
     df = pysal.open(input_shp.replace('.shp', '.dbf'), 'r')
 
@@ -1674,6 +1692,11 @@ def list_field_names(in_shapefile, be_quiet=False, epsg=None):
     Returns:
         List of field names
     """
+
+    if not pandas_installed:
+
+        logger.warning('Pandas must be installed to load field names.')
+        return
 
     d_name, f_name = os.path.split(in_shapefile)
 
