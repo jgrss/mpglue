@@ -53,7 +53,8 @@ if platform.system() != 'Windows':
                 'statsmodels>=0.8.0',
                 'cython>=0.26',
                 'scikit-learn>=0.18.1',
-                'pandas>=0.20.0']:
+                'pandas>=0.20.0',
+                'pymorph']:
 
         required_packages.append(pkg)
 

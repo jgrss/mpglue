@@ -38,6 +38,13 @@ cl.split_samples(sample_data,
                  clear_observations=clear_df.clear.values,
                  min_observations=0)
 
+"""Random Forest"""
+cl.construct_model(classifier_info={'classifier': 'AB_EX_RF', 'n_estimators': 100},
+                   output_model='data/AB_EX_RF.model')
+
+print(cl.model)
+sys.exit()
+
 """Chain CRF"""
 # cl.construct_model(classifier_info={'classifier': 'ChainCRF'})
 # pr = cl.model.predict(cl.p_vars)
