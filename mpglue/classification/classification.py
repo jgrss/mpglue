@@ -523,6 +523,28 @@ class ParameterHandler(object):
         return cinfo
 
 
+class PickleIt(object):
+
+    """A class for pickling objects"""
+
+    @staticmethod
+    def dump(data2dump, output_file):
+
+        with open(output_file, 'wb') as p_dump:
+
+            pickle.dump(data2dump,
+                        p_dump,
+                        protocol=pickle.HIGHEST_PROTOCOL)
+
+    @staticmethod
+    def load(input_file):
+
+        with open(input_file, 'rb') as p_load:
+            loaded_data = pickle.load(p_load)
+
+        return loaded_data
+
+
 class Samples(object):
 
     """
@@ -1123,9 +1145,7 @@ class Samples(object):
 
         self.scaler = StandardScaler().fit(self.p_vars)
 
-        # pickle the scaler to file for later use
-        with open(scaler_file, 'wb') as p_dump:
-            pickle.dump(self.scaler, p_dump, protocol=pickle.HIGHEST_PROTOCOL)
+        PickleIt.dump(self.scaler, scaler_file)
 
         # Save the unscaled samples.
         self.p_vars_original = self.p_vars.copy()
@@ -2680,8 +2700,7 @@ class Preprocessing(object):
         # Load sample weights.
         if os.path.isfile(base_samples.replace('.txt', '_w.txt')):
 
-            with open(base_samples.replace('.txt', '_w.txt'), 'rb') as p_load:
-                weights = pickle.load(p_load)
+            weights = PickleIt.load(base_samples.replace('.txt', '_w.txt'))
 
             if isinstance(weights, list):
                 weights = np.array(weights, dtype='float32')
@@ -2784,8 +2803,7 @@ class Preprocessing(object):
             if os.path.isfile(compare_samples.replace('.txt', '_w.txt')):
                 os.remove(compare_samples.replace('.txt', '_w.txt'))
 
-            with open(compare_samples.replace('.txt', '_w.txt'), 'wb') as p_dump:
-                pickle.dump(weights_out, p_dump, protocol=pickle.HIGHEST_PROTOCOL)
+            PickleIt.dump(weights_out, compare_samples.replace('.txt', '_w.txt'))
 
     def _index_samples(self, base_samples, id_label='Id', x_label='X', y_label='Y'):
 
@@ -3154,7 +3172,7 @@ class ModelOptions(object):
         """
 
 
-class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualization):
+class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples, Visualization):
 
     """
     A class for image sampling and classification
@@ -3401,10 +3419,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
             # first load the parameters
             try:
-
-                with open(self.input_model, 'rb') as p_load:
-                    self.classifier_info, __ = pickle.load(p_load)
-
+                self.classifier_info, __ = self.load(self.input_model)
             except:
                 logger.error('\nCould not load {}\n'.format(self.input_model))
                 raise OSError
@@ -3423,10 +3438,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
             # Scikit-learn models
             try:
-
-                with open(self.input_model, 'rb') as p_load:
-                    self.classifier_info, self.model = pickle.load(p_load)
-
+                self.classifier_info, self.model = self.load(self.input_model)
             except:
                 logger.error('\nCould not load {}\n'.format(self.input_model))
                 raise OSError
@@ -4166,12 +4178,8 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
 
                     self.model.save(self.output_model)
 
-                    # dump the parameters to a text file
-                    with open(self.output_model, 'wb') as p_dump:
-
-                        pickle.dump([self.classifier_info, self.model],
-                                    p_dump,
-                                    protocol=pickle.HIGHEST_PROTOCOL)
+                    # Dump the parameters to a text file.
+                    self.dump([self.classifier_info, self.model], self.output_model)
 
                 except:
 
@@ -4181,13 +4189,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
             else:
 
                 try:
-
-                    with open(self.output_model, 'wb') as p_dump:
-
-                        pickle.dump([self.classifier_info, self.model],
-                                    p_dump,
-                                    protocol=pickle.HIGHEST_PROTOCOL)
-
+                    self.dump([self.classifier_info, self.model], self.output_model)
                 except:
 
                     logger.error('\nCould not save {} to file.\n'.format(self.output_model))
@@ -4431,10 +4433,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
             self.record_keeping = os.path.join(d_name, '{}_record.txt'.format(f_base))
 
             if os.path.isfile(self.record_keeping):
-
-                with open(self.record_keeping, 'rb') as p_load:
-                    self.record_list = pickle.load(p_load)
-
+                self.record_list = self.load(self.record_keeping)
             else:
                 self.record_list = list()
 
@@ -4600,9 +4599,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
             out_raster_object.fill(0)
 
         if isinstance(self.scale_data, str):
-
-            with open(self.scale_data, 'rb') as p_load:
-                self.scaler = pickle.load(p_load)
+            self.scaler = self.load(self.scale_data)
 
         elif not self.scale_data:
             self.scaler = False
@@ -4817,10 +4814,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                         else:
 
                             if isinstance(self.input_model, str):
-
-                                with open(self.input_model, 'rb') as p_load:
-                                    m = pickle.load(p_load)[1]
-
+                                m = self.load(self.input_model)[1]
                             else:
                                 m = self.model
 
@@ -4836,8 +4830,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
                 if os.path.isfile(self.record_keeping):
                     os.remove(self.record_keeping)
 
-                with open(self.record_keeping, 'wb') as p_dump:
-                    pickle.dump(self.record_list, p_dump, protocol=pickle.HIGHEST_PROTOCOL)
+                self.dump(self.record_list, self.record_keeping)
 
         if self.get_probs:
 
@@ -5624,10 +5617,7 @@ class classification(EndMembers, ModelOptions, Preprocessing, Samples, Visualiza
         lc_weights = file_name.replace('.txt', '_w.txt')
 
         if os.path.isfile(lc_weights):
-
-            with open(lc_weights, 'rb') as p_load:
-                weights = pickle.load(p_load)
-
+            weights = self.load(lc_weights)
         else:
             weights = None
 
@@ -6177,9 +6167,7 @@ class classification_r(classification):
             output_model = output_model.replace('\\', '/')
 
         if isinstance(input_model, str):
-
-            with open(input_model, 'rb') as p_load:
-                self.classifier_info, self.model, self.headers = pickle.load(p_load)
+            self.classifier_info, self.model, self.headers = self.load(input_model)
 
             self.input_model = input_model
             return
@@ -6311,13 +6299,10 @@ class classification_r(classification):
 
                 else:
 
-                    with open(self.output_model, 'wb') as p_dump:
-
-                        pickle.dump([self.classifier_info,
-                                     self.model,
-                                     self.headers],
-                                    p_dump,
-                                    protocol=pickle.HIGHEST_PROTOCOL)
+                    self.dump([self.classifier_info,
+                               self.model,
+                               self.headers],
+                              self.output_model)
 
                 if write_summary:
 
@@ -6364,13 +6349,10 @@ class classification_r(classification):
 
                 else:
 
-                    with open(self.output_model, 'wb') as p_dump:
-
-                        pickle.dump([self.classifier_info,
-                                     self.model,
-                                     self.headers],
-                                    p_dump,
-                                    protocol=pickle.HIGHEST_PROTOCOL)
+                    self.dump([self.classifier_info,
+                               self.model,
+                               self.headers],
+                              self.output_model)
 
                 if write_summary:
 
@@ -6419,17 +6401,12 @@ class classification_r(classification):
         self.record_keeping = os.path.join(d_name, '{}_record.txt'.format(f_base))
 
         if os.path.isfile(self.record_keeping):
-
-            with open(self.record_keeping, 'rb') as p_load:
-                self.record_list = pickle.load(p_load)
-
+            self.record_list = self.load(self.record_keeping)
         else:
             self.record_list = list()
 
         if isinstance(input_model, str):
-
-            with open(input_model, 'rb') as p_load:
-                self.classifier_info, self.model, self.headers = pickle.load(p_load)
+            self.classifier_info, self.model, self.headers = self.load(input_model)
 
         if self.OS_SYSTEM == 'Windows':
 
