@@ -49,7 +49,6 @@ try:
     rtree_installed = True
 except:
     rtree_installed = False
-    logger.warning('Rtree and libspatialindex must be installed for spatial indexing')
 
 # Pickle
 try:
@@ -989,6 +988,11 @@ class RTreeManager(object):
     """
 
     def __init__(self, base_shapefile=None, name_field=None):
+
+        if not rtree_installed:
+
+            logger.warning('Rtree and libspatialindex must be installed for spatial indexing')
+            return
 
         self.utm_shp_path = os.path.join(MAIN_PATH.replace('mpglue', 'mappy'), 'utilities', 'sentinel')
 
