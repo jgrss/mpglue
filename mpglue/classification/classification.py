@@ -4386,6 +4386,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.n_jobs = n_jobs
         self.n_jobs_vars = n_jobs_vars
         self.chunk_size = (self.row_block_size * self.col_block_size) / 100
+        self.kwargs = kwargs
 
         if self.n_jobs == -1:
             self.n_jobs = joblib.cpu_count()
@@ -4422,7 +4423,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         # Conditional Random Fields
         if self.classifier_info['classifier'] == 'GridCRF':
-            self._predict4crf(**kwargs)
+            self._predict4crf(**self.kwargs)
 
         # Orfeo Toolbox application
         elif 'OR' in self.classifier_info['classifier']:
@@ -4576,7 +4577,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         if 'CV' not in self.classifier_info['classifier']:
             model_pp = deepcopy(self.model)
 
-        rows, cols = self.i_info.rows, self.i_info.cols
+        start_i = 0
+        start_j = 0
+        rows = self.i_info.rows
+        cols = self.i_info.cols
 
         if self.ignore_feas:
             self.bands2open = sorted([bd for bd in range(1, self.i_info.bands+1) if bd not in self.ignore_feas])
@@ -4612,7 +4616,22 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         elif not self.scale_data:
             self.scaler = False
 
-        block_rows, block_cols = raster_tools.block_dimensions(rows, cols,
+        if self.kwargs:
+
+            if 'i' in self.kwargs:
+                start_i = self.kwargs['i']
+
+            if 'j' in self.kwargs:
+                start_j = self.kwargs['j']
+
+            if 'rows' in self.kwargs:
+                rows = self.kwargs['rows']
+
+            if 'cols' in self.kwargs:
+                cols = self.kwargs['cols']
+
+        block_rows, block_cols = raster_tools.block_dimensions(rows,
+                                                               cols,
                                                                row_block_size=self.row_block_size,
                                                                col_block_size=self.col_block_size)
 
@@ -4625,11 +4644,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 n_blocks += 1
 
         n_block = 1
-        for i in range(0, rows, block_rows):
+        for i in range(start_i, rows, block_rows):
 
             n_rows = self._num_rows_cols(i, block_rows, rows)
 
-            for j in range(0, cols, block_cols):
+            for j in range(start_j, cols, block_cols):
 
                 logger.info('  Block {:d} of {:d} ...'.format(n_block, n_blocks))
 
@@ -4739,13 +4758,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                             # predicted = np.empty((n_samples, 1), dtype='uint8')
 
                             predicted = joblib.Parallel(n_jobs=self.n_jobs,
-                                                 max_nbytes=None)(joblib.delayed(predict_cv)(chunk, self.chunk_size,
-                                                                                      self.file_name, self.perc_samp,
-                                                                                      self.classes2remove,
-                                                                                      self.ignore_feas, self.use_xy,
-                                                                                      self.classifier_info,
-                                                                                      self.weight_classes)
-                                                                  for chunk in range(0, n_samples, self.chunk_size))
+                                                        max_nbytes=None)(joblib.delayed(predict_cv)(chunk, self.chunk_size,
+                                                                                                    self.file_name, self.perc_samp,
+                                                                                                    self.classes2remove,
+                                                                                                    self.ignore_feas, self.use_xy,
+                                                                                                    self.classifier_info,
+                                                                                                    self.weight_classes)
+                                                                         for chunk in range(0, n_samples, self.chunk_size))
 
                         # transpose and reshape the predicted labels to (rows x columns)
                         out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
@@ -4770,8 +4789,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         if isinstance(self.input_model, str):
 
                             predicted = joblib.Parallel(n_jobs=self.n_jobs,
-                                                 max_nbytes=None)(joblib.delayed(predict_c5_cubist)(self.input_model, ip)
-                                                                  for ip in indice_pairs)
+                                                        max_nbytes=None)(joblib.delayed(predict_c5_cubist)(self.input_model,
+                                                                                                           ip)
+                                                                         for ip in indice_pairs)
 
                             # Write the predictions to file.
                             out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
