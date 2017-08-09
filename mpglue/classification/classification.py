@@ -4669,19 +4669,20 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 elif (self.classifier_info['classifier'] not in ['C5', 'Cubist', 'QDA', 'ChainCRF']) and \
                         ('CV' not in self.classifier_info['classifier']):
 
-                    try:
+                    if hasattr(self.model, 'n_features_'):
 
                         if len(self.bands2open) != self.model.n_features_:
-
                             logger.error('\nThe number of predictive layers does not match the number of model estimators.\n')
                             raise AssertionError
 
-                    except:
+                    if hasattr(self.model, 'base_estimator'):
 
-                        if len(self.bands2open) != self.model.base_estimator.n_features_:
+                        if hasattr(self.model.base_estimator, 'n_features_'):
 
-                            logger.error('\nThe number of predictive layers does not match the number of model estimators.\n')
-                            raise AssertionError
+                            if len(self.bands2open) != self.model.base_estimator.n_features_:
+
+                                logger.error('\nThe number of predictive layers does not match the number of model estimators.\n')
+                                raise AssertionError
 
                 # Get all the bands for the tile. The shape
                 #   of the features is (features x rows x columns).
