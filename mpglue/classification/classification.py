@@ -4582,6 +4582,25 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         rows = self.i_info.rows
         cols = self.i_info.cols
 
+        if self.kwargs:
+
+            if 'i' in self.kwargs:
+                start_i = self.kwargs['i']
+
+            if 'j' in self.kwargs:
+                start_j = self.kwargs['j']
+
+            if 'rows' in self.kwargs:
+                rows = self.kwargs['rows']
+
+            if 'cols' in self.kwargs:
+                cols = self.kwargs['cols']
+
+            self.o_info.update_info(left=self.o_info.left+(start_j*self.o_info.cellY),
+                                    top=self.o_info.top-(start_i*self.o_info.cellY),
+                                    rows=rows,
+                                    cols=cols)
+
         if self.ignore_feas:
             self.bands2open = sorted([bd for bd in range(1, self.i_info.bands+1) if bd not in self.ignore_feas])
         else:
@@ -4615,20 +4634,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         elif not self.scale_data:
             self.scaler = False
-
-        if self.kwargs:
-
-            if 'i' in self.kwargs:
-                start_i = self.kwargs['i']
-
-            if 'j' in self.kwargs:
-                start_j = self.kwargs['j']
-
-            if 'rows' in self.kwargs:
-                rows = self.kwargs['rows']
-
-            if 'cols' in self.kwargs:
-                cols = self.kwargs['cols']
 
         block_rows, block_cols = raster_tools.block_dimensions(rows,
                                                                cols,
