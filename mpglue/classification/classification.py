@@ -488,7 +488,7 @@ class ParameterHandler(object):
                                  'neighborhood']
 
         else:
-            logger.info('The classifier is not supported.')
+            logger.info('  The classifier is not supported.')
 
     def check_parameters(self, cinfo, default_params, trials_set=False):
 
@@ -662,7 +662,7 @@ class Samples(object):
         elif isinstance(self.file_name, np.ndarray):
 
             if len(self.file_name.shape) != 2:
-                logger.error('The samples array must be a 2d array.')
+                logger.error('  The samples array must be a 2d array.')
                 raise TypeError
 
             headers = [x_label, y_label] + map(str, range(1, self.file_name.shape[1]-2)) + [response_label]
@@ -672,7 +672,7 @@ class Samples(object):
             del self.file_name
 
         else:
-            logger.error('The samples file must be a text file or a 2d array.')
+            logger.error('  The samples file must be a text file or a 2d array.')
             raise TypeError
 
         # Parse the headers.
@@ -707,7 +707,8 @@ class Samples(object):
             clear_observations = np.array(clear_observations, dtype='uint64').ravel()
 
             if self.all_samps.shape[0] != len(clear_observations):
-                logger.error('The clear observation and sample lengths do no match.')
+
+                logger.error('  The clear observation and sample lengths do no match.')
                 raise AssertionError
 
         # Spatial stratified sampling.
@@ -833,7 +834,7 @@ class Samples(object):
             elif labs_type == 'float':
                 self.labels = np.asarray([float(l) for l in self.all_samps[:, self.label_idx]]).astype(np.float32)
             else:
-                logger.error('\n``labs_type`` should be int or float\n')
+                logger.error('  ``labs_type`` should be int or float')
                 raise TypeError
 
             self.classes = list(np.unique(self.labels))
@@ -903,7 +904,7 @@ class Samples(object):
 
             if stratified:
 
-                print('Stratifying ...')
+                logger.info('  Stratifying ...')
 
                 n_total_samps = int(perc_samp * self.n_samps)
                 n_match_samps = 0
@@ -949,7 +950,7 @@ class Samples(object):
         elif labs_type == 'float':
             self.labels = np.float32(np.asarray([float(l) for l in self.all_samps[:, self.label_idx]]))
         else:
-            logger.error('\n``labs_type`` should be int or float\n')
+            logger.error('  ``labs_type`` should be int or float')
             raise ValueError
 
         self.classes = list(np.unique(self.labels))
@@ -1054,7 +1055,7 @@ class Samples(object):
         elif isinstance(sample, int):
             random_subsample = np.random.choice(range(0, n_samples), size=sample, replace=False)
         else:
-            logger.error('The sample number must be an integer or float.')
+            logger.error('  The sample number must be an integer or float.')
             raise TypeError
 
         # Create the test samples.
@@ -1304,7 +1305,7 @@ class Samples(object):
 
             if len(predictors) != len(labels):
 
-                logger.error('The list lengths do not match.')
+                logger.error('  The list lengths do not match.')
                 raise AssertionError
 
         n_patches = len(predictors)
@@ -1492,7 +1493,7 @@ class Samples(object):
                                                                                                                           bands)
 
         else:
-            logger.warning('No variables were shaped.')
+            logger.warning('  No variables were shaped.')
 
         # Arrange the labels.
         if isinstance(labels, list):
@@ -1523,7 +1524,7 @@ class Samples(object):
                     self.labels[li] = label
 
         else:
-            logger.warning('No labels were shaped.')
+            logger.warning('  No labels were shaped.')
 
         if isinstance(self.p_vars, np.ndarray):
             self.p_vars[np.isnan(self.p_vars) | np.isinf(self.p_vars)] = 0
@@ -1538,15 +1539,15 @@ class Samples(object):
             # Check whether there are any
             #   negative class labels.
             if np.min(self.classes) < 0:
-                logger.error('The class labels should not contain negative values.')
+                logger.error('  The class labels should not contain negative values.')
 
             # Check whether the classes begin with 0.
             if self.classes[0] != 0:
-                logger.error('The class labels must begin with 0 when using CRF models.')
+                logger.error('  The class labels must begin with 0 when using CRF models.')
 
             # Check whether the classes are increasing by 1.
             if np.any(np.abs(np.diff(self.classes)) > 1):
-                logger.error('The class labels should increase by 1, starting with 0.')
+                logger.error('  The class labels should increase by 1, starting with 0.')
 
             self.class_counts = dict()
 
@@ -1594,14 +1595,14 @@ class EndMembers(object):
         try:
             import pysptools.eea as eea
         except:
-            logger.error('Pysptools needs to be installed to extract endmembers')
+            logger.error('  Pysptools needs to be installed to extract endmembers')
             raise ImportError
 
         map_methods = dict(fippi=eea.FIPPI(),
                            nfinder=eea.NFINDR())
 
         if method not in map_methods:
-            logger.error('The {} method is not an option. Choose from fippi or nfinder.'.format(method))
+            logger.error('  The {} method is not an option. Choose from fippi or nfinder.'.format(method))
             raise NameError
 
         end_finder = map_methods[method]
@@ -1659,7 +1660,7 @@ class EndMembers(object):
         try:
             import pysptools.abundance_maps as amp
         except:
-            logger.error('Pysptools needs to be installed to extract endmembers')
+            logger.error('  Pysptools needs to be installed to extract endmembers')
             raise ImportError
 
         map_methods = dict(fcls=amp.FCLS(),
@@ -1667,7 +1668,7 @@ class EndMembers(object):
                            ucls=amp.UCLS())
 
         if method not in map_methods:
-            logger.error('The {} method is not an option. Choose from fcls, nnls, or ucls.'.format(method))
+            logger.error('  The {} method is not an option. Choose from fcls, nnls, or ucls.'.format(method))
             raise NameError
 
         mapper = map_methods[method]
@@ -2790,8 +2791,8 @@ class Preprocessing(object):
 
                 assert df.shape[0] == len(weights_out)
 
-        print('Base samples: {:,d}'.format(df_base.shape[0]))
-        print('New samples: {:,d}'.format(df.shape[0]))
+        logger.info('  Base samples: {:,d}'.format(df_base.shape[0]))
+        logger.info('  New samples: {:,d}'.format(df.shape[0]))
 
         if os.path.isfile(output):
             os.remove(output)
@@ -2931,7 +2932,8 @@ class Preprocessing(object):
         """
 
         if not self.scaled:
-            logger.error('The data should be scaled prior to outlier removal.')
+
+            logger.error('  The data should be scaled prior to outlier removal.')
             raise NameError
 
         self.outliers_fraction = outliers_fraction
@@ -2946,12 +2948,12 @@ class Preprocessing(object):
 
         for check_class in self.classes:
 
-            print('Class {:d} ...'.format(check_class))
+            logger.info('  Class {:d} ...'.format(check_class))
 
             try:
                 new_p_vars, new_labels = self._remove_outliers(check_class, new_p_vars, new_labels)
             except:
-                logger.error('Could not fit the data for class {:d}'.format(check_class))
+                logger.error('  Could not fit the data for class {:d}'.format(check_class))
                 raise RuntimeError
 
         if not locate_only:
@@ -2993,7 +2995,7 @@ class Preprocessing(object):
 
         n_outliers = len(y_pred) - len(inlier_idx[0])
 
-        print('  {:d} outliers in class {:d}'.format(n_outliers, check_class))
+        logger.info('  {:d} outliers in class {:d}'.format(n_outliers, check_class))
 
         # temp_p_vars = temp_p_vars[inlier_idx]
 
@@ -3306,7 +3308,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         if isinstance(self.input_model, str):
 
             if not os.path.isfile(self.input_model):
-                logger.error('\n{} does not exist.\n'.format(self.input_model))
+
+                logger.error('  {} does not exist.'.format(self.input_model))
                 raise OSError
 
         if not isinstance(self.input_model, str):
@@ -3315,13 +3318,14 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             try:
                 __ = self.classifier_info['classifier']
             except:
-                logger.error('\nThe model must be declared.\n')
+                logger.error('  The model must be declared.')
                 raise ValueError
 
             if not isinstance(self.classifier_info['classifier'], list):
 
                 if self.classifier_info['classifier'] not in get_available_models():
-                    logger.error('\n{} is not a model option.\n'.format(self.classifier_info['classifier']))
+
+                    logger.error('  {} is not a model option.'.format(self.classifier_info['classifier']))
                     raise NameError
 
         if isinstance(self.output_model, str):
@@ -3337,7 +3341,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             if 'CV' in self.classifier_info['classifier']:
 
                 if 'xml' not in f_ext.lower():
-                    logger.error('\nThe output model for OpenCV models must be XML.\n')
+
+                    logger.error('  The output model for OpenCV models must be XML.')
                     raise TypeError
 
             if not os.path.isdir(d_name):
@@ -3384,7 +3389,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     self.class_weight = class_proportions
 
             else:
-                logger.error('The weight method is not supported.')
+                logger.error('  The weight method is not supported.')
                 raise NameError
 
         if isinstance(self.input_model, str):
@@ -3421,7 +3426,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             try:
                 self.classifier_info, __ = self.load(self.input_model)
             except:
-                logger.error('\nCould not load {}\n'.format(self.input_model))
+                logger.error('  Could not load {}'.format(self.input_model))
                 raise OSError
 
             # load the correct model
@@ -3431,7 +3436,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             try:
                 self.model.load(self.input_model)
             except:
-                logger.error('\nCould not load {}\n'.format(self.input_model))
+                logger.error('  Could not load {}'.format(self.input_model))
                 raise OSError
 
         else:
@@ -3440,7 +3445,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             try:
                 self.classifier_info, self.model = self.load(self.input_model)
             except:
-                logger.error('\nCould not load {}\n'.format(self.input_model))
+                logger.error('  Could not load {}'.format(self.input_model))
                 raise OSError
 
     def _default_parameters(self):
@@ -3549,13 +3554,14 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         try:
                             self.classifier_info['n_hidden'] = (self.n_feas + self.n_classes) / 2
                         except:
-                            logger.error('\nCannot infer number of hidden nodes.\n')
+                            logger.error('  Cannot infer number of hidden nodes.')
                             raise ValueError
 
         elif self.classifier_info['classifier'] in ['ChainCRF', 'GridCRF']:
 
             if not pystruct_installed:
-                logger.warning('Pystruct must be installed to used CRF models.')
+
+                logger.warning('  Pystruct must be installed to used CRF models.')
                 return
 
             if 'max_iter' not in self.classifier_info_:
@@ -3847,7 +3853,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                    **self.classifier_info_)
 
                 except:
-                    logger.error('The Grid CRF failed.')
+
+                    logger.error('  The Grid CRF failed.')
                     raise RuntimeError
 
             elif self.classifier_info['classifier'] == 'ORRF':
@@ -3863,9 +3870,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     sys.exit('\nThe input shapefile must be a polygon.\n')
 
                 if os.path.isfile(self.out_stats):
-
-                    print('\nThe statistics already exist')
-
+                    logger.info('  The statistics already exist')
                 else:
 
                     if self.stats_from_image:
@@ -3946,7 +3951,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 # app.ExecuteAndWriteOutput()
 
             else:
-                logger.error('\nThe model {} is not supported'.format(self.classifier_info['classifier']))
+
+                logger.error('  The model {} is not supported'.format(self.classifier_info['classifier']))
                 raise NameError
 
     def _set_parameters(self):
@@ -4055,12 +4061,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 a_or_an = 'a'
 
             if isinstance(self.classifier_info['classifier'], list):
-                print('\nTraining a voting model with {} ...\n'.format(','.join(self.classifier_info['classifier'])))
+                logger.info('  Training a voting model with {} ...'.format(','.join(self.classifier_info['classifier'])))
             else:
-                print('\nTraining {} {} model with {:,d} samples and {:,d} variables ...\n'.format(a_or_an,
-                                                                                                   self.classifier_info['classifier'],
-                                                                                                   self.n_samps,
-                                                                                                   self.n_feas))
+                logger.info('  Training {} {} model with {:,d} samples and {:,d} variables ...'.format(a_or_an,
+                                                                                                       self.classifier_info['classifier'],
+                                                                                                       self.n_samps,
+                                                                                                       self.n_feas))
 
         # OpenCV tree-based models
         if self.classifier_info['classifier'] in ['CART', 'CVRF', 'CVEX_RF']:
@@ -4122,7 +4128,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         elif self.classifier_info['classifier'] in ['CVSVMA', 'CVSVRA']:
 
-            logger.info('\nBe patient. Auto tuning can take a while.\n')
+            logger.info('  Be patient. Auto tuning can take a while.')
 
             self.model.train_auto(self.p_vars, self.labels, None, None, params=self.parameters, k_fold=10)
 
@@ -4183,7 +4189,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 except:
 
-                    logger.error('\nCould not save {} to file.\n'.format(self.output_model))
+                    logger.error('  Could not save {} to file.'.format(self.output_model))
                     raise IOError
 
             else:
@@ -4192,7 +4198,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     self.dump([self.classifier_info, self.model], self.output_model)
                 except:
 
-                    logger.error('\nCould not save {} to file.\n'.format(self.output_model))
+                    logger.error('  Could not save {} to file.'.format(self.output_model))
                     raise IOError
 
             # Get test accuracy, if possible.
@@ -4411,8 +4417,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         if not os.path.isdir(d_name):
             os.makedirs(d_name)
 
-        logger.info('\nPredicting class labels from {} and writing to {} ...\n'.format(self.input_image,
-                                                                                       self.out_image))
+        logger.info('  Predicting class labels from {} and writing to {} ...'.format(self.input_image,
+                                                                                     self.out_image))
 
         # Conditional Random Fields
         if self.classifier_info['classifier'] == 'GridCRF':
@@ -4444,7 +4450,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             if self.get_probs:
 
                 if not hasattr(self.model, 'predict_proba'):
-                    logger.warning('The model must have a `predict_proba` method to prediction class probabilities.')
+
+                    logger.warning('  The model must have a `predict_proba` method to prediction class probabilities.')
                     return
 
                 self.o_info.bands = self.n_classes
@@ -4544,7 +4551,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         try:
             subprocess.call(com, shell=True)
         except:
-            logger.warning('Are you sure the Orfeo Toolbox is installed?')
+
+            logger.warning('  Are you sure the Orfeo Toolbox is installed?')
             return
 
         if isinstance(self.mask_background, str):
@@ -4623,7 +4631,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             for j in range(0, cols, block_cols):
 
-                logger.info('Block {:d} of {:d} ...'.format(n_block, n_blocks))
+                logger.info('  Block {:d} of {:d} ...'.format(n_block, n_blocks))
 
                 n_block += 1
 
@@ -4663,7 +4671,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     if len(self.bands2open) != self.model.getVarCount():
 
-                        logger.error('\nThe number of predictive layers does not match the number of model estimators.\n')
+                        logger.error('  The number of predictive layers does not match the number of model estimators.')
                         raise AssertionError
 
                 elif (self.classifier_info['classifier'] not in ['C5', 'Cubist', 'QDA', 'ChainCRF']) and \
@@ -4672,7 +4680,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     if hasattr(self.model, 'n_features_'):
 
                         if len(self.bands2open) != self.model.n_features_:
-                            logger.error('\nThe number of predictive layers does not match the number of model estimators.\n')
+
+                            logger.error('  The number of predictive layers does not match the number of model estimators.')
                             raise AssertionError
 
                     if hasattr(self.model, 'base_estimator'):
@@ -4681,7 +4690,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                             if len(self.bands2open) != self.model.base_estimator.n_features_:
 
-                                logger.error('\nThe number of predictive layers does not match the number of model estimators.\n')
+                                logger.error('  The number of predictive layers does not match the number of model estimators.')
                                 raise AssertionError
 
                 # Get all the bands for the tile. The shape
@@ -5089,7 +5098,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 self.test_array = np.float32(np.c_[test_labs_pred, self.labels])
 
         if not be_quiet:
-            print('\nGetting test accuracy ...\n')
+            logger.info('  Getting test accuracy ...')
 
         self.emat = error_matrix()
         self.emat.get_stats(po_array=self.test_array, discrete=discrete)
@@ -5121,11 +5130,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         if method == 'chi2':
 
             if not hasattr(self, 'p_vars'):
-                logger.error('\nBe sure to run `split_samples` to create the `p_vars` variables.\n')
+
+                logger.error('  Be sure to run `split_samples` to create the `p_vars` variables.')
                 raise AttributeError
 
             if not hasattr(self, 'labels'):
-                logger.error('\nBe sure to run `split_samples` to create the `labels` variables.\n')
+
+                logger.error('  Be sure to run `split_samples` to create the `labels` variables.')
                 raise AttributeError
 
             p_vars = self.p_vars.copy()
@@ -5143,15 +5154,15 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         elif method == 'RF':
 
             if not hasattr(self, 'model'):
-                logger.error('\nA RF model must be trained to use RF feature importance.\n')
+                logger.error('  A RF model must be trained to use RF feature importance.')
 
             if not hasattr(self.model, 'feature_importances_'):
-                logger.error('\nA RF model must be trained to use RF feature importance.\n')
+                logger.error('  A RF model must be trained to use RF feature importance.')
 
             feas_ranked = self.model.feature_importances_
 
         else:
-            logger.error('\nThe feature ranking method is not supported.\n')
+            logger.error('  The feature ranking method is not supported.')
             raise NameError
 
         loop_len = len(feas_ranked) + 1
@@ -5182,7 +5193,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                    ignore_feas=indices,
                                    use_xy=self.use_xy)
 
-                print('{:d} features ...'.format(self.n_feas))
+                logger.info('  {:d} features ...'.format(self.n_feas))
 
                 self.construct_model(classifier_info=self.classifier_info)
 
@@ -5245,11 +5256,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         if rank_method == 'chi2':
 
             if not hasattr(self, 'p_vars'):
-                logger.error('\nBe sure to run `split_samples` to create the `p_vars` variables.\n')
+
+                logger.error('  Be sure to run `split_samples` to create the `p_vars` variables.')
                 raise AttributeError
 
             if not hasattr(self, 'labels'):
-                logger.error('\nBe sure to run `split_samples` to create the `labels` variables.\n')
+
+                logger.error('  Be sure to run `split_samples` to create the `labels` variables.')
                 raise AttributeError
 
             p_vars = self.p_vars.copy()
@@ -5269,10 +5282,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         elif rank_method == 'RF':
 
             if not hasattr(self, 'model'):
-                logger.error('\nA RF model must be trained to use RF feature importance.\n')
+                logger.error('  A RF model must be trained to use RF feature importance.')
 
             if not hasattr(self.model, 'feature_importances_'):
-                logger.error('\nA RF model must be trained to use RF feature importance.\n')
+                logger.error('  A RF model must be trained to use RF feature importance.')
 
             feas_ranked = self.model.feature_importances_
 
@@ -5280,7 +5293,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         else:
 
-            logger.error('\nThe feature ranking method is not supported.\n')
+            logger.error('  The feature ranking method is not supported.')
             raise NameError
 
         feas_ranked[np.isnan(feas_ranked)] = 0.
@@ -5296,7 +5309,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             title = '************************************\n*                                  *\n* Random Forest Feature Importance *\n*                                  *\n************************************\n\nRank      Variable      Value\n----      --------      -----'
 
         if not be_quiet:
-            print(title)
+            logger.info(title)
 
         if isinstance(rank_text, str):
             rank_txt_wr.write('%s\n' % title)
@@ -5323,7 +5336,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     ranks = '%d        %d            %s' % (r, s, str(self.fea_rank[s]))
 
                 if not be_quiet:
-                    print(ranks)
+                    logger.info(ranks)
 
                 if isinstance(rank_text, str):
                     rank_txt_wr.write('%s\n' % ranks)
@@ -5340,13 +5353,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         if not be_quiet:
 
-            print('\nMean score:  %.2f' % np.average([v for k, v in self.fea_rank.iteritems()]))
+            logger.info('  Mean score:  %.2f' % np.average([v for k, v in self.fea_rank.iteritems()]))
 
-            print('\n==================')
-            print('Excluded variables')
-            print('==================')
-            print(','.join(map(str, sorted(self.bad_features))))
-            print()
+            logger.info('  ==================')
+            logger.info('  Excluded variables')
+            logger.info('  ==================')
+            logger.info(','.join(map(str, sorted(self.bad_features))))
 
         if isinstance(rank_text, str):
 
@@ -5398,8 +5410,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 counter += 1
 
         for k, v in self.variable_names.iteritems():
-
-            print(k, v)
+            logger.info(k, v)
 
     def sub_feas(self, input_image, out_img, band_list=[]):
 
@@ -5451,7 +5462,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             for fea_idx in self.ranked_feas:
                 band_list = '%s-b %d ' % (band_list, fea_idx)
 
-        print('\nSubsetting ranked features ...\n')
+        logger.info('  Subsetting ranked features ...')
 
         com = 'gdalbuildvrt %s %s %s' % (band_list, out_img, input_image)
 
@@ -5531,13 +5542,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         best_score_index = np.argmax(df['Accuracy'].values)
 
-        print('\nBest score: {:f}'.format(df['Accuracy'].values[best_score_index]))
+        logger.info('  Best score: {:f}'.format(df['Accuracy'].values[best_score_index]))
 
-        print('\nBest parameters:\n')
-        print(''.join(['='] * len(df_param_headers)))
-        print(df_param_headers)
-        print(''.join(['='] * len(df_param_headers)))
-        print(df[df_param_headers].values[best_score_index])
+        logger.info('  Best parameters:')
+        logger.info(''.join(['='] * len(df_param_headers)))
+        logger.info(df_param_headers)
+        logger.info(''.join(['='] * len(df_param_headers)))
+        logger.info(df[df_param_headers].values[best_score_index])
 
         if isinstance(output_file, str):
             df.to_csv(output_file, sep=',', index=False)
@@ -5577,25 +5588,30 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         regressors = ['Cubist', 'RFR', 'ABR', 'BagR', 'EX_RFR', 'EX_DTR', 'DTR']
 
         if metric not in ['accuracy', 'r_squared', 'rmse', 'mae', 'medae', 'mse']:
-            logger.error('The metric is not supported.')
+
+            logger.error('  The metric is not supported.')
             raise NameError
 
         if classifier_name in regressors and metric == 'accuracy':
-            logger.error('Overall accuracy is not supported with regression classifiers.')
+
+            logger.error('  Overall accuracy is not supported with regression classifiers.')
             raise NameError
 
         if classifier_name not in regressors and metric in ['r_squared', 'rmse', 'mae', 'medae', 'mse']:
-            logger.error('Overall accuracy is the only option with discrete classifiers.')
+
+            logger.error('  Overall accuracy is the only option with discrete classifiers.')
             raise NameError
 
         if classifier_name in ['C5', 'Cubist']:
 
             if 'R_installed' not in globals():
-                logger.warning('You must use `classification_r` to use C5 and Cubist.')
+
+                logger.warning('  You must use `classification_r` to use C5 and Cubist.')
                 return
 
             if not R_installed:
-                logger.warning('R and rpy2 must be installed to use C5 or Cubist.')
+
+                logger.warning('  R and rpy2 must be installed to use C5 or Cubist.')
                 return
 
         if classifier_name in regressors:
@@ -5624,7 +5640,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         for k_fold in range(1, k_folds+1):
 
-            print('Fold {:d} of {:d} ...'.format(k_fold, k_folds))
+            logger.info('  Fold {:d} of {:d} ...'.format(k_fold, k_folds))
 
             self.split_samples(file_name, perc_samp_each=perc_samp, ignore_feas=ignore_feas,
                                use_xy=use_xy, classes2remove=classes2remove, stratified=stratified,
@@ -5666,13 +5682,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         else:
             best_score_index = np.argmin(df[score_label].values)
 
-        print('\nBest {} score: {:f}'.format(metric, df[score_label].values[best_score_index]))
+        logger.info('  Best {} score: {:f}'.format(metric, df[score_label].values[best_score_index]))
 
-        print('\nBest parameters:\n')
-        print(''.join(['='] * len(df_param_headers)))
-        print(df_param_headers)
-        print(''.join(['=']*len(df_param_headers)))
-        print(df[df_param_headers].values[best_score_index])
+        logger.info('  Best parameters:')
+        logger.info(''.join(['='] * len(df_param_headers)))
+        logger.info(df_param_headers)
+        logger.info(''.join(['=']*len(df_param_headers)))
+        logger.info(df[df_param_headers].values[best_score_index])
 
         if isinstance(output_file, str):
             df.to_csv(output_file, sep=',', index=False)
@@ -5858,10 +5874,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                           'unbiased': bool_list}
 
         else:
-            logger.error('\nThe model cannot be optimized.\n')
+
+            logger.error('  The model cannot be optimized.')
             return NameError
 
-        print('\nFinding the best paramaters for a {} model ...\n'.format(classifier_info['classifier']))
+        logger.info('  Finding the best paramaters for a {} model ...'.format(classifier_info['classifier']))
 
         core_classifiers = ['C5', 'Cubist', 'RF', 'RFR',
                             'AB_RF', 'AB_EX_RF', 'AB_DT', 'AB_EX_DT',
@@ -5888,12 +5905,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             grid_search.fit(self.p_vars, self.labels)
 
-            print(grid_search.best_estimator_)
-            print('\nBest score: {:f}'.format(grid_search.best_score_))
-            print('\nBest parameters: {}\n'.format(grid_search.best_params_))
+            logger.info(grid_search.best_estimator_)
+            logger.info('  Best score: {:f}'.format(grid_search.best_score_))
+            logger.info('  Best parameters: {}'.format(grid_search.best_params_))
 
         else:
-            logger.error('The score method {} is not supported.'.format(method))
+
+            logger.error('  The score method {} is not supported.'.format(method))
             raise NameError
 
     def stack_majority(self, img, output_model, out_img, classifier_info, scale_data=False, ignore_feas=[]):
@@ -6158,7 +6176,8 @@ class classification_r(classification):
         """
 
         if not R_installed:
-            logger.warning('R and rpy2 must be installed to use C5 or Cubist.')
+
+            logger.warning('  R and rpy2 must be installed to use C5 or Cubist.')
             return
 
         self.get_probs = get_probs
@@ -6224,7 +6243,8 @@ class classification_r(classification):
                 self.classifier_info['fuzzy'] = False
 
         else:
-            logger.error('\nThe classifier must be C5 or Cubist.\n')
+
+            logger.error('  The classifier must be C5 or Cubist.')
             raise NameError
 
         if isinstance(output_model, str):
@@ -6274,10 +6294,10 @@ class classification_r(classification):
         # Train a Cubist model.
         if 'Cubist' in self.classifier_info['classifier']:
 
-            print('\nTraining a Cubist model with {:d} committees, {:d} rules, {:d}% extrapolation, and {:,d} samples ...\n'.format(self.classifier_info['committees'],
-                                                                                                                                    self.classifier_info['rules'],
-                                                                                                                                    self.classifier_info['extrapolation'],
-                                                                                                                                    self.n_samps))
+            logger.info('  Training a Cubist model with {:d} committees, {:d} rules, {:d}% extrapolation, and {:,d} samples ...'.format(self.classifier_info['committees'],
+                                                                                                                                        self.classifier_info['rules'],
+                                                                                                                                        self.classifier_info['extrapolation'],
+                                                                                                                                        self.n_samps))
 
             # train the Cubist model
             # R('model = Cubist::cubist(x=samps, y=labels, committees=%d, control=cubistControl(rules=%d, extrapolation=%d))' % \
@@ -6290,7 +6310,7 @@ class classification_r(classification):
 
             if isinstance(output_model, str):
 
-                print('Writing the model to file ...')
+                logger.info('  Writing the model to file ...')
 
                 # Write the Cubist model and .names to file.
                 if self.OS_SYSTEM == 'Windows':
@@ -6307,7 +6327,7 @@ class classification_r(classification):
 
                 if write_summary:
 
-                    print('Writing the model summary to file ...')
+                    logger.info('  Writing the model summary to file ...')
 
                     # Write the Cubist model summary to file.
                     with open(os.path.join(self.model_dir, '{}_summary.txt'.format(self.model_base)), 'wb') as out_tree:
@@ -6315,10 +6335,10 @@ class classification_r(classification):
 
         elif 'C5' in self.classifier_info['classifier']:
 
-            print('\nTraining a C5 model with {:d} trials, {:.2f} CF, {:d} minimum cases, and {:,d} samples ...\n'.format(self.classifier_info['trials'],
-                                                                                                                          self.classifier_info['CF'],
-                                                                                                                          self.classifier_info['min_cases'],
-                                                                                                                          self.n_samps))
+            logger.info('  Training a C5 model with {:d} trials, {:.2f} CF, {:d} minimum cases, and {:,d} samples ...'.format(self.classifier_info['trials'],
+                                                                                                                              self.classifier_info['CF'],
+                                                                                                                              self.classifier_info['min_cases'],
+                                                                                                                              self.n_samps))
 
             # train the C5 model
             # R('model = C50::C5.0(x=samps, y=factor(labels), trials=%d, control=C5.0Control(CF=%f, minCases=%d))' % \
@@ -6338,7 +6358,7 @@ class classification_r(classification):
 
             if isinstance(output_model, str):
 
-                print('Writing the model to file ...')
+                logger.info('  Writing the model to file ...')
 
                 # Write the C5 tree to file.
                 if self.OS_SYSTEM == 'Windows':
@@ -6357,7 +6377,7 @@ class classification_r(classification):
 
                 if write_summary:
 
-                    print('Writing the model summary to file (this may take a few minutes with large trees) ...')
+                    logger.info('  Writing the model summary to file (this may take a few minutes with large trees) ...')
 
                     # Write the C5 model summary to file.
                     with open(os.path.join(self.model_dir, '{}_summary.txt'.format(self.model_base)), 'wb') as out_imp:
@@ -6524,7 +6544,7 @@ class classification_r(classification):
 
             n_block = 1
 
-            print('\nMapping labels ...\n')
+            logger.info('  Mapping labels ...')
 
             for i in xrange(0, rows, block_rows):
 
@@ -6532,12 +6552,12 @@ class classification_r(classification):
 
                 for j in xrange(0, cols, block_cols):
 
-                    print('Block {:d} of {:d} ...'.format(n_block, n_blocks))
+                    logger.info('  Block {:d} of {:d} ...'.format(n_block, n_blocks))
                     n_block += 1
 
                     if n_block in self.record_list:
-                        print('  Skipping current block ...')
 
+                        logger.info('  Skipping current block ...')
                         continue
 
                     n_cols = self._num_rows_cols(j, block_cols, cols)
@@ -7141,12 +7161,12 @@ def main():
             _options()
 
         elif arg[:1] == ':':
-            print('Unrecognized command option: %s' % arg)
+            logger.info('  Unrecognized command option: %s' % arg)
             _usage()
 
         i += 1
 
-    print('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
+    logger.info('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
 
     start_time = time.time()
 
@@ -7204,8 +7224,8 @@ def main():
 
             cl.optimize_parameters(samples, classifier_info, perc_samp, max_depth_range=(1, 100), k_folds=optimize)
 
-            print('\nThe optimum depth was %d' % cl.opt_depth)
-            print('The maximum accuracy was %f\n' % cl.max_acc)
+            logger.info('  The optimum depth was %d' % cl.opt_depth)
+            logger.info('  The maximum accuracy was %f' % cl.max_acc)
 
         if samples:
 
@@ -7295,8 +7315,8 @@ def main():
 
             cl.sub_feas(img, out_img_rank)
 
-    print('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
-          (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
+    logger.info('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
+                (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
 
 if __name__ == '__main__':
     main()
