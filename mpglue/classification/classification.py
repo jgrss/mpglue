@@ -1053,8 +1053,12 @@ class Samples(object):
         if isinstance(sample, float):
             random_subsample = np.random.choice(range(0, n_samples), size=int(sample*n_samples), replace=False)
         elif isinstance(sample, int):
-            random_subsample = np.random.choice(range(0, n_samples), size=sample, replace=False)
+
+            n_sample = sample if sample <= len(range(0, n_samples)) else len(range(0, n_samples))
+            random_subsample = np.random.choice(range(0, n_samples), size=n_sample, replace=False)
+            
         else:
+
             logger.error('  The sample number must be an integer or float.')
             raise TypeError
 
