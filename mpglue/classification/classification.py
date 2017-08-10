@@ -4597,29 +4597,33 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         iwo = 0
         jwo = 0
 
-        # if self.kwargs:
-        # 
-        #     if 'i' in self.kwargs:
-        #
-        #         start_i = self.kwargs['i']
-        #         iwo = start_i
-        #
-        #     if 'j' in self.kwargs:
-        #
-        #         start_j = self.kwargs['j']
-        #         jwo = start_j
-        #
-        #     if 'rows' in self.kwargs:
-        #         rows = self.kwargs['rows']
-        #
-        #     if 'cols' in self.kwargs:
-        #         cols = self.kwargs['cols']
-        #
-        #     # TODO: write subset
-        #     self.o_info.update_info(left=self.o_info.left+(start_j*self.o_info.cellY),
-        #                             top=self.o_info.top-(start_i*self.o_info.cellY),
-        #                             rows=rows,
-        #                             cols=cols)
+        if self.kwargs:
+
+            if 'i' in self.kwargs:
+
+                start_i = self.kwargs['i']
+                self.o_info.update_info(top=self.o_info.top-(start_i*self.o_info.cellY))
+                iwo = start_i
+
+            if 'j' in self.kwargs:
+
+                start_j = self.kwargs['j']
+                self.o_info.update_info(left=self.o_info.left+(start_j*self.o_info.cellY))
+                jwo = start_j
+
+            if 'rows' in self.kwargs:
+
+                if self.kwargs['rows'] != -1:
+
+                    rows = self.kwargs['rows']
+                    self.o_info.update_info(rows=rows)
+
+            if 'cols' in self.kwargs:
+
+                if self.kwargs['cols'] != -1:
+
+                    cols = self.kwargs['cols']
+                    self.o_info.update_info(rows=cols)
 
         if self.ignore_feas:
             self.bands2open = sorted([bd for bd in range(1, self.i_info.bands+1) if bd not in self.ignore_feas])
