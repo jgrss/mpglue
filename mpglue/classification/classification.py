@@ -4232,6 +4232,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         p_vars_r = None
         labels_r = None
         p_vars_test_r = None
+        constant = np.array([1.], dtype='float64').reshape(1, 1)
 
         if isinstance(p_vars2reshape, np.ndarray):
 
@@ -4245,7 +4246,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             else:
                 reshape_features = p_vars2reshape.shape[1]
 
-            p_vars_r = np.array([pv_.reshape(1, reshape_features) for pv_ in p_vars2reshape], dtype='float64')
+            p_vars_r = np.array([np.hstack((pv_.reshape(1, reshape_features), constant))
+                                 for pv_ in p_vars2reshape], dtype='float64')
 
         if isinstance(labels2reshape, np.ndarray):
             labels_r = np.array([np.array([label_], dtype='int64') for label_ in labels2reshape], dtype='int64')
@@ -4262,7 +4264,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             else:
                 reshape_features = p_vars_test2reshape.shape[1]
 
-            p_vars_test_r = np.array([pv.reshape(1, reshape_features) for pv in p_vars_test2reshape], dtype='float64')
+            p_vars_test_r = np.array([np.hstack((pv_.reshape(1, reshape_features), constant))
+                                      for pv_ in p_vars_test2reshape], dtype='float64')
 
         return p_vars_r, labels_r, p_vars_test_r
 
