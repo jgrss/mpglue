@@ -4660,6 +4660,16 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         # Determine the number of blocks in the image.
         n_blocks = self._set_n_blocks(rows, cols, block_rows, block_cols)
 
+        logger.info(start_i)
+        logger.info(rows)
+        logger.info(iwe)
+        logger.info(block_rows)
+        logger.info('BREAK')
+        logger.info(start_j)
+        logger.info(cols)
+        logger.info(jwe)
+        logger.info(block_cols)
+
         n_block = 1
         for i in range(start_i, rows+iwe, block_rows):
 
@@ -4737,7 +4747,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 logger.info(n_cols)
 
                 # Get all the bands for the tile. The shape
-                #   of the features is (features x rows x columns).
+                #   of the features is ([rows x columns] x features).
                 features = raster_tools.read(image2open=self.input_image,
                                              bands2open=self.bands2open,
                                              i=i,
