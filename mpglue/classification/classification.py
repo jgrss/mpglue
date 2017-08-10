@@ -3576,9 +3576,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 logger.warning('  Pystruct must be installed to used CRF models.')
                 return
 
-            logger.info('INFO')
-            logger.info(self.classifier_info_)
-
             if 'max_iter' not in self.classifier_info_:
                 self.classifier_info_['max_iter'] = 1000
 
@@ -3610,9 +3607,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             self.grid_info = dict(inference_method=inference_method,
                                   neighborhood=neighborhood)
-
-            logger.info('GRID')
-            logger.info(self.grid_info)
 
             # if 'break_on_bad' not in self.classifier_info_:
             #     self.classifier_info_['break_on_bad'] = True
@@ -4164,6 +4158,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             if isinstance(self.sample_weight, np.ndarray):
                 self.model.fit(self.p_vars, self.labels, sample_weight=self.sample_weight)
             else:
+                logger.info(self.p_vars.shape)
+                logger.info(self.labels.shape)
                 self.model.fit(self.p_vars, self.labels)
 
             if self.calibrate_proba:
