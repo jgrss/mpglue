@@ -1550,21 +1550,21 @@ class Samples(object):
             #   negative class labels.
             if np.min(self.classes) < 0:
 
-                logger.info('  The class labels should not contain negative values.')
+                logger.info('  The class labels should not contain negative values, but are:')
                 logger.error(self.classes)
                 raise ValueError
 
             # Check whether the classes begin with 0.
             if self.classes[0] != 0:
 
-                logger.info('  The class labels must begin with 0 when using CRF models.')
+                logger.info('  The class labels must begin with 0 when using CRF models, but are:')
                 logger.error(self.classes)
                 raise ValueError
 
             # Check whether the classes are increasing by 1.
             if np.any(np.abs(np.diff(self.classes)) > 1):
 
-                logger.info('  The class labels should increase by 1, starting with 0.')
+                logger.info('  The class labels should increase by 1, starting with 0, but are:')
                 logger.error(self.classes)
                 raise ValueError
 
