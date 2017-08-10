@@ -4673,7 +4673,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         n_block = 1
         for i in range(start_i, rows+iwe, block_rows):
 
-            n_rows = self._num_rows_cols(i, block_rows, rows)
+            n_rows = self._num_rows_cols(i, block_rows, rows+iwe)
 
             for j in range(start_j, cols+jwe, block_cols):
 
@@ -4686,7 +4686,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     logger.info('  Skipping current block ...')
                     continue
                     
-                n_cols = self._num_rows_cols(j, block_cols, cols)
+                n_cols = self._num_rows_cols(j, block_cols, cols+jwe)
 
                 # Check for zeros in the block.
                 if self.band_check != -1:
