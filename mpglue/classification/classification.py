@@ -3576,7 +3576,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 logger.warning('  Pystruct must be installed to used CRF models.')
                 return
 
-            logger.inf('INFO')
+            logger.info('INFO')
             logger.info(self.classifier_info_)
 
             if 'max_iter' not in self.classifier_info_:
