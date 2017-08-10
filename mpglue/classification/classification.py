@@ -3446,6 +3446,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             try:
                 self.model.load(self.input_model)
             except:
+
                 logger.error('  Could not load {}'.format(self.input_model))
                 raise OSError
 
@@ -3455,6 +3456,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             try:
                 self.classifier_info, self.model = self.load(self.input_model)
             except:
+
                 logger.error('  Could not load {}'.format(self.input_model))
                 raise OSError
 
@@ -4624,6 +4626,14 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     cols = self.kwargs['cols']
                     self.o_info.update_info(rows=cols)
+
+            logger.info('New info:')
+            logger.info(start_i)
+            logger.info(iwo)
+            logger.info(start_j)
+            logger.info(jwo)
+            logger.info(rows)
+            logger.info(cols)
 
         if self.ignore_feas:
             self.bands2open = sorted([bd for bd in range(1, self.i_info.bands+1) if bd not in self.ignore_feas])
