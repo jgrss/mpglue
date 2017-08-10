@@ -3576,6 +3576,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 logger.warning('  Pystruct must be installed to used CRF models.')
                 return
 
+            logger.inf('INFO')
+            logger.info(self.classifier_info_)
+
             if 'max_iter' not in self.classifier_info_:
                 self.classifier_info_['max_iter'] = 1000
 
@@ -3591,24 +3594,25 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             if 'inference_cache' not in self.classifier_info_:
                 self.classifier_info_['inference_cache'] = 0
 
-            if 'inference_method' in self.classifier_info_:
+            if 'inference_method' not in self.classifier_info_:
+                inference_method = 'qpbo'
+            else:
 
                 inference_method = self.classifier_info_['inference_method']
                 del self.classifier_info_['inference_method']
 
+            if 'neighborhood' not in self.classifier_info_:
+                neighborhood = 4
             else:
-                inference_method = 'qpbo'
-
-            if 'neighborhood' in self.classifier_info_:
 
                 neighborhood = self.classifier_info_['neighborhood']
                 del self.classifier_info_['neighborhood']
 
-            else:
-                neighborhood = 4
-
             self.grid_info = dict(inference_method=inference_method,
                                   neighborhood=neighborhood)
+
+            logger.info('GRID')
+            logger.info(self.grid_info)
 
             # if 'break_on_bad' not in self.classifier_info_:
             #     self.classifier_info_['break_on_bad'] = True
@@ -4660,16 +4664,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         # Determine the number of blocks in the image.
         n_blocks = self._set_n_blocks(rows, cols, block_rows, block_cols)
 
-        logger.info(start_i)
-        logger.info(rows)
-        logger.info(iwe)
-        logger.info(block_rows)
-        logger.info('BREAK')
-        logger.info(start_j)
-        logger.info(cols)
-        logger.info(jwe)
-        logger.info(block_cols)
-
         n_block = 1
         for i in range(start_i, rows+iwe, block_rows):
 
@@ -4738,13 +4732,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                                 logger.error('  The number of predictive layers does not match the number of model estimators.')
                                 raise AssertionError
-
-                logger.info('INFO')
-                logger.info(self.bands2open)
-                logger.info(i)
-                logger.info(j)
-                logger.info(n_rows)
-                logger.info(n_cols)
 
                 # Get all the bands for the tile. The shape
                 #   of the features is ([rows x columns] x features).
