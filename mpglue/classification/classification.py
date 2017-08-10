@@ -3577,10 +3577,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 return
 
             if 'max_iter' not in self.classifier_info_:
-                self.classifier_info_['max_iter'] = 100
+                self.classifier_info_['max_iter'] = 1000
 
             if 'C' not in self.classifier_info_:
-                self.classifier_info_['C'] = 1.
+                self.classifier_info_['C'] = .001
 
             if 'n_jobs' not in self.classifier_info_:
                 self.classifier_info_['n_jobs'] = -1
@@ -4627,14 +4627,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     cols = self.kwargs['cols']
                     self.o_info.update_info(rows=cols)
 
-            logger.info('New info:')
-            logger.info(start_i)
-            logger.info(iwo)
-            logger.info(start_j)
-            logger.info(jwo)
-            logger.info(rows)
-            logger.info(cols)
-
         if self.ignore_feas:
             self.bands2open = sorted([bd for bd in range(1, self.i_info.bands+1) if bd not in self.ignore_feas])
         else:
@@ -4878,6 +4870,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                             else:
                                 m = self.model
                                 predicted = [predict_scikit(m, ip) for ip in indice_pairs]
+
+                            print(predicted)
+                            print(predicted.max())
+                            sys.exit()
+                            return
 
                             # Write the predictions to file.
                             out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
