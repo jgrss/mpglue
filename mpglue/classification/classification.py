@@ -1356,8 +1356,11 @@ class Samples(object):
                 self.p_vars = np.zeros((n_patches,
                                         self.im_rows,
                                         self.im_cols,
-                                        bands),
+                                        bands+1),
                                        dtype='float32')
+
+                # Add a constant feature.
+                self.p_vars[:, :, :, -1] = 1
 
                 for pri, predictor in enumerate(predictors):
 
@@ -1367,43 +1370,43 @@ class Samples(object):
 
                             if kwargs:
 
-                                self.p_vars[pri, :, :, :] = raster_tools.read(image2open=predictor,
-                                                                              bands2open=bands2open,
-                                                                              predictions=True,
-                                                                              n_jobs=n_jobs,
-                                                                              **kwargs).reshape(self.im_rows,
-                                                                                                self.im_cols,
-                                                                                                bands) / scale_factor
+                                self.p_vars[pri, :, :, :-1] = raster_tools.read(image2open=predictor,
+                                                                                bands2open=bands2open,
+                                                                                predictions=True,
+                                                                                n_jobs=n_jobs,
+                                                                                **kwargs).reshape(self.im_rows,
+                                                                                                  self.im_cols,
+                                                                                                  bands) / scale_factor
 
                             else:
 
-                                self.p_vars[pri, :, :, :] = raster_tools.read(image2open=predictor,
-                                                                              bands2open=bands2open,
-                                                                              predictions=True,
-                                                                              n_jobs=n_jobs).reshape(self.im_rows,
-                                                                                                     self.im_cols,
-                                                                                                     bands) / scale_factor
+                                self.p_vars[pri, :, :, :-1] = raster_tools.read(image2open=predictor,
+                                                                                bands2open=bands2open,
+                                                                                predictions=True,
+                                                                                n_jobs=n_jobs).reshape(self.im_rows,
+                                                                                                       self.im_cols,
+                                                                                                       bands) / scale_factor
 
                         else:
 
                             if kwargs:
 
-                                self.p_vars[pri, :, :, :] = scaler.transform(raster_tools.read(image2open=predictor,
-                                                                                               bands2open=bands2open,
-                                                                                               predictions=True,
-                                                                                               n_jobs=n_jobs,
-                                                                                               **kwargs)).reshape(self.im_rows,
-                                                                                                                  self.im_cols,
-                                                                                                                  bands)
+                                self.p_vars[pri, :, :, :-1] = scaler.transform(raster_tools.read(image2open=predictor,
+                                                                                                 bands2open=bands2open,
+                                                                                                 predictions=True,
+                                                                                                 n_jobs=n_jobs,
+                                                                                                 **kwargs)).reshape(self.im_rows,
+                                                                                                                    self.im_cols,
+                                                                                                                    bands)
 
                             else:
 
-                                self.p_vars[pri, :, :, :] = scaler.transform(raster_tools.read(image2open=predictor,
-                                                                                               bands2open=bands2open,
-                                                                                               predictions=True,
-                                                                                               n_jobs=n_jobs)).reshape(self.im_rows,
-                                                                                                                       self.im_cols,
-                                                                                                                       bands)
+                                self.p_vars[pri, :, :, :-1] = scaler.transform(raster_tools.read(image2open=predictor,
+                                                                                                 bands2open=bands2open,
+                                                                                                 predictions=True,
+                                                                                                 n_jobs=n_jobs)).reshape(self.im_rows,
+                                                                                                                         self.im_cols,
+                                                                                                                         bands)
 
                     else:
 
@@ -1413,35 +1416,35 @@ class Samples(object):
 
                                 if kwargs:
 
-                                    self.p_vars[pri, :, :, :] = i_info.read(bands2open=bands2open,
-                                                                            predictions=True,
-                                                                            **kwargs).reshape(self.im_rows,
-                                                                                              self.im_cols,
-                                                                                              bands) / scale_factor
+                                    self.p_vars[pri, :, :, :-1] = i_info.read(bands2open=bands2open,
+                                                                              predictions=True,
+                                                                              **kwargs).reshape(self.im_rows,
+                                                                                                self.im_cols,
+                                                                                                bands) / scale_factor
 
                                 else:
 
-                                    self.p_vars[pri, :, :, :] = i_info.read(bands2open=bands2open,
-                                                                            predictions=True).reshape(self.im_rows,
-                                                                                                      self.im_cols,
-                                                                                                      bands) / scale_factor
+                                    self.p_vars[pri, :, :, :-1] = i_info.read(bands2open=bands2open,
+                                                                              predictions=True).reshape(self.im_rows,
+                                                                                                        self.im_cols,
+                                                                                                        bands) / scale_factor
 
                             else:
 
                                 if kwargs:
 
-                                    self.p_vars[pri, :, :, :] = scaler.transform(i_info.read(bands2open=bands2open,
-                                                                                             predictions=True,
-                                                                                             **kwargs)).reshape(self.im_rows,
-                                                                                                                self.im_cols,
-                                                                                                                bands)
+                                    self.p_vars[pri, :, :, :-1] = scaler.transform(i_info.read(bands2open=bands2open,
+                                                                                               predictions=True,
+                                                                                               **kwargs)).reshape(self.im_rows,
+                                                                                                                  self.im_cols,
+                                                                                                                  bands)
 
                                 else:
 
-                                    self.p_vars[pri, :, :, :] = scaler.transform(i_info.read(bands2open=bands2open,
-                                                                                             predictions=True)).reshape(self.im_rows,
-                                                                                                                        self.im_cols,
-                                                                                                                        bands)
+                                    self.p_vars[pri, :, :, :-1] = scaler.transform(i_info.read(bands2open=bands2open,
+                                                                                               predictions=True)).reshape(self.im_rows,
+                                                                                                                          self.im_cols,
+                                                                                                                          bands)
 
                         del i_info
 
@@ -1454,7 +1457,10 @@ class Samples(object):
                     bands = 1
                     self.im_rows, self.im_cols = predictors[0].shape
 
-                self.p_vars = np.zeros((n_patches, self.im_rows, self.im_cols, bands), dtype='float32')
+                self.p_vars = np.zeros((n_patches, self.im_rows, self.im_cols, bands+1), dtype='float32')
+
+                # Add a constant feature.
+                self.p_vars[:, :, :, -1] = 1
 
                 # Setup a scaler for all inputs.
                 if scale_factor <= 1:
@@ -1480,17 +1486,17 @@ class Samples(object):
 
                     if scale_factor > 1:
 
-                        self.p_vars[pri, :, :, :] = predictor.transpose(1, 2, 0).reshape(self.im_rows*self.im_cols,
-                                                                                         bands).reshape(self.im_rows,
-                                                                                                        self.im_cols,
-                                                                                                        bands) / scale_factor
+                        self.p_vars[pri, :, :, :-1] = predictor.transpose(1, 2, 0).reshape(self.im_rows*self.im_cols,
+                                                                                           bands).reshape(self.im_rows,
+                                                                                                          self.im_cols,
+                                                                                                          bands) / scale_factor
 
                     else:
 
-                        self.p_vars[pri, :, :, :] = scaler.transform(predictor.transpose(1, 2, 0).reshape(self.im_rows*self.im_cols,
-                                                                                                          bands)).reshape(self.im_rows,
-                                                                                                                          self.im_cols,
-                                                                                                                          bands)
+                        self.p_vars[pri, :, :, :-1] = scaler.transform(predictor.transpose(1, 2, 0).reshape(self.im_rows*self.im_cols,
+                                                                                                            bands)).reshape(self.im_rows,
+                                                                                                                            self.im_cols,
+                                                                                                                            bands)
 
         else:
             logger.warning('  No variables were shaped.')
