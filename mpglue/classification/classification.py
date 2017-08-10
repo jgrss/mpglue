@@ -4848,6 +4848,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                             n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
                             indice_pairs.append([i_, n_rows_])
 
+                        print(self.n_jobs)
+
                         if (self.n_jobs != 0) and (self.n_jobs != 1):
 
                             # Make the predictions and convert to a NumPy array.
