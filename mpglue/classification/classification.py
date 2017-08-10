@@ -4631,26 +4631,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     self.o_info.update_info(rows=cols)
                     jwe = cols
 
-        if self.ignore_feas:
-            self.bands2open = sorted([bd for bd in range(1, self.i_info.bands+1) if bd not in self.ignore_feas])
-        else:
+        # Determine which bands to open.
+        self._set_bands2open()
 
-            if not isinstance(self.bands2open, list):
-                self.bands2open = range(1, self.i_info.bands+1)
-
-        if isinstance(self.mask_background, str):
-
-            out_raster_object = raster_tools.create_raster(self.out_image_temp,
-                                                           self.o_info,
-                                                           compress='none',
-                                                           tile=False,
-                                                           bigtiff='yes')
-
-        else:
-
-            out_raster_object = raster_tools.create_raster(self.out_image,
-                                                           self.o_info,
-                                                           tile=False)
+        # Setup the object to write to.
+        out_raster_object = self._set_output_object()
 
         if self.get_probs:
             out_bands = [out_raster_object.get_band(bd) for bd in range(1, self.o_info.bands+1)]
@@ -4661,7 +4646,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         if isinstance(self.scale_data, str):
             self.scaler = self.load(self.scale_data)
-
         elif not self.scale_data:
             self.scaler = False
 
@@ -4673,10 +4657,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         # set widget and pbar
         #ttl_blks_ct, pbar = _iteration_parameters(rows, cols, block_rows, block_cols)
 
-        n_blocks = 0
-        for i in range(0, rows, block_rows):
-            for j in range(0, cols, block_cols):
-                n_blocks += 1
+        # Determine the number of blocks in the image.
+        n_blocks = self._set_n_blocks(rows, cols, block_rows, block_cols)
 
         n_block = 1
         for i in range(start_i, rows+iwe, block_rows):
@@ -4746,6 +4728,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                                 logger.error('  The number of predictive layers does not match the number of model estimators.')
                                 raise AssertionError
+
+                logger.info('INFO')
+                logger.info(self.bands2open)
+                logger.info(i)
+                logger.info(j)
+                logger.info(n_rows)
+                logger.info(n_cols)
 
                 # Get all the bands for the tile. The shape
                 #   of the features is (features x rows x columns).
@@ -4921,6 +4910,44 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             self._mask_background(self.out_image_temp, self.out_image, self.mask_background,
                                   self.background_band, self.background_value, self.minimum_observations,
                                   self.observation_band)
+
+    def _set_bands2open(self):
+
+        """Sets the list of (feature) bands to open"""
+
+        if self.ignore_feas:
+            self.bands2open = sorted([bd for bd in range(1, self.i_info.bands+1) if bd not in self.ignore_feas])
+        else:
+
+            if not isinstance(self.bands2open, list):
+                self.bands2open = range(1, self.i_info.bands+1)
+
+    def _set_output_object(self):
+
+        """Creates the raster object to write to"""
+
+        if isinstance(self.mask_background, str):
+
+            return raster_tools.create_raster(self.out_image_temp,
+                                              self.o_info,
+                                              compress='none',
+                                              tile=False,
+                                              bigtiff='yes')
+
+        else:
+
+            return raster_tools.create_raster(self.out_image,
+                                              self.o_info,
+                                              tile=False)
+
+    def _set_n_blocks(self, rows, cols, block_rows, block_cols):
+
+        n_blocks = 0
+        for i in range(0, rows, block_rows):
+            for j in range(0, cols, block_cols):
+                n_blocks += 1
+
+        return n_blocks
 
     def _mask_background(self, image2mask, masked_image, background_image, background_band,
                          background_value, minimum_observations, observation_band):
