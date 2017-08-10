@@ -2815,11 +2815,11 @@ class BlockFunc(object):
 
         self.pairs = []
 
-        for i in xrange(0, self.proc_info.rows, self.block_rows):
+        for i in range(0, self.proc_info.rows, self.block_rows):
 
             n_rows = n_rows_cols(i, self.block_rows, self.proc_info.rows)
 
-            for j in xrange(0, self.proc_info.cols, self.block_cols):
+            for j in range(0, self.proc_info.cols, self.block_cols):
 
                 n_cols = n_rows_cols(j, self.block_cols, self.proc_info.cols)
 
@@ -4050,12 +4050,7 @@ def n_rows_cols(pixel_index, block_size, rows_cols):
         Adjusted block size as int.
     """
 
-    if (pixel_index + block_size) < rows_cols:
-        samp_out = block_size
-    else:
-        samp_out = rows_cols - pixel_index
-
-    return samp_out
+    return block_size if (pixel_index + block_size) < rows_cols else rows_cols - pixel_index
 
 
 def n_i_j(pixel_index, offset):

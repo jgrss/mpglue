@@ -4601,9 +4601,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         rows = self.i_info.rows
         cols = self.i_info.cols
         iwo = 0
-        iwe = 0
         jwo = 0
-        jwe = 0
 
         if self.kwargs:
 
@@ -4625,7 +4623,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     rows = self.kwargs['rows']
                     self.o_info.update_info(rows=rows)
-                    iwe = rows
 
             if 'cols' in self.kwargs:
 
@@ -4633,7 +4630,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     cols = self.kwargs['cols']
                     self.o_info.update_info(cols=cols)
-                    jwe = cols
 
         # Determine which bands to open.
         self._set_bands2open()
@@ -4665,11 +4661,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         n_blocks = self._set_n_blocks(rows, cols, block_rows, block_cols)
 
         n_block = 1
-        for i in range(start_i, rows+iwe, block_rows):
+        for i in range(start_i, rows+iwo, block_rows):
 
-            n_rows = self._num_rows_cols(i, block_rows, rows+iwe)
+            n_rows = self._num_rows_cols(i, block_rows, rows+iwo)
 
-            for j in range(start_j, cols+jwe, block_cols):
+            for j in range(start_j, cols+jwo, block_cols):
 
                 logger.info('  Block {:d} of {:d} ...'.format(n_block, n_blocks))
 
@@ -4680,7 +4676,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     logger.info('  Skipping current block ...')
                     continue
                     
-                n_cols = self._num_rows_cols(j, block_cols, cols+jwe)
+                n_cols = self._num_rows_cols(j, block_cols, cols+jwo)
 
                 # Check for zeros in the block.
                 if self.band_check != -1:
@@ -5025,8 +5021,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         os.remove(image2mask)
 
-    def _num_rows_cols(self, pix, rows_cols, samp_in):
-        return rows_cols if (pix + rows_cols < samp_in) else samp_in - pix
+    def _num_rows_cols(self, pixel_index, block_size, rows_cols):
+        return block_size if (pixel_index + block_size) < rows_cols else rows_cols - pixel_index
 
     def _get_feas(self, img_obj_list, i, j, n_rows, n_cols):
 
