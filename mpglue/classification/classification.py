@@ -4169,8 +4169,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             if isinstance(self.sample_weight, np.ndarray):
                 self.model.fit(self.p_vars, self.labels, sample_weight=self.sample_weight)
             else:
-                logger.info(self.p_vars.shape)
-                logger.info(self.labels.shape)
                 self.model.fit(self.p_vars, self.labels)
 
             if self.calibrate_proba:
