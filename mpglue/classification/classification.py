@@ -4764,6 +4764,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 if self.classifier_info['classifier'] == 'ChainCRF':
                     features = self._transform4crf(p_vars2reshape=features)[0]
 
+                print self.classifier_info
+                print self.n_jobs
+                print self.n_jobs_vars
+                print features.shape
+                print features.max()
+                print
+
                 # Predict class conditional probabilities.
                 if self.get_probs:
 
@@ -4848,8 +4855,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                             n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
                             indice_pairs.append([i_, n_rows_])
 
-                        print(self.n_jobs)
-
                         if (self.n_jobs != 0) and (self.n_jobs != 1):
 
                             # Make the predictions and convert to a NumPy array.
@@ -4872,11 +4877,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                             else:
                                 m = self.model
                                 predicted = [predict_scikit(m, ip) for ip in indice_pairs]
-
-                            print(predicted)
-                            print(predicted.max())
-                            sys.exit()
-                            return
 
                             # Write the predictions to file.
                             out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
