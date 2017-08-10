@@ -4597,7 +4597,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         rows = self.i_info.rows
         cols = self.i_info.cols
         iwo = 0
+        iwe = 0
         jwo = 0
+        jwe = 0
 
         if self.kwargs:
 
@@ -4619,6 +4621,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     rows = self.kwargs['rows']
                     self.o_info.update_info(rows=rows)
+                    iwe = rows
 
             if 'cols' in self.kwargs:
 
@@ -4626,6 +4629,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     cols = self.kwargs['cols']
                     self.o_info.update_info(rows=cols)
+                    jwe = cols
 
         if self.ignore_feas:
             self.bands2open = sorted([bd for bd in range(1, self.i_info.bands+1) if bd not in self.ignore_feas])
@@ -4674,19 +4678,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             for j in range(0, cols, block_cols):
                 n_blocks += 1
 
-        print self.classifier_info
-        print self.n_jobs
-        print self.n_jobs_vars
-        print start_i, rows, block_rows
-        print start_j, cols, block_cols
-        print
-
         n_block = 1
-        for i in range(start_i, rows, block_rows):
+        for i in range(start_i, rows+iwe, block_rows):
 
             n_rows = self._num_rows_cols(i, block_rows, rows)
 
-            for j in range(start_j, cols, block_cols):
+            for j in range(start_j, cols+jwe, block_cols):
 
                 logger.info('  Block {:d} of {:d} ...'.format(n_block, n_blocks))
 
