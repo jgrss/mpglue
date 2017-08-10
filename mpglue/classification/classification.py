@@ -1528,10 +1528,12 @@ class Samples(object):
 
                 rows, cols = labels[0].shape
 
-                self.labels = np.zeros((n_patches, rows, cols), dtype='uint8')
+                # self.labels = np.zeros((n_patches, rows, cols), dtype='uint8')
+                #
+                # for li, label in enumerate(labels):
+                #     self.labels[li] = label
 
-                for li, label in enumerate(labels):
-                    self.labels[li] = label
+                self.labels = np.array(labels, dtype='uint8').reshape(n_patches, rows, cols)
 
         else:
             logger.warning('  No labels were shaped.')
