@@ -4674,6 +4674,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             for j in range(0, cols, block_cols):
                 n_blocks += 1
 
+        print self.classifier_info
+        print self.n_jobs
+        print self.n_jobs_vars
+        print start_i, rows, block_rows
+        print start_j, cols, block_cols
+        print
+
         n_block = 1
         for i in range(start_i, rows, block_rows):
 
@@ -4763,13 +4770,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 # Reshape the features for CRF models.
                 if self.classifier_info['classifier'] == 'ChainCRF':
                     features = self._transform4crf(p_vars2reshape=features)[0]
-
-                print self.classifier_info
-                print self.n_jobs
-                print self.n_jobs_vars
-                print features.shape
-                print features.max()
-                print
 
                 # Predict class conditional probabilities.
                 if self.get_probs:
