@@ -4632,7 +4632,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 if self.kwargs['cols'] != -1:
 
                     cols = self.kwargs['cols']
-                    self.o_info.update_info(rows=cols)
+                    self.o_info.update_info(cols=cols)
                     jwe = cols
 
         # Determine which bands to open.
