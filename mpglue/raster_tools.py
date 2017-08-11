@@ -1333,6 +1333,10 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
             elif (i + array2write.shape[0]) > self.rows:
 
+                logger.info(i)
+                logger.info(array2write.shape[0])
+                logger.info(self.rows)
+
                 logger.error('\nThe starting row position + the array rows spills over.\n')
                 raise ArrayOffsetError
 
