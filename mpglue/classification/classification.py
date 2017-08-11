@@ -4638,16 +4638,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     cols = self.kwargs['cols']
                     self.o_info.update_info(cols=cols)
 
-        logger.info(start_i)
-        logger.info(start_j)
-        logger.info(rows)
-        logger.info(cols)
-
         # Determine which bands to open.
         self._set_bands2open()
 
         # Setup the object to write to.
         out_raster_object = self._set_output_object()
+
+        out_raster_object.update_info(rows=rows, cols=cols)
 
         if self.get_probs:
             out_bands = [out_raster_object.get_band(bd) for bd in range(1, self.o_info.bands+1)]
