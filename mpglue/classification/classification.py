@@ -4608,8 +4608,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         iwo = 0
         jwo = 0
 
-        logger.info(self.kwargs)
-
         if self.kwargs:
 
             if 'i' in self.kwargs:
