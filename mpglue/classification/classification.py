@@ -4608,6 +4608,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         iwo = 0
         jwo = 0
 
+        logger.info(self.kwargs)
+
         if self.kwargs:
 
             if 'i' in self.kwargs:
@@ -4636,10 +4638,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     cols = self.kwargs['cols']
                     self.o_info.update_info(cols=cols)
 
-            logger.info(start_i)
-            logger.info(start_j)
-            logger.info(rows)
-            logger.info(cols)
+        logger.info(start_i)
+        logger.info(start_j)
+        logger.info(rows)
+        logger.info(cols)
 
         # Determine which bands to open.
         self._set_bands2open()
