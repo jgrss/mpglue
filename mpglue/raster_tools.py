@@ -3418,7 +3418,7 @@ def vis2rgb(image_array):
     return image_array.transpose(1, 2, 0)
 
 
-class create_raster(CreateDriver, FileManager):
+class create_raster(CreateDriver, FileManager, UpdateInfo):
 
     """
     Creates a raster driver to write to.
