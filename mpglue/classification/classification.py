@@ -4680,8 +4680,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             for j in range(start_j, cols+jwo, block_cols):
 
                 logger.info('  Block {:d} of {:d} ...'.format(n_block, n_blocks))
-                logger.info(n_rows)
-                logger.info(n_cols)
 
                 n_block += 1
 
@@ -4691,6 +4689,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     continue
                     
                 n_cols = self._num_rows_cols(j, block_cols, cols+jwo)
+
+                logger.info(n_rows)
+                logger.info(n_cols)
 
                 # Check for zeros in the block.
                 if self.band_check != -1:
