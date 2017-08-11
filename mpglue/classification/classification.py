@@ -4680,8 +4680,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             for j in range(start_j, cols+jwo, block_cols):
 
                 logger.info('  Block {:d} of {:d} ...'.format(n_block, n_blocks))
-                logger.infi(n_rows)
-                logger.infi(n_cols)
+                logger.info(n_rows)
+                logger.info(n_cols)
 
                 n_block += 1
 
