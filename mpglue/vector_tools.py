@@ -1173,6 +1173,11 @@ class RTreeManager(object):
 
         self.grid_infos = list()
 
+        logger.info(index_iter)
+        logger.info(self.field_dict)
+        logger.info(image_envelope)
+        sys.exit()
+
         # Intersect the base shapefile bounding box
         #   with the UTM grids.
         for n in index_iter:
