@@ -1081,6 +1081,8 @@ class RTreeManager(object):
         Intersects the RTree index with a shapefile or extent envelope.
         """
 
+        envelope = None
+
         if isinstance(shapefile2intersect, str):
 
             # Open the base shapefile
@@ -1094,6 +1096,11 @@ class RTreeManager(object):
 
                     # left, right, bottom, top
                     envelope = [bdy_envelope[0], bdy_envelope[1], bdy_envelope[2], bdy_envelope[3]]
+
+        if not isinstance(envelope, list):
+
+            logger.error('The study area envelope was not loaded.')
+            raise NameError
 
         image_envelope = dict(left=envelope[0],
                               right=envelope[1],
@@ -1624,8 +1631,13 @@ def spatial_intersection(select_shp, intersect_shp, output_shp, epsg=None):
         o_shp.close()
 
 
-def select_and_save(file_name, out_vector, select_field=None, select_value=None,
-                    expression=None, overwrite=True, epsg=None):
+def select_and_save(file_name,
+                    out_vector,
+                    select_field=None,
+                    select_value=None,
+                    expression=None,
+                    overwrite=True,
+                    epsg=None):
 
     """
     Selects a vector feature by an attribute and save to new file.
@@ -1646,7 +1658,7 @@ def select_and_save(file_name, out_vector, select_field=None, select_value=None,
         >>> import mpglue as gl
         >>>
         >>> # Save features where 'Id' is equal to 1.
-        >>> mp.select_and_save('/in_shapefile.shp', '/out_shapefile.shp', 'Id', '1')
+        >>> gl.vector_tools.select_and_save('/in_shapefile.shp', '/out_shapefile.shp', 'Id', '1')
     """
 
     if not os.path.isfile(file_name):
