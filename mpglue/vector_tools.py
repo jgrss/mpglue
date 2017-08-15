@@ -1007,8 +1007,9 @@ class RTreeManager(object):
 
         """
         Args:
-            base_shapefile (Optional[str])
-            name_field (Optional[str])
+            base_shapefile (Optional[str]): The base shapefile that will be checked for intersecting features.
+                Default is None, which uses the global MGRS grid.
+            name_field (Optional[str]): The name field of `base_shapefile`. Default is 'Name'.
         """
 
         if not rtree_installed:
@@ -1087,10 +1088,11 @@ class RTreeManager(object):
         Intersects the RTree index with a shapefile or extent envelope.
 
         Args:
-            shapefile2intersect (Optional[str])
-            get_centroid_feature (Optional[bool])
-            name_field (Optional[str])
-            envelope (Optional[list])
+            shapefile2intersect (Optional[str]): The shapfile to intersect.
+            get_centroid_feature (Optional[bool]): Whether to check if a feature's centroid is
+                within the intersecting grid. Default is False, i.e., get all intersecting features.
+            name_field (Optional[str]): The value field for `shapefile2intersect`.
+            envelope (Optional[list]): [left, right, bottom, top]. Default is to extract from `shapefile2intersect`.
             epsg (Optional[int])
             proj4 (Optional[str])
             lat_lon (Optional[int])
@@ -1101,6 +1103,7 @@ class RTreeManager(object):
             # Open the base shapefile
             with vopen(shapefile2intersect) as bdy_info:
 
+                # Get the extent of 1 feature.
                 if bdy_info.n_feas == 1:
 
                     bdy_feature = bdy_info.lyr.GetFeature(0)
@@ -1109,6 +1112,23 @@ class RTreeManager(object):
 
                     # left, right, bottom, top
                     envelope = [bdy_envelope[0], bdy_envelope[1], bdy_envelope[2], bdy_envelope[3]]
+
+                # Get the maximum extent of
+                #   all the features.
+                else:
+
+                    envelope = [10000000., -10000000., 10000000., -10000000.]
+
+                    for fea in range(0, bdy_info.n_feas):
+
+                        bdy_feature = bdy_info.lyr.GetFeature(fea)
+                        bdy_geometry = bdy_feature.GetGeometryRef()
+                        bdy_envelope = bdy_geometry.GetEnvelope()
+
+                        envelope[0] = min(envelope[0], bdy_envelope[0])
+                        envelope[1] = max(envelope[1], bdy_envelope[1])
+                        envelope[2] = min(envelope[2], bdy_envelope[2])
+                        envelope[3] = max(envelope[3], bdy_envelope[3])
 
         if not isinstance(envelope, list):
 
