@@ -1074,7 +1074,7 @@ class RTreeManager(object):
             mgrs_info = os.path.join(MAIN_PATH.replace('mpglue', 'mappy'),
                                      'utilities',
                                      'sentinel',
-                                     'utm_grid_info.txt')
+                                     'utm_grid_info.pickle')
 
             if not os.path.isfile(mgrs_info):
 

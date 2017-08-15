@@ -11,14 +11,7 @@ import fnmatch
 import random
 import datetime
 from collections import OrderedDict
-
-# Pickle
-try:
-    import cPickle as cp
-except:
-    from six.moves import cPickle as cp
-else:
-    import pickle as cp
+import cPickle as cp
 
 from .progressbar.progressbar import ProgressBar
 from .progressbar import widgets
