@@ -1173,7 +1173,6 @@ class RTreeManager(object):
 
         self.grid_infos = list()
 
-        logger.info(len(index_iter))
         logger.info(index_iter)
         logger.info(image_envelope)
         sys.exit()
