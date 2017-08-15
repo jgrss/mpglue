@@ -1001,11 +1001,15 @@ class TransformExtent(object):
 
 class RTreeManager(object):
 
-    """
-    A class to handle nearest neighbor lookups and spatial intersections with RTree
-    """
+    """A class to handle nearest neighbor lookups and spatial intersections with RTree"""
 
-    def __init__(self, base_shapefile=None, name_field=None):
+    def __init__(self, base_shapefile=None, name_field='Name'):
+
+        """
+        Args:
+            base_shapefile (Optional[str])
+            name_field (Optional[str])
+        """
 
         if not rtree_installed:
 
@@ -1057,13 +1061,15 @@ class RTreeManager(object):
                                                           bottom=en[2],
                                                           top=en[3]))
 
-        bdy_info = None
+        del bdy_info
 
         if not isinstance(base_shapefile, str):
 
             # Load the RTree info for the MGRS grid.
             self.rtree_info = os.path.join(MAIN_PATH.replace('mpglue', 'mappy'),
-                                           'utilities', 'sentinel', 'utm_grid_info.txt')
+                                           'utilities',
+                                           'sentinel',
+                                           'utm_grid_info.txt')
 
             self.field_dict = pickle.load(file(self.rtree_info, 'rb'))
 
@@ -1079,9 +1085,16 @@ class RTreeManager(object):
 
         """
         Intersects the RTree index with a shapefile or extent envelope.
-        """
 
-        envelope = None
+        Args:
+            shapefile2intersect (Optional[str])
+            get_centroid_feature (Optional[bool])
+            name_field (Optional[str])
+            envelope (Optional[list])
+            epsg (Optional[int])
+            proj4 (Optional[str])
+            lat_lon (Optional[int])
+        """
 
         if isinstance(shapefile2intersect, str):
 
