@@ -465,7 +465,7 @@ class PickleIt(object):
     @staticmethod
     def load(pickle_file):
 
-        with open(pickle_file, 'wb') as ddp:
+        with open(pickle_file, 'rb') as ddp:
             data_object = cp.load(ddp)
 
         return data_object

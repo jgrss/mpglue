@@ -1097,7 +1097,8 @@ class RTreeManager(object):
         Intersects the RTree index with a shapefile or extent envelope.
 
         Args:
-            shapefile2intersect (Optional[str]): The shapfile to intersect.
+            shapefile2intersect (Optional[str]): The shapfile to intersect. The projection of
+                `shapefile2intersect` should match the projection of `base_shapefile`.
             get_centroid_feature (Optional[bool]): Whether to check if a feature's centroid is
                 within the intersecting grid. Default is False, i.e., get all intersecting features.
             name_field (Optional[str]): The value field for `shapefile2intersect`.
