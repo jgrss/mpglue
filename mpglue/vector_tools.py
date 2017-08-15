@@ -1130,6 +1130,8 @@ class RTreeManager(object):
                         envelope[2] = min(envelope[2], bdy_envelope[2])
                         envelope[3] = max(envelope[3], bdy_envelope[3])
 
+            del bdy_info
+
         if not isinstance(envelope, list):
 
             logger.error('The study area envelope was not loaded.')
