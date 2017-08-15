@@ -12,6 +12,14 @@ import random
 import datetime
 from collections import OrderedDict
 
+# Pickle
+try:
+    import cPickle as cp
+except:
+    from six.moves import cPickle as cp
+else:
+    import pickle as cp
+
 from .progressbar.progressbar import ProgressBar
 from .progressbar import widgets
 
@@ -444,3 +452,20 @@ def _iteration_parameters_values(value1, value2, marker='*'):
     progress_bar.start()
 
     return 1, progress_bar
+
+
+class PickleIt(object):
+
+    @staticmethod
+    def dump(pickle_file, data_object):
+
+        with open(pickle_file, 'wb') as ddp:
+            cp.dump(data_object, ddp, protocol=cp.HIGHEST_PROTOCOL)
+
+    @staticmethod
+    def load(pickle_file):
+
+        with open(pickle_file, 'wb') as ddp:
+            data_object = cp.load(ddp)
+
+        return data_object
