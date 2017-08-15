@@ -1181,15 +1181,9 @@ class RTreeManager(object):
 
         self.grid_infos = list()
 
-        logger.info('  Envelope')
-        logger.info(envelope)
-        logger.info('  Loading grids ...')
-
         # Intersect the base shapefile bounding box
         #   with the UTM grids.
         for n in index_iter:
-
-            logger.info(n)
 
             grid_info = self.field_dict[n]
 
@@ -1257,9 +1251,6 @@ class RTreeManager(object):
 
             else:
                 self.grid_infos.append(grid_info)
-
-        logger.info(self.grid_infos)
-        sys.exit()
 
     def _get_coord_poly(self, the_extent_info):
 
