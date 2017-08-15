@@ -1018,19 +1018,19 @@ class RTreeManager(object):
             logger.warning('Rtree and libspatialindex must be installed for spatial indexing')
             return
 
-        # self.utm_shp_path = os.path.join(MAIN_PATH.replace('mpglue', 'mappy'), 'utilities', 'sentinel')
-        #
         # Setup the UTM MGRS shapefile
-        # if isinstance(base_shapefile, str):
-        #     self.base_shapefile_ = base_shapefile
-        # else:
-        #
-        #     self.base_shapefile_ = os.path.join(self.utm_shp_path, 'sentinel2_grid.shp')
-        #
-        #     if not os.path.isfile(self.base_shapefile_):
-        #
-        #         with tarfile.open(os.path.join(self.utm_shp_path, 'utm_shp.tar.gz'), mode='r') as tar:
-        #             tar.extractall(path=self.utm_shp_path)
+        if isinstance(base_shapefile, str):
+            self.base_shapefile_ = base_shapefile
+        else:
+
+            self.utm_shp_path = os.path.join(MAIN_PATH.replace('mpglue', 'mappy'), 'utilities', 'sentinel')
+
+            self.base_shapefile_ = os.path.join(self.utm_shp_path, 'sentinel2_grid.shp')
+
+            if not os.path.isfile(self.base_shapefile_):
+
+                with tarfile.open(os.path.join(self.utm_shp_path, 'utm_shp.tar.gz'), mode='r') as tar:
+                    tar.extractall(path=self.utm_shp_path)
 
         if rtree_installed:
             self.rtree_index = rtree.index.Index(interleaved=False)
@@ -1038,50 +1038,48 @@ class RTreeManager(object):
             self.rtree_index = dict()
 
         # Load the information from the shapefile.
-        if isinstance(base_shapefile, str):
+        # if isinstance(base_shapefile, str):
+        #     self.field_dict = dict()
 
-            self.field_dict = dict()
+        # Setup the RTree index database.
+        with vopen(self.base_shapefile_) as bdy_info:
 
-            # Setup the RTree index
-            with vopen(self.base_shapefile_) as bdy_info:
+            # Iterate over each feature.
+            for f in range(0, bdy_info.n_feas):
 
-                for f in range(0, bdy_info.n_feas):
+                bdy_feature = bdy_info.lyr.GetFeature(f)
+                bdy_geometry = bdy_feature.GetGeometryRef()
+                en = bdy_geometry.GetEnvelope()
 
-                    bdy_feature = bdy_info.lyr.GetFeature(f)
-                    bdy_geometry = bdy_feature.GetGeometryRef()
-                    en = bdy_geometry.GetEnvelope()
+                if rtree_installed:
+                    self.rtree_index.insert(f, (en[0], en[1], en[2], en[3]))
+                else:
+                    self.rtree_index[f] = (en[0], en[1], en[2], en[3])
 
-                    if rtree_installed:
-                        self.rtree_index.insert(f, (en[0], en[1], en[2], en[3]))
-                    else:
-                        self.rtree_index[f] = (en[0], en[1], en[2], en[3])
+                # if isinstance(base_shapefile, str):
+                #
+                #     feature_name = bdy_feature.GetField(name_field)
+                #
+                #     self.field_dict[f] = dict(name=feature_name,
+                #                               extent=dict(left=en[0],
+                #                                           right=en[1],
+                #                                           bottom=en[2],
+                #                                           top=en[3]))
 
-                    if isinstance(base_shapefile, str):
+        del bdy_info, bdy_feature, bdy_geometry
 
-                        feature_name = bdy_feature.GetField(name_field)
+        # Load the RTree info for the MGRS global grid.
+        mgrs_info = os.path.join(MAIN_PATH.replace('mpglue', 'mappy'),
+                                 'utilities',
+                                 'sentinel',
+                                 'utm_grid_info.pickle')
 
-                        self.field_dict[f] = dict(name=feature_name,
-                                                  extent=dict(left=en[0],
-                                                              right=en[1],
-                                                              bottom=en[2],
-                                                              top=en[3]))
+        if not os.path.isfile(mgrs_info):
 
-            del bdy_info
+            logger.error('The MGRS global grid information file does not exist.')
+            raise NameError
 
-        else:
-
-            # Load the RTree info for the MGRS global grid.
-            mgrs_info = os.path.join(MAIN_PATH.replace('mpglue', 'mappy'),
-                                     'utilities',
-                                     'sentinel',
-                                     'utm_grid_info.pickle')
-
-            if not os.path.isfile(mgrs_info):
-
-                logger.error('The MGRS global grid information file does not exist.')
-                raise NameError
-
-            self.field_dict = PickleIt().load(mgrs_info)
+        self.field_dict = PickleIt().load(mgrs_info)
 
     def get_intersecting_features(self,
                                   shapefile2intersect=None,
