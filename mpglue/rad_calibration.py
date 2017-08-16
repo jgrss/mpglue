@@ -133,20 +133,22 @@ def julian_day_dictionary_r(start_year=1980, end_year=2020):
     return jd_dict_r
 
 
-def get_leap_years(start_year=1980, end_year=2020):
+def get_leap_years(start_year=1980, end_year=2050):
 
     """
     Gets the number of calendar days by year
     """
 
-    max_dict = dict()
+    leap_year_dict = dict()
 
     jd_dict = julian_day_dictionary(start_year=start_year, end_year=end_year)
 
     for yyyy in range(start_year, end_year):
-        max_dict[yyyy] = max([int(k.split('-')[1]) for k, v in jd_dict.iteritems() if str(yyyy) in k])
+        leap_year_dict[yyyy] = max([int(k.split('-')[1]) for k, v in jd_dict.iteritems() if str(yyyy) in k])
 
-    return max_dict
+    # leap_year_dict_r = {v: k for k, v in leap_year_dict.items()}
+
+    return leap_year_dict
 
 
 def jd_interp(the_array, length, skip_factor):
