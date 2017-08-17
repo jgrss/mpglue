@@ -2009,16 +2009,23 @@ def create_fields(v_info, field_names, field_types, field_widths):
     return v_info
 
 
-def add_fields(input_vector, output_vector=None, field_names=['x', 'y'], method='field-xy',
-               area_units='km', constant=1, epsg=None, field_breaks=None, default_value=None,
+def add_fields(input_vector,
+               output_vector=None,
+               field_names=['x', 'y'],
+               method='field-xy',
+               area_units='km',
+               constant=1,
+               epsg=None,
+               field_breaks=None,
+               default_value=None,
                field_type=None):
 
     """
-    Adds x, y coordinate fields to an existing vector.
+    Adds fields to an existing vector
 
     Args:
         input_vector (str): The input vector.
-        output_vector (Optional[str]): An output vector iwth ``method``='dissolve'. Default is None.
+        output_vector (Optional[str]): An output vector with ``method``='dissolve'. Default is None.
         field_names (Optional[str list]): The field names. Default is ['x', 'y'].
         method (Optional[str]): The method to use. Default is 'field-xy'. Choices are
             ['field-xy', 'field-id', 'field-area', 'field-constant', 'field-dissolve'].
