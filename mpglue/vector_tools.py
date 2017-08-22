@@ -336,7 +336,7 @@ def delete_vector(file_name):
         with vopen(file_name) as v_info:
             v_info.delete()
 
-        v_info = None
+        del v_info
 
     # Delete QGIS files.
     d_name, f_name = os.path.split(file_name)
@@ -1729,9 +1729,9 @@ def select_and_save(file_name,
 
         out_lyr = out_driver_source.datasource.CopyLayer(v_info.lyr, f_base)
 
-        out_lyr = None
+        del out_lyr
 
-    v_info = None
+    del v_info
 
 
 def list_field_names(in_shapefile, be_quiet=False, epsg=None):
