@@ -3278,8 +3278,16 @@ def _merge_dicts(dict1, dict2):
     return dict3
 
 
-def warp(input_image, output_image, out_epsg=None, in_epsg=None, resample='nearest',
-         cell_size=0, d_type=None, return_datasource=False, overwrite=False, **kwargs):
+def warp(input_image,
+         output_image,
+         out_epsg=None,
+         in_epsg=None,
+         resample='nearest',
+         cell_size=0,
+         d_type=None,
+         return_datasource=False,
+         overwrite=False,
+         **kwargs):
 
     """
     Warp transforms a dataset
