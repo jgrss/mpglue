@@ -12,9 +12,9 @@ import sys
 import time
 import argparse
 from copy import copy
-import subprocess
 
 # MapPy
+from .errors import logger
 from . import raster_tools, vector_tools
 from .helpers import _iteration_parameters, overwrite_file
 
@@ -281,7 +281,7 @@ def main():
     if args.examples:
         _examples()
 
-    print('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
+    logger.info('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
 
     start_time = time.time()
 
@@ -292,8 +292,8 @@ def main():
                 B_band=args.B_band, C_band=args.C_band, D_band=args.D_band,
                 E_band=args.E_band, F_band=args.F_band, G_band=args.G_band)
 
-    print('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
-          (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
+    logger.info('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
+                (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
 
 if __name__ == '__main__':
     main()

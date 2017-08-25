@@ -14,13 +14,12 @@ import argparse
 import fnmatch
 from joblib import Parallel, delayed
 
-from .poly2points import poly2points
-from .error_matrix import error_matrix
-
 from .. import raster_tools
 from .. import vector_tools
 from ..helpers import _iteration_parameters_values
-from ..errors import ArrayOffsetError
+from ..errors import ArrayOffsetError, logger
+from .poly2points import poly2points
+from .error_matrix import error_matrix
 
 # NumPy
 try:
@@ -51,7 +50,7 @@ def _sample_parallel(band_position, image_name, c_list, accuracy, feature_length
     # image_info = raster_tools.ropen(image_name)
 
     # print 'Band {:d} of {:d} ...'.format(band_position, image_info.bands)
-    print('Band {:d} of {:d} ...'.format(band_position, datasource.RasterCount))
+    logger.info('Band {:d} of {:d} ...'.format(band_position, datasource.RasterCount))
 
     # image_info.get_band(band_position)
 
@@ -131,7 +130,7 @@ class SampleImage(object):
             raise IOError('\n{} does not exist. It should be a raster image.'.format(self.image_file))
 
         if self.neighbors and (self.n_jobs != 0):
-            print('Cannot sample neighbors in parallel, so setting ``n_jobs`` to 0.')
+            logger.info('Cannot sample neighbors in parallel, so setting ``n_jobs`` to 0.')
             self.n_jobs = 0
 
         self.d_name_points, f_name_points = os.path.split(self.points_file)
@@ -146,7 +145,7 @@ class SampleImage(object):
 
         if not self.out_dir:
             self.out_dir = copy(self.d_name_points)
-            print('\nNo output directory was given. Results will be saved to {}'.format(self.out_dir))
+            logger.info('\nNo output directory was given. Results will be saved to {}'.format(self.out_dir))
 
         if not os.path.isdir(self.out_dir):
             os.makedirs(self.out_dir)
@@ -171,7 +170,7 @@ class SampleImage(object):
 
         ogr_com = '{} -sql {}"'.format(ogr_com, ogr_com_sql)
 
-        print('\nSubsetting {} by classes {} ...\n'.format(self.points_file, ','.join(self.sql_expression_attr)))
+        logger.info('\nSubsetting {} by classes {} ...\n'.format(self.points_file, ','.join(self.sql_expression_attr)))
 
         subprocess.call(ogr_com, shell=True)
 
@@ -260,7 +259,7 @@ class SampleImage(object):
 
     def sample(self):
 
-        print('  \nSampling {} ...\n'.format(self.f_name_rst))
+        logger.info('  \nSampling {} ...\n'.format(self.f_name_rst))
 
         # Open the image.
         with raster_tools.ropen(self.image_file) as self.m_info:
@@ -270,9 +269,9 @@ class SampleImage(object):
 
             if self.m_info.corrupted_bands:
 
-                print()
-                print('The following bands appear to be corrupted:')
-                print(', '.join(self.m_info.corrupted_bands))
+                logger.info()
+                logger.info('The following bands appear to be corrupted:')
+                logger.info(', '.join(self.m_info.corrupted_bands))
                 sys.exit()
 
             self.write_headers()
@@ -435,7 +434,7 @@ class SampleImage(object):
 
             value_arr = np.zeros((feature_length*self.updater, self.m_info.bands+4), dtype='float32')
 
-            print('\nSampling {:,d} samples from {:d} image layers ...\n'.format(feature_length, self.m_info.bands))
+            logger.info('\nSampling {:,d} samples from {:d} image layers ...\n'.format(feature_length, self.m_info.bands))
 
             ctr, pbar = _iteration_parameters_values(self.m_info.bands, feature_length)
 
@@ -719,7 +718,7 @@ def main():
     if args.examples:
         _examples()
 
-    print('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
+    logger.info('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
 
     start_time = time.time()
 
@@ -727,8 +726,8 @@ def main():
                   accuracy=args.accuracy, field_type=args.fieldtype, neighbors=args.neighbors,
                   n_jobs=args.n_jobs, sql_expression_attr=args.sql_attr, sql_expression_field=args.sql_field)
 
-    print('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
-          (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
+    logger.info('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
+                (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
 
 if __name__ == '__main__':
     main()

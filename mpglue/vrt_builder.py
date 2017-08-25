@@ -471,7 +471,7 @@ def main():
     if args.examples:
         _examples()
 
-    print('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
+    logger.info('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
 
     start_time = time.time()
 
@@ -479,8 +479,8 @@ def main():
                 bands2include=args.bands2include, force_type=args.force_type,
                 subset=args.subset, base_name=args.base_name)
 
-    print('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
-          (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
+    logger.info('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
+                (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
 
 if __name__ == '__main__':
     main()

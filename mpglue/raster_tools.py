@@ -137,6 +137,8 @@ STORAGE_DICT = {'byte': 'uint8',
                 'float32': 'float32',
                 'float64': 'float64'}
 
+STORAGE_DICT_r = {v: k for k, v in STORAGE_DICT.items()}
+
 STORAGE_DICT_GDAL = {'unknown': gdal.GDT_Unknown,
                      'byte': gdal.GDT_Byte,
                      'uint16': gdal.GDT_UInt16,
@@ -3742,6 +3744,7 @@ def write2raster(out_array,
     array_shape = out_array.shape
 
     if len(array_shape) > 3:
+
         logger.error('The array shape should be 2d or 3d.')
         raise ArrayShapeError
 
@@ -3759,17 +3762,16 @@ def write2raster(out_array,
     if not out_rst:
 
         if not isinstance(o_info, ropen):
+
             logger.error('The output information must be set.')
             raise ropenError
 
         new_file = True
 
-        STORAGE_DICT_r = {v: k for k, v in STORAGE_DICT.items()}
-
-        o_info.storage = STORAGE_DICT_r[out_array.dtype.name]
-        o_info.bands = out_dims
-        o_info.rows = out_rows
-        o_info.cols = out_cols
+        o_info.update_info(storage=STORAGE_DICT_r[out_array.dtype.name],
+                           bands=out_dims,
+                           rows=out_rows,
+                           cols=out_cols)
 
         if kwargs:
             out_rst = create_raster(out_name, o_info, **kwargs)
@@ -5537,7 +5539,7 @@ def main():
     if args.examples:
         _examples()
 
-    print('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
+    logger.info('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
 
     start_time = time.time()
 
@@ -5545,32 +5547,32 @@ def main():
 
         i_info = ropen(args.input)
 
-        print('\nThe projection:\n')
-        print(i_info.projection)
+        logger.info('\nThe projection:\n')
+        logger.info(i_info.projection)
 
-        print('\n======================================\n')
+        logger.info('\n======================================\n')
 
-        print('The extent (left, right, top, bottom):\n')
-        print('{:f}, {:f}, {:f}, {:f}'.format(i_info.left, i_info.right, i_info.top, i_info.bottom))
+        logger.info('The extent (left, right, top, bottom):\n')
+        logger.info('{:f}, {:f}, {:f}, {:f}'.format(i_info.left, i_info.right, i_info.top, i_info.bottom))
 
         storage_string = 'The data type: {}\n'.format(i_info.storage)
 
-        print('\n{}\n'.format(''.join(['=']*(len(storage_string)-1))))
+        logger.info('\n{}\n'.format(''.join(['=']*(len(storage_string)-1))))
 
-        print(storage_string)
+        logger.info(storage_string)
 
-        print('=========\n')
+        logger.info('=========\n')
 
-        print('The size:\n')
-        print('{:,d} rows'.format(i_info.rows))
-        print('{:,d} columns'.format(i_info.cols))
+        logger.info('The size:\n')
+        logger.info('{:,d} rows'.format(i_info.rows))
+        logger.info('{:,d} columns'.format(i_info.cols))
 
         if i_info.bands == 1:
-            print('{:,d} band'.format(i_info.bands))
+            logger.info('{:,d} band'.format(i_info.bands))
         else:
-            print('{:,d} bands'.format(i_info.bands))
+            logger.info('{:,d} bands'.format(i_info.bands))
 
-        print('{:.2f} meter cell size'.format(i_info.cellY))
+        logger.info('{:.2f} meter cell size'.format(i_info.cellY))
 
         i_info.close()
 
@@ -5581,8 +5583,8 @@ def main():
                     set_below=args.set_below, set_above=args.set_above,
                     set_common=args.set_common, out_storage=args.out_storage)
 
-    print('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
-          (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
+    logger.info('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
+                (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
 
 if __name__ == '__main__':
     main()

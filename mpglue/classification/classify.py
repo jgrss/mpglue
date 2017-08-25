@@ -10,6 +10,7 @@ import time
 import argparse
 import ast
 
+from ..errors import logger
 from .classification import classification
 # from classification import classification_r
 
@@ -121,7 +122,7 @@ def main():
     if isinstance(args.class_subs, str):
         args.class_subs = ast.literal_eval(args.class_subs)
 
-    print('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
+    logger.info('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
 
     start_time = time.time()
 
@@ -150,8 +151,8 @@ def main():
                     row_block_size=args.row_block_size, col_block_size=args.col_block_size,
                     n_jobs=args.n_jobs, n_jobs_vars=args.n_jobs_vars)
 
-    print('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n'
-          % (time.asctime(time.localtime(time.time())), (time.time() - start_time)))
+    logger.info('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
+                (time.asctime(time.localtime(time.time())), (time.time() - start_time)))
 
 
 if __name__ == '__main__':

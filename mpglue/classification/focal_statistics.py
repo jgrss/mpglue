@@ -11,6 +11,7 @@ import argparse
 import itertools
 from joblib import Parallel, delayed
 
+from ..errors import logger
 from .. import raster_tools
 from ..helpers import overwrite_file, get_block_chunks
 from ._moving_window import moving_window
@@ -112,7 +113,7 @@ def focal_statistics(in_image, out_image, band=1, overwrite=False, chunk_size=51
 
         block_chunks = get_block_chunks(i_info.rows, i_info.cols, chunk_size, window_size)
 
-        print '  Processing tiles ...'
+        logger.info('  Processing tiles ...')
 
         chunk_stats = Parallel(n_jobs=n_jobs,
                                max_nbytes=None)(delayed(do_stat)(i_info.read(bands2open=band,
@@ -160,7 +161,7 @@ def focal_statistics(in_image, out_image, band=1, overwrite=False, chunk_size=51
                     if tile_count > ttl_blks:
                         tile_count = ttl_blks
 
-                    print '  Processing tiles {:d} -- {:d} of {:d} ...'.format(ttl_blks_ct, tile_count, ttl_blks)
+                    logger.info('  Processing tiles {:d} -- {:d} of {:d} ...'.format(ttl_blks_ct, tile_count, ttl_blks))
 
                 out_array = moving_window(i_info.read(bands2open=band, i=i, j=j, rows=n_rows, cols=n_cols,
                                                       d_type='float32'), **kwargs)
@@ -219,7 +220,7 @@ def main():
     if args.examples:
         _examples()
 
-    print('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
+    logger.info('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
 
     start_time = time.time()
 
@@ -227,8 +228,8 @@ def main():
                      window_size=args.window_size, ignore_value=args.ignore_value,
                      overwrite=args.overwrite, resample=args.resample, n_jobs=args.n_jobs)
 
-    print('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
-          (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
+    logger.info('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
+                (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
 
 if __name__ == '__main__':
     main()

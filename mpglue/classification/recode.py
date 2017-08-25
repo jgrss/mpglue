@@ -12,8 +12,8 @@ import argparse
 import ast
 
 # MapPy
+from ..errors import logger
 from .. import raster_tools
-from .. import vector_tools
 
 # GDAL
 try:
@@ -89,7 +89,7 @@ def recode(input_poly, input_image, output_image, recode_dict, class_id='Id'):
 
         if not os.path.isfile(out_vector_image):
 
-            print '\nRasterizing {} ...\n'.format(f_name)
+            logger.info('\nRasterizing {} ...\n'.format(f_name))
 
             raster_tools.rasterize_vector(input_poly, out_vector_image,
                                           burn_id=class_id,
@@ -152,15 +152,15 @@ def main():
     if args.examples:
         _examples()
 
-    print('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
+    logger.info('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
 
     start_time = time.time()
 
     recode(args.poly, args.input, args.output, ast.literal_eval(args.recode_rules),
            class_id=args.class_id)
 
-    print('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
-          (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
+    logger.info('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
+                (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
 
 if __name__ == '__main__':
     main()

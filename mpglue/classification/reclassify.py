@@ -6,13 +6,13 @@ Date Created: 11/14/2011
 """ 
 
 # Import system modules
-import os
 import sys
 import time
 import ast
 import argparse
 
 # MapPy
+from ..errors import logger
 from .. import raster_tools
 
 
@@ -98,14 +98,14 @@ def main():
     if args.examples:
         _examples()
 
-    print('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
+    logger.info('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
 
     start_time = time.time()
 
     reclassify(args.input, args.output, ast.literal_eval(args.reclassify))
 
-    print('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
-          (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
+    logger.info('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
+                (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
 
 if __name__ == '__main__':
     main()

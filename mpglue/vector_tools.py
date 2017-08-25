@@ -2447,7 +2447,7 @@ def main():
     if args.examples:
         _examples()
 
-    print('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
+    logger.info('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
 
     start_time = time.time()
 
@@ -2455,14 +2455,14 @@ def main():
 
         v_info = vopen(args.input, epsg=args.epsg)
 
-        print('\nThe projection:\n')
-        print(v_info.projection)
+        logger.info('\nThe projection:\n')
+        logger.info(v_info.projection)
 
-        print('\nThe extent (left, right, top, bottom):\n')
-        print('{:f}, {:f}, {:f}, {:f}'.format(v_info.left, v_info.right, v_info.top, v_info.bottom))
+        logger.info('\nThe extent (left, right, top, bottom):\n')
+        logger.info('{:f}, {:f}, {:f}, {:f}'.format(v_info.left, v_info.right, v_info.top, v_info.bottom))
 
-        print('\nThe geometry:\n')
-        print(v_info.shp_geom_name)
+        logger.info('\nThe geometry:\n')
+        logger.info(v_info.shp_geom_name)
 
         v_info.close()
 
@@ -2493,8 +2493,8 @@ def main():
                    field_breaks=ast.literal_eval(args.field_breaks),
                    default_value=args.default_value)
 
-    print('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
-          (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
+    logger.info('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
+                (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
 
 if __name__ == '__main__':
     main()

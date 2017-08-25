@@ -23,6 +23,7 @@ try:
 except:
     import raster_tools
 
+from .errors import logger
 from .helpers import _iteration_parameters
 # from mappy.utilities import composite
 
@@ -240,9 +241,9 @@ class SensorInfo(object):
         # Return the dictionary sorted by values
         self.expected_band_order = OrderedDict(sorted(self.band_orders[sensor].items(), key=lambda sbo: sbo[1]))
 
-        print('\nExpected band order for {}:\n'.format(sensor))
-        print('  WAVELENGTH  Band')
-        print('  ----------  ----')
+        logger.info('\nExpected band order for {}:\n'.format(sensor))
+        logger.info('  WAVELENGTH  Band')
+        logger.info('  ----------  ----')
 
         sp = ' '
 
@@ -254,7 +255,7 @@ class SensorInfo(object):
             for gx in xrange(0, gap_len):
                 gap_string += sp
 
-            print('  {}{}{:d}'.format(w.upper(), gap_string, b))
+            logger.info('  {}{}{:d}'.format(w.upper(), gap_string, b))
 
         print
 
@@ -1515,7 +1516,7 @@ class VegIndices(BandHandler):
                         os.remove(associated_file_full)
 
         if os.path.isfile(self.output_image):
-            print('\n{} already exists ...'.format(self.output_image))
+            logger.info('\n{} already exists ...'.format(self.output_image))
         else:
 
             out_rst = raster_tools.create_raster(self.output_image, o_info, compress='none')
@@ -1524,7 +1525,7 @@ class VegIndices(BandHandler):
 
             if not self.be_quiet:
 
-                print('\n{} ...\n'.format(self.input_indice.upper()))
+                logger.info('\n{} ...\n'.format(self.input_indice.upper()))
 
                 if print_progress:
                     ctr, pbar = _iteration_parameters(self.rows, self.cols, block_size_rows, block_size_cols)
@@ -1599,7 +1600,7 @@ class VegIndices(BandHandler):
             if self.input_indice.upper() == 'VCI':
 
                 if not self.be_quiet:
-                    print('\nComputing VCI ...')
+                    logger.info('\nComputing VCI ...')
 
                 # iterative over entire image with row blocks
                 for self.i in xrange(0, self.rows, block_size_rows):
@@ -1646,7 +1647,7 @@ class VegIndices(BandHandler):
 
         if overviews:
 
-            print('\nComputing overviews ...\n')
+            logger.info('\nComputing overviews ...\n')
 
             with raster_tools.ropen(output_image) as v_info:
                 v_info.build_overviews()
@@ -1977,7 +1978,7 @@ def main():
     if args.examples:
         _examples()
 
-    print('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
+    logger.info('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
 
     start_time = time.time()
 
@@ -1985,8 +1986,8 @@ def main():
                 no_data=args.no_data, chunk_size=args.chunk, be_quiet=args.be_quiet,
                 overwrite=args.overwrite, overviews=args.overviews)
 
-    print('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
-          (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
+    logger.info('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
+                (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
 
 if __name__ == '__main__':
     main()
