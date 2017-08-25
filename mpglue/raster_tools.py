@@ -3711,7 +3711,7 @@ def write2raster(out_array,
         o_info (Optional[object]): Output image information. Needed if ``out_rst`` not given. Default is None.
         x (Optional[int]): Column starting position. Default is 0.
         y (Optional[int]): Row starting position. Default is 0.
-        out_rst (Optional[object]): GDAL object to right to, otherwise created. Default is None.
+        out_rst (Optional[object]): GDAL object to write to, otherwise created. Default is None.
         write2bands (Optional[int or int list]): Band positions to write to, otherwise takes the order of the input
             array dimensions. Default is None.
         close_band (Optional[bool]): Whether to flush the band cache. Default is True.
