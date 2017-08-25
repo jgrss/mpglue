@@ -2426,7 +2426,7 @@ class PanSharpen(object):
 
             bp.run()
 
-        p_info = None
+        del m_info, p_info
 
     def _warp_multi(self):
 
@@ -2436,7 +2436,7 @@ class PanSharpen(object):
             extent = p_info.extent
             cell_size = p_info.cellY
 
-        p_info = None
+        del p_info
 
         self.multi_warped = os.path.join(self.out_dir, '{}_warped.tif'.format(self.f_base))
 
