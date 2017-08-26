@@ -1210,7 +1210,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
                     self.projection = line.replace('coordinate system string = {', '')
                     self.projection = self.projection.replace('}\n', '')
 
-    def build_overviews(self, sampling_method='nearest', levels=None):
+    def build_overviews(self, sampling_method='nearest', levels=None, be_quiet=False):
 
         """
         Builds image overviews.
@@ -1218,6 +1218,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
         Args:
             sampling_method (Optional[str]): The sampling method to use. Default is 'nearest'.
             levels (Optional[int list]): The levels to build. Default is [2, 4, 8, 16].
+            be_quiet (Optional[bool]): Whether to be quiet and do not print progress. Default is False.
         """
 
         if not levels:
@@ -1226,8 +1227,14 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
             levels = map(int, levels)
 
         try:
+
+            if not be_quiet:
+                logger.info('  Building pyramid overviews ...')
+
             self.datasource.BuildOverviews(sampling_method.upper(), overviewlist=levels)
+
         except:
+
             logger.error(gdal.GetLastErrorMsg())
             raise ValueError('Failed to build overviews.')
 
@@ -1717,15 +1724,6 @@ class SentinelParser(object):
     A class to parse Sentinel 2 metadata
     """
 
-    def __init__(self, metadata, band_order=None):
-
-        self.bo = copy.copy(band_order)
-
-        if metadata.endswith('.xml'):
-            self.parse_xml(metadata)
-        else:
-            raise NameError('Parser type not supported')
-
     def parse_xml(self, metadata):
 
         # xmltodict
@@ -1733,6 +1731,11 @@ class SentinelParser(object):
             import xmltodict
         except ImportError:
             raise ImportError('xmltodict must be installed to parse Sentinel data')
+
+        if not metadata.endswith('.xml'):
+
+            logger.error('Parser type not supported')
+            raise NameError
 
         with open(metadata) as xml_tree:
             xml_object = xmltodict.parse(xml_tree.read())
@@ -3329,6 +3332,8 @@ def warp(input_image,
         None, writes to `output_image'.
     """
 
+    check_and_create_dir(os.path.split(output_image)[0])
+
     if isinstance(out_epsg, int):
         out_epsg = 'EPSG:{:d}'.format(out_epsg)
 
@@ -3400,11 +3405,14 @@ def translate(input_image, output_image, cell_size=0, d_type=None, **kwargs):
 
         Examples:
             >>> from mpglue import raster_tools
+            >>>
             >>> raster_tools.translate('input.tif', 'output.tif',
             >>>                        cell_size=30.,
             >>>                        format='GTiff', d_type='byte',
             >>>                        creationOptions=['GDAL_CACHEMAX=256', 'TILED=YES'])
     """
+
+    check_and_create_dir(os.path.split(output_image)[0])
 
     if isinstance(d_type, str):
 
