@@ -1717,7 +1717,7 @@ class SentinelParser(object):
     A class to parse Sentinel 2 metadata
     """
 
-    def __init__(self, metadata, band_order=[]):
+    def __init__(self, metadata, band_order=None):
 
         self.bo = copy.copy(band_order)
 
@@ -1749,23 +1749,26 @@ class SentinelParser(object):
 
         self.year, self.month, self.day = product_info['GENERATION_TIME'][:10].split('-')
 
-        self.band_list = product_info['Query_Options']['Band_List']
-
-        self.band_list = [bn for bn in self.band_list['BAND_NAME']]
+        # self.band_list = product_info['Query_Options']['Band_List']
+        # self.band_list = [bn for bn in self.band_list['BAND_NAME']]
 
         granule_list = product_info['Product_Organisation']['Granule_List']
 
-        self.granule_dict = {}
-        
-        for granule in granule_list:
+        self.band_list = granule_list['Granule']['IMAGE_FILE']
 
-            tile = granule['Granules']
-            tile_id = tile['@granuleIdentifier']
-            image_ids = tile['IMAGE_ID']
+        image_format = granule_list['Granule']['@imageFormat']
 
-            image_format = tile['@imageFormat']
-
-            self.granule_dict[tile_id] = image_ids
+        # self.granule_dict = dict()
+        #
+        # for granule in granule_list:
+        #
+        #     tile = granule['Granules']
+        #     tile_id = tile['@granuleIdentifier']
+        #     image_ids = tile['IMAGE_ID']
+        #
+        #     image_format = tile['@imageFormat']
+        #
+        #     self.granule_dict[tile_id] = image_ids
 
         self.image_ext = FORMAT_DICT[image_format]
 
