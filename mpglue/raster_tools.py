@@ -3154,11 +3154,6 @@ def read(image2open=None,
     elif not isinstance(i_info, ropen) and isinstance(image2open, str):
         i_info = ropen(image2open)
 
-    if isinstance(d_type, str):
-        d_type = STORAGE_DICT[d_type]
-    else:
-        d_type = STORAGE_DICT[i_info.storage.lower()]
-
     if i < 0:
         i = 0
 
@@ -3221,6 +3216,12 @@ def read(image2open=None,
         return i_info.read(**kwargs)
 
     else:
+
+        # Convert to NumPy dtype.
+        if isinstance(d_type, str):
+            d_type = STORAGE_DICT[d_type]
+        else:
+            d_type = STORAGE_DICT[i_info.storage.lower()]
 
         # format_dict = {'byte': 'B', 'int16': 'i', 'uint16': 'I', 'float32': 'f', 'float64': 'd'}
 
