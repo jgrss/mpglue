@@ -170,7 +170,7 @@ def overwrite_file(file2overwrite):
 
         for associated_file in associated_files:
 
-            associated_file_full = '{}/{}'.format(di_name, associated_file)
+            associated_file_full = os.path.join(di_name, associated_file)
 
             if os.path.isfile(associated_file_full):
                 os.remove(associated_file_full)

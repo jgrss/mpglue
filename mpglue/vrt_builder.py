@@ -7,6 +7,7 @@ Date Created: 4/29/2015
 
 import os
 import sys
+import fnmatch
 import time
 import argparse
 from collections import OrderedDict
@@ -14,12 +15,12 @@ from collections import OrderedDict
 from .errors import logger
 from . import raster_tools, vector_tools
 
-FORCE_TYPE_DICT = {'byte': 'Byte',
-                   'float32': 'Float32',
-                   'float64': 'Float64',
-                   'uint16': 'UInt16',
-                   'uint32': 'Uint32',
-                   'uint64': 'Uint64'}
+FORCE_TYPE_DICT = dict(byte='Byte',
+                       float32='Float32',
+                       float64='Float64',
+                       uint16='UInt16',
+                       uint32='Uint32',
+                       uint64='Uint64')
 
 
 class VRTBuilder(object):
@@ -63,25 +64,62 @@ class VRTBuilder(object):
 
         self.xml_end = '</VRTDataset>'
 
-    def get_full_extent(self, in_dict):
+    def get_full_extent(self, in_dict, separate, search_extension):
 
-        """
-        Gets extent information for all images
-        """
+        """Gets extent information for all images"""
+
+        if isinstance(in_dict, str):
+
+            if not os.path.isdir(in_dict):
+
+                logger.error('The input string should be an existing directory.')
+                raise TypeError
+
+            # List the images.
+            image_search_list = sorted(fnmatch.filter(os.listdir(in_dict), '*{}'.format(search_extension)))
+
+            image_search_list = [os.path.join(in_dict, im) for im in image_search_list]
+
+            # Store as a dictionary.
+            if separate:
+                in_dict = zip(map(str, range(1, len(image_search_list)+1)), [[im] for im in image_search_list])
+            else:
+                in_dict = {'1': image_search_list}
+
+        elif isinstance(in_dict, list):
+
+            # Store as a dictionary.
+            if separate:
+                in_dict = zip(map(str, range(1, len(in_dict)+1)), [[im] for im in in_dict])
+            else:
+                in_dict = {'1': in_dict}
+
+        else:
+
+            if not isinstance(in_dict, dict):
+
+                logger.error('The input parameter must be a dictionary, list, or directory.')
+                raise TypeError
 
         # Ensure order by sorting by keys.
         self.in_dict = OrderedDict(sorted(in_dict.items()))
 
-        # use only the first list for the extent
-        image_list = in_dict['1']
+        # Use only the first list
+        #   for the extent.
+        image_list = self.in_dict['1']
 
         if not isinstance(image_list, list):
-            raise TypeError('An image list must be given.')
+
+            logger.error('An image list must be given.')
+            raise TypeError
 
         if not image_list:
-            raise ValueError('A full image list must be given.')
 
-        # get the minimum and maximum extent of all images
+            logger.error('A full image list must be given.')
+            raise ValueError
+
+        # Get the minimum and maximum
+        #   extent of all images.
 
         self.left = 100000000.
         self.right = -100000000.
@@ -106,7 +144,7 @@ class VRTBuilder(object):
                 self.top = max(i_info.top, self.top)
                 self.bottom = min(i_info.bottom, self.bottom)
 
-            i_info = None
+            del i_info
 
         self.geo_transform[0] = self.left
         self.geo_transform[3] = self.top
@@ -146,8 +184,14 @@ class VRTBuilder(object):
             self.xml_band_header = self.xml_band_header.replace('<NoDataValue>0', '<NoDataValue>{:f}'.format(no_data))
             self.xml_band = self.xml_band.replace('<NODATA>0', '<NODATA>{:f}'.format(no_data))
 
-    def add_bands(self, in_dict, bands2include=None, start_band=1, force_type=None,
-                  subset=False, base_name=None, be_quiet=False):
+    def add_bands(self,
+                  in_dict,
+                  bands2include=None,
+                  start_band=1,
+                  force_type=None,
+                  subset=False,
+                  base_name=None,
+                  be_quiet=False):
 
         """
         in_dict (OrderedDict): An ordered dictionary. The main bands should be first, followed by ancillary data.
@@ -370,37 +414,67 @@ class VRTBuilder(object):
         self.band_dict = OrderedDict(sorted(self.band_dict.items(), key=lambda t: t[0]))
 
 
-def vrt_builder(in_dict, out_vrt, bands2include=None, start_band=1, force_type=None,
-                subset=False, base_name=None, no_data=None, be_quiet=False, overwrite=False):
+def vrt_builder(in_dict,
+                out_vrt,
+                bands2include=None,
+                start_band=1,
+                force_type=None,
+                subset=False,
+                base_name=None,
+                no_data=None,
+                be_quiet=False,
+                overwrite=False,
+                separate=False,
+                search_extension='.tif'):
 
     """
     Builds a VRT file, accepting raster files with different band counts.
     
     Args:
-        in_dict (dict): The input dictionary of images to add to a VRT file.
+        in_dict (dict or list or str): The input dictionary, image list, or directory of images to add to a VRT file.
 
-            Format:
-                {'1': <list of images>,
-                 '2': <list of images>,
+            dict format:
+                {'1': [<list of images>],
+                 '2': [<list of images>],
                  ...}
 
             where,
                 each dictionary key is an separate layer in the VRT output.
+
+            Note:
+                If `in_dict`=`str`, it is assumed to be a directory and the file names will be sorted.
+                If `in_dict`=`list`, the file names are assumed to be sorted.
+
         out_vrt (str): The output VRT file.
         bands2include (Optional[list]): A list of bands to include. Default is None, or all bands.
         force_type (Optional[str]): Force the output storage type. Default is None.
         subset (Optional[bool]): Whether to subset ``in_dict`` >= '2' to '1'. Default is False.
         base_name (Optional[str]): A base name to prepend to the /subs directory. Default is None.
-        no_data (Optional[int or float]):
+        separate (Optional[bool]): Whether to keep layers separate. Otherwise, mosaic as one layer. Default is False.
+            Note:
+                Only applied when `in_dict`=`str`.
+        search_extension (Optional[str]): The image search extension when `in_dict`=`str`. Default is '.tif'.
+        no_data (Optional[int or float]): The output no data flag. Default is None.
         be_quiet (Optional[bool]): Whether to be quiet and do not print progress. Default is False.
         overwrite (Optional[bool]): Whether to overwrite `out_vrt`, if it exists. Default is False.
 
     Examples:
-        >>> # Stack image bands.
+        >>> # Stack image bands from a dictionary.
         >>> vrt_builder({'1': ['image1.tif'],
         >>>             '2': ['image2.tif'],
         >>>             '3': ['image3.tif']},
         >>>             '/out_vrt.vrt')
+        >>>
+        >>> # Stack GeoTiffs from a directory.
+        >>> vrt_builder('/image_dir',
+        >>>             '/out_vrt.vrt',
+        >>>             separate=True,
+        >>>             search_extension='.tif')
+        >>>
+        >>> # Mosaic GeoTiffs from a list.
+        >>> vrt_builder(['/image1.tif', '/image2.tif'],
+        >>>             '/out_vrt.vrt',
+        >>>             separate=False)
         >>>
         >>> # Stack multiple sources and subset.
         >>> vrt_builder({'1': ['image1.tif', 'imag2.tif'],
@@ -414,12 +488,16 @@ def vrt_builder(in_dict, out_vrt, bands2include=None, start_band=1, force_type=N
     # VRT builder class
     vb = VRTBuilder()
 
+    # Prepare the VRT XML strings.
     vb.get_xml_base()
 
-    vb.get_full_extent(in_dict)
+    # Get the image extent information.
+    vb.get_full_extent(in_dict, separate, search_extension)
 
+    # Update the main part of the XML string.
     vb.replace_main(no_data=no_data)
 
+    # Add the data to the XML string.
     vb.add_bands(in_dict,
                  bands2include=bands2include,
                  start_band=start_band,
@@ -428,7 +506,7 @@ def vrt_builder(in_dict, out_vrt, bands2include=None, start_band=1, force_type=N
                  base_name=base_name,
                  be_quiet=be_quiet)
 
-    d_name, f_name = os.path.split(out_vrt)
+    d_name = os.path.split(out_vrt)[0]
 
     if not os.path.isdir(d_name):
         os.makedirs(d_name)
@@ -438,6 +516,7 @@ def vrt_builder(in_dict, out_vrt, bands2include=None, start_band=1, force_type=N
         if os.path.isfile(out_vrt):
             os.remove(out_vrt)
 
+    # Write the VRT to file.
     with open(out_vrt, 'w') as xml_writer:
         xml_writer.writelines(vb.xml_base)
 
