@@ -334,19 +334,46 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2, mode='c'] _rolling_median_v(np.ndarray[
     return arr
 
 
-cdef DTYPE_float32_t[:, :] _rolling_mean(DTYPE_float32_t[:, :] arr,
-                                         int window_size,
-                                         DTYPE_float32_t[:] weights,
-                                         bint do_weights):
+cdef void _rolling_mean1d(DTYPE_float32_t[:] array2process,
+                          int cols,
+                          int window_size,
+                          int window_half,
+                          bint do_weights,
+                          DTYPE_float32_t[:] weights,
+                          DTYPE_float32_t weights_sum) nogil:
 
     cdef:
-        Py_ssize_t i, j
+        Py_ssize_t j
+
+    # Get the rolling mean.
+    for j in range(0, cols-window_size):
+
+        if do_weights:
+
+            array2process[j+window_half] = _get_weighted_mean(array2process[j:j+window_size],
+                                                              window_size,
+                                                              weights,
+                                                              weights_sum)
+
+        else:
+
+            array2process[j+window_half] = _get_mean(array2process[j:j+window_size],
+                                                     window_size)
+
+
+cdef DTYPE_float32_t[:, :] _rolling_mean(DTYPE_float32_t[:, :] arr,
+                                         int window_size,
+                                         int window_half,
+                                         DTYPE_float32_t[:] weights,
+                                         bint do_weights,
+                                         DTYPE_float32_t weights_sum):
+
+    cdef:
+        Py_ssize_t i
         unsigned int rows = arr.shape[0]
         unsigned int cols = arr.shape[1]
-        unsigned int window_half = int(window_size / 2)
         DTYPE_float32_t[:] the_row
         DTYPE_float32_t[:, :] results = np.zeros((rows, cols), dtype='float32')
-        DTYPE_float32_t weights_sum = _get_sum(weights, window_size)
 
     # Iterate over the array by rows.
     for i in range(0, rows):
@@ -356,20 +383,25 @@ cdef DTYPE_float32_t[:, :] _rolling_mean(DTYPE_float32_t[:, :] arr,
 
         with nogil:
 
-            # Get the rolling mean.
-            for j in range(0, cols-window_size):
-
-                if do_weights:
-                    the_row[j+window_half] = _get_weighted_mean(the_row[j:j+window_size], window_size, weights, weights_sum)
-                else:
-                    the_row[j+window_half] = _get_mean(the_row[j:j+window_size], window_size)
+            _rolling_mean1d(the_row,
+                            cols,
+                            window_size,
+                            window_half,
+                            do_weights,
+                            weights,
+                            weights_sum)
 
         results[i, :] = the_row[:]
 
     return results
 
 
-def rolling_stats(np.ndarray image_array, str stat='mean', int window_size=3, window_weights=None):
+def rolling_stats(np.ndarray image_array,
+                  str stat='mean',
+                  int window_size=3,
+                  window_weights=None,
+                  bint is_1d=False,
+                  int cols=0):
 
     """
     Computes rolling statistics
@@ -388,22 +420,52 @@ def rolling_stats(np.ndarray image_array, str stat='mean', int window_size=3, wi
     cdef:
         DTYPE_float32_t[:] weights
         bint do_weights
+        DTYPE_float32_t weights_sum
+        cdef DTYPE_float32_t[:] array2process
+        int window_half = int(window_size / 2.)
 
     if isinstance(window_weights, np.ndarray):
+
         weights = np.float32(window_weights)
+        weights_sum = _get_sum(weights, window_size)
         do_weights = True
+
     else:
+
         weights = np.zeros(1, dtype='float32')
+        weights_sum = 0.
         do_weights = False
 
-    if stat == 'mean':
+    if cols == 0:
+        cols = image_array.shape[1]
 
-        return np.float32(_rolling_mean(np.float32(image_array), window_size, weights, do_weights))
+    if is_1d:
 
-    elif stat == 'median':
+        _rolling_mean1d(image_array,
+                        cols,
+                        window_size,
+                        window_half,
+                        do_weights,
+                        weights,
+                        weights_sum)
 
-        return _rolling_median(np.float32(image_array), window_size)
+        return np.float32(image_array)
 
-    elif stat == 'slope':
+    else:
 
-        return _rolling_least_squares(np.float32(image_array), window_size)
+        if stat == 'mean':
+
+            return np.float32(_rolling_mean(np.float32(image_array),
+                              window_size,
+                              window_half,
+                              weights,
+                              do_weights,
+                              weights_sum))
+
+        elif stat == 'median':
+
+            return _rolling_median(np.float32(image_array), window_size)
+
+        elif stat == 'slope':
+
+            return _rolling_least_squares(np.float32(image_array), window_size)

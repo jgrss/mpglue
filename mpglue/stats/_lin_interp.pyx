@@ -86,7 +86,7 @@ cdef tuple _find_indices(DTYPE_float32_t[:] in_row, int dims, DTYPE_float32_t va
 
     cdef:
         Py_ssize_t fi
-        unsigned int counter = 0
+        Py_ssize_t counter = 0
         DTYPE_float32_t[:] index_positions = in_row.copy()
 
     with nogil:
@@ -143,8 +143,8 @@ cdef void _interp_loop_1d(DTYPE_float32_t[:] in_row,
 
     cdef:
         Py_ssize_t x2_idx
-        unsigned int len_idx
-        DTYPE_long_t[:] idx
+        Py_ssize_t len_idx
+        DTYPE_float32_t[:] idx
         int x1, x2, x3
 
     idx, len_idx = _find_indices(in_row, dims, value2fill)
@@ -178,11 +178,11 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2, mode='c'] _interp_loop(DTYPE_float32_t[
                                                                 DTYPE_float32_t value2fill):
 
     cdef:
-        Py_ssize_t i, x2_idx
-        unsigned int len_idx
+        Py_ssize_t i    #, x2_idx
+        #Py_ssize_t len_idx
         DTYPE_float32_t[:] in_row
-        DTYPE_float32_t[:] idx
-        int x1, x2, x3
+        #DTYPE_float32_t[:] idx
+        #int x1, x2, x3
 
     for i in range(0, rows):
 
@@ -240,7 +240,7 @@ def lin_interp(np.ndarray input_array, DTYPE_float32_t value2fill):
     return _interp_loop(np.float32(np.ascontiguousarray(input_array)), rows, dims, value2fill)
 
 
-def lin_interp_1d(np.ndarray input_array, DTYPE_float32_t value2fill):
+def lin_interp_1d(np.ndarray input_array, float value2fill):
 
     """
     Linearly interpolates between 'no data' points
@@ -254,8 +254,8 @@ def lin_interp_1d(np.ndarray input_array, DTYPE_float32_t value2fill):
     """
 
     cdef:
-        int dims = len(input_array)
-        DTYPE_float32_t[:] in1d = np.float32(np.ascontiguousarray(input_array))
+        int dims = int(len(input_array))
+        DTYPE_float32_t[:] in1d = np.float32(input_array)
 
     _interp_loop_1d(in1d, dims, value2fill)
 
