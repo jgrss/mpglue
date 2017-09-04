@@ -84,26 +84,37 @@ cdef extern from 'numpy/npy_math.h':
 cdef DTYPE_float32_t _get_weighted_mean(DTYPE_float32_t[:] array_1d,
                                         int array_length,
                                         DTYPE_float32_t[:] weights,
-                                        DTYPE_float32_t weights_sum) nogil:
+                                        DTYPE_float32_t weights_sum,
+                                        DTYPE_float32_t ignore_value) nogil:
 
     cdef:
         Py_ssize_t jj
         DTYPE_float32_t array_sum = (array_1d[0] * weights[0])
 
     for jj in range(1, array_length):
-        array_sum += (array_1d[jj] * weights[jj])
+
+        if array_1d[jj] == ignore_value:
+            weights_sum -= weights[jj]
+        else:
+            array_sum += (array_1d[jj] * weights[jj])
 
     return array_sum / weights_sum
 
 
-cdef DTYPE_float32_t _get_mean(DTYPE_float32_t[:] array_1d, int array_length) nogil:
+cdef DTYPE_float32_t _get_mean(DTYPE_float32_t[:] array_1d,
+                               DTYPE_float32_t ignore_value) nogil:
 
     cdef:
         Py_ssize_t jj
+        int array_length = 0
         DTYPE_float32_t array_sum = array_1d[0]
 
     for jj in range(1, array_length):
-        array_sum += array_1d[jj]
+
+        if array_1d[jj] != ignore_value:
+
+            array_sum += array_1d[jj]
+            array_length += 1
 
     return array_sum / array_length
 
@@ -129,6 +140,20 @@ cdef void _get_min(DTYPE_float32_t[:] val1, DTYPE_float32_t[:] val2, int cols) n
 
         if val2[c] < val1[c]:
             val1[c] = val2[c]
+
+
+cdef DTYPE_float32_t _get_max_value(DTYPE_float32_t[:] array1d, int cols) nogil:
+
+    cdef:
+        Py_ssize_t c
+        DTYPE_float32_t max_value = array1d[0]
+
+    for c in range(1, cols):
+
+        if array1d[c] > max_value:
+            max_value = array1d[c]
+
+    return max_value
 
 
 cdef void _get_max(DTYPE_float32_t[:] val1, DTYPE_float32_t[:] val2, int cols) nogil:
@@ -340,25 +365,47 @@ cdef void _rolling_mean1d(DTYPE_float32_t[:] array2process,
                           int window_half,
                           bint do_weights,
                           DTYPE_float32_t[:] weights,
-                          DTYPE_float32_t weights_sum) nogil:
+                          DTYPE_float32_t weights_sum,
+                          DTYPE_float32_t ignore_value,
+                          bint apply_under,
+                          DTYPE_float32_t apply_under_value,
+                          bint apply_over,
+                          DTYPE_float32_t apply_over_value,
+                          int iterations) nogil:
 
     cdef:
-        Py_ssize_t j
+        Py_ssize_t j, n_iter
 
-    # Get the rolling mean.
-    for j in range(0, cols-window_size):
+    for n_iter in range(0, iterations):
 
-        if do_weights:
+        # Get the rolling mean.
+        for j in range(0, cols-window_size):
 
-            array2process[j+window_half] = _get_weighted_mean(array2process[j:j+window_size],
-                                                              window_size,
-                                                              weights,
-                                                              weights_sum)
+            if apply_under:
 
-        else:
+                if array2process[j+window_half] > apply_under_value:
+                    continue
 
-            array2process[j+window_half] = _get_mean(array2process[j:j+window_size],
-                                                     window_size)
+                if _get_max_value(array2process[j:j+window_size], window_size) > apply_under_value:
+                    continue
+
+            if apply_over:
+
+                if array2process[j+window_half] < apply_over_value:
+                    continue
+
+            if do_weights:
+
+                array2process[j+window_half] = _get_weighted_mean(array2process[j:j+window_size],
+                                                                  window_size,
+                                                                  weights,
+                                                                  weights_sum,
+                                                                  ignore_value)
+
+            else:
+
+                array2process[j+window_half] = _get_mean(array2process[j:j+window_size],
+                                                         ignore_value)
 
 
 cdef DTYPE_float32_t[:, :] _rolling_mean(DTYPE_float32_t[:, :] arr,
@@ -366,7 +413,13 @@ cdef DTYPE_float32_t[:, :] _rolling_mean(DTYPE_float32_t[:, :] arr,
                                          int window_half,
                                          DTYPE_float32_t[:] weights,
                                          bint do_weights,
-                                         DTYPE_float32_t weights_sum):
+                                         DTYPE_float32_t weights_sum,
+                                         DTYPE_float32_t ignore_value,
+                                         bint apply_under,
+                                         DTYPE_float32_t apply_under_value,
+                                         bint apply_over,
+                                         DTYPE_float32_t apply_over_value,
+                                         int iterations):
 
     cdef:
         Py_ssize_t i
@@ -389,7 +442,13 @@ cdef DTYPE_float32_t[:, :] _rolling_mean(DTYPE_float32_t[:, :] arr,
                             window_half,
                             do_weights,
                             weights,
-                            weights_sum)
+                            weights_sum,
+                            ignore_value,
+                            apply_under,
+                            apply_under_value,
+                            apply_over,
+                            apply_over_value,
+                            iterations)
 
         results[i, :] = the_row[:]
 
@@ -401,7 +460,13 @@ def rolling_stats(np.ndarray image_array,
                   int window_size=3,
                   window_weights=None,
                   bint is_1d=False,
-                  int cols=0):
+                  int cols=0,
+                  float ignore_value=-999.,
+                  bint apply_under=False,
+                  float apply_under_value=-999.,
+                  bint apply_over=False,
+                  float apply_over_value=-999.,
+                  int iterations=1):
 
     """
     Computes rolling statistics
@@ -415,6 +480,15 @@ def rolling_stats(np.ndarray image_array,
                     image.reshape(columns, rows, dimensions).T.reshape(dimensions, rows*columns)
         stat (Optional[str]): The statistic to compute. Default is 'median'. Choices are ['mean', 'median', 'slope'].
         window_size (Optional[int]): The window size. Default is 3.
+        window_weights (Optiona[1d array])
+        is_1d (Optional[bool])
+        cols (Optional[int])
+        ignore_value (Optional[float])
+        apply_under (Optional[bool])
+        apply_under_value (Optional[float])
+        apply_over (Optional[bool])
+        apply_over_value (Optional[float])
+        iterations (Optional[int])
     """
 
     cdef:
@@ -447,7 +521,13 @@ def rolling_stats(np.ndarray image_array,
                         window_half,
                         do_weights,
                         weights,
-                        weights_sum)
+                        weights_sum,
+                        ignore_value,
+                        apply_under,
+                        apply_under_value,
+                        apply_over,
+                        apply_over_value,
+                        iterations)
 
         return np.float32(image_array)
 
@@ -456,11 +536,17 @@ def rolling_stats(np.ndarray image_array,
         if stat == 'mean':
 
             return np.float32(_rolling_mean(np.float32(image_array),
-                              window_size,
-                              window_half,
-                              weights,
-                              do_weights,
-                              weights_sum))
+                                            window_size,
+                                            window_half,
+                                            weights,
+                                            do_weights,
+                                            weights_sum,
+                                            ignore_value,
+                                            apply_under,
+                                            apply_under_value,
+                                            apply_over,
+                                            apply_over_value,
+                                            iterations))
 
         elif stat == 'median':
 
