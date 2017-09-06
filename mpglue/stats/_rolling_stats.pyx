@@ -409,6 +409,9 @@ cdef void _rolling_mean1d(DTYPE_float32_t[:] array2process,
 
             if apply_under:
 
+                if array2process[j+window_half] < ignore_value + .01:
+                    continue
+
                 if array2process[j+window_half] > apply_under_value:
                     continue
 
