@@ -359,6 +359,32 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2, mode='c'] _rolling_median_v(np.ndarray[
     return arr
 
 
+cdef void _convolve1d(DTYPE_float32_t[:] array2process,
+                      DTYPE_float32_t[:] array2write,
+                      int cols,
+                      int window_size,
+                      int window_half,
+                      DTYPE_float32_t[:] weights,
+                      bint update_weights,
+                      int iterations) nogil:
+
+    cdef:
+        Py_ssize_t j, n_iter, ws
+
+    for n_iter in range(1, iterations+1):
+
+        for j in range(0, cols-window_size):
+
+            for ws in range(0, window_size):
+                array2write[j+window_half] += array2process[j+ws] * weights[ws]
+
+        if update_weights:
+
+            weights[0] = 1. / (n_iter + 2.)
+            weights[1] = n_iter / (n_iter + 2.)
+            weights[3] = 1. / (n_iter + 2.)
+
+
 cdef void _rolling_mean1d(DTYPE_float32_t[:] array2process,
                           int cols,
                           int window_size,
@@ -376,7 +402,7 @@ cdef void _rolling_mean1d(DTYPE_float32_t[:] array2process,
     cdef:
         Py_ssize_t j, n_iter
 
-    for n_iter in range(0, iterations):
+    for n_iter in range(1, iterations+1):
 
         # Get the rolling mean.
         for j in range(0, cols-window_size):
@@ -408,25 +434,28 @@ cdef void _rolling_mean1d(DTYPE_float32_t[:] array2process,
                                                          ignore_value)
 
 
-cdef DTYPE_float32_t[:, :] _rolling_mean(DTYPE_float32_t[:, :] arr,
-                                         int window_size,
-                                         int window_half,
-                                         DTYPE_float32_t[:] weights,
-                                         bint do_weights,
-                                         DTYPE_float32_t weights_sum,
-                                         DTYPE_float32_t ignore_value,
-                                         bint apply_under,
-                                         DTYPE_float32_t apply_under_value,
-                                         bint apply_over,
-                                         DTYPE_float32_t apply_over_value,
-                                         int iterations):
+cdef DTYPE_float32_t[:, :] _rolling_stats(DTYPE_float32_t[:, :] arr,
+                                          int window_size,
+                                          int window_half,
+                                          DTYPE_float32_t[:] weights,
+                                          bint do_weights,
+                                          bint update_weights,
+                                          DTYPE_float32_t weights_sum,
+                                          DTYPE_float32_t ignore_value,
+                                          bint apply_under,
+                                          DTYPE_float32_t apply_under_value,
+                                          bint apply_over,
+                                          DTYPE_float32_t apply_over_value,
+                                          int iterations,
+                                          str stat):
 
     cdef:
         Py_ssize_t i
         unsigned int rows = arr.shape[0]
         unsigned int cols = arr.shape[1]
-        DTYPE_float32_t[:] the_row
+        DTYPE_float32_t[:] the_row, out_row
         DTYPE_float32_t[:, :] results = np.zeros((rows, cols), dtype='float32')
+        DTYPE_float32_t[:] zzzzeros = np.zeros(cols, dtype='float32')
 
     # Iterate over the array by rows.
     for i in range(0, rows):
@@ -434,23 +463,42 @@ cdef DTYPE_float32_t[:, :] _rolling_mean(DTYPE_float32_t[:, :] arr,
         # Get the current row
         the_row = arr[i, :]
 
-        with nogil:
+        if stat == 'convolve':
 
-            _rolling_mean1d(the_row,
+            out_row = zzzzeros.copy()
+
+            with nogil:
+
+                _convolve1d(the_row,
+                            out_row,
                             cols,
                             window_size,
                             window_half,
-                            do_weights,
                             weights,
-                            weights_sum,
-                            ignore_value,
-                            apply_under,
-                            apply_under_value,
-                            apply_over,
-                            apply_over_value,
+                            update_weights,
                             iterations)
 
-        results[i, :] = the_row[:]
+            results[i, :] = out_row[:]
+
+        elif stat == 'mean':
+
+            with nogil:
+
+                _rolling_mean1d(the_row,
+                                cols,
+                                window_size,
+                                window_half,
+                                do_weights,
+                                weights,
+                                weights_sum,
+                                ignore_value,
+                                apply_under,
+                                apply_under_value,
+                                apply_over,
+                                apply_over_value,
+                                iterations)
+
+            results[i, :] = the_row[:]
 
     return results
 
@@ -459,6 +507,7 @@ def rolling_stats(np.ndarray image_array,
                   str stat='mean',
                   int window_size=3,
                   window_weights=None,
+                  bint update_weights=False,
                   bint is_1d=False,
                   int cols=0,
                   float ignore_value=-999.,
@@ -478,9 +527,11 @@ def rolling_stats(np.ndarray image_array,
                 image.reshape(dimensions, rows*columns)
                 image.T.reshape(rows*columns, dimensions) -->
                     image.reshape(columns, rows, dimensions).T.reshape(dimensions, rows*columns)
-        stat (Optional[str]): The statistic to compute. Default is 'median'. Choices are ['mean', 'median', 'slope'].
+        stat (Optional[str]): The statistic to compute. Default is 'median'.
+            Choices are ['mean', 'median', 'slope', 'convolve'].
         window_size (Optional[int]): The window size. Default is 3.
         window_weights (Optiona[1d array])
+        update_weights (Optional[bool])
         is_1d (Optional[bool])
         cols (Optional[int])
         ignore_value (Optional[float])
@@ -533,20 +584,22 @@ def rolling_stats(np.ndarray image_array,
 
     else:
 
-        if stat == 'mean':
+        if stat in ['convolve', 'mean']:
 
-            return np.float32(_rolling_mean(np.float32(image_array),
-                                            window_size,
-                                            window_half,
-                                            weights,
-                                            do_weights,
-                                            weights_sum,
-                                            ignore_value,
-                                            apply_under,
-                                            apply_under_value,
-                                            apply_over,
-                                            apply_over_value,
-                                            iterations))
+            return np.float32(_rolling_stats(np.float32(image_array),
+                                             window_size,
+                                             window_half,
+                                             weights,
+                                             do_weights,
+                                             update_weights,
+                                             weights_sum,
+                                             ignore_value,
+                                             apply_under,
+                                             apply_under_value,
+                                             apply_over,
+                                             apply_over_value,
+                                             iterations,
+                                             stat))
 
         elif stat == 'median':
 
