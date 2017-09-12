@@ -62,6 +62,7 @@ try:
 
     if (os.environ.get('DISPLAY', '') == '') or (platform.system() == 'Darwin'):
         mpl.use('Agg')
+        mpl.pyplot.switch_backend('agg')
 
     import matplotlib.pyplot as plt
     import matplotlib.gridspec as gridspec
