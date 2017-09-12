@@ -1279,6 +1279,9 @@ class Samples(object):
             self.train_idx += df_sub.iloc[train_index].INDEX.tolist()
             self.test_idx += df_sub.iloc[test_index].INDEX.tolist()
 
+            logger.info(np.array(train_index).min())
+            logger.info(np.array(train_index).max())
+
             # Remove the rows that were sampled.
             df_sub.drop(df_sub.index[train_index], axis=0, inplace=True)
             df_sub.drop(df_sub.index[test_index], axis=0, inplace=True)
