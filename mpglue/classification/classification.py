@@ -714,7 +714,8 @@ class Samples(object):
         # Spatial stratified sampling.
         if stratified:
 
-            self.use_xy = True
+            # TODO
+            # self.use_xy = True
 
             min_x = self.XY[:, 0].min()
             max_x = self.XY[:, 0].max()
@@ -765,10 +766,6 @@ class Samples(object):
         #   n_feas = number of features minus the labels
         self.n_samps = self.all_samps.shape[0]
         self.n_feas = self.all_samps.shape[1] - 1
-
-        print self.all_samps
-        print self.all_samps.shape
-        sys.exit()
 
         if isinstance(self.sample_weight, np.ndarray):
             assert len(self.sample_weight) == self.n_samps
