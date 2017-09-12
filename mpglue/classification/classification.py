@@ -1272,6 +1272,22 @@ class Samples(object):
             #   the test indices.
             test_index = np.array(list(test_index) + list(np.delete(train_index, ran_diff_idx)), dtype='int64')
 
+        elif cl > len(train_index):
+
+            # Get the number of missing samples.
+            cl_diff = cl - len(train_index)
+
+            # Randomly select `cl_diff` samples
+            #   from the training index.
+            ran_diff_idx = np.random.choice(range(0, len(test_index)), size=cl_diff, replace=False)
+
+            # Subset the test indices.
+            test_index = test_index[ran_diff_idx]
+
+            # Add the extra indices to
+            #   the train indices.
+            train_index = np.array(list(train_index) + list(np.delete(test_index, ran_diff_idx)), dtype='int64')
+
         # Add the original DataFrame row indices
         #   to the full train and test indices.
         self.train_idx += df_sub.iloc[train_index].INDEX.tolist()
