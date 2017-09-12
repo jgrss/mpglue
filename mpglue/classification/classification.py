@@ -699,6 +699,11 @@ class Samples(object):
         # Parse the x variables.
         self.all_samps = df.loc[:, self.headers[data_position:]].values
 
+        print self.all_samps
+        print df.head()
+        print self.label_idx
+        sys.exit()
+
         # Parse the x, y coordinates.
         self.XY = df[[x_label, y_label]].values
 
@@ -828,6 +833,7 @@ class Samples(object):
                     # DataFrame that contains the current class.
                     df_sub = df.loc[cl_indices]
 
+                    # Reorder the row index.
                     df_sub = df_sub.reset_index()
 
                     # Get `cl` samples from each strata.
