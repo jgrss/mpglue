@@ -839,14 +839,8 @@ class Samples(object):
                     test_index = pd.Int64Index(np.arange(len(df_sub))).difference(dfg.index)
                     train_index = dfg.index
 
-                    test_samples_temp = df_sub.iloc[test_index].values[:, 2:-1]
-                    train_samples_temp = df_sub.iloc[train_index].values[:, 2:-1]
-
-                    print df_sub.head(2)
-                    print df_sub.shape
-                    print test_samples_temp
-                    print test_samples_temp.shape
-                    sys.exit()
+                    test_samples_temp = df_sub.iloc[test_index].values[:, 3:-1]
+                    train_samples_temp = df_sub.iloc[train_index].values[:, 3:-1]
 
                     if isinstance(curr_clear, np.ndarray):
 
@@ -886,9 +880,7 @@ class Samples(object):
                 counter += 1
 
             self.all_samps = train_stk.copy()
-            print self.all_samps
-            print self.all_samps.shape
-            sys.exit()
+            
             test_samps = test_stk.copy()
 
             if isinstance(clear_observations, np.ndarray):
