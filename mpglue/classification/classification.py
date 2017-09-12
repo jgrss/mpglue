@@ -779,6 +779,31 @@ class Samples(object):
         # Sample a specified number per class.
         if class_subs:
 
+            # TODO: testing
+            if stratified:
+
+                groups = 'abcdefghijklmnopqrstuvwxyz'
+
+                df = pd.DataFrame(self.all_samps, columns=headers)
+                df['GROUP'] = '--'
+
+                c = 0
+                gdd = 1
+
+                # Set the groups for stratification.
+                for ygi, xgj in itertools.product(range(0, len(y_grids)-1), range(0, len(x_grids)-1)):
+
+                    g = groups[c] * gdd
+
+                    df['GROUP'] = [g if (x_grids[xgj] <= x_ < x_grids[xgj + 1]) and
+                                        (y_grids[ygi] <= y_ < y_grids[ygi + 1]) else gr
+                                   for x_, y_, gr in zip(df['X'], df['Y'], df['GROUP'])]
+
+                    c += 1
+                    if c == len(groups):
+                        c = 0
+                        gdd += 1
+
             counter = 1
 
             test_stk = None
@@ -790,15 +815,47 @@ class Samples(object):
             for class_key, cl in sorted(class_subs.iteritems()):
 
                 # Get the samples for the current class.
-                curr_cl, curr_weights, curr_clear, do_continue = self.get_class_subsample(class_key, clear_observations)
+                curr_cl, curr_weights, curr_clear, do_continue, cl_indices = self.get_class_subsample(class_key, clear_observations)
 
                 if do_continue:
                     continue
 
-                # Get the sub-sample indices
-                #   for the current class.
-                test_samples_temp, train_samples_temp, test_clear_temp, train_clear_temp, train_weights_temp = \
-                    self.get_test_train(curr_cl, cl, curr_weights, curr_clear)
+                # TODO: testing
+                if stratified:
+
+                    # DataFrame that contains the current class.
+                    df_sub = df.loc[cl_indices]
+
+                    # Get `cl` samples from each strata.
+                    dfg = df_sub.groupby('GROUP', group_keys=False).apply(lambda xr_: xr_.sample(min(len(xr_), cl)))
+
+                    test_index = pd.Int64Index(np.arange(len(df_sub))).difference(dfg.index)
+                    train_index = dfg.index
+
+                    test_samples_temp = df_sub.iloc[test_index]
+                    train_samples_temp = df_sub.iloc[train_index]
+
+                    if isinstance(curr_clear, np.ndarray):
+
+                        test_clear_temp = curr_clear[test_index]
+                        train_clear_temp = curr_clear[train_index]
+
+                    else:
+
+                        test_clear_temp = None
+                        train_clear_temp = None
+
+                    if isinstance(curr_weights, np.ndarray):
+                        train_weights_temp = curr_weights[train_index]
+                    else:
+                        train_weights_temp = None
+
+                else:
+
+                    # Get the sub-sample indices
+                    #   for the current class.
+                    test_samples_temp, train_samples_temp, test_clear_temp, train_clear_temp, train_weights_temp = \
+                        self.get_test_train(curr_cl, cl, curr_weights, curr_clear)
 
                 # Stack the sub-samples.
                 test_stk, train_stk, clear_test_stk, clear_train_stk, weights_train_stk = self._stack_samples(counter,
@@ -857,7 +914,7 @@ class Samples(object):
             for class_key, cl in sorted(class_subs.iteritems()):
 
                 # Get the samples for the current class.
-                curr_cl, curr_weights, curr_clear, do_continue = self.get_class_subsample(class_key, clear_observations)
+                curr_cl, curr_weights, curr_clear, do_continue, cl_indices = self.get_class_subsample(class_key, clear_observations)
 
                 if do_continue:
                     continue
@@ -1106,7 +1163,7 @@ class Samples(object):
         # Continue to the next class
         #   if there are no matches.
         if not np.any(cl_indices):
-            return None, None, None, True
+            return None, None, None, True, None
 
         # Get the samples for the current class.
         curr_cl = self.all_samps[cl_indices]
@@ -1137,9 +1194,9 @@ class Samples(object):
             current_weights = None
 
         if not isinstance(clear_observations, np.ndarray) and not isinstance(self.sample_weight, np.ndarray):
-            return curr_cl, None, None, False
+            return curr_cl, None, None, False, cl_indices
         else:
-            return curr_cl, current_weights, current_clear, False
+            return curr_cl, current_weights, current_clear, False, cl_indices
 
     def _scale_p_vars(self):
 
@@ -1172,9 +1229,7 @@ class Samples(object):
 
     def _stratify(self, y_grids, x_grids, n_match_samps, n_total_samps):
 
-        """
-        Grid stratification
-        """
+        """Grid stratification"""
 
         for ygi, xgj in itertools.product(range(0, len(y_grids)-1), range(0, len(x_grids)-1)):
 
