@@ -784,7 +784,7 @@ class Samples(object):
 
                 groups = 'abcdefghijklmnopqrstuvwxyz'
 
-                df = pd.DataFrame(self.all_samps, columns=headers)
+                df = pd.DataFrame(self.all_samps, columns=self.headers)
                 df['GROUP'] = '--'
 
                 c = 0
@@ -803,6 +803,8 @@ class Samples(object):
                     if c == len(groups):
                         c = 0
                         gdd += 1
+
+                print df.head(5)
 
             counter = 1
 
@@ -825,6 +827,8 @@ class Samples(object):
 
                     # DataFrame that contains the current class.
                     df_sub = df.loc[cl_indices]
+
+                    df_sub = df_sub.reset_index()
 
                     # Get `cl` samples from each strata.
                     dfg = df_sub.groupby('GROUP', group_keys=False).apply(lambda xr_: xr_.sample(min(len(xr_), cl)))
