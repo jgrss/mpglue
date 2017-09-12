@@ -782,28 +782,7 @@ class Samples(object):
 
             # TODO: testing
             if stratified:
-
-                groups = 'abcdefghijklmnopqrstuvwxyz'
-
-                df['GROUP'] = '--'
-
-                c = 0
-                gdd = 1
-                n_groups = float(len(y_grids) * len(x_grids))
-
-                # Set the groups for stratification.
-                for ygi, xgj in itertools.product(range(0, len(y_grids)-1), range(0, len(x_grids)-1)):
-
-                    g = groups[c] * gdd
-
-                    df['GROUP'] = [g if (x_grids[xgj] <= x_ < x_grids[xgj+1]) and
-                                        (y_grids[ygi] <= y_ < y_grids[ygi+1]) else gr
-                                   for x_, y_, gr in zip(df['X'], df['Y'], df['GROUP'])]
-
-                    c += 1
-                    if c == len(groups):
-                        c = 0
-                        gdd += 1
+                df = self._create_group_strata(df, x_grids, y_grids)
 
             counter = 1
 
@@ -812,6 +791,8 @@ class Samples(object):
             clear_test_stk = None
             clear_train_stk = None
             weights_train_stk = None
+            self.train_idx = list()
+            self.test_idx = list()
 
             for class_key, cl in sorted(class_subs.iteritems()):
 
@@ -825,39 +806,8 @@ class Samples(object):
                 # TODO: testing
                 if stratified:
 
-                    samps_per_grid = int(np.ceil(cl / n_groups))
-
-                    # DataFrame that contains the current class.
-                    df_sub = df.loc[cl_indices]
-
-                    # Reorder the row index.
-                    df_sub = df_sub.reset_index()
-
-                    # Get `cl` samples from each GROUP strata.
-                    dfg = df_sub.groupby('GROUP', group_keys=False).apply(lambda xr_: xr_.sample(min(len(xr_),
-                                                                                                     samps_per_grid)))
-
-                    test_index = pd.Int64Index(np.arange(len(df_sub))).difference(dfg.index)
-                    train_index = dfg.index
-
-                    # index, X, Y, <data>, ..., labels, GROUP
-                    test_samples_temp = df_sub.iloc[test_index].values[:, 3:-1]
-                    train_samples_temp = df_sub.iloc[train_index].values[:, 3:-1]
-
-                    if isinstance(curr_clear, np.ndarray):
-
-                        test_clear_temp = curr_clear[test_index]
-                        train_clear_temp = curr_clear[train_index]
-
-                    else:
-
-                        test_clear_temp = None
-                        train_clear_temp = None
-
-                    if isinstance(curr_weights, np.ndarray):
-                        train_weights_temp = curr_weights[train_index]
-                    else:
-                        train_weights_temp = None
+                    test_samples_temp, train_samples_temp, test_clear_temp, train_clear_temp, train_weights_temp = \
+                        self._stratify(df, cl, cl_indices, curr_clear, curr_weights)
 
                 else:
 
@@ -880,6 +830,9 @@ class Samples(object):
                                                                                                               train_weights_temp)
 
                 counter += 1
+
+            self.train_idx = sorted(self.train_idx)
+            self.test_idx = sorted(self.test_idx)
 
             self.all_samps = train_stk.copy()
 
@@ -1024,9 +977,9 @@ class Samples(object):
         self.n_classes = len(self.classes)
 
         if norm_struct:
-            self.p_vars = self.all_samps[:, :self.label_idx].astype(np.float32)
+            self.p_vars = np.float32(self.all_samps[:, :self.label_idx])
         else:
-            self.p_vars = self.all_samps[:, 1:].astype(np.float32)
+            self.p_vars = np.float32(self.all_samps[:, 1:])
 
         self.p_vars[np.isnan(self.p_vars) | np.isinf(self.p_vars)] = 0.
 
@@ -1048,7 +1001,7 @@ class Samples(object):
             self.p_vars_test_cols = self.p_vars_test.shape[1]
 
         # Get individual class counts.
-        self._update_class_counts()
+        self.update_class_counts()
 
         if scale_data:
             self._scale_p_vars()
@@ -1227,7 +1180,7 @@ class Samples(object):
 
         self.scaled = True
 
-    def _update_class_counts(self):
+    def update_class_counts(self):
 
         self.classes = map(int, list(np.unique(self.labels)))
         self.n_classes = len(self.classes)
@@ -1237,43 +1190,153 @@ class Samples(object):
         for indv_class in self.classes:
             self.class_counts[indv_class] = (self.labels == indv_class).sum()
 
-    def _stratify(self, y_grids, x_grids, n_match_samps, n_total_samps):
+    def _create_group_strata(self, df, x_grids, y_grids):
 
-        """Grid stratification"""
+        groups = 'abcdefghijklmnopqrstuvwxyz'
 
+        df['GROUP'] = '--'
+
+        c = 0
+        gdd = 1
+
+        self.n_groups = float(len(y_grids) * len(x_grids))
+
+        # Set the groups for stratification.
         for ygi, xgj in itertools.product(range(0, len(y_grids)-1), range(0, len(x_grids)-1)):
 
-            # Get all of the samples in the current grid.
-            gi = np.where((self.all_samps[:, -2] >= y_grids[ygi]) &
-                          (self.all_samps[:, -2] < y_grids[ygi+1]) &
-                          (self.all_samps[:, -3] >= x_grids[xgj]) &
-                          (self.all_samps[:, -3] < x_grids[xgj+1]))[0]
+            g = groups[c] * gdd
 
-            if len(gi) > 0:
+            df['GROUP'] = [g if (x_grids[xgj] <= x_ < x_grids[xgj + 1]) and
+                                (y_grids[ygi] <= y_ < y_grids[ygi + 1]) else gr
+                           for x_, y_, gr in zip(df['X'], df['Y'], df['GROUP'])]
 
-                # Randomly sample from the grid samples.
-                ran = np.random.choice(range(len(gi)), size=1, replace=False)
+            c += 1
+            if c == len(groups):
 
-                gi_i = gi[ran[0]]
+                c = 0
+                gdd += 1
 
-                # Remove the samples.
-                if n_match_samps == 0:
+        return df
 
-                    # Reshape (add 1 for the labels)
-                    self.stratified_samps = self.all_samps[gi_i].reshape(1, self.n_feas+1)
-                    self.all_samps = np.delete(self.all_samps, gi_i, axis=0)
+    def _stratify(self, df, cl, cl_indices, curr_clear, curr_weights):
 
-                else:
+        """
+        Grid stratification
 
-                    self.stratified_samps = np.r_[self.stratified_samps, self.all_samps[gi_i].reshape(1, self.n_feas+1)]
-                    self.all_samps = np.delete(self.all_samps, gi_i, axis=0)
+        Args:
+            df (DataFrame): The dataframe.
+            cl (int): The class sample count.
+            cl_indices (1d array): Indices for the current class.
+            curr_clear (1d array): Clear values.
+            curr_weights (1d array): Weight values.
+        """
 
-                n_match_samps += 1
+        samps_per_grid = int(np.ceil(cl / self.n_groups))
 
-                if n_match_samps >= n_total_samps:
-                    return n_match_samps
+        # DataFrame that contains the current class.
+        df_sub = df.loc[cl_indices]
 
-        return n_match_samps
+        # Save the original row indices.
+        df_sub['INDEX'] = df_sub.index
+
+        # Reorder the row index.
+        df_sub = df_sub.reset_index()
+
+        # Get `cl` samples from each GROUP strata.
+        dfg = df_sub.groupby('GROUP', group_keys=False).apply(lambda xr_: xr_.sample(min(len(xr_),
+                                                                                         samps_per_grid)))
+
+        # The train indices are
+        #   the DataFrame index.
+        train_index = dfg.index
+
+        # The test indices are the difference
+        #   between the full DataFrame and
+        #   the train indices.
+        test_index = pd.Int64Index(np.arange(len(df_sub))).difference(dfg.index)
+
+        # Randomly clip to `cl`.
+        if len(train_index) > cl:
+
+            # Get the number of extra samples.
+            cl_diff = len(train_index) - cl
+
+            # Randomly select `cl_diff` samples
+            #   from the training index.
+            ran_diff_idx = np.random.choice(range(0, len(train_index)), size=cl_diff, replace=False)
+
+            # Subset the train indices.
+            train_index = train_index[ran_diff_idx]
+
+            # Add the extra indices to
+            #   the test indices.
+            test_index = np.array(list(test_index) + list(np.delete(train_index, ran_diff_idx)), dtype='int64')
+
+        # Add the original DataFrame row indices
+        #   to the full train and test indices.
+        self.train_idx += df_sub.iloc[train_index].INDEX.tolist()
+        self.test_idx += df_sub.iloc[test_index].INDEX.tolist()
+
+        # Get the train and test indices for the current class.
+        #
+        # `df_sub` = [index, X, Y, <data1>, ..., <dataN>, labels, GROUP, INDEX]
+        train_samples_temp = df_sub.iloc[train_index].values[:, 3:-2]
+        test_samples_temp = df_sub.iloc[test_index].values[:, 3:-2]
+
+        if isinstance(curr_clear, np.ndarray):
+
+            test_clear_temp = curr_clear[test_index]
+            train_clear_temp = curr_clear[train_index]
+
+        else:
+
+            test_clear_temp = None
+            train_clear_temp = None
+
+        if isinstance(curr_weights, np.ndarray):
+            train_weights_temp = curr_weights[train_index]
+        else:
+            train_weights_temp = None
+
+        return test_samples_temp, train_samples_temp, test_clear_temp, train_clear_temp, train_weights_temp
+
+    # def _stratify(self, y_grids, x_grids, n_match_samps, n_total_samps):
+    #
+    #     """Grid stratification"""
+    #
+    #     for ygi, xgj in itertools.product(range(0, len(y_grids)-1), range(0, len(x_grids)-1)):
+    #
+    #         # Get all of the samples in the current grid.
+    #         gi = np.where((self.all_samps[:, -2] >= y_grids[ygi]) &
+    #                       (self.all_samps[:, -2] < y_grids[ygi+1]) &
+    #                       (self.all_samps[:, -3] >= x_grids[xgj]) &
+    #                       (self.all_samps[:, -3] < x_grids[xgj+1]))[0]
+    #
+    #         if len(gi) > 0:
+    #
+    #             # Randomly sample from the grid samples.
+    #             ran = np.random.choice(range(len(gi)), size=1, replace=False)
+    #
+    #             gi_i = gi[ran[0]]
+    #
+    #             # Remove the samples.
+    #             if n_match_samps == 0:
+    #
+    #                 # Reshape (add 1 for the labels)
+    #                 self.stratified_samps = self.all_samps[gi_i].reshape(1, self.n_feas+1)
+    #                 self.all_samps = np.delete(self.all_samps, gi_i, axis=0)
+    #
+    #             else:
+    #
+    #                 self.stratified_samps = np.r_[self.stratified_samps, self.all_samps[gi_i].reshape(1, self.n_feas+1)]
+    #                 self.all_samps = np.delete(self.all_samps, gi_i, axis=0)
+    #
+    #             n_match_samps += 1
+    #
+    #             if n_match_samps >= n_total_samps:
+    #                 return n_match_samps
+    #
+    #     return n_match_samps
 
     def _recode_labels(self, recode_dict):
 
@@ -3047,7 +3110,7 @@ class Preprocessing(object):
             self.p_vars = new_p_vars
             self.labels = new_labels
 
-            self._update_class_counts()
+            self.update_class_counts()
 
     @retry(wait_random_min=500, wait_random_max=1000, stop_max_attempt_number=5)
     def _remove_outliers(self, check_class, new_p_vars, new_labels):
@@ -4186,7 +4249,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         elif self.classifier_info['classifier'] in ['CVRFR', 'CVEX_RFR']:
 
             self.model.train(self.p_vars, cv2.CV_ROW_SAMPLE, self.labels,
-                             varType=np.zeros(self.n_feas+1).astype(np.uint8), params=self.parameters)
+                             varType=np.zeros(self.n_feas+1, dtype='uint8'), params=self.parameters)
 
         elif self.classifier_info['classifier'] == 'CVMLP':
 
