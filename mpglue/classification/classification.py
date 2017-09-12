@@ -788,6 +788,7 @@ class Samples(object):
 
                 c = 0
                 gdd = 1
+                n_groups = float(len(y_grids) * len(x_grids))
 
                 # Set the groups for stratification.
                 for ygi, xgj in itertools.product(range(0, len(y_grids)-1), range(0, len(x_grids)-1)):
@@ -822,6 +823,8 @@ class Samples(object):
                 # TODO: testing
                 if stratified:
 
+                    samps_per_grid = int(np.ceil(cl / n_groups))
+
                     # DataFrame that contains the current class.
                     df_sub = df.loc[cl_indices]
 
@@ -829,23 +832,19 @@ class Samples(object):
                     df_sub = df_sub.reset_index()
 
                     # Get `cl` samples from each strata.
-                    dfg = df_sub.groupby('GROUP', group_keys=False).apply(lambda xr_: xr_.sample(min(len(xr_), cl)))
+                    dfg = df_sub.groupby('GROUP', group_keys=False).apply(lambda xr_: xr_.sample(min(len(xr_),
+                                                                                                     samps_per_grid)))
 
                     test_index = pd.Int64Index(np.arange(len(df_sub))).difference(dfg.index)
                     train_index = dfg.index
-
-                    print df_sub.head()
-                    print train_index
-                    print test_index
-                    print
 
                     test_samples_temp = df_sub.iloc[test_index].values[:, 2:-1]
                     train_samples_temp = df_sub.iloc[train_index].values[:, 2:-1]
 
                     if isinstance(curr_clear, np.ndarray):
 
-                        test_clear_temp = curr_clear[test_index].values
-                        train_clear_temp = curr_clear[train_index].values
+                        test_clear_temp = curr_clear[test_index]
+                        train_clear_temp = curr_clear[train_index]
 
                     else:
 
@@ -853,7 +852,7 @@ class Samples(object):
                         train_clear_temp = None
 
                     if isinstance(curr_weights, np.ndarray):
-                        train_weights_temp = curr_weights[train_index].values
+                        train_weights_temp = curr_weights[train_index]
                     else:
                         train_weights_temp = None
 
