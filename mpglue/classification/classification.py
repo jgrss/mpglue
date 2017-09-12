@@ -804,6 +804,8 @@ class Samples(object):
                         c = 0
                         gdd += 1
 
+                print df.head(30)
+
             counter = 1
 
             test_stk = None
