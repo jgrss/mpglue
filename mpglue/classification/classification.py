@@ -838,6 +838,12 @@ class Samples(object):
 
             test_samps = test_stk.copy()
 
+            logger.info(len(self.train_idx))
+            logger.info(len(self.test_idx))
+            logger.info(self.all_samps.shape)
+            logger.info(test_samps.shape)
+            sys.exit()
+
             if isinstance(clear_observations, np.ndarray):
 
                 self.test_clear = np.uint64(clear_test_stk)
@@ -1234,7 +1240,7 @@ class Samples(object):
         samps_per_grid = int(np.ceil(cl / self.n_groups))
 
         # DataFrame that contains the current class.
-        df_sub = df.loc[cl_indices]
+        df_sub = df.iloc[cl_indices]
 
         # Save the original row indices.
         df_sub['INDEX'] = df_sub.index
