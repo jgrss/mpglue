@@ -1274,6 +1274,11 @@ class Samples(object):
             #   collected to this point.
             clsamp = copy(cl - samples_collected)
 
+            logger.info('  SAMPLES')
+            logger.info(samples_collected)
+            logger.info(cl)
+            logger.info(clsamp)
+
             # Add the original DataFrame row indices
             #   to the full train and test indices.
             self.train_idx += df_sub.iloc[train_index].INDEX.tolist()
@@ -1281,6 +1286,9 @@ class Samples(object):
 
             # Remove the rows that were sampled.
             df_sub.drop(np.array(sorted(list(train_index)+list(test_index)), dtype='int64'), axis=0, inplace=True)
+
+            logger.info(df_sub.shape[0])
+            logger.info('  CYCLE')
 
             if df_sub.shape[0] < clsamp:
                 break
