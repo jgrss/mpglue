@@ -699,11 +699,6 @@ class Samples(object):
         # Parse the x variables.
         self.all_samps = df.loc[:, self.headers[data_position:]].values
 
-        print self.all_samps
-        print df.head()
-        print self.label_idx
-        sys.exit()
-
         # Parse the x, y coordinates.
         self.XY = df[[x_label, y_label]].values
 
@@ -789,7 +784,6 @@ class Samples(object):
 
                 groups = 'abcdefghijklmnopqrstuvwxyz'
 
-                df = pd.DataFrame(self.all_samps, columns=self.headers)
                 df['GROUP'] = '--'
 
                 c = 0
@@ -845,6 +839,7 @@ class Samples(object):
                     print df_sub.head()
                     print train_index
                     print test_index
+                    print
 
                     test_samples_temp = df_sub.iloc[test_index]
                     train_samples_temp = df_sub.iloc[train_index]
