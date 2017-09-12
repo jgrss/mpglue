@@ -804,8 +804,6 @@ class Samples(object):
                         c = 0
                         gdd += 1
 
-                print df.head(30)
-
             counter = 1
 
             test_stk = None
@@ -833,6 +831,10 @@ class Samples(object):
 
                     test_index = pd.Int64Index(np.arange(len(df_sub))).difference(dfg.index)
                     train_index = dfg.index
+
+                    print df_sub.head()
+                    print train_index
+                    print test_index
 
                     test_samples_temp = df_sub.iloc[test_index]
                     train_samples_temp = df_sub.iloc[train_index]
