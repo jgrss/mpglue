@@ -815,7 +815,8 @@ class Samples(object):
             for class_key, cl in sorted(class_subs.iteritems()):
 
                 # Get the samples for the current class.
-                curr_cl, curr_weights, curr_clear, do_continue, cl_indices = self.get_class_subsample(class_key, clear_observations)
+                curr_cl, curr_weights, curr_clear, do_continue, cl_indices = self.get_class_subsample(class_key,
+                                                                                                      clear_observations)
 
                 if do_continue:
                     continue
@@ -879,6 +880,9 @@ class Samples(object):
                 counter += 1
 
             self.all_samps = train_stk.copy()
+            print self.all_samps
+            print self.all_samps.shape
+            sys.exit()
             test_samps = test_stk.copy()
 
             if isinstance(clear_observations, np.ndarray):
