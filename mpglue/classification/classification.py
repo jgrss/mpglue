@@ -796,8 +796,8 @@ class Samples(object):
 
                     g = groups[c] * gdd
 
-                    df['GROUP'] = [g if (x_grids[xgj] <= x_ < x_grids[xgj + 1]) and
-                                        (y_grids[ygi] <= y_ < y_grids[ygi + 1]) else gr
+                    df['GROUP'] = [g if (x_grids[xgj] <= x_ < x_grids[xgj+1]) and
+                                        (y_grids[ygi] <= y_ < y_grids[ygi+1]) else gr
                                    for x_, y_, gr in zip(df['X'], df['Y'], df['GROUP'])]
 
                     c += 1
@@ -833,13 +833,14 @@ class Samples(object):
                     # Reorder the row index.
                     df_sub = df_sub.reset_index()
 
-                    # Get `cl` samples from each strata.
+                    # Get `cl` samples from each GROUP strata.
                     dfg = df_sub.groupby('GROUP', group_keys=False).apply(lambda xr_: xr_.sample(min(len(xr_),
                                                                                                      samps_per_grid)))
 
                     test_index = pd.Int64Index(np.arange(len(df_sub))).difference(dfg.index)
                     train_index = dfg.index
 
+                    # index, X, Y, <data>, ..., labels, GROUP
                     test_samples_temp = df_sub.iloc[test_index].values[:, 3:-1]
                     train_samples_temp = df_sub.iloc[train_index].values[:, 3:-1]
 
