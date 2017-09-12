@@ -837,13 +837,6 @@ class Samples(object):
 
             test_samps = test_stk.copy()
 
-            logger.info(df.shape)
-            logger.info(len(self.train_idx))
-            logger.info(len(self.test_idx))
-            logger.info(self.all_samps.shape)
-            logger.info(test_samps.shape)
-            sys.exit()
-
             if isinstance(clear_observations, np.ndarray):
 
                 self.test_clear = np.uint64(clear_test_stk)
@@ -929,8 +922,6 @@ class Samples(object):
                 and (perc_samp_each == 0):
 
             if stratified:
-
-                logger.info('  Stratifying ...')
 
                 n_total_samps = int(perc_samp * self.n_samps)
                 n_match_samps = 0
@@ -1237,7 +1228,7 @@ class Samples(object):
             curr_weights (1d array): Weight values.
         """
 
-        samps_per_grid = int(np.ceil(cl / self.n_groups))
+        samples_collected = 0
 
         # DataFrame that contains the current class.
         df_sub = df.iloc[cl_indices]
@@ -1245,70 +1236,107 @@ class Samples(object):
         # Save the original row indices.
         df_sub['INDEX'] = df_sub.index
 
-        # Reorder the row index.
-        df_sub = df_sub.reset_index()
+        train_index_sub = list()
+        test_index_sub = list()
 
-        # Get `cl` samples from each GROUP strata.
-        dfg = df_sub.groupby('GROUP', group_keys=False).apply(lambda xr_: xr_.sample(min(len(xr_),
-                                                                                         samps_per_grid)))
+        clsamp = copy(cl)
 
-        # The train indices are
-        #   the DataFrame index.
-        train_index = dfg.index
+        while samples_collected < cl:
 
-        # The test indices are the difference
-        #   between the full DataFrame and
-        #   the train indices.
-        test_index = pd.Int64Index(np.arange(len(df_sub))).difference(dfg.index)
+            # Reorder the row index.
+            df_sub = df_sub.reset_index()
 
-        # Randomly clip to `cl`.
-        if len(train_index) > cl:
+            # Samples to take, per grid.
+            samps_per_grid = int(np.ceil(clsamp / self.n_groups))
 
-            # Get the number of extra samples.
-            cl_diff = len(train_index) - cl
+            # Get `samps_per_grid` samples from each GROUP strata.
+            dfg = df_sub.groupby('GROUP', group_keys=False).apply(lambda xr_: xr_.sample(min(len(xr_),
+                                                                                             samps_per_grid)))
 
-            # Randomly select `cl_diff` samples
-            #   from the training index.
-            ran_diff_idx = np.random.choice(range(0, len(train_index)), size=cl_diff, replace=False)
+            # The train indices are
+            #   the DataFrame index.
+            train_index = dfg.index
 
-            # Add the extra indices to
-            #   the test indices.
-            test_index = np.array(list(test_index) + list(np.delete(train_index, ran_diff_idx)), dtype='int64')
-
-            # Subset the train indices.
-            train_index = np.delete(train_index, ran_diff_idx)
-
-        elif len(train_index) < cl:
-
-            # Get the number of missing samples.
-            cl_diff = cl - len(train_index)
-
-            # Randomly select `cl_diff` samples
-            #   from the training index.
-            ran_diff_idx = np.random.choice(range(0, len(test_index)), size=cl_diff, replace=False)
-
-            # Add the extra indices to
+            # The test indices are the difference
+            #   between the DataFrame and
             #   the train indices.
-            train_index = np.array(list(train_index) + list(np.delete(test_index, ran_diff_idx)), dtype='int64')
+            test_index = pd.Int64Index(np.arange(len(df_sub))).difference(dfg.index)
 
-            # Subset the test indices.
-            test_index = np.delete(test_index, ran_diff_idx)
+            # Update the train and test indices.
+            train_index_sub += df_sub.iloc[train_index].INDEX.tolist()
+            test_index_sub += df_sub.iloc[test_index].INDEX.tolist()
 
-        # Add the original DataFrame row indices
-        #   to the full train and test indices.
-        self.train_idx += df_sub.iloc[train_index].INDEX.tolist()
-        self.test_idx += df_sub.iloc[test_index].INDEX.tolist()
+            # Get the total number of samples collect.
+            samples_collected = len(train_index_sub)
+
+            # Get the difference between the target
+            #   sample size and the total
+            #   collected to this point.
+            clsamp = copy(cl - samples_collected)
+
+            # Add the original DataFrame row indices
+            #   to the full train and test indices.
+            self.train_idx += df_sub.iloc[train_index].INDEX.tolist()
+            self.test_idx += df_sub.iloc[test_index].INDEX.tolist()
+
+            # Remove the rows that were sampled.
+            df_sub.drop(df_sub.index[train_index], axis=0, inplace=True)
+            df_sub.drop(df_sub.index[test_index], axis=0, inplace=True)
+
+            if df_sub.shape[0] < clsamp:
+                break
+
+            # Randomly clip to `cl`.
+            # if len(train_index) > cl:
+            #
+            #     # Get the number of extra samples.
+            #     cl_diff = len(train_index) - cl
+            #
+            #     # Randomly select `cl_diff` samples
+            #     #   from the training index.
+            #     ran_diff_idx = np.random.choice(range(0, len(train_index)), size=cl_diff, replace=False)
+            #
+            #     # Add the extra indices to
+            #     #   the test indices.
+            #     test_index = np.array(list(test_index) + list(np.delete(train_index, ran_diff_idx)), dtype='int64')
+            #
+            #     # Subset the train indices.
+            #     train_index = np.delete(train_index, ran_diff_idx)
+            #
+            # elif len(train_index) < cl:
+            #
+            #     # Get the number of missing samples.
+            #     cl_diff = cl - len(train_index)
+            #
+            #     # Randomly select `cl_diff` samples
+            #     #   from the training index.
+            #     ran_diff_idx = np.random.choice(range(0, len(test_index)), size=cl_diff, replace=False)
+            #
+            #     # Add the extra indices to
+            #     #   the train indices.
+            #     train_index = np.array(list(train_index) + list(np.delete(test_index, ran_diff_idx)), dtype='int64')
+            #
+            #     # Subset the test indices.
+            #     test_index = np.delete(test_index, ran_diff_idx)
 
         # Get the train and test indices for the current class.
         #
         # `df_sub` = [index, X, Y, <data1>, ..., <dataN>, labels, GROUP, INDEX]
-        train_samples_temp = df_sub.iloc[train_index].values[:, 3:-2]
-        test_samples_temp = df_sub.iloc[test_index].values[:, 3:-2]
+        train_samples_temp = df.iloc[train_index_sub].values[:, 3:-2]
+        test_samples_temp = df.iloc[test_index_sub].values[:, 3:-2]
+
+        logger.info(len(self.train_idx))
+        logger.info(len(train_index_sub))
+        logger.info(len(self.test_idx))
+        logger.info(len(test_index_sub))
+        logger.info(train_samples_temp.shape)
+        logger.info(test_samples_temp.shape)
+        sys.exit()
 
         if isinstance(curr_clear, np.ndarray):
 
-            test_clear_temp = curr_clear[test_index]
-            train_clear_temp = curr_clear[train_index]
+            test_clear_temp = curr_clear[train_index_sub]
+            train_clear_temp = curr_clear[test_index_sub]
 
         else:
 
@@ -1316,7 +1344,7 @@ class Samples(object):
             train_clear_temp = None
 
         if isinstance(curr_weights, np.ndarray):
-            train_weights_temp = curr_weights[train_index]
+            train_weights_temp = curr_weights[train_index_sub]
         else:
             train_weights_temp = None
 
