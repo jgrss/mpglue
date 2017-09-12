@@ -803,7 +803,6 @@ class Samples(object):
                 if do_continue:
                     continue
 
-                # TODO: testing
                 if stratified:
 
                     test_samples_temp, train_samples_temp, test_clear_temp, train_clear_temp, train_weights_temp = \
@@ -838,6 +837,7 @@ class Samples(object):
 
             test_samps = test_stk.copy()
 
+            logger.info(df.shape)
             logger.info(len(self.train_idx))
             logger.info(len(self.test_idx))
             logger.info(self.all_samps.shape)
