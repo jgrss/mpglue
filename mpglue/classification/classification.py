@@ -842,6 +842,12 @@ class Samples(object):
                     test_samples_temp = df_sub.iloc[test_index].values[:, 2:-1]
                     train_samples_temp = df_sub.iloc[train_index].values[:, 2:-1]
 
+                    print df_sub.head(2)
+                    print df_sub.shape
+                    print test_samples_temp
+                    print test_samples_temp.shape
+                    sys.exit()
+
                     if isinstance(curr_clear, np.ndarray):
 
                         test_clear_temp = curr_clear[test_index]
