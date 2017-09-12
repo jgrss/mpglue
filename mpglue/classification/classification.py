@@ -766,6 +766,10 @@ class Samples(object):
         self.n_samps = self.all_samps.shape[0]
         self.n_feas = self.all_samps.shape[1] - 1
 
+        print self.all_samps
+        print self.all_samps.shape
+        sys.exit()
+
         if isinstance(self.sample_weight, np.ndarray):
             assert len(self.sample_weight) == self.n_samps
 
@@ -880,7 +884,7 @@ class Samples(object):
                 counter += 1
 
             self.all_samps = train_stk.copy()
-            
+
             test_samps = test_stk.copy()
 
             if isinstance(clear_observations, np.ndarray):
