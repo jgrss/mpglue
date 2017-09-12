@@ -803,8 +803,6 @@ class Samples(object):
                         c = 0
                         gdd += 1
 
-                print df.head(5)
-
             counter = 1
 
             test_stk = None
@@ -841,13 +839,13 @@ class Samples(object):
                     print test_index
                     print
 
-                    test_samples_temp = df_sub.iloc[test_index]
-                    train_samples_temp = df_sub.iloc[train_index]
+                    test_samples_temp = df_sub.iloc[test_index].values[:, 2:-1]
+                    train_samples_temp = df_sub.iloc[train_index].values[:, 2:-1]
 
                     if isinstance(curr_clear, np.ndarray):
 
-                        test_clear_temp = curr_clear[test_index]
-                        train_clear_temp = curr_clear[train_index]
+                        test_clear_temp = curr_clear[test_index].values
+                        train_clear_temp = curr_clear[train_index].values
 
                     else:
 
@@ -855,7 +853,7 @@ class Samples(object):
                         train_clear_temp = None
 
                     if isinstance(curr_weights, np.ndarray):
-                        train_weights_temp = curr_weights[train_index]
+                        train_weights_temp = curr_weights[train_index].values
                     else:
                         train_weights_temp = None
 
