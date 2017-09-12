@@ -1280,8 +1280,7 @@ class Samples(object):
             self.test_idx += df_sub.iloc[test_index].INDEX.tolist()
 
             # Remove the rows that were sampled.
-            df_sub.drop(df_sub.index[np.array(train_index, dtype='int64')-1], axis=0, inplace=True)
-            df_sub.drop(df_sub.index[np.array(test_index, dtype='int64')-1], axis=0, inplace=True)
+            df_sub.drop(np.array(sorted(list(train_index)+list(test_index)), dtype='int64'), axis=0, inplace=True)
 
             if df_sub.shape[0] < clsamp:
                 break
