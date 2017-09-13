@@ -797,7 +797,7 @@ class Samples(object):
             for class_key, cl in sorted(class_subs.iteritems()):
 
                 if stratified:
-                    self._stratify(cl, clear_observations, self.sample_weight)
+                    self._stratify(class_key, cl)
                 else:
                     self._sample_groups(class_key, cl)
 
@@ -1412,6 +1412,7 @@ class Samples(object):
             new_samps[temp_labels == recode_key] = cl
 
         self.all_samps[:, -1] = new_samps
+        self.df['response'] = new_samps
 
     def _remove_min_observations(self, clear_observations):
 
@@ -1425,6 +1426,7 @@ class Samples(object):
         good_indices = np.where(clear_observations >= self.min_observations)
 
         self.all_samps = self.all_samps[good_indices]
+        self.df = self.df.iloc[good_indices]
 
         if isinstance(self.sample_weight, np.ndarray):
             self.sample_weight = self.sample_weight[good_indices]
@@ -1439,20 +1441,21 @@ class Samples(object):
 
         for class2remove in classes2remove:
 
-            class2remove_idx = np.where(self.all_samps[:, self.label_idx] == class2remove)
+            good_class_idx = np.where(self.all_samps[:, self.label_idx] != class2remove)
 
-            self.all_samps = np.delete(self.all_samps, class2remove_idx, axis=0)
+            self.all_samps = self.all_samps[good_class_idx]
+            self.df = self.df.iloc[good_class_idx]
 
             if isinstance(self.p_vars, np.ndarray):
 
-                self.p_vars = np.float32(np.delete(self.p_vars, class2remove_idx, axis=0))
-                self.labels = np.float32(np.delete(self.labels, class2remove_idx, axis=0))
+                self.p_vars = np.float32(self.p_vars[good_class_idx])
+                self.labels = np.float32(self.labels[good_class_idx])
 
             if isinstance(self.sample_weight, np.ndarray):
-                self.sample_weight = np.float32(np.delete(self.sample_weight, class2remove_idx, axis=0))
+                self.sample_weight = np.float32(self.sample_weight[good_class_idx])
 
             if isinstance(clear_observations, np.ndarray):
-                clear_observations = np.uint64(np.delete(clear_observations, class2remove_idx, axis=0))
+                clear_observations = np.uint64(clear_observations[good_class_idx])
 
         return clear_observations
 
