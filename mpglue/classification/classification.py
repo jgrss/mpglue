@@ -796,14 +796,6 @@ class Samples(object):
             self.train_idx = sorted(self.train_idx)
             self.test_idx = sorted(list(set(self.df.index.tolist()).difference(self.train_idx)))
 
-            logger.info(self.all_samps.shape)
-            logger.info(len(self.train_idx))
-            logger.info(min(self.train_idx))
-            logger.info(max(self.train_idx))
-            logger.info(len(self.test_idx))
-            logger.info(min(self.test_idx))
-            logger.info(max(self.test_idx))
-
             test_samps = self.all_samps[self.test_idx]
             self.all_samps = self.all_samps[self.train_idx]
 
@@ -814,13 +806,6 @@ class Samples(object):
 
             if isinstance(self.sample_weight, np.ndarray):
                 self.sample_weight = self.sample_weight[self.train_idx]
-
-            logger.info(self.all_samps.shape)
-            logger.info(test_samps.shape)
-            logger.info(self.df.shape)
-            logger.info(self.test_clear.shape)
-            logger.info(self.train_clear.shape)
-            sys.exit()
 
         elif 0 < perc_samp_each < 1:
 
@@ -1272,11 +1257,6 @@ class Samples(object):
             #   sample size and the total
             #   collected to this point.
             clsamp = copy(cl - samples_collected)
-
-            logger.info('  SAMPLE')
-            logger.info(clsamp)
-            logger.info(len(train_index))
-            logger.info(df_sub.shape)
 
             # Add the original DataFrame row indices
             #   to the full train and test indices.
