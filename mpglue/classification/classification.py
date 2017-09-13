@@ -1254,68 +1254,36 @@ class Samples(object):
         else:
             dfg = df_sub.sample(frac=cl, replace=False)
 
-        logger.info(df_sub.head(1))
-        logger.info(df_sub.shape)
-        logger.info(cl)
-        logger.info(dfg.shape)
-
         # The train indices are
         #   the DataFrame index.
         train_index = dfg.index.values.ravel()
-
-        logger.info(train_index.dtype)
-        logger.info(train_index.shape)
-        logger.info(train_index.max())
 
         # The test indices are the difference
         #   between the DataFrame and
         #   the train indices.
         # test_index = pd.Int64Index(np.arange(len(df_sub))).difference(dfg.index)
-        test_index = df_sub.iloc[~train_index].index.values.ravel()
+        # test_index = df_sub.iloc[~train_index].index.values.ravel()
 
-        logger.info(len(train_index))
-        logger.info(len(test_index))
+        logger.info(df_sub.iloc[train_index].head(2))
 
         # Update the train and test indices.
-        train_index_sub = df_sub.iloc[train_index].INDEX.tolist()
-        test_index_sub = df_sub.iloc[test_index].INDEX.tolist()
-
-        logger.info(len(train_index_sub))
-        logger.info(len(test_index_sub))
+        # train_index_sub = df_sub.iloc[train_index].INDEX.tolist()
+        # test_index_sub = df_sub.iloc[test_index].INDEX.tolist()
 
         # Add the original DataFrame row indices
         #   to the full train and test indices.
         self.train_idx += df_sub.iloc[train_index].INDEX.tolist()
-        self.test_idx += df_sub.iloc[test_index].INDEX.tolist()
+        # self.test_idx += df_sub.iloc[test_index].INDEX.tolist()
 
-        logger.info(df.head(1))
-        logger.info(df.shape)
+        logger.info(self.train_idx[:5])
         logger.info(len(self.train_idx))
-        logger.info(len(self.test_idx))
         sys.exit()
 
         # Get the train and test indices for the current class.
         #
-        # `df` = [index, X, Y, <data1>, ..., <dataN>, labels]
-        train_samples_temp = df.iloc[train_index_sub].values[:, 3:-1]
-        test_samples_temp = df.iloc[test_index_sub].values[:, 3:-1]
-
-        if isinstance(curr_clear, np.ndarray):
-
-            test_clear_temp = curr_clear[train_index_sub]
-            train_clear_temp = curr_clear[test_index_sub]
-
-        else:
-
-            test_clear_temp = None
-            train_clear_temp = None
-
-        if isinstance(curr_weights, np.ndarray):
-            train_weights_temp = curr_weights[train_index_sub]
-        else:
-            train_weights_temp = None
-
-        return test_samples_temp, train_samples_temp, test_clear_temp, train_clear_temp, train_weights_temp
+        # `df` = [X, Y, <data1>, ..., <dataN>, labels]
+        # train_samples_temp = df.iloc[train_index_sub].values[:, 2:-1]
+        # test_samples_temp = df.iloc[test_index_sub].values[:, 2:-1]
 
     def _stratify(self, class_key, cl, df, curr_clear, curr_weights):
 
