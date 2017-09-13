@@ -784,15 +784,7 @@ class Samples(object):
             if stratified:
                 self._create_group_strata(x_grids, y_grids)
 
-            counter = 1
-
-            # test_stk = None
-            # train_stk = None
-            # clear_test_stk = None
-            # clear_train_stk = None
-            # weights_train_stk = None
             self.train_idx = list()
-            # self.test_idx = list()
 
             for class_key, cl in sorted(class_subs.iteritems()):
 
@@ -800,8 +792,6 @@ class Samples(object):
                     self._stratify(class_key, cl)
                 else:
                     self._sample_groups(class_key, cl)
-
-                counter += 1
 
             self.train_idx = sorted(self.train_idx)
             self.test_idx = sorted(list(set(self.df.index.tolist()).difference(self.train_idx)))
@@ -814,8 +804,8 @@ class Samples(object):
             logger.info(min(self.test_idx))
             logger.info(max(self.test_idx))
 
-            self.all_samps = self.all_samps[self.train_idx]
             test_samps = self.all_samps[self.test_idx]
+            self.all_samps = self.all_samps[self.train_idx]
 
             if isinstance(clear_observations, np.ndarray):
 
