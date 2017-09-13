@@ -1173,6 +1173,8 @@ class Samples(object):
         self.x_grids = np.arange(min_x, max_x+spacing, spacing)
         self.y_grids = np.arange(min_y, max_y+spacing, spacing)
 
+        self.n_grids = len(self.x_grids) * len(self.y_grids)
+
     def _stratify(self, class_key, cl):
 
         """
@@ -1203,7 +1205,7 @@ class Samples(object):
             # Samples to take, per grid.
             samps_per_grid = int(np.floor(clsamp / self.n_groups))
 
-            if df_sub.shape[0] < samps_per_grid * (self.y_grids * self.x_grids):
+            if df_sub.shape[0] < samps_per_grid * self.n_grids:
                 break
 
             # Get `samps_per_grid` samples from each GROUP strata.
