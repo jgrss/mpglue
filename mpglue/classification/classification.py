@@ -1251,7 +1251,7 @@ class Samples(object):
         else:
             dfg = df_sub.sample(frac=cl, replace=False)
 
-        logger.info(df_sub.head(5))
+        logger.info(df_sub.head(1))
         logger.info(df_sub.shape)
         logger.info(cl)
         logger.info(dfg.shape)
@@ -1260,9 +1260,9 @@ class Samples(object):
         #   the DataFrame index.
         train_index = dfg.index.values.ravel()
 
-        logger.info(train_index)
         logger.info(train_index.dtype)
         logger.info(train_index.shape)
+        logger.info(train_index.max())
 
         # The test indices are the difference
         #   between the DataFrame and
