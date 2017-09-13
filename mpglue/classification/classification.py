@@ -1205,10 +1205,10 @@ class Samples(object):
         df_sub = self.df.query('response == {CK}'.format(CK=class_key))
 
         # Save the original row indices.
-        df_sub['INDEX'] = df_sub.index
+        df_sub['ORIG_INDEX'] = df_sub.index
 
         # Reorder the row index.
-        df_sub.reset_index(inplace=True)
+        df_sub.reset_index(inplace=True, drop=True)
 
         # Get `cl` samples from each response strata.
         if isinstance(cl, int):
@@ -1222,7 +1222,7 @@ class Samples(object):
 
         # Add the original DataFrame row indices
         #   to the full train and test indices.
-        self.train_idx += df_sub.iloc[train_index].INDEX.tolist()
+        self.train_idx += df_sub.iloc[train_index].ORIG_INDEX.tolist()
 
     def _stratify(self, class_key, cl):
 
@@ -1240,7 +1240,7 @@ class Samples(object):
         df_sub = self.df.query('response == {CK}'.format(CK=class_key))
 
         # Save the original row indices.
-        df_sub['INDEX'] = df_sub.index
+        df_sub['ORIG_INDEX'] = df_sub.index
 
         train_index_sub = list()
 
@@ -1249,7 +1249,7 @@ class Samples(object):
         while samples_collected < cl:
 
             # Reorder the row index.
-            df_sub.reset_index(inplace=True)
+            df_sub.reset_index(inplace=True, drop=True)
 
             # Samples to take, per grid.
             samps_per_grid = int(np.ceil(clsamp / self.n_groups))
@@ -1263,7 +1263,7 @@ class Samples(object):
             train_index = dfg.index.values.ravel()
 
             # Update the train and test indices.
-            train_index_sub += df_sub.iloc[train_index].INDEX.tolist()
+            train_index_sub += df_sub.iloc[train_index].ORIG_INDEX.tolist()
 
             # Get the total number of samples collect.
             samples_collected = len(train_index_sub)
@@ -1280,7 +1280,7 @@ class Samples(object):
 
             # Add the original DataFrame row indices
             #   to the full train and test indices.
-            self.train_idx += df_sub.iloc[train_index].INDEX.tolist()
+            self.train_idx += df_sub.iloc[train_index].ORIG_INDEX.tolist()
 
             # Remove the rows that were sampled.
             df_sub = df_sub.iloc[~train_index]
