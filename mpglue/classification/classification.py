@@ -1208,7 +1208,7 @@ class Samples(object):
         df_sub['INDEX'] = df_sub.index
 
         # Reorder the row index.
-        df_sub = df_sub.reset_index()
+        df_sub.reset_index(inplace=True)
 
         # Get `cl` samples from each response strata.
         if isinstance(cl, int):
@@ -1249,7 +1249,7 @@ class Samples(object):
         while samples_collected < cl:
 
             # Reorder the row index.
-            df_sub = df_sub.reset_index()
+            df_sub.reset_index(inplace=True)
 
             # Samples to take, per grid.
             samps_per_grid = int(np.ceil(clsamp / self.n_groups))
@@ -1283,7 +1283,8 @@ class Samples(object):
             self.train_idx += df_sub.iloc[train_index].INDEX.tolist()
 
             # Remove the rows that were sampled.
-            df_sub.drop(np.array(sorted(list(train_index)), dtype='int64'), axis=0, inplace=True)
+            df_sub = df_sub.iloc[~train_index]
+            # df_sub.drop(np.array(sorted(list(train_index)), dtype='int64'), axis=0, inplace=True)
 
             if df_sub.shape[0] < clsamp:
                 break
