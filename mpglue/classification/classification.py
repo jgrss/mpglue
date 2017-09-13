@@ -1263,7 +1263,8 @@ class Samples(object):
         # The test indices are the difference
         #   between the DataFrame and
         #   the train indices.
-        test_index = pd.Int64Index(np.arange(len(df_sub))).difference(dfg.index)
+        # test_index = pd.Int64Index(np.arange(len(df_sub))).difference(dfg.index)
+        test_index = df_sub.iloc[~train_index].index
 
         logger.info(train_index)
         logger.info(test_index)
@@ -1280,8 +1281,8 @@ class Samples(object):
         logger.info(df.head(5))
         logger.info(df.shape)
         logger.info(df.iloc[train_index_sub].values[0])
-        logger.info(class_key)
-        logger.info(cl)
+        logger.info(len(self.train_idx))
+        logger.info(len(self.test_idx))
         sys.exit()
 
         # Get the train and test indices for the current class.
