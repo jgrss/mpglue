@@ -1258,7 +1258,7 @@ class Samples(object):
 
         # The train indices are
         #   the DataFrame index.
-        train_index = dfg.index.values
+        train_index = dfg.index.values.ravel()
 
         logger.info(train_index)
         logger.info(train_index.dtype)
@@ -1268,7 +1268,7 @@ class Samples(object):
         #   between the DataFrame and
         #   the train indices.
         # test_index = pd.Int64Index(np.arange(len(df_sub))).difference(dfg.index)
-        test_index = df_sub.iloc[~train_index].index.values
+        test_index = df_sub.iloc[~train_index].index.values.ravel()
 
         logger.info(train_index)
         logger.info(test_index)
