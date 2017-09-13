@@ -908,8 +908,8 @@ class Samples(object):
                 if not self.use_xy:
                     self.all_samps = np.c_[self.all_samps[:, :-1], self.XY, self.all_samps[:, -1]]
 
-                while n_match_samps < n_total_samps:
-                    n_match_samps = self._stratify(y_grids, x_grids, n_match_samps, n_total_samps)
+                # while n_match_samps < n_total_samps:
+                #     n_match_samps = self._stratify(y_grids, x_grids, n_match_samps, n_total_samps)
 
                 test_samps = copy(self.all_samps)
                 self.all_samps = copy(self.stratified_samps)
@@ -1273,6 +1273,11 @@ class Samples(object):
             #   collected to this point.
             clsamp = copy(cl - samples_collected)
 
+            logger.info('  SAMPLE')
+            logger.info(clsamp)
+            logger.info(len(train_index))
+            logger.info(df_sub.shape)
+
             # Add the original DataFrame row indices
             #   to the full train and test indices.
             self.train_idx += df_sub.iloc[train_index].INDEX.tolist()
@@ -1282,39 +1287,6 @@ class Samples(object):
 
             if df_sub.shape[0] < clsamp:
                 break
-
-            # Randomly clip to `cl`.
-            # if len(train_index) > cl:
-            #
-            #     # Get the number of extra samples.
-            #     cl_diff = len(train_index) - cl
-            #
-            #     # Randomly select `cl_diff` samples
-            #     #   from the training index.
-            #     ran_diff_idx = np.random.choice(range(0, len(train_index)), size=cl_diff, replace=False)
-            #
-            #     # Add the extra indices to
-            #     #   the test indices.
-            #     test_index = np.array(list(test_index) + list(np.delete(train_index, ran_diff_idx)), dtype='int64')
-            #
-            #     # Subset the train indices.
-            #     train_index = np.delete(train_index, ran_diff_idx)
-            #
-            # elif len(train_index) < cl:
-            #
-            #     # Get the number of missing samples.
-            #     cl_diff = cl - len(train_index)
-            #
-            #     # Randomly select `cl_diff` samples
-            #     #   from the training index.
-            #     ran_diff_idx = np.random.choice(range(0, len(test_index)), size=cl_diff, replace=False)
-            #
-            #     # Add the extra indices to
-            #     #   the train indices.
-            #     train_index = np.array(list(train_index) + list(np.delete(test_index, ran_diff_idx)), dtype='int64')
-            #
-            #     # Subset the test indices.
-            #     test_index = np.delete(test_index, ran_diff_idx)
 
     # def _stratify(self, y_grids, x_grids, n_match_samps, n_total_samps):
     #
