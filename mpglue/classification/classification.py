@@ -1243,8 +1243,7 @@ class Samples(object):
             self.train_idx += df_sub.iloc[train_index].ORIG_INDEX.tolist()
 
             # Remove the rows that were sampled.
-            df_sub = df_sub.iloc[~train_index[::-1]]
-            # df_sub.drop(np.array(sorted(list(train_index)), dtype='int64'), axis=0, inplace=True)
+            df_sub.drop(np.array(sorted(list(train_index)), dtype='int64'), axis=0, inplace=True)
 
             logger.info(samples_collected)
             logger.info(cl)
