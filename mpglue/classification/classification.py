@@ -1201,7 +1201,7 @@ class Samples(object):
             df_sub.reset_index(inplace=True, drop=True)
 
             # Samples to take, per grid.
-            samps_per_grid = int(np.ceil(clsamp / self.n_groups))
+            samps_per_grid = int(np.floor(clsamp / self.n_groups))
 
             # Get `samps_per_grid` samples from each GROUP strata.
             dfg = df_sub.groupby('GROUP', group_keys=False).apply(lambda xr_: xr_.sample(min(len(xr_),
