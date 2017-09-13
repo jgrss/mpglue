@@ -1205,6 +1205,11 @@ class Samples(object):
             # Samples to take, per grid.
             samps_per_grid = int(np.floor(clsamp / self.n_groups))
 
+            logger.info('  SAMPLES')
+            logger.info(samps_per_grid)
+            logger.info(self.n_grids)
+            logger.info(df_sub.shape[0])
+
             if df_sub.shape[0] < samps_per_grid * self.n_grids:
                 break
 
@@ -1215,6 +1220,12 @@ class Samples(object):
             # The train indices are
             #   the DataFrame index.
             train_index = dfg.index.values.ravel()
+
+            logger.info('  TRAIN')
+            logger.info(len(train_index))
+
+            if (len(train_index) == 0) or (len(train_index) > df_sub.shape[0]):
+                break
 
             # Update the train and test indices.
             train_index_sub += df_sub.iloc[train_index].ORIG_INDEX.tolist()
@@ -1231,14 +1242,10 @@ class Samples(object):
             #   to the full train and test indices.
             self.train_idx += df_sub.iloc[train_index].ORIG_INDEX.tolist()
 
-            if len(train_index) > df_sub.shape[0]:
-                break
-
             # Remove the rows that were sampled.
             df_sub = df_sub.iloc[~train_index[::-1]]
             # df_sub.drop(np.array(sorted(list(train_index)), dtype='int64'), axis=0, inplace=True)
 
-            logger.info('  SAMPLES')
             logger.info(samples_collected)
             logger.info(cl)
             logger.info(clsamp)
