@@ -793,7 +793,6 @@ class Samples(object):
         logger.info(self.all_samps.shape)
         logger.info(self.df.shape)
         logger.info(self.XY.shape)
-        sys.exit()
 
         # ----------------------------------
         # Potential change in array ROW size
@@ -1303,7 +1302,7 @@ class Samples(object):
             clear_observations (1d array): The clear observations.
         """
 
-        self.clear_idx = np.where(clear_observations >= self.min_observations)
+        self.clear_idx = np.where(clear_observations >= self.min_observations)[0]
 
         self.all_samps = self.all_samps[self.clear_idx]
 
@@ -1327,7 +1326,7 @@ class Samples(object):
 
         for class2remove in classes2remove:
 
-            self.class_idx = np.where(self.all_samps[:, self.label_idx] != class2remove)
+            self.class_idx = np.where(self.all_samps[:, self.label_idx] != class2remove)[0]
 
             self.all_samps = self.all_samps[self.class_idx]
 
