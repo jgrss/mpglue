@@ -1245,6 +1245,9 @@ class Samples(object):
         # Save the original row indices.
         df_sub['INDEX'] = df_sub.index
 
+        # Reorder the row index.
+        df_sub = df_sub.reset_index()
+
         # Get `cl` samples from each response strata.
         if isinstance(cl, int):
             dfg = df_sub.sample(n=cl, replace=False)
