@@ -4261,9 +4261,15 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             if self.calibrate_proba:
 
+                feature_importances_ = None
+                estimators_ = None
+
                 # Keep the feature importances.
                 if hasattr(self.model, 'feature_importances_'):
                     feature_importances_ = copy(self.model.feature_importances_)
+
+                if hasattr(self.model, 'estimators_'):
+                    estimators_ = copy(self.model.estimators_)
 
                 # clf_probs = self.model.predict_proba(self.p_vars_test)
 
@@ -4293,7 +4299,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 else:
                     self.model.fit(self.p_vars_test, self.labels_test)
 
-                self.model.feature_importances_ = feature_importances_
+                if isinstance(feature_importances_, np.ndarray):
+                    self.model.feature_importances_ = feature_importances_
+
+                if isinstance(estimators_, np.ndarray):
+                    self.model.estimators_ = estimators_
 
                 self.calibrated = True
 
