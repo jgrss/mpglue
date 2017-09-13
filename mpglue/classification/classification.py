@@ -1258,13 +1258,13 @@ class Samples(object):
 
         # The train indices are
         #   the DataFrame index.
-        train_index = dfg.index
+        train_index = dfg.index.values
 
         # The test indices are the difference
         #   between the DataFrame and
         #   the train indices.
         # test_index = pd.Int64Index(np.arange(len(df_sub))).difference(dfg.index)
-        test_index = df_sub.iloc[~train_index].index
+        test_index = df_sub.iloc[~train_index].index.values
 
         logger.info(train_index)
         logger.info(test_index)
