@@ -664,6 +664,7 @@ class Samples(object):
         self.classes2remove = classes2remove
         self.sample_weight = sample_weight
         self.min_observations = min_observations
+        self.response_label = response_label
 
         self.class_idx = None
         self.clear_idx = None
@@ -678,7 +679,7 @@ class Samples(object):
                 logger.error('  The samples array must be a 2d array.')
                 raise TypeError
 
-            headers = [x_label, y_label] + map(str, range(1, self.file_name.shape[1]-2)) + [response_label]
+            headers = [x_label, y_label] + map(str, range(1, self.file_name.shape[1]-2)) + [self.response_label]
 
             self.df = pd.DataFrame(self.file_name, columns=headers)
 
@@ -703,7 +704,7 @@ class Samples(object):
 
         else:
 
-            self.headers = self.headers[self.headers.index(response_label):]
+            self.headers = self.headers[self.headers.index(self.response_label):]
 
             # The response index position.
             self.label_idx = 0
@@ -712,9 +713,6 @@ class Samples(object):
 
         # Parse the x variables.
         self.all_samps = self.df.loc[:, self.headers[data_position:]].values
-
-        # Parse the x, y coordinates.
-        self.XY = self.df[[x_label, y_label]].values
 
         if isinstance(clear_observations, np.ndarray) or isinstance(clear_observations, list):
 
@@ -725,39 +723,45 @@ class Samples(object):
                 logger.error('  The clear observation and sample lengths do no match.')
                 raise AssertionError
 
-        # Spatial stratified sampling.
-        if stratified:
-            self._create_grid_strata(spacing)
-
+        # ---------------------------
+        # Change in array COLUMN size
+        # ---------------------------
         # Remove specified x variables.
         if ignore_feas:
 
-            ignore_feas_ = [f-1 for f in ignore_feas]
             ignore_feas = np.array(sorted([int(f-1) for f in ignore_feas]), dtype='int64')
 
-            self.all_samps = self.all_samps[:, ~ignore_feas[::-1]]
-            self.df = self.df.iloc[:, ~ignore_feas[::-1]]
+            self.all_samps = np.delete(self.all_samps, ignore_feas, axis=1)
+            self.df.drop(self.df.columns[ignore_feas+2], inplace=True, axis=1)
 
             self.headers = self.df.columns.tolist()
 
-        # Append the x, y coordinates to the x variables.
         if self.use_xy:
 
-            self.all_samps = np.c_[self.all_samps[:, :-1], self.XY, self.all_samps[:, -1]]
-            self.headers = self.headers[2:-1] + self.headers[:2] + [self.headers[-1]]
+            # Reorder the variables and x, y coordinates.
+            self.df = self.df[[self.headers[2:-1] + self.headers[:2] + self.headers[-1]]]
+            self.all_samps = self.df.values
+
+            self.headers = self.df.columns.tolist()
 
         else:
 
-            # Remove x, y
+            # Remove the x, y coordinates.
             self.headers = self.headers[2:]
 
         if isinstance(self.sample_weight, list) and len(self.sample_weight) > 0:
             self.sample_weight = np.array(self.sample_weight, dtype='float32')
 
+        # ----------------------------------
+        # Potential change in array ROW size
+        # ----------------------------------
         # Remove unwanted classes.
         if self.classes2remove:
             clear_observations = self._remove_classes(self.classes2remove, clear_observations)
 
+        # ----------------------------------
+        # Potential change in array ROW size
+        # ----------------------------------
         # Remove samples with less than
         #   minimum time series requirement.
         if isinstance(clear_observations, np.ndarray) and (min_observations > 0):
@@ -779,14 +783,36 @@ class Samples(object):
         if recode_dict:
             self._recode_labels(recode_dict)
 
-        # Sample a specified number per class.
-        if class_subs:
+        # Parse the x, y coordinates.
+        self.XY = self.df[[x_label, y_label]].values
 
-            # TODO: testing
+        # Spatial stratified sampling.
+        if stratified:
+            self._create_grid_strata(spacing)
+
+        logger.info(self.all_samps.shape)
+        logger.info(self.df.shape)
+        logger.info(self.XY.shape)
+        sys.exit()
+
+        # ----------------------------------
+        # Potential change in array ROW size
+        # ----------------------------------
+        # Sample a specified number per class.
+        if class_subs or (0 < perc_samp_each < 1):
+
+            self.train_idx = list()
+
+            # Create the group strata.
             if stratified:
                 self._create_group_strata()
 
-            self.train_idx = list()
+            if not class_subs and (0 < perc_samp_each < 1):
+
+                class_subs = dict()
+
+                for clp in self.classes:
+                    class_subs[clp] = perc_samp_each
 
             for class_key, cl in sorted(class_subs.iteritems()):
 
@@ -803,47 +829,6 @@ class Samples(object):
 
             if isinstance(clear_observations, np.ndarray):
 
-                self.test_clear = clear_observations[self.test_idx]
-                self.train_clear = clear_observations[self.train_idx]
-
-            if isinstance(self.sample_weight, np.ndarray):
-                self.sample_weight = self.sample_weight[self.train_idx]
-
-        elif 0 < perc_samp_each < 1:
-
-            # Get class labels.
-            if labs_type == 'int':
-                self.labels = np.array(self.all_samps[:, self.label_idx].ravel(), dtype='int64')
-            elif labs_type == 'float':
-                self.labels = np.array(self.all_samps[:, self.label_idx].ravel(), dtype='float32')
-            else:
-
-                logger.error('  `labs_type` should be int or float')
-                raise TypeError
-
-            self.classes = list(np.unique(self.labels))
-
-            class_subs = dict()
-
-            for clp in self.classes:
-                class_subs[clp] = perc_samp_each
-
-            self.train_idx = list()
-
-            for class_key, cl in sorted(class_subs.iteritems()):
-
-                if stratified:
-                    self._stratify(class_key, cl)
-                else:
-                    self._sample_groups(class_key, cl)
-
-            self.train_idx = sorted(self.train_idx)
-            self.test_idx = sorted(list(set(self.df.index.tolist()).difference(self.train_idx)))
-
-            test_samps = self.all_samps[self.test_idx]
-            self.all_samps = self.all_samps[self.train_idx]
-
-            if isinstance(clear_observations, np.ndarray):
                 self.test_clear = clear_observations[self.test_idx]
                 self.train_clear = clear_observations[self.train_idx]
 
@@ -1300,14 +1285,14 @@ class Samples(object):
             recode_dict (dict): The recode dictionary.
         """
 
-        new_samps = np.zeros(self.n_samps, dtype='int16')
+        new_samps = np.zeros(self.n_samps, dtype='int64')
         temp_labels = self.all_samps[:, -1]
 
         for recode_key, cl in sorted(recode_dict.iteritems()):
             new_samps[temp_labels == recode_key] = cl
 
         self.all_samps[:, -1] = new_samps
-        self.df['response'] = new_samps
+        self.df[self.response_label] = new_samps
 
     def _remove_min_observations(self, clear_observations):
 
