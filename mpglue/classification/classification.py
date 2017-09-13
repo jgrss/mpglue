@@ -1252,6 +1252,11 @@ class Samples(object):
             logger.info(df_sub.shape)
             logger.info('  COLLECTED')
 
+        if len(self.train_idx) > cl:
+
+            ran = np.random.choice(range(0, len(self.train_idx)), size=cl, replace=False)
+            self.train_idx = self.train_idx[ran]
+
         logger.info(len(self.train_idx))
         sys.exit()
 
