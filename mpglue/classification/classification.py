@@ -838,6 +838,14 @@ class Samples(object):
             self.train_idx = sorted(self.train_idx)
             self.test_idx = sorted(list(set(self.df.index.tolist()).difference(self.train_idx)))
 
+            logger.info(self.all_samps.shape)
+            logger.info(len(self.train_idx))
+            logger.info(min(self.train_idx))
+            logger.info(max(self.train_idx))
+            logger.info(len(self.test_idx))
+            logger.info(min(self.test_idx))
+            logger.info(max(self.test_idx))
+
             self.all_samps = self.all_samps[self.train_idx]
             test_samps = self.all_samps[self.test_idx]
 
