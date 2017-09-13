@@ -1205,11 +1205,6 @@ class Samples(object):
             # Samples to take, per grid.
             samps_per_grid = int(np.ceil(clsamp / self.n_groups))
 
-            logger.info('  SAMPLES')
-            logger.info(samps_per_grid)
-            logger.info(self.n_grids)
-            logger.info(df_sub.shape[0])
-
             if df_sub.shape[0] < samps_per_grid * self.n_grids:
                 break
 
@@ -1220,9 +1215,6 @@ class Samples(object):
             # The train indices are
             #   the DataFrame index.
             train_index = dfg.index.values.ravel()
-
-            logger.info('  TRAIN')
-            logger.info(len(train_index))
 
             if (len(train_index) == 0) or (len(train_index) > df_sub.shape[0]):
                 break
@@ -1245,20 +1237,10 @@ class Samples(object):
             # Remove the rows that were sampled.
             df_sub.drop(np.array(sorted(list(train_index)), dtype='int64'), axis=0, inplace=True)
 
-            logger.info(samples_collected)
-            logger.info(cl)
-            logger.info(clsamp)
-            logger.info(len(train_index))
-            logger.info(df_sub.shape)
-            logger.info('  COLLECTED')
-
         if len(self.train_idx) > cl:
 
             ran = np.random.choice(range(0, len(self.train_idx)), size=cl, replace=False)
             self.train_idx = list(np.array(self.train_idx, dtype='int64')[ran])
-
-        logger.info(len(self.train_idx))
-        sys.exit()
 
     # def _stratify(self, y_grids, x_grids, n_match_samps, n_total_samps):
     #
