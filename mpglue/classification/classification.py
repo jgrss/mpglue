@@ -1203,6 +1203,9 @@ class Samples(object):
             # Samples to take, per grid.
             samps_per_grid = int(np.floor(clsamp / self.n_groups))
 
+            if df_sub.shape[0] < samps_per_grid * (self.y_grids * self.x_grids):
+                break
+
             # Get `samps_per_grid` samples from each GROUP strata.
             dfg = df_sub.groupby('GROUP', group_keys=False).apply(lambda xr_: xr_.sample(min(len(xr_),
                                                                                              samps_per_grid)))
@@ -1226,6 +1229,9 @@ class Samples(object):
             #   to the full train and test indices.
             self.train_idx += df_sub.iloc[train_index].ORIG_INDEX.tolist()
 
+            if len(train_index) > df_sub.shape[0]:
+                break
+
             # Remove the rows that were sampled.
             df_sub = df_sub.iloc[~train_index[::-1]]
             # df_sub.drop(np.array(sorted(list(train_index)), dtype='int64'), axis=0, inplace=True)
@@ -1237,9 +1243,6 @@ class Samples(object):
             logger.info(len(train_index))
             logger.info(df_sub.shape)
             logger.info('  COLLECTED')
-
-            if df_sub.shape[0] < clsamp:
-                break
 
     # def _stratify(self, y_grids, x_grids, n_match_samps, n_total_samps):
     #
