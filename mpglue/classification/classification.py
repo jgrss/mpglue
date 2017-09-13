@@ -1203,7 +1203,7 @@ class Samples(object):
             df_sub.reset_index(inplace=True, drop=True)
 
             # Samples to take, per grid.
-            samps_per_grid = int(np.floor(clsamp / self.n_groups))
+            samps_per_grid = int(np.ceil(clsamp / self.n_groups))
 
             logger.info('  SAMPLES')
             logger.info(samps_per_grid)
@@ -1251,6 +1251,9 @@ class Samples(object):
             logger.info(len(train_index))
             logger.info(df_sub.shape)
             logger.info('  COLLECTED')
+
+        logger.info(len(self.train_idx))
+        sys.exit()
 
     # def _stratify(self, y_grids, x_grids, n_match_samps, n_total_samps):
     #
