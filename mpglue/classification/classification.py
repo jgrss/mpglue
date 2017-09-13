@@ -1251,6 +1251,11 @@ class Samples(object):
         else:
             dfg = df_sub.sample(frac=cl, replace=False)
 
+        logger.info(df_sub.head(5))
+        logger.info(df_sub.shape)
+        logger.info(cl)
+        logger.info(dfg.shape)
+
         # The train indices are
         #   the DataFrame index.
         train_index = dfg.index
@@ -1259,6 +1264,9 @@ class Samples(object):
         #   between the DataFrame and
         #   the train indices.
         test_index = pd.Int64Index(np.arange(len(df_sub))).difference(dfg.index)
+
+        logger.info(train_index)
+        logger.info(test_index)
 
         # Update the train and test indices.
         train_index_sub = df_sub.iloc[train_index].INDEX.tolist()
