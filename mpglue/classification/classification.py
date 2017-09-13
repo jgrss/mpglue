@@ -790,10 +790,6 @@ class Samples(object):
         if stratified:
             self._create_grid_strata(spacing)
 
-        logger.info(self.all_samps.shape)
-        logger.info(self.df.shape)
-        logger.info(self.XY.shape)
-
         # ----------------------------------
         # Potential change in array ROW size
         # ----------------------------------
