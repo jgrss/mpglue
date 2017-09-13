@@ -1260,6 +1260,10 @@ class Samples(object):
         #   the DataFrame index.
         train_index = dfg.index.values
 
+        logger.info(train_index)
+        logger.info(train_index.dtype)
+        logger.info(train_index.shape)
+
         # The test indices are the difference
         #   between the DataFrame and
         #   the train indices.
