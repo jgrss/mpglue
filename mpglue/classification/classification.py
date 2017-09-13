@@ -1255,7 +1255,7 @@ class Samples(object):
         if len(self.train_idx) > cl:
 
             ran = np.random.choice(range(0, len(self.train_idx)), size=cl, replace=False)
-            self.train_idx = self.train_idx[ran]
+            self.train_idx = list(np.array(self.train_idx, dtype='int64')[ran])
 
         logger.info(len(self.train_idx))
         sys.exit()
