@@ -801,38 +801,6 @@ class Samples(object):
                 else:
                     self._sample_groups(class_key, cl)
 
-                # Get the samples for the current class.
-                # curr_cl, curr_weights, curr_clear, do_continue, cl_indices = self.get_class_subsample(class_key,
-                #                                                                                       clear_observations)
-
-                # if do_continue:
-                #     continue
-
-                # if stratified:
-                #
-                #     test_samples_temp, train_samples_temp, test_clear_temp, train_clear_temp, train_weights_temp = \
-                #         self._stratify(df, cl, cl_indices, curr_clear, curr_weights)
-                #
-                # else:
-                #
-                #     # Get the sub-sample indices
-                #     #   for the current class.
-                #     test_samples_temp, train_samples_temp, test_clear_temp, train_clear_temp, train_weights_temp = \
-                #         self.get_test_train(curr_cl, cl, curr_weights, curr_clear)
-
-                # Stack the sub-samples.
-                # test_stk, train_stk, clear_test_stk, clear_train_stk, weights_train_stk = self._stack_samples(counter,
-                #                                                                                               test_stk,
-                #                                                                                               train_stk,
-                #                                                                                               test_samples_temp,
-                #                                                                                               train_samples_temp,
-                #                                                                                               clear_test_stk,
-                #                                                                                               clear_train_stk,
-                #                                                                                               test_clear_temp,
-                #                                                                                               train_clear_temp,
-                #                                                                                               weights_train_stk,
-                #                                                                                               train_weights_temp)
-
                 counter += 1
 
             self.train_idx = sorted(self.train_idx)
@@ -1426,7 +1394,9 @@ class Samples(object):
         good_indices = np.where(clear_observations >= self.min_observations)
 
         self.all_samps = self.all_samps[good_indices]
+
         self.df = self.df.iloc[good_indices]
+        self.df = self.df.reset_index()
 
         if isinstance(self.sample_weight, np.ndarray):
             self.sample_weight = self.sample_weight[good_indices]
@@ -1444,7 +1414,9 @@ class Samples(object):
             good_class_idx = np.where(self.all_samps[:, self.label_idx] != class2remove)
 
             self.all_samps = self.all_samps[good_class_idx]
+
             self.df = self.df.iloc[good_class_idx]
+            self.df = self.df.reset_index()
 
             if isinstance(self.p_vars, np.ndarray):
 
