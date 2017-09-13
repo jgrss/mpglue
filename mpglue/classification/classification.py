@@ -1273,21 +1273,23 @@ class Samples(object):
         # test_index = pd.Int64Index(np.arange(len(df_sub))).difference(dfg.index)
         test_index = df_sub.iloc[~train_index].index.values.ravel()
 
-        logger.info(train_index)
-        logger.info(test_index)
+        logger.info(len(train_index))
+        logger.info(len(test_index))
 
         # Update the train and test indices.
         train_index_sub = df_sub.iloc[train_index].INDEX.tolist()
         test_index_sub = df_sub.iloc[test_index].INDEX.tolist()
+
+        logger.info(len(train_index_sub))
+        logger.info(len(test_index_sub))
 
         # Add the original DataFrame row indices
         #   to the full train and test indices.
         self.train_idx += df_sub.iloc[train_index].INDEX.tolist()
         self.test_idx += df_sub.iloc[test_index].INDEX.tolist()
 
-        logger.info(df.head(5))
+        logger.info(df.head(1))
         logger.info(df.shape)
-        logger.info(df.iloc[train_index_sub].values[0])
         logger.info(len(self.train_idx))
         logger.info(len(self.test_idx))
         sys.exit()
