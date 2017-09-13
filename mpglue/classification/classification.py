@@ -1230,6 +1230,14 @@ class Samples(object):
             df_sub = df_sub.iloc[~train_index[::-1]]
             # df_sub.drop(np.array(sorted(list(train_index)), dtype='int64'), axis=0, inplace=True)
 
+            logger.info('  SAMPLES')
+            logger.info(samples_collected)
+            logger.info(cl)
+            logger.info(clsamp)
+            logger.info(len(train_index))
+            logger.info(df_sub.shape)
+            logger.info('  COLLECTED')
+
             if df_sub.shape[0] < clsamp:
                 break
 
