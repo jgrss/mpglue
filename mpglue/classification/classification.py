@@ -676,6 +676,7 @@ class Samples(object):
         elif isinstance(self.file_name, np.ndarray):
 
             if len(self.file_name.shape) != 2:
+
                 logger.error('  The samples array must be a 2d array.')
                 raise TypeError
 
@@ -790,13 +791,13 @@ class Samples(object):
         if stratified:
             self._create_grid_strata(spacing)
 
+        self.train_idx = list()
+
         # ----------------------------------
         # Potential change in array ROW size
         # ----------------------------------
         # Sample a specified number per class.
         if class_subs or (0 < perc_samp_each < 1):
-
-            self.train_idx = list()
 
             # Create the group strata.
             if stratified:
@@ -1129,12 +1130,12 @@ class Samples(object):
                 c = 0
                 gdd += 1
 
-    def _sample_groups(self, class_key, cl):
+    def _sample_groups(self, class_key, sample_size):
 
         """
         Args:
             class_key (int): The class to sample from.
-            cl (int): The number of samples to take.
+            sample_size (int): The number of samples to take.
         """
 
         # DataFrame that contains the current class.
@@ -1146,19 +1147,23 @@ class Samples(object):
         # Reorder the row index.
         df_sub.reset_index(inplace=True, drop=True)
 
-        # Get `cl` samples from each response strata.
-        if isinstance(cl, int):
-            dfg = df_sub.sample(n=cl, replace=False)
+        if sample_size > df_sub.shape[0]:
+            self.train_index = df_sub.ORIG_INDEX.tolist()
         else:
-            dfg = df_sub.sample(frac=cl, replace=False)
 
-        # The train indices are
-        #   the DataFrame index.
-        train_index = dfg.index.values.ravel()
+            # Get `cl` samples from each response strata.
+            if isinstance(sample_size, int):
+                dfg = df_sub.sample(n=sample_size, replace=False)
+            else:
+                dfg = df_sub.sample(frac=sample_size, replace=False)
 
-        # Add the original DataFrame row indices
-        #   to the full train and test indices.
-        self.train_idx += df_sub.iloc[train_index].ORIG_INDEX.tolist()
+            # The train indices are
+            #   the DataFrame index.
+            train_index = dfg.index.values.ravel()
+
+            # Add the original DataFrame row indices
+            #   to the full train and test indices.
+            self.train_idx += df_sub.iloc[train_index].ORIG_INDEX.tolist()
 
     def _create_grid_strata(self, spacing):
 
@@ -3407,6 +3412,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.be_quiet = be_quiet
         self.n_jobs = n_jobs
 
+        self.calibrated = False
+
         if isinstance(self.input_model, str):
 
             if not os.path.isfile(self.input_model):
@@ -4254,6 +4261,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             if self.calibrate_proba:
 
+                # Keep the feature importances.
+                if hasattr(self.model, 'feature_importances_'):
+                    feature_importances_ = copy(self.model.feature_importances_)
+
                 # clf_probs = self.model.predict_proba(self.p_vars_test)
 
                 if self.n_samps >= 1000:
@@ -4261,7 +4272,30 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 else:
                     self.model = calibration.CalibratedClassifierCV(self.model, method='sigmoid', cv='prefit')
 
-                self.model.fit(self.p_vars_test, self.labels_test)
+                # Limit the test size.
+                samp_thresh = 5000
+                if self.p_vars_test.shape[0] > samp_thresh:
+
+                    pdf = pd.DataFrame(self.p_vars_test)
+                    pdf['GROUP'] = self.labels_test
+
+                    n_groups = len(pdf.GROUP.unique())
+
+                    group_samps = int(float(samp_thresh) / n_groups)
+
+                    dfg = pdf.groupby('GROUP', group_keys=False).apply(lambda xr_: xr_.sample(min(len(xr_),
+                                                                                                  group_samps)))
+
+                    idx = dfg.index.values.ravel()
+
+                    self.model.fit(self.p_vars_test[idx], self.labels_test[idx])
+
+                else:
+                    self.model.fit(self.p_vars_test, self.labels_test)
+
+                self.model.feature_importances_ = feature_importances_
+
+                self.calibrated = True
 
                 # clf_probs_cal = self.model_.predict_proba(self.p_vars_test)
                 #
@@ -4269,7 +4303,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 #
                 # plt.figure(0)
                 # colors = ['r', 'g', 'b', 'orange', 'purple', 'green', 'yellow', 'black', 'cyan', 'magenta', 'gray']
-                # for i in xrange(clf_probs.shape[0]):
+                # for i in range(clf_probs.shape[0]):
                 #     plt.arrow(clf_probs[i, 0], clf_probs[i, 1],
                 #               clf_probs_cal[i, 0] - clf_probs[i, 0],
                 #               clf_probs_cal[i, 1] - clf_probs[i, 1],

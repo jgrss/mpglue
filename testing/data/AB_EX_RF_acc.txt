@@ -1,0 +1,37 @@
+============
+Error Matrix
+============
+
+               Observed
+               --------
+               Class 0   Class 1   Class 2   Class 3   Total   User(%)
+               -------   -------   -------   -------   -----   -------
+Predicted| C0| (0)       0         0         0         0       0.00
+           C1| 0         (0)       0         0         0       0.00
+           C2| 5         4         (7)       4         20      35.00
+           C3| 0         0         0         (0)       0       0.00
+        Total| 5         4         7         4         (20)
+  Producer(%)| 0.00      0.00      100.00    0.00              (35.00%)
+
+Samples: 20
+
+==========
+Statistics
+==========
+
+Overall Accuracy (%): 35.00
+Kappa: 0.00
+Hamming loss: 0.65
+
+============
+Class report
+============
+
+             precision    recall  f1-score   support
+
+          0       0.00      0.00      0.00         5
+          1       0.00      0.00      0.00         4
+          2       0.35      1.00      0.52         7
+          3       0.00      0.00      0.00         4
+
+avg / total       0.12      0.35      0.18        20

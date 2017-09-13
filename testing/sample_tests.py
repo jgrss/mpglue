@@ -39,11 +39,9 @@ cl.split_samples(sample_data,
                  min_observations=0)
 
 """Random Forest"""
-cl.construct_model(classifier_info={'classifier': 'AB_EX_RF', 'n_estimators': 100},
-                   output_model='data/AB_EX_RF.model')
-
-print(cl.model)
-sys.exit()
+cl.construct_model(classifier_info={'classifier': 'AB_EX_RF', 'trials': 10, 'n_estimators': 100},
+                   output_model='data/AB_EX_RF.model',
+                   calibrate_proba=True)
 
 """Chain CRF"""
 # cl.construct_model(classifier_info={'classifier': 'ChainCRF'})
@@ -51,29 +49,32 @@ sys.exit()
 # pr = np.array(list(itertools.chain.from_iterable(pr)))
 
 """Grid CRF"""
-var_im = np.random.uniform(low=0, high=10000, size=3*100*100).reshape(3, 100, 100).astype(np.float32)
-labels_im = np.random.uniform(low=0, high=3, size=100*100).reshape(100, 100).astype(np.uint8)
-cl.load4crf([var_im], [labels_im], scale_factor=10000.)
-cl.construct_model(classifier_info={'classifier': 'GridCRF'})
-pr = cl.model.predict(cl.p_vars)
+# var_im = np.random.uniform(low=0, high=10000, size=3*100*100).reshape(3, 100, 100).astype(np.float32)
+# labels_im = np.random.uniform(low=0, high=3, size=100*100).reshape(100, 100).astype(np.uint8)
+# cl.load4crf([var_im], [labels_im], scale_factor=10000.)
+# cl.construct_model(classifier_info={'classifier': 'GridCRF'})
+# pr = cl.model.predict(cl.p_vars)
+#
+# print(cl.model)
+# print(pr)
+# sys.exit()
 
+print(cl.calibrated)
 print(cl.model)
-print(pr)
-sys.exit()
-
+print(cl.model.feature_importances_)
 print(cl.XY.shape)
 print(cl.p_vars.shape)
 print(cl.labels.shape)
 print(cl.sample_weight)
 
-df_weights = pd.DataFrame(np.hstack((cl.XY,
-                                     cl.p_vars,
-                                     cl.labels.reshape(cl.n_samps, 1),
-                                     cl.sample_weight.reshape(cl.n_samps, 1))),
-                          columns=['X', 'Y', 'a1', 'a2', 'a3', 'a4', 'Id', 'WEIGHT'])
+# df_weights = pd.DataFrame(np.hstack((cl.XY,
+#                                      cl.p_vars,
+#                                      cl.labels.reshape(cl.n_samps, 1),
+#                                      cl.sample_weight.reshape(cl.n_samps, 1))),
+#                           columns=['X', 'Y', 'a1', 'a2', 'a3', 'a4', 'Id', 'WEIGHT'])
 
-df_weights = cl.weight_samples(df_weights, 'WEIGHT == 1', 'WEIGHT != 1')
-print(df_weights)
+# df_weights = cl.weight_samples(df_weights, 'WEIGHT == 1', 'WEIGHT != 1')
+# print(df_weights)
 sys.exit()
 
 
