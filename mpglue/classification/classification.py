@@ -488,7 +488,7 @@ class ParameterHandler(object):
                                  'neighborhood']
 
         else:
-            logger.info('  The classifier is not supported.')
+            logger.warning('  The classifier is not supported.')
 
     def check_parameters(self, cinfo, default_params, trials_set=False):
 
@@ -1120,8 +1120,8 @@ class Samples(object):
 
             g = groups[c] * gdd
 
-            self.df['GROUP'] = [g if (self.x_grids[xgj] <= x_ < self.x_grids[xgj + 1]) and
-                                     (self.y_grids[ygi] <= y_ < self.y_grids[ygi + 1]) else
+            self.df['GROUP'] = [g if (self.x_grids[xgj] <= x_ < self.x_grids[xgj+1]) and
+                                     (self.y_grids[ygi] <= y_ < self.y_grids[ygi+1]) else
                                 gr for x_, y_, gr in zip(self.df['X'], self.df['Y'], self.df['GROUP'])]
 
             c += 1
