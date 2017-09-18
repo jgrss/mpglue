@@ -1991,70 +1991,65 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
 
         out_ds = None
 
-    def hist(self, band=1, is_cdl=False, bins=256, hist_range=None, normed=False, weights=None, density=None):
+    def hist(self, band=1, name_dict=None, bins=256, **kwargs):
 
         """
         Prints the image histogram
 
         Args:
             band (Optional[int]): The band to get the histogram from.
-            is_cdl (Optional[bool]): Whether the image is a CDL image.
+            name_dict (Optional[dict]): A dictionary of {'name': value} for discrete value arrays.
             bins (Optional[int]): The number of bins.
-            hist_range (Optional[tuple]): The histogram range.
-            normed
-            weights
-            density
+            kwargs:
+                Other arguments passed to `numpy.histogram`.
+                hist_range (Optional[tuple]): The histogram range.
+                normed (Optional[bool])
+                weights
+                density
         """
 
-        if is_cdl:
-
-            from .helpers import CDL_DICT#, CDL_NONCROP_DICT
-
-            CDL_DICT_r = {v: k for k, v in CDL_DICT.iteritems()}
-            # CDL_NONCROP_DICT_r = {v: k for k, v in CDL_NONCROP_DICT.iteritems()}
-
-        if not isinstance(hist_range, tuple):
-            hist_range = (0, 255)
+        if 'hist_range' not in kwargs:
+            kwargs['hist_range'] = (0, bins-1)
 
         if hasattr(self, 'array'):
 
             the_hist, bin_edges = np.histogram(self.array,
                                                bins=bins,
-                                               range=hist_range,
-                                               normed=normed,
-                                               weights=weights,
-                                               density=density)
+                                               **kwargs)
 
         else:
 
             the_hist, bin_edges = np.histogram(self.read(bands2open=band),
                                                bins=bins,
-                                               range=hist_range,
-                                               normed=normed,
-                                               weights=weights,
-                                               density=density)
+                                               **kwargs)
 
-        total_samples = float(the_hist.sum())
-        the_hist_pct = (the_hist / total_samples) * 100.
+        self.total_samples = float(the_hist.sum())
+        the_hist_pct = (the_hist / self.total_samples) * 100.
 
-        logger.info('\nTotal samples: {:,d}\n'.format(int(total_samples)))
+        self.value_dict = dict()
 
         for i in range(0, bins):
 
             if the_hist[i] > 0:
 
-                if is_cdl:
+                if isinstance(name_dict, dict):
 
-                    if i not in CDL_DICT_r:
-                        cdl_label = 'unknown'
+                    if i not in name_dict:
+                        label = 'unknown'
                     else:
-                        cdl_label = CDL_DICT_r[i]
+                        label = name_dict[i]
 
-                    logger.info('{:d} ({}): {:,d} -- {:.2f}%'.format(i, cdl_label, the_hist[i], the_hist_pct[i]))
+                    self.value_dict[i] = dict(value=i,
+                                              name=label,
+                                              count=the_hist[i],
+                                              perc=the_hist_pct[i])
 
                 else:
-                    logger.info('{:d}: {:,d} -- {:.2f}%'.format(i, the_hist[i], the_hist_pct[i]))
 
+                    self.value_dict[i] = dict(value=i,
+                                              count=the_hist[i],
+                                              perc=the_hist_pct[i])
+                    
     def pca(self, n_components=3):
 
         """
