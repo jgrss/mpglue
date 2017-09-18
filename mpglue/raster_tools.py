@@ -18,7 +18,7 @@ import shutil
 import itertools
 import platform
 import subprocess
-# import ctypes
+from collections import OrderedDict
 
 # if platform.system() == 'Darwin':
 #
@@ -1998,18 +1998,28 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
 
         Args:
             band (Optional[int]): The band to get the histogram from.
-            name_dict (Optional[dict]): A dictionary of {'name': value} for discrete value arrays.
+            name_dict (Optional[dict]): A dictionary of {value: 'name'} for discrete value arrays.
             bins (Optional[int]): The number of bins.
             kwargs:
                 Other arguments passed to `numpy.histogram`.
-                hist_range (Optional[tuple]): The histogram range.
+                range (Optional[tuple]): The histogram range.
                 normed (Optional[bool])
                 weights
                 density
+
+        Example:
+            >>> import mpglue as gl
+            >>>
+            >>> i_info = gl.ropen('image_name.tif')
+            >>>
+            >>> i_info.hist()
+            >>>
+            >>> # Print the histogram dictionary.
+            >>> print(i_info.value_dict)
         """
 
-        if 'hist_range' not in kwargs:
-            kwargs['hist_range'] = (0, bins-1)
+        if 'range' not in kwargs:
+            kwargs['range'] = (0, bins-1)
 
         if hasattr(self, 'array'):
 
@@ -2042,14 +2052,19 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
                     self.value_dict[i] = dict(value=i,
                                               name=label,
                                               count=the_hist[i],
-                                              perc=the_hist_pct[i])
+                                              perc=round(the_hist_pct[i], 4))
 
                 else:
 
                     self.value_dict[i] = dict(value=i,
                                               count=the_hist[i],
-                                              perc=the_hist_pct[i])
-                    
+                                              perc=round(the_hist_pct[i], 4))
+
+        # Sort the values, largest to smallest
+        self.value_dict = OrderedDict(sorted(self.value_dict.items(),
+                                             key=lambda item: item[1]['count'],
+                                             reverse=True))
+
     def pca(self, n_components=3):
 
         """
