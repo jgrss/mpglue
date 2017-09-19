@@ -462,9 +462,7 @@ class ReadWrite(object):
 
     def predictions2norm(self):
 
-        """
-        Reshapes predictions back to 2d array
-        """
+        """Reshapes predictions back to 2d array"""
 
         self.array = self.array.reshape(self.ccols, self.rrows).T
 
