@@ -86,8 +86,6 @@ class VRTBuilder(object):
             else:
                 in_dict = {'1': image_search_list}
 
-            logger.info(in_dict)
-
         elif isinstance(in_dict, list):
 
             # Store as a dictionary.
@@ -560,6 +558,7 @@ def main():
 
     logger.info('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
                 (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
+
 
 if __name__ == '__main__':
     main()
