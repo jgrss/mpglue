@@ -187,7 +187,6 @@ class VRTBuilder(object):
             self.xml_band = self.xml_band.replace('<NODATA>0', '<NODATA>{:f}'.format(no_data))
 
     def add_bands(self,
-                  in_dict,
                   bands2include=None,
                   start_band=1,
                   force_type=None,
@@ -207,14 +206,14 @@ class VRTBuilder(object):
         """
 
         new_dict = OrderedDict()
-        for k, v in in_dict.iteritems():
+        for k, v in self.in_dict.iteritems():
             new_dict['{:03d}'.format(int(k))] = v
 
-        in_dict = OrderedDict(sorted(new_dict.items(), key=lambda tv: tv[0]))
+        self.in_dict = OrderedDict(sorted(new_dict.items(), key=lambda tv: tv[0]))
 
         self.base_name = base_name
 
-        self._band_count(in_dict)
+        self._band_count()
 
         band_counter = 1
 
@@ -225,7 +224,7 @@ class VRTBuilder(object):
                 sys.stdout.write('\rBuilding list {} of {:d} ...'.format(bdk, len(self.band_dict)))
                 sys.stdout.flush()
 
-            image_list = in_dict[bdk]
+            image_list = self.in_dict[bdk]
 
             for bdi in xrange(start_band, bd+start_band):
 
@@ -393,12 +392,12 @@ class VRTBuilder(object):
 
         return out_sub, sub_directory
 
-    def _band_count(self, in_dict):
+    def _band_count(self):
 
         self.band_dict = dict()
 
         # get first image from each list
-        for k, v in in_dict.iteritems():
+        for k, v in self.in_dict.iteritems():
 
             vi_ = v[0]
 
@@ -500,8 +499,7 @@ def vrt_builder(in_dict,
     vb.replace_main(no_data=no_data)
 
     # Add the data to the XML string.
-    vb.add_bands(in_dict,
-                 bands2include=bands2include,
+    vb.add_bands(bands2include=bands2include,
                  start_band=start_band,
                  force_type=force_type,
                  subset=subset,
