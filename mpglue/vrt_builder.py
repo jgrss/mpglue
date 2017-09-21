@@ -82,15 +82,17 @@ class VRTBuilder(object):
 
             # Store as a dictionary.
             if separate:
-                in_dict = zip(map(str, range(1, len(image_search_list)+1)), [[im] for im in image_search_list])
+                in_dict = dict(zip(map(str, range(1, len(image_search_list)+1)), [[im] for im in image_search_list]))
             else:
                 in_dict = {'1': image_search_list}
+
+            logger.info(in_dict)
 
         elif isinstance(in_dict, list):
 
             # Store as a dictionary.
             if separate:
-                in_dict = zip(map(str, range(1, len(in_dict)+1)), [[im] for im in in_dict])
+                in_dict = dict(zip(map(str, range(1, len(in_dict)+1)), [[im] for im in in_dict]))
             else:
                 in_dict = {'1': in_dict}
 
@@ -101,7 +103,7 @@ class VRTBuilder(object):
                 logger.error('The input parameter must be a dictionary, list, or directory.')
                 raise TypeError
 
-        # Ensure order by sorting by keys.
+        # Ensure order by sorting by `OrderedDict` items.
         self.in_dict = OrderedDict(sorted(in_dict.items()))
 
         # Use only the first list
