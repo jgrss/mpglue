@@ -367,6 +367,12 @@ class ReadWrite(object):
         # values = struct.unpack('%d%s' % ((rows * cols * len(bands2open)), format_dict[i_info.storage.lower()]),
         #     i_info.datasource.ReadRaster(yoff=i, xoff=j, xsize=cols, ysize=rows, band_list=bands2open))
 
+        logger.info(self.i)
+        logger.info(self.j)
+        logger.info(self.rrows)
+        logger.info(self.ccols)
+        logger.info('  BREAK')
+
         if hasattr(self, 'band'):
 
             self.array = self.band.ReadAsArray(self.j,
