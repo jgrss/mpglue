@@ -3179,24 +3179,46 @@ def read(image2open=None,
     elif not isinstance(i_info, ropen) and isinstance(image2open, str):
         i_info = ropen(image2open)
 
+    rrows = copy.copy(rows)
+    ccols = copy.copy(cols)
+
+    if rrows == -1:
+        rrows = i_info.rows
+    else:
+
+        if rrows > i_info.rows:
+            raise ValueError('\nThe requested rows cannot be larger than the image rows.\n')
+
+    if ccols == -1:
+        ccols = i_info.cols
+    else:
+
+        if ccols > i_info.cols:
+            raise ValueError('\nThe requested columns cannot be larger than the image columns.\n')
+
+    #################
+    # Bounds checking
+    #################
+
+    # Row indices
     if i < 0:
         i = 0
 
+    if i >= i_info.rows:
+        i = i_info.rows - 1
+
+    # Number of rows
+    rrows = n_rows_cols(i, rrows, i_info.rows)
+
+    # Column indices
     if j < 0:
         j = 0
 
-    if rows == -1:
-        rows = i_info.rows
-    else:
+    if j >= i_info.cols:
+        j = i_info.cols - 1
 
-        if rows > i_info.rows:
-            raise ValueError('\nThe requested rows cannot be larger than the image rows.\n')
-
-    if cols == -1:
-        cols = i_info.cols
-    else:
-        if cols > i_info.cols:
-            raise ValueError('\nThe requested columns cannot be larger than the image columns.\n')
+    # Number of columns
+    ccols = n_rows_cols(j, ccols, i_info.cols)
 
     if isinstance(bands2open, list):
 
@@ -3231,8 +3253,8 @@ def read(image2open=None,
         kwargs = dict(bands2open=bands2open,
                       i=i,
                       j=j,
-                      rows=rows,
-                      cols=cols,
+                      rows=rrows,
+                      cols=ccols,
                       d_type=d_type,
                       sort_bands2open=sort_bands2open,
                       y=y,
@@ -3252,7 +3274,7 @@ def read(image2open=None,
 
         if n_jobs == 0:
 
-            values = np.asarray([i_info.datasource.GetRasterBand(band).ReadAsArray(j, i, cols, rows)
+            values = np.asarray([i_info.datasource.GetRasterBand(band).ReadAsArray(j, i, ccols, rrows)
                                  for band in bands2open], dtype=d_type)
 
             # values = struct.unpack('%d%s' % ((rows * cols * len(bands2open)), format_dict[i_info.storage.lower()]),
@@ -3260,30 +3282,22 @@ def read(image2open=None,
 
             if predictions:
 
-                return values.reshape(len(bands2open), rows, cols).transpose(1, 2, 0).reshape(rows*cols,
-                                                                                              len(bands2open))
+                return values.reshape(len(bands2open), rrows, ccols).transpose(1, 2, 0).reshape(rrows*ccols,
+                                                                                                len(bands2open))
 
             else:
 
                 if len(bands2open) == 1:
-                    return values.reshape(rows, cols)
+                    return values.reshape(rrows, ccols)
                 else:
-                    return values.reshape(len(bands2open), rows, cols)
+                    return values.reshape(len(bands2open), rrows, ccols)
 
             # only close the image if it was opened internally
             # if isinstance(image2open, str):
             #     i_info.close()
 
         else:
-
-            logger.info(i)
-            logger.info(j)
-            logger.info(rows)
-            logger.info(cols)
-            logger.info(predictions)
-            logger.info('  BREAK')
-
-            return _read_parallel(image2open, i_info, bands2open, i, j, rows, cols, n_jobs, d_type, predictions)
+            return _read_parallel(image2open, i_info, bands2open, i, j, rrows, ccols, n_jobs, d_type, predictions)
 
 
 def build_vrt(file_list, output_image, cell_size=0., **kwargs):
