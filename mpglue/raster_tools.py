@@ -460,11 +460,14 @@ class ReadWrite(object):
 
             self.array = self._reshape(self.array, bands2open)
 
-    def predictions2norm(self):
+    def predictions2norm(self, dims=1):
 
-        """Reshapes predictions back to 2d array"""
+        """Reshapes predictions to nd array"""
 
-        self.array = self.array.reshape(self.ccols, self.rrows).T
+        if dims == 1:
+            self.array = self.array.reshape(self.ccols, self.rrows).T
+        else:
+            self.array = self.array.T.reshape(dims, self.rrows, self.ccols)
 
     def _reshape2predictions(self, n_bands):
 
@@ -474,6 +477,10 @@ class ReadWrite(object):
         Args:
             n_bands (int)
         """
+
+        logger.info(self.rrows)
+        logger.info(self.ccols)
+        logger.info('  BREAK')
 
         if n_bands == 1:
 
