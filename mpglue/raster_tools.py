@@ -478,10 +478,6 @@ class ReadWrite(object):
             n_bands (int)
         """
 
-        logger.info(self.rrows)
-        logger.info(self.ccols)
-        logger.info('  BREAK')
-
         if n_bands == 1:
 
             self.array = self.array.reshape(self.rrows,
