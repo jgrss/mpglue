@@ -367,12 +367,6 @@ class ReadWrite(object):
         # values = struct.unpack('%d%s' % ((rows * cols * len(bands2open)), format_dict[i_info.storage.lower()]),
         #     i_info.datasource.ReadRaster(yoff=i, xoff=j, xsize=cols, ysize=rows, band_list=bands2open))
 
-        logger.info(self.i)
-        logger.info(self.j)
-        logger.info(self.rrows)
-        logger.info(self.ccols)
-        logger.info('  BREAK')
-
         if hasattr(self, 'band'):
 
             self.array = self.band.ReadAsArray(self.j,
@@ -3093,7 +3087,12 @@ def _read_parallel(image, image_info, bands2open, y, x, rows2open, columns2open,
 
     image_info.close()
 
-    band_arrays = Parallel(n_jobs=n_jobs)(delayed(gdal_read)(image, band2open, y, x, rows2open, columns2open)
+    band_arrays = Parallel(n_jobs=n_jobs)(delayed(gdal_read)(image,
+                                                             band2open,
+                                                             y,
+                                                             x,
+                                                             rows2open,
+                                                             columns2open)
                                           for band2open in bands2open)
 
     if predictions:
@@ -3276,6 +3275,14 @@ def read(image2open=None,
             #     i_info.close()
 
         else:
+
+            logger.info(i)
+            logger.info(j)
+            logger.info(rows)
+            logger.info(cols)
+            logger.info(predictions)
+            logger.info('  BREAK')
+
             return _read_parallel(image2open, i_info, bands2open, i, j, rows, cols, n_jobs, d_type, predictions)
 
 
