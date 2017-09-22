@@ -13,7 +13,8 @@ from .veg_indices import veg_indices, VegIndicesEquations
 from .vrt_builder import vrt_builder
 from .version import __version__
 
-__all__ = ['ropen', 'read',
+__all__ = ['ropen',
+           'read',
            'vopen',
            'classification', 'classification_r',
            'error_matrix', 'object_accuracy',

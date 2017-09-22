@@ -1886,8 +1886,14 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
         >>> i_info.close()
     """
 
-    def __init__(self, file_name='none', open2read=True, metadata=None, sensor='Landsat',
-                 hdf_band=1, check_corrupted=False, **kwargs):
+    def __init__(self,
+                 file_name='none',
+                 open2read=True,
+                 metadata=None,
+                 sensor='Landsat',
+                 hdf_band=1,
+                 check_corrupted=False,
+                 **kwargs):
 
         self.file_name = os.path.normpath(file_name)
 
@@ -3129,7 +3135,7 @@ def read(image2open=None,
 
     Args:
         image2open (Optional[str]): An image to open. Default is None.
-        i_info (Optional[object]): An instance of ``ropen``. Default is None
+        i_info (Optional[object]): An instance of `ropen`. Default is None
         bands2open (Optional[int list or int]: Band position to open or list of bands to open. Default is 1.
             Examples:
                 bands2open = 1        (open band 1)
@@ -3143,8 +3149,8 @@ def read(image2open=None,
             Choices are ['uint8', 'int8', 'uint16', 'uint32', 'int16', 'float32', 'float64'].
         predictions (Optional[bool]): Whether to return reshaped array for predictions.
         sort_bands2open (Optional[bool]): Whether to sort ``bands2open``. Default is True.
-        y (Optional[float]): A y index coordinate. Default is 0. If greater than 0, overrides ``i``.
-        x (Optional[float]): A x index coordinate. Default is 0. If greater than 0, overrides ``j``.
+        y (Optional[float]): A y index coordinate. Default is 0. If greater than 0, overrides `i`.
+        x (Optional[float]): A x index coordinate. Default is 0. If greater than 0, overrides `j`.
         n_jobs (Optional[int]): The number of bands to open in parallel. Default is 0.
 
     Attributes:
