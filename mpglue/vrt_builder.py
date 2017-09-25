@@ -293,11 +293,21 @@ class VRTBuilder(object):
                     else:
                         self.xml_band_ = self.xml_band_.replace('image_dataType', str(i_info.storage))
 
-                    vrt_text_list = ['image_SourceBand', 'image_RasterXSize', 'image_RasterYSize',
-                                     'image_BlockXSize', 'image_BlockYSize', 'full_xOff', 'full_yOff']
+                    vrt_text_list = ['image_SourceBand',
+                                     'image_RasterXSize',
+                                     'image_RasterYSize',
+                                     'image_BlockXSize',
+                                     'image_BlockYSize',
+                                     'full_xOff',
+                                     'full_yOff']
 
-                    image_info_list = [bdi, i_info.cols, i_info.rows, i_info.block_x,
-                                       i_info.block_y, x_offset, y_offset]
+                    image_info_list = [bdi,
+                                       i_info.cols,
+                                       i_info.rows,
+                                       i_info.block_x,
+                                       i_info.block_y,
+                                       x_offset,
+                                       y_offset]
 
                     for rep, wit in zip(*[vrt_text_list, image_info_list]):
                         self.xml_band_ = self.xml_band_.replace(rep, str(wit))
