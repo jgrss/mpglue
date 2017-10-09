@@ -1106,6 +1106,8 @@ class RTreeManager(object):
             lat_lon (Optional[int])
         """
 
+        self.grid_infos = list()
+
         if isinstance(shapefile2intersect, str):
 
             # Open the base shapefile
@@ -1178,8 +1180,6 @@ class RTreeManager(object):
             index_iter = self.rtree_index.intersection(envelope)
         else:
             index_iter = range(0, len(self.field_dict))
-
-        self.grid_infos = list()
 
         # Intersect the base shapefile bounding box
         #   with the UTM grids.
