@@ -3389,6 +3389,8 @@ def warp(input_image,
     if isinstance(out_epsg, int):
         out_epsg = 'EPSG:{:d}'.format(out_epsg)
 
+    in_proj = None
+
     if isinstance(in_epsg, int):
         in_proj = 'EPSG:{:d}'.format(in_epsg)
 
