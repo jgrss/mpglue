@@ -5514,6 +5514,8 @@ class QAMasker(object):
             https://github.com/haoliangyu/pymasker/blob/master/pymasker.py
         """
 
+        bit_shifts = {1: 0, 2: 4, 3: 8, 4: 12, 5: 16, 6: 20, 7: 24}
+
         # bit_pos = 0
         # bit_len = 2
         #
@@ -5531,19 +5533,17 @@ class QAMasker(object):
         #
         # return (self.qa & pos_value) == con_value
 
-        bit_shifts = {1: 0, 2: 4, 3: 8, 4: 12, 5: 16, 6: 20, 7: 24}
-
-        modis_mask = np.uint8(self.qa >> bit_shifts[self.modis_qa_band] & 4)
-
         # `modis_mask`
         #   0: best quality
         #   1: good quality
         #   4: fill value
         #
         # `output`
-        #   1: good data
-        #   0: bad data
-        return np.where(modis_mask <= self.modis_quality, 1, 0)
+        #   0: good data = clear
+        #   255: bad data = fill
+        return np.where(np.uint8(self.qa >> bit_shifts[self.modis_qa_band] & 4) <= self.modis_quality,
+                        self.fmask_dict['clear'],
+                        self.fmask_dict['fill'])
 
     def get_qa_mask(self, what2mask):
 
