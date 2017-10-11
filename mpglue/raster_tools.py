@@ -19,6 +19,7 @@ import itertools
 import platform
 import subprocess
 from collections import OrderedDict
+import pdb
 
 # if platform.system() == 'Darwin':
 #
@@ -1132,18 +1133,18 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
             self.hdf_key_list = [k for k in self.hdf_layers.keys() if '_NAME' in k]
 
-            self.hdf_name_list = dict()
+            self.hdf_name_dict = dict()
 
             for hdf_str in self.hdf_key_list:
 
                 str_digit = hdf_str[hdf_str.find('_')+1:len(hdf_str)-hdf_str[::-1].find('_')-1]
 
                 if len(str_digit) == 1:
-                    self.hdf_name_list[hdf_str.replace(str_digit, '0{}'.format(str_digit))] = self.hdf_layers[hdf_str]
+                    self.hdf_name_dict[hdf_str.replace(str_digit, '0{}'.format(str_digit))] = self.hdf_layers[hdf_str]
                 else:
-                    self.hdf_name_list[hdf_str] = self.hdf_layers[hdf_str]
+                    self.hdf_name_dict[hdf_str] = self.hdf_layers[hdf_str]
 
-            self.hdf_name_list = [self.hdf_name_list[k] for k in sorted(self.hdf_name_list)]
+            self.hdf_name_list = [self.hdf_name_dict[k] for k in sorted(self.hdf_name_dict)]
 
             # self.hdf_name_list = [self.hdf_layers[k] for k in self.hdf_layers.keys() if '_NAME' in k]
 
@@ -1154,6 +1155,8 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
             # self.datasource = gdal.Open(self.datasource.GetSubDatasets()[hdf_band - 1][0], GA_ReadOnly)
 
         self.datasource_info()
+
+        pdb.set_trace()
 
     def _open_dataset(self, image_name, open2read):
 
