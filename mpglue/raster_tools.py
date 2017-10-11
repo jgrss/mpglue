@@ -5494,6 +5494,14 @@ class QAMasker(object):
                                    'snowice': (5, 5),
                                    'landwater': (7, 6)}}
 
+        self.modis_bit_shifts = {1: 0,
+                                 2: 4,
+                                 3: 8,
+                                 4: 12,
+                                 5: 16,
+                                 6: 20,
+                                 7: 24}
+
     def qa_bits(self, what2mask):
 
         # For confidence bits
@@ -5513,8 +5521,6 @@ class QAMasker(object):
         Reference:
             https://github.com/haoliangyu/pymasker/blob/master/pymasker.py
         """
-
-        bit_shifts = {1: 0, 2: 4, 3: 8, 4: 12, 5: 16, 6: 20, 7: 24}
 
         # bit_pos = 0
         # bit_len = 2
@@ -5541,7 +5547,7 @@ class QAMasker(object):
         # `output`
         #   0: good data = clear
         #   255: bad data = fill
-        return np.where(np.uint8(self.qa >> bit_shifts[self.modis_qa_band] & 4) <= self.modis_quality,
+        return np.where(np.uint8(self.qa >> self.modis_bit_shifts[self.modis_qa_band] & 4) <= self.modis_quality,
                         self.fmask_dict['clear'],
                         self.fmask_dict['fill'])
 
