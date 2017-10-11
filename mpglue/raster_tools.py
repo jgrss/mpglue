@@ -1156,8 +1156,6 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
         self.datasource_info()
 
-        pdb.set_trace()
-
     def _open_dataset(self, image_name, open2read):
 
         """
