@@ -151,6 +151,13 @@ class VRTBuilder(object):
 
         self.geo_transform = str(self.geo_transform)
 
+        logger.info(self.left)
+        logger.info(self.right)
+        logger.info(self.bottom)
+        logger.info(self.top)
+        logger.info(self.cellY)
+        sys.exit()
+
         if (self.left < 0) and (self.right < 0):
             self.columns = int(round(abs(abs(self.right) - abs(self.left)) / self.cell_size))
         elif (self.left >= 0) and (self.right >= 0):
