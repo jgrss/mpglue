@@ -151,25 +151,18 @@ class VRTBuilder(object):
 
         self.geo_transform = str(self.geo_transform)
 
-        logger.info(self.left)
-        logger.info(self.right)
-        logger.info(self.bottom)
-        logger.info(self.top)
-        logger.info(self.cellY)
-        sys.exit()
-
         if (self.left < 0) and (self.right < 0):
             self.columns = int(round(abs(abs(self.right) - abs(self.left)) / self.cell_size))
         elif (self.left >= 0) and (self.right >= 0):
             self.columns = int(round(abs(abs(self.right) - abs(self.left)) / self.cell_size))
-        elif (self.left < 0) and (self.right > 0):
+        elif (self.left < 0) and (self.right >= 0):
             self.columns = int(round((abs(self.right) + abs(self.left)) / self.cell_size))
 
         if (self.top < 0) and (self.bottom < 0):
             self.rows = int(round(abs(abs(self.top) - abs(self.bottom)) / self.cell_size))
         elif (self.top >= 0) and (self.bottom >= 0):
             self.rows = int(round(abs(abs(self.top) - abs(self.bottom)) / self.cell_size))
-        elif (self.top > 0) and (self.bottom < 0):
+        elif (self.top >= 0) and (self.bottom < 0):
             self.rows = int(round((abs(self.top) + abs(self.bottom)) / self.cell_size))
 
     def replace_main(self, no_data=None):
