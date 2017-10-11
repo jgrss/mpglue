@@ -1103,6 +1103,7 @@ class RTreeManager(object):
             envelope (Optional[list]): [left, right, bottom, top]. Default is to extract from `shapefile2intersect`.
             epsg (Optional[int])
             proj4 (Optional[str])
+            proj (Optional[str])
             lat_lon (Optional[int])
         """
 

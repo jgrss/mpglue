@@ -3341,6 +3341,7 @@ def warp(input_image,
          output_image,
          out_epsg=None,
          in_epsg=None,
+         in_proj4=None,
          resample='nearest',
          cell_size=0,
          d_type=None,
@@ -3355,7 +3356,8 @@ def warp(input_image,
         input_image (str): The image to warp.
         output_image (str): The output image.
         out_epsg (Optional[int]): The output EPSG projection code.
-        in_epsg (Optional[int]): The input EPSG code. Default is None.
+        in_epsg (Optional[int]): An input EPSG code. Default is None.
+        in_proj4 (Optional[str]): An input projection string. Default is None.
         resample (Optional[str]): The resampling method. Default is 'nearest'.
         cell_size (Optional[float]): The output cell size. Default is 0.
         d_type (Optional[str]): Data type to overwrite `outputType`. Default is None.
@@ -3388,9 +3390,14 @@ def warp(input_image,
         out_epsg = 'EPSG:{:d}'.format(out_epsg)
 
     if isinstance(in_epsg, int):
-        in_epsg = 'EPSG:{:d}'.format(in_epsg)
+        in_proj = 'EPSG:{:d}'.format(in_epsg)
 
-    if not isinstance(cell_size, tuple):
+    if isinstance(in_proj4, str):
+        in_proj = in_proj4
+
+    if cell_size == 0:
+        cell_size = (None, None)
+    else:
         cell_size = (cell_size, -cell_size)
 
     if overwrite:
@@ -3400,7 +3407,7 @@ def warp(input_image,
 
     if isinstance(d_type, str):
 
-        awargs = _merge_dicts(dict(srcSRS=in_epsg,
+        awargs = _merge_dicts(dict(srcSRS=in_proj,
                                    dstSRS=out_epsg,
                                    xRes=cell_size[0],
                                    yRes=cell_size[1],
@@ -3410,7 +3417,7 @@ def warp(input_image,
 
     else:
 
-        awargs = _merge_dicts(dict(srcSRS=in_epsg,
+        awargs = _merge_dicts(dict(srcSRS=in_proj,
                                    dstSRS=out_epsg,
                                    xRes=cell_size[0],
                                    yRes=cell_size[1],
