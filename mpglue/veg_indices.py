@@ -25,7 +25,7 @@ except:
 
 from .errors import logger
 from .helpers import _iteration_parameters
-# from mappy.utilities import composite
+from .version import __version__
 
 # Numpy    
 try:
@@ -61,6 +61,11 @@ try:
 except ImportError:
     raise ImportError('Scikit-image must be installed')
 
+try:
+    import deprecation
+except ImportError:
+    raise ImportError('deprecation must be installed (pip install deprecation)')
+
 old_settings = np.seterr(all='ignore')
 
 
@@ -70,12 +75,16 @@ class SensorInfo(object):
     A class to hold sensor names, wavelengths, and equations.
     """
 
+    @deprecation.deprecated(deprecated_in='0.1.4',
+                            removed_in='0.1.5',
+                            current_version=__version__,
+                            details='The MODIS sensors with be named MODISc5 and MODISc6, for the respective collections.')
     def __init__(self):
 
         self.sensors = ['ASTER', 'ASTER-VNIR', 'CBERS2', 'CitySphere', 'GeoEye1', 'IKONOS',
-                        'Landsat', 'Landsat8', 'Landsat-thermal', 'Landsat-sharp', 'MODIS', 'RapidEye',
-                        'Sentinel2', 'Sentinel2-10m', 'Sentinel2-20m', 'Quickbird', 'WorldView2',
-                        'RGB', 'BGR']
+                        'Landsat', 'Landsat8', 'Landsat-thermal', 'Landsat-sharp',
+                        'MODISc5', 'MODIS', 'RapidEye', 'Sentinel2', 'Sentinel2-10m',
+                        'Sentinel2-20m', 'Quickbird', 'WorldView2', 'RGB', 'BGR']
 
         # Landsat 8
         #   coastal blue, blue, gree, red, NIR, SWIR 1, SWIR 2, cirrus
