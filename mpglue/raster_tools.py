@@ -19,7 +19,6 @@ import itertools
 import platform
 import subprocess
 from collections import OrderedDict
-import pdb
 
 # if platform.system() == 'Darwin':
 #
