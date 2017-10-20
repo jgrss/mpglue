@@ -122,6 +122,7 @@ DRIVER_DICT = {'.bin': 'ENVI',
                '.nc': 'netCDF',
                '.ntf': 'NITF',
                '.pix': 'PCRaster',
+               '.hgt': 'SRTMHGT',
                '.sid': 'MrSID',
                '.tif': 'GTiff',
                '.til': 'TIL',
@@ -3326,7 +3327,7 @@ def build_vrt(file_list, output_image, cell_size=0., **kwargs):
 
     out_ds = gdal.BuildVRT(output_image, np.array(file_list), options=vrt_options)
 
-    out_ds = None
+    del out_ds
 
 
 def _merge_dicts(dict1, dict2):
@@ -3428,7 +3429,10 @@ def warp(input_image,
 
     warp_options = gdal.WarpOptions(**awargs)
 
-    out_ds = gdal.Warp(output_image, input_image, options=warp_options)
+    try:
+        out_ds = gdal.Warp(output_image, input_image, options=warp_options)
+    except:
+        logger.warning('  GDAL returned an exception--check the output file, {}.'.format(output_image))
 
     if return_datasource:
 
@@ -3485,7 +3489,10 @@ def translate(input_image, output_image, cell_size=0, d_type=None, **kwargs):
                                                   yRes=cell_size,
                                                   **kwargs)
 
-    out_ds = gdal.Translate(output_image, input_image, options=translate_options)
+    try:
+        out_ds = gdal.Translate(output_image, input_image, options=translate_options)
+    except:
+        logger.warning('  GDAL returned an exception--check the output file, {}.'.format(output_image))
 
     out_ds = None
 
