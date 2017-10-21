@@ -3841,8 +3841,10 @@ def write2raster(out_array,
 
         if not isinstance(o_info, ropen):
 
-            logger.error('The output information must be set.')
-            raise ropenError
+            if not isinstance(o_info, ImageInfo):
+
+                logger.error('The output information must be set.')
+                raise ropenError
 
         new_file = True
 
