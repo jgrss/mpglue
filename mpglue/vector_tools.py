@@ -1602,19 +1602,23 @@ def spatial_intersection(select_shp, intersect_shp, output_shp, epsg=None):
     # Open the files.
     with vopen(select_shp, epsg=epsg) as select_info, vopen(intersect_shp, epsg=epsg) as intersect_info:
 
-        tracker_list = []
+        tracker_list = list()
 
         # Create the output shapefile
         field_names = list_field_names(select_shp, be_quiet=True)
 
         if epsg > 0:
 
-            o_shp = create_vector(output_shp, field_names=field_names,
-                                  geom_type=select_info.shp_geom_name.lower(), epsg=epsg)
+            o_shp = create_vector(output_shp,
+                                  field_names=field_names,
+                                  geom_type=select_info.shp_geom_name.lower(),
+                                  epsg=epsg)
 
         else:
 
-            o_shp = create_vector(output_shp, field_names=field_names, projection_from_file=select_shp,
+            o_shp = create_vector(output_shp,
+                                  field_names=field_names,
+                                  projection_from_file=select_shp,
                                   geom_type=select_info.shp_geom_name.lower())
 
         # Iterate over each select feature in the polygon.
@@ -1627,7 +1631,7 @@ def spatial_intersection(select_shp, intersect_shp, output_shp, epsg=None):
                 else:
                     end_feature = m + 499
 
-                print('Select features {:d}--{:d} of {:d} ...'.format(m, end_feature, select_info.n_feas))
+                logger.info('  Intersecting features {:d}--{:d} of {:d} ...'.format(m, end_feature, select_info.n_feas))
 
             # Get the current polygon feature.
             select_feature = select_info.lyr.GetFeature(m)
@@ -1648,8 +1652,9 @@ def spatial_intersection(select_shp, intersect_shp, output_shp, epsg=None):
 
                 # No need to check intersecting features
                 # if outside bounds.
-                if (left > select_info.right) or (right < select_info.left) or (top < select_info.bottom) \
-                        or (bottom > select_info.top):
+                if (left > select_info.right) or (right < select_info.left) or \
+                        (top < select_info.bottom) or (bottom > select_info.top):
+
                     continue
 
                 # Test the intersection.
@@ -1661,7 +1666,7 @@ def spatial_intersection(select_shp, intersect_shp, output_shp, epsg=None):
                     # Don't add a feature on top of existing one.
                     if m not in tracker_list:
 
-                        field_values = {}
+                        field_values = dict()
 
                         # Get the field names and values.
                         for field in field_names:
