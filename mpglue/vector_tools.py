@@ -1968,6 +1968,22 @@ def convex_hull(in_shp, out_shp):
     cv.close()
 
 
+def get_fields(in_file):
+
+    field_names = list()
+
+    with vopen(in_file) as v_info:
+
+        for feature in v_info.lyr:
+
+            field_names.append(feature.GetField('Name'))
+            feature.Destroy()
+
+    del v_info
+
+    return field_names
+
+
 def create_fields(v_info, field_names, field_types, field_widths):
 
     """
