@@ -1721,9 +1721,9 @@ class LandsatParser(object):
 
             solar_angles = soup.find('solar_angles')
 
-            self.zenith = float(solar_angles['zenith'].strip())
-            self.elev = 90. - self.zenith
-            self.azimuth = float(solar_angles['azimuth'].strip())
+            self.solar_zenith = float(solar_angles['zenith'].strip())
+            self.solar_elevation = 90. - self.zenith
+            self.solar_azimuth = float(solar_angles['azimuth'].strip())
 
 
 class SentinelParser(object):

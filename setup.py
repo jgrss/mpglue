@@ -39,24 +39,23 @@ with open('AUTHORS.txt') as f:
 
 required_packages = ['matplotlib>=2.0.0',
                      'joblib>=0.11.0',
-                     'BeautifulSoup4>=4.5.1',
+                     'BeautifulSoup4>=4.6.0',
                      'decorator>=4.1.1',
                      'deprecation>=1.0.1']
 
-if platform.system() != 'Windows':
+# if platform.system() != 'Windows':
 
-    for pkg in ['numpy>=1.13',
-                'scipy>=0.19.0',
-                'scikit-image>=0.13',
-                'gdal>=2.1',
-                'tables>=3.4.2',
-                'statsmodels>=0.8.0',
-                'cython>=0.26',
-                'scikit-learn>=0.18.1',
-                'pandas>=0.20.0',
-                'pymorph']:
+for pkg in ['numpy>=1.13',
+            'scipy>=0.19.0',
+            'scikit-image>=0.13',
+            'tables>=3.4.2',
+            'statsmodels>=0.8.0',
+            'cython>=0.26',
+            'scikit-learn>=0.19.0',
+            'pandas>=0.20.0',
+            'pymorph']:
 
-        required_packages.append(pkg)
+    required_packages.append(pkg)
 
 
 def get_pyx_list():
