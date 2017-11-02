@@ -1968,7 +1968,15 @@ def convex_hull(in_shp, out_shp):
     cv.close()
 
 
-def get_fields(in_file):
+def get_field_ids(in_file, field_name):
+
+    """
+    Gets a list of field ids
+
+    Args:
+        in_file (str): The input vector file.
+        field_name (str): The field name to get ids from.
+    """
 
     field_names = list()
 
@@ -1976,7 +1984,7 @@ def get_fields(in_file):
 
         for feature in v_info.lyr:
 
-            field_names.append(feature.GetField('Name'))
+            field_names.append(feature.GetField(field_name))
             feature.Destroy()
 
     del v_info
