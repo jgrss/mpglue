@@ -1360,7 +1360,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
             else:
 
-                if not hasattr(self.band):
+                if not hasattr(self, 'band'):
 
                     logger.error('\nThe band must be set either with `get_band` or `write_array`.\n')
                     raise AttributeError
@@ -3897,7 +3897,7 @@ def write2raster(out_array,
 
     else:
 
-        if out_dims > 2:
+        if out_dims >= 2:
 
             for n_band in range(1, out_dims+1):
 
