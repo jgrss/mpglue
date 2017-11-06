@@ -738,7 +738,8 @@ def reproject(input_vector, output_vector, in_epsg=None, out_epsg=None, overwrit
     from ._gdal import ogr2ogr
 
     ogr2ogr.main(['', '-f', 'ESRI Shapefile',
-                  '-s_srs', str(in_epsg), '-t_srs', str(out_epsg),
+                  '-s_srs', 'EPSG:{:d}'.format(in_epsg),
+                  '-t_srs', 'EPSG:{:d}'.format(out_epsg)),
                   output_vector, input_vector])
 
     # input spatial reference
