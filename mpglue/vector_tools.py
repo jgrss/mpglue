@@ -1292,6 +1292,30 @@ class RTreeManager(object):
             delete_vector(self.base_shapefile_)
 
 
+def create_poly_geom_from_image(the_extent_info):
+
+    """
+    Args:
+        the_extent_info (ropen object): An instance of `ropen`.
+    """
+
+    # Create a polygon object from the coordinates.
+    # 0:left, 1:right, 2:bottom, 3:top
+    coord_wkt = 'POLYGON (({:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}))'.format(
+        the_extent_info.left,
+        the_extent_info.top,
+        the_extent_info.right,
+        the_extent_info.top,
+        the_extent_info.right,
+        the_extent_info.bottom,
+        the_extent_info.left,
+        the_extent_info.bottom,
+        the_extent_info.left,
+        the_extent_info.top)
+
+    return ogr.CreateGeometryFromWkt(coord_wkt)
+
+
 def intersects_shapefile(shapefile2intersect, base_shapefile=None):
 
     srt = RTreeManager(base_shapefile=base_shapefile)
