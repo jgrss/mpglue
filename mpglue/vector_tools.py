@@ -735,64 +735,70 @@ def reproject(input_vector, output_vector, in_epsg=None, out_epsg=None, overwrit
     if os.path.isfile(output_vector) and overwrite:
         delete_vector(output_vector)
 
+    from ._gdal import ogr2ogr
+
+    ogr2ogr.main(['', '-f', 'ESRI Shapefile',
+                  '-s_srs', str(in_epsg), '-t_srs', str(out_epsg),
+                  output_vector, input_vector])
+
     # input spatial reference
-    source_sr = osr.SpatialReference()
-    source_sr.ImportFromEPSG(in_epsg)
-
-    # output spatial reference
-    target_sr = osr.SpatialReference()
-    target_sr.ImportFromEPSG(out_epsg)
-
-    # Create the transformation.
-    coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
-
-    # Open the input layer.
-    with vopen(input_vector) as v_info:
-
-        vct_fields = list()
-
-        # Get the input fields to transfer over.
-        for i in range(0, v_info.lyr_def.GetFieldCount()):
-            vct_fields.append(v_info.lyr_def.GetFieldDefn(i).GetName())
-
-        # create the output layer
-        cv = create_vector(output_vector,
-                           field_names=vct_fields,
-                           geom_type=v_info.shp_geom_name.lower(),
-                           epsg=out_epsg)
-
-        # Iterate over the input features.
-        in_feature = v_info.lyr.GetNextFeature()
-
-        while in_feature:
-
-            # get the input geometry
-            geom = in_feature.GetGeometryRef()
-
-            # reproject the geometry
-            geom.Transform(coord_trans)
-
-            # create a new feature
-            out_feature = ogr.Feature(cv.lyr_def)
-
-            # set the geometry and attribute
-            out_feature.SetGeometry(geom)
-
-            for i in range(0, cv.lyr_def.GetFieldCount()):
-
-                out_feature.SetField(cv.lyr_def.GetFieldDefn(i).GetNameRef(),
-                                     in_feature.GetField(i))
-
-            # add the feature to the shapefile
-            cv.lyr.CreateFeature(out_feature)
-
-            # dereference the features and get the next input feature
-            out_feature = None
-            in_feature = v_info.lyr.GetNextFeature()
-
-        cv.close()
-
-    del v_info
+    # source_sr = osr.SpatialReference()
+    # source_sr.ImportFromEPSG(in_epsg)
+    #
+    # # output spatial reference
+    # target_sr = osr.SpatialReference()
+    # target_sr.ImportFromEPSG(out_epsg)
+    #
+    # # Create the transformation.
+    # coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
+    #
+    # # Open the input layer.
+    # with vopen(input_vector) as v_info:
+    #
+    #     vct_fields = list()
+    #
+    #     # Get the input fields to transfer over.
+    #     for i in range(0, v_info.lyr_def.GetFieldCount()):
+    #         vct_fields.append(v_info.lyr_def.GetFieldDefn(i).GetName())
+    #
+    #     # create the output layer
+    #     cv = create_vector(output_vector,
+    #                        field_names=vct_fields,
+    #                        geom_type=v_info.shp_geom_name.lower(),
+    #                        epsg=out_epsg)
+    #
+    #     # Iterate over the input features.
+    #     in_feature = v_info.lyr.GetNextFeature()
+    #
+    #     while in_feature:
+    #
+    #         # get the input geometry
+    #         geom = in_feature.GetGeometryRef()
+    #
+    #         # reproject the geometry
+    #         geom.Transform(coord_trans)
+    #
+    #         # create a new feature
+    #         out_feature = ogr.Feature(cv.lyr_def)
+    #
+    #         # set the geometry and attribute
+    #         out_feature.SetGeometry(geom)
+    #
+    #         for i in range(0, cv.lyr_def.GetFieldCount()):
+    #
+    #             out_feature.SetField(cv.lyr_def.GetFieldDefn(i).GetNameRef(),
+    #                                  in_feature.GetField(i))
+    #
+    #         # add the feature to the shapefile
+    #         cv.lyr.CreateFeature(out_feature)
+    #
+    #         # dereference the features and get the next input feature
+    #         out_feature = None
+    #         in_feature = v_info.lyr.GetNextFeature()
+    #
+    #     cv.close()
+    #
+    # del v_info
 
 
 def shp2dataframe(input_shp):
