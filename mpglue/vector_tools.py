@@ -749,8 +749,15 @@ def reproject(input_vector, output_vector, in_epsg=None, out_epsg=None, overwrit
     # Open the input layer.
     with vopen(input_vector) as v_info:
 
+        vct_fields = list()
+
+        # Get the input fields to transfer over.
+        for i in range(0, v_info.lyr_def.GetFieldCount()):
+            vct_fields.append(v_info.lyr_def.GetFieldDefn(i).GetName())
+
         # create the output layer
         cv = create_vector(output_vector,
+                           field_names=vct_fields,
                            geom_type=v_info.shp_geom_name.lower(),
                            epsg=out_epsg)
 
