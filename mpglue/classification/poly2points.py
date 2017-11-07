@@ -50,8 +50,6 @@ def _add_points_from_raster(out_shp,
 
     with raster_tools.ropen(in_rst) as m_info:
 
-        m_info.update_info(storage='byte')
-
         if not be_quiet:
             ctr, pbar = _iteration_parameters(m_info.rows, m_info.cols, block_size_rows, block_size_cols)
 
@@ -81,17 +79,20 @@ def _add_points_from_raster(out_shp,
 
                         for j2 in range(0, n_cols, skip):
 
-                            val = block[i2, j2]
+                            point_value = block[i2, j2]
 
-                            if int(val) == no_data_value:
+                            if int(point_value) == no_data_value:
                                 continue
 
-                            if int(str(val)[str(val).find('.')+1]) == 0:
-                                val = int(val)
-                            else:
-                                val = float('{:.2f}'.format(val))
+                            import pdb
+                            pdb.set_trace()
 
-                            if val != no_data_value:
+                            if int(str(point_value)[str(point_value).find('.')+1]) == 0:
+                                point_value = int(point_value)
+                            else:
+                                point_value = float('{:.2f}'.format(point_value))
+
+                            if point_value != no_data_value:
 
                                 top_shift = (top - (i2 * m_info.cellY)) - (m_info.cellY / 2.)
                                 left_shift = (left + (j2 * m_info.cellY)) + (m_info.cellY / 2.)
@@ -100,7 +101,7 @@ def _add_points_from_raster(out_shp,
                                 # top_shift = top - ((m_info.cellY * skip) - (m_info.cellY / 2.))
 
                                 # create a point at left, top
-                                vector_tools.add_point(left_shift, top_shift, mpc, class_id, val)
+                                vector_tools.add_point(left_shift, top_shift, mpc, class_id, point_value)
 
                         #     left += (m_info.cellY * skip)
                         #
