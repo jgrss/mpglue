@@ -326,6 +326,7 @@ class VRTBuilder(object):
         # add to the XML string
         self.xml_base = '{}{}'.format(self.xml_base, self.xml_end)
 
+        print
         logger.info('  Finished processing VRT file')
 
     # def delete_subs(self, sub_directory):
