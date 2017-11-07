@@ -198,9 +198,6 @@ def poly2points(input_polygon,
         if not be_quiet:
             logger.info('  Rasterizing {} ...'.format(input_polygon))
 
-        import pdb
-        pdb.set_trace()
-
         # Rasterize the polygon.
         if use_extent:
 
