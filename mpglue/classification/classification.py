@@ -807,6 +807,9 @@ class Samples(object):
 
                 class_subs = dict()
 
+                import pdb
+                pdb.set_trace()
+
                 for clp in self.classes:
                     class_subs[clp] = perc_samp_each
 
