@@ -4726,16 +4726,40 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         if self.kwargs:
 
-            if 'i' in self.kwargs:
+            if ('i' in self.kwargs) and ('y' not in self.kwargs):
 
                 start_i = self.kwargs['i']
                 self.o_info.update_info(top=self.o_info.top-(start_i*self.o_info.cellY))
                 iwo = start_i
 
-            if 'j' in self.kwargs:
+            elif ('i' not in self.kwargs) and ('y' in self.kwargs):
+
+                # Index the image by x, y coordinates (in map units).
+                self.kwargs['i'] = vector_tools.get_xy_offsets(self,
+                                                               x=999.,
+                                                               y=self.kwargs['y'],
+                                                               check_position=False)[3]
+
+                start_i = self.kwargs['i']
+                self.o_info.update_info(top=self.o_info.top-(start_i*self.o_info.cellY))
+                iwo = start_i
+
+            if ('j' in self.kwargs) and ('x' not in self.kwargs):
 
                 start_j = self.kwargs['j']
                 self.o_info.update_info(left=self.o_info.left+(start_j*self.o_info.cellY))
+                jwo = start_j
+
+            elif ('j' not in self.kwargs) and ('x' in self.kwargs):
+
+                # Index the image by x, y coordinates (in map units).
+                self.kwargs['j'] = vector_tools.get_xy_offsets(self,
+                                                               x=self.kwargs['x'],
+                                                               y=999.,
+                                                               check_position=False)[2]
+
+                start_j = self.kwargs['j']
+                self.o_info.update_info(left=self.o_info.left + (start_j * self.o_info.cellY))
                 jwo = start_j
 
             if 'rows' in self.kwargs:
