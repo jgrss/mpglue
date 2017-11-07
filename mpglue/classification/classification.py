@@ -4735,7 +4735,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             elif ('i' not in self.kwargs) and ('y' in self.kwargs):
 
                 # Index the image by x, y coordinates (in map units).
-                self.kwargs['i'] = vector_tools.get_xy_offsets(self,
+                self.kwargs['i'] = vector_tools.get_xy_offsets(self.i_info,
                                                                x=999.,
                                                                y=self.kwargs['y'],
                                                                check_position=False)[3]
@@ -4753,7 +4753,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             elif ('j' not in self.kwargs) and ('x' in self.kwargs):
 
                 # Index the image by x, y coordinates (in map units).
-                self.kwargs['j'] = vector_tools.get_xy_offsets(self,
+                self.kwargs['j'] = vector_tools.get_xy_offsets(self.i_info,
                                                                x=self.kwargs['x'],
                                                                y=999.,
                                                                check_position=False)[2]

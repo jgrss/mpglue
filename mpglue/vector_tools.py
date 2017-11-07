@@ -1574,8 +1574,14 @@ def _get_xy_offsets(x, left, right, y, top, bottom, cell_size_x, cell_size_y, ro
     return x_offset, y_offset
 
 
-def get_xy_offsets(image_info=None, image_list=None, x=None, y=None, feature=None, xy_info=None,
-                   round_offset=False, check_position=True):
+def get_xy_offsets(image_info=None,
+                   image_list=None,
+                   x=None,
+                   y=None,
+                   feature=None,
+                   xy_info=None,
+                   round_offset=False,
+                   check_position=True):
 
     """
     Get coordinate offsets
