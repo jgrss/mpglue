@@ -28,9 +28,16 @@ except ImportError:
     raise ImportError('NumPy did not load')
 
 
-def _add_points_from_raster(out_shp, class_id, field_type, in_rst,
-                            epsg=None, projection=None, no_data_value=-1, skip=1,
-                            be_quiet=False):
+def _add_points_from_raster(out_shp,
+                            class_id,
+                            field_type,
+                            in_rst,
+                            no_data_value,
+                            projection,
+                            skip,
+                            be_quiet,
+                            block_size_rows,
+                            block_size_cols):
 
     # Create the new shapefile
     mpc = vector_tools.create_vector(out_shp,
@@ -41,87 +48,78 @@ def _add_points_from_raster(out_shp, class_id, field_type, in_rst,
     # create the geometry
     pt_geom = ogr.Geometry(ogr.wkbPoint)
 
-    m_info = raster_tools.ropen(in_rst)
+    with raster_tools.ropen(in_rst) as m_info:
 
-    m_info.update_info(storage='byte')
+        m_info.update_info(storage='byte')
 
-    # band = m_info.datasource.GetRasterBand(1)
+        if not be_quiet:
+            ctr, pbar = _iteration_parameters(m_info.rows, m_info.cols, block_size_rows, block_size_cols)
 
-    block_size_rows = 512
-    block_size_cols = 512
+        for i in range(0, m_info.rows, block_size_rows):
 
-    logger.info('\nConverting to points ...\n')
+            top = m_info.top - (i * m_info.cellY)
 
-    if not be_quiet:
-        ctr, pbar = _iteration_parameters(m_info.rows, m_info.cols, block_size_rows, block_size_cols)
+            n_rows = raster_tools.n_rows_cols(i, block_size_rows, m_info.rows)
 
-    for i in xrange(0, m_info.rows, block_size_rows):
+            for j in range(0, m_info.cols, block_size_cols):
 
-        top = m_info.top - (i * m_info.cellY)
+                left = m_info.left + (j * m_info.cellY)
 
-        n_rows = raster_tools.n_rows_cols(i, block_size_rows, m_info.rows)
+                n_cols = raster_tools.n_rows_cols(j, block_size_cols, m_info.cols)
 
-        for j in xrange(0, m_info.cols, block_size_cols):
+                # Read the current block.
+                block = m_info.read(bands2open=1,
+                                    i=i,
+                                    j=j,
+                                    rows=n_rows,
+                                    cols=n_cols)
 
-            left = m_info.left + (j * m_info.cellY)
+                # Create the points.
+                if block.max() != no_data_value:
 
-            n_cols = raster_tools.n_rows_cols(j, block_size_cols, m_info.cols)
+                    for i2 in range(0, n_rows, skip):
 
-            block = m_info.read(bands2open=1,
-                                   i=i, j=j,
-                                   rows=n_rows, cols=n_cols,
-                                   d_type='int16')
+                        for j2 in range(0, n_cols, skip):
 
-            # block = np.float32(band.ReadAsArray(j, i, n_cols, n_rows))
+                            val = block[i2, j2]
 
-            # blk_mean = block.mean()
-            # blk_mean = float('%.2f' % blk_mean)
+                            if int(val) == no_data_value:
+                                continue
 
-            if block.max() != no_data_value:
+                            if int(str(val)[str(val).find('.')+1]) == 0:
+                                val = int(val)
+                            else:
+                                val = float('{:.2f}'.format(val))
 
-                for i2 in xrange(0, n_rows, skip):
+                            if val != no_data_value:
 
-                    for j2 in xrange(0, n_cols, skip):
+                                top_shift = (top - (i2 * m_info.cellY)) - (m_info.cellY / 2.)
+                                left_shift = (left + (j2 * m_info.cellY)) + (m_info.cellY / 2.)
 
-                        val = block[i2, j2]
+                                # left_shift = left + ((m_info.cellY * skip) - (m_info.cellY / 2.))
+                                # top_shift = top - ((m_info.cellY * skip) - (m_info.cellY / 2.))
 
-                        if int(val) == no_data_value:
-                            continue
+                                # create a point at left, top
+                                vector_tools.add_point(left_shift, top_shift, mpc, class_id, val)
 
-                        if int(str(val)[str(val).find('.')+1]) == 0:
-                            val = int(val)
-                        else:
-                            val = float('{:.2f}'.format(val))
+                        #     left += (m_info.cellY * skip)
+                        #
+                        # top -= (m_info.cellY * skip)
 
-                        if val != no_data_value:
+                if not be_quiet:
 
-                            top_shift = (top - (i2 * m_info.cellY)) - (m_info.cellY / 2.)
-                            left_shift = (left + (j2 * m_info.cellY)) + (m_info.cellY / 2.)
-
-                            # left_shift = left + ((m_info.cellY * skip) - (m_info.cellY / 2.))
-                            # top_shift = top - ((m_info.cellY * skip) - (m_info.cellY / 2.))
-
-                            # create a point at left, top
-                            vector_tools.add_point(left_shift, top_shift, mpc, class_id, val)
-
-                    #     left += (m_info.cellY * skip)
-                    #
-                    # top -= (m_info.cellY * skip)
-
-            if not be_quiet:
-                pbar.update(ctr)
-                ctr += 1
+                    pbar.update(ctr)
+                    ctr += 1
 
     if not be_quiet:
         pbar.finish()
 
-    # band = None
-    m_info.close()
-    m_info = None
+    del m_info
 
     pt_geom.Destroy()
     mpc.close()
 
+    # Cleanup
     if os.path.isfile(in_rst):
 
         try:
@@ -130,95 +128,131 @@ def _add_points_from_raster(out_shp, class_id, field_type, in_rst,
             pass
 
     
-def poly2points(poly, out_shp, targ_img, class_id='Id', cell_size=None,
-                field_type='int', use_extent=True, no_data_value=-1):
+def poly2points(input_polygon,
+                output_points,
+                target_image,
+                class_id='Id',
+                cell_size=None,
+                field_type='int',
+                use_extent=True,
+                no_data_value=-1,
+                storage='int16',
+                be_quiet=False,
+                skip_factor=1,
+                block_size_rows=1024,
+                block_size_cols=1024):
 
     """
     Converts polygons to points.
 
     Args:    
-        poly (str): Path, name, and extension of polygon vector to compute.
-        out_shp (str): Path, name, and extension of output vector points.
-        targ_img (str): Path, name, and extension of image to align to.
+        input_polygon (str): Path, name, and extension of polygon vector to compute.
+        output_points (str): Path, name, and extension of output vector points.
+        target_image (str): Path, name, and extension of image to align to.
         class_id (Optional[str]): The field id in ``poly`` to get class values from. Default is 'Id'.
-        cell_size (Optional[float]): The cell size for point spacing. Default is None, or cell size of ``targ_img``.
-        field_type
-        use_extent
-        no_data_value
+        cell_size (Optional[float]): The cell size for point spacing. Default is None, or cell size of ``target_image``.
+        field_type (Optional[str]): The output field data type. Default is 'int'.
+        use_extent (Optional[bool]): Whether to use the extent of `target_image`. Default is True.
+        no_data_value (Optional[str]): The output no data value. Default is -1.
+        storage (Optional[str]): The output image data storage type. Default is 'int16'.
+        be_quiet (Optional[bool]): Whether to be quiet and do not print. Default is False.
+        skip_factor (Optional[int]): The within-polygon point skip factor. Default is 1.
+            E.g.,
+                `skip_factor`=1 would create a point at every pixel that has its centroid inside a polygon.
+                `skip_factor`=2 would create a point at every other pixel that has its centroid inside a polygon.
+        block_size_rows (Optional[int]): The processing row block size, in pixels. Default is 1024.
+        block_size_cols (Optional[int]): The processing column block size, in pixels. Default is 1024.
 
     Examples:
-        >>> from mappy.sample import poly2points
-        >>> poly2points('C:/someDir/somePoly.shp', 'C:/someDir/somePts.shp')
-    
-        Command line usage
-        ------------------
-        .. mappy\sample\poly2points.py -i C:\someDir\somePoly.shp -o C:\someOutDir\somePts.shp
+        >>> from mpglue.classification.poly2points import poly2points
+        >>>
+        >>> poly2points('/polygons.shp',
+        >>>             '/points.shp',
+        >>>             '/target_image.tif')
 
     Returns:
-        None, writes to ``out_shp``.
+        None, writes to ``output_points``.
     """
 
-    d_name, f_name = os.path.split(out_shp)
+    d_name, f_name = os.path.split(output_points)
     f_base, f_ext = os.path.splitext(f_name)
         
-    out_rst = os.path.join(d_name, '{}.tif'.format(f_base))
+    rasterized_polygons = os.path.join(d_name, '{}.tif'.format(f_base))
 
-    if os.path.isfile(out_rst):
+    if os.path.isfile(rasterized_polygons):
 
         try:
-            os.remove(out_rst)
+            os.remove(rasterized_polygons)
         except:
-            sys.exit('ERROR!! Could not delete the output raster.')
+            logger.warning('  Could not delete the output raster. Will attempt to overwrite it.')
 
-    m_info = raster_tools.ropen(targ_img)
+    with raster_tools.ropen(target_image) as m_info:
 
-    m_info.update_info(storage='int16')
+        m_info.update_info(storage=storage)
 
-    if not isinstance(cell_size, float):
-        cell_size = m_info.cellY
+        if not isinstance(cell_size, float):
+            cell_size = m_info.cellY
 
-    # Check if the shapefile is UTM North or South. gdal_rasterize has trouble with UTM South
-    # if 'S' in vct_info.proj.GetAttrValue('PROJCS')[-1]: # GetUTMZone()
-    #     sys.exit('\nERROR!! The shapefile should be projected to UTM North (even for the Southern Hemisphere).\n')
+        # Check if the shapefile is UTM North or South. gdal_rasterize has trouble with UTM South
+        # if 'S' in vct_info.proj.GetAttrValue('PROJCS')[-1]: # GetUTMZone()
+        #     sys.exit('\nERROR!! The shapefile should be projected to UTM North (even for the Southern Hemisphere).\n')
 
-    logger.info('\nRasterizing {} ...\n'.format(f_name))
+        if not be_quiet:
+            logger.info('  Rasterizing {} ...'.format(input_polygon))
 
-    if use_extent:
+        # Rasterize the polygon.
+        if use_extent:
 
-        raster_tools.rasterize_vector(poly, out_rst,
-                                      burn_id=class_id,
-                                      cell_size=cell_size,
-                                      top=m_info.top, bottom=m_info.bottom,
-                                      left=m_info.left, right=m_info.right,
-                                      projection=m_info.projection,
-                                      initial_value=no_data_value,
-                                      storage=m_info.storage)
+            raster_tools.rasterize_vector(input_polygon,
+                                          rasterized_polygons,
+                                          burn_id=class_id,
+                                          cell_size=cell_size,
+                                          top=m_info.top,
+                                          bottom=m_info.bottom,
+                                          left=m_info.left,
+                                          right=m_info.right,
+                                          projection=m_info.projection,
+                                          initial_value=no_data_value,
+                                          storage=m_info.storage)
 
-        # com = 'gdal_rasterize -init %d -a %s -te %f %f %f %f -tr %f %f -ot Float32 %s %s' % \
-        #       (no_data_value, class_id, m_info.left, m_info.bottom, m_info.right, m_info.top, cell_size, cell_size, \
-        #        poly, out_rst)
-    else:
-        raster_tools.rasterize_vector(poly, out_rst,
-                                      burn_id=class_id,
-                                      cell_size=cell_size,
-                                      projection=m_info.projection,
-                                      initial_value=no_data_value,
-                                      storage=m_info.storage)
+            # com = 'gdal_rasterize -init %d -a %s -te %f %f %f %f -tr %f %f -ot Float32 %s %s' % \
+            #       (no_data_value, class_id, m_info.left, m_info.bottom, m_info.right, m_info.top, cell_size, cell_size, \
+            #        input_polygon, rasterized_polygons)
+        else:
 
-        # com = 'gdal_rasterize -init %d -a %s -tr %f %f -ot Float32 %s %s' % \
-        #       (no_data_value, class_id, cell_size, cell_size, poly, out_rst)
+            raster_tools.rasterize_vector(input_polygon,
+                                          rasterized_polygons,
+                                          burn_id=class_id,
+                                          cell_size=cell_size,
+                                          projection=m_info.projection,
+                                          initial_value=no_data_value,
+                                          storage=m_info.storage)
 
-    # subprocess.call(com, shell=True)
+            # com = 'gdal_rasterize -init %d -a %s -tr %f %f -ot Float32 %s %s' % \
+            #       (no_data_value, class_id, cell_size, cell_size, input_polygon, rasterized_polygons)
 
-    m_info.close()
-    m_info = None
+        # subprocess.call(com, shell=True)
 
-    # get vector info
-    with vector_tools.vopen(poly) as v_info:
+    del m_info
 
-        _add_points_from_raster(out_shp, class_id, field_type, out_rst,
-                                no_data_value=no_data_value,
-                                projection=v_info.projection)
+    if not be_quiet:
+        logger.info('  Converting {} to points ...'.format(rasterized_polygons))
+
+    # Get information from the input polygon.
+    with vector_tools.vopen(input_polygon) as v_info:
+
+        # Create the points from
+        #   the rasterized polygon.
+        _add_points_from_raster(output_points,
+                                class_id,
+                                field_type,
+                                rasterized_polygons,
+                                no_data_value,
+                                v_info.projection,
+                                skip_factor,
+                                be_quiet,
+                                block_size_rows,
+                                block_size_cols)
 
 
 def _examples():
@@ -254,6 +288,7 @@ def main():
 
     logger.info('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
                 (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
+
 
 if __name__ == '__main__':
     main()
