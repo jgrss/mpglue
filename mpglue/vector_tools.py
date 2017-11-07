@@ -1470,31 +1470,35 @@ def intersects_boundary(meta_dict, boundary_file):
         True if ``meta_dict`` coordinates intersect ``boundary_shp``, otherwise False.
     """
 
-    with vopen(boundary_file) as bdy_info:
+    if isinstance(boundary_file, ogr.Geometry):
+        bdy_geometry = boundary_file
+    else:
 
-        bdy_feature = bdy_info.lyr.GetFeature(0)
+        with vopen(boundary_file) as bdy_info:
 
-        bdy_geometry = bdy_feature.GetGeometryRef()
+            bdy_feature = bdy_info.lyr.GetFeature(0)
 
-        # Create a polygon object from the coordinates.
-        coord_wkt = 'POLYGON (({:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}))'.format(meta_dict['UL'][0],
-                                                                                               meta_dict['UL'][1],
-                                                                                               meta_dict['UR'][0],
-                                                                                               meta_dict['UR'][1],
-                                                                                               meta_dict['LR'][0],
-                                                                                               meta_dict['LR'][1],
-                                                                                               meta_dict['LL'][0],
-                                                                                               meta_dict['LL'][1],
-                                                                                               meta_dict['UL'][0],
-                                                                                               meta_dict['UL'][1])
+            bdy_geometry = bdy_feature.GetGeometryRef()
 
-        coord_poly = ogr.CreateGeometryFromWkt(coord_wkt)
+        del bdy_info
 
-        # If the polygon object is empty,
-        #   then the two do not intersect.
-        is_empty = bdy_geometry.Intersection(coord_poly).IsEmpty()
+    # Create a polygon object from the coordinates.
+    coord_wkt = 'POLYGON (({:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}))'.format(meta_dict['UL'][0],
+                                                                                           meta_dict['UL'][1],
+                                                                                           meta_dict['UR'][0],
+                                                                                           meta_dict['UR'][1],
+                                                                                           meta_dict['LR'][0],
+                                                                                           meta_dict['LR'][1],
+                                                                                           meta_dict['LL'][0],
+                                                                                           meta_dict['LL'][1],
+                                                                                           meta_dict['UL'][0],
+                                                                                           meta_dict['UL'][1])
 
-    if is_empty:
+    coord_poly = ogr.CreateGeometryFromWkt(coord_wkt)
+
+    # If the polygon object is empty,
+    #   then the two do not intersect.
+    if not bdy_geometry.Intersection(coord_poly):
         return False
     else:
         return True
