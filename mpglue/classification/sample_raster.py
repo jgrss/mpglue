@@ -600,7 +600,18 @@ class SampleImage(object):
             if self.accuracy:
 
                 # Output confusion matrix text file.
-                error_file = os.path.join(self.out_dir, '{}__{}_acc.txt'.format(self.f_base_points, self.f_base_rst))
+                if isinstance(self.append_name, str):
+
+                    error_file = os.path.join(self.out_dir,
+                                              '{POINTS}__{RASTER}_{BASE}_ACCURACY.txt'.format(POINTS=self.f_base_points,
+                                                                                              RASTER=self.f_base_rst,
+                                                                                              BASE=self.append_name))
+
+                else:
+
+                    error_file = os.path.join(self.out_dir,
+                                              '{POINTS}__{RASTER}_ACCURACY.txt'.format(POINTS=self.f_base_points,
+                                                                                 RASTER=self.f_base_rst))
 
                 emat = error_matrix()
                 emat.get_stats(po_text=self.data_file, header=True)
