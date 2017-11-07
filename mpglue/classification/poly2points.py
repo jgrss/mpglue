@@ -72,6 +72,9 @@ def _add_points_from_raster(out_shp,
                                     rows=n_rows,
                                     cols=n_cols)
 
+                import pdb
+                pdb.set_trace()
+
                 # Create the points.
                 if block.max() != no_data_value:
 
@@ -83,9 +86,6 @@ def _add_points_from_raster(out_shp,
 
                             if int(point_value) == no_data_value:
                                 continue
-
-                            import pdb
-                            pdb.set_trace()
 
                             if int(str(point_value)[str(point_value).find('.')+1]) == 0:
                                 point_value = int(point_value)
