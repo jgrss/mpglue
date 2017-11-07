@@ -103,10 +103,21 @@ class SampleImage(object):
         neighbors (Optional[bool])
         field_type (Optional[str])
         use_extent (Optional[bool])
+        append_name (Optional[str]): A base name to append to the samples file name.
     """
 
-    def __init__(self, points_file, image_file, out_dir, class_id, accuracy=False, n_jobs=0,
-                 neighbors=False, field_type='int', use_extent=True, sql_expression_attr=[],
+    def __init__(self,
+                 points_file,
+                 image_file,
+                 out_dir,
+                 class_id,
+                 accuracy=False,
+                 n_jobs=0,
+                 neighbors=False,
+                 field_type='int',
+                 use_extent=True,
+                 append_name=None,
+                 sql_expression_attr=None,
                  sql_expression_field='Id'):
 
         self.points_file = points_file
@@ -118,6 +129,7 @@ class SampleImage(object):
         self.neighbors = neighbors
         self.field_type = field_type
         self.use_extent = use_extent
+        self.append_name = append_name
         self.sql_expression_attr = sql_expression_attr
         self.sql_expression_field = sql_expression_field
 
@@ -181,9 +193,7 @@ class SampleImage(object):
 
     def setup_names(self):
 
-        """
-        File names and directories
-        """
+        """File names and directories"""
 
         # self.out_dir = self.out_dir.replace('\\', '/')
 
@@ -209,17 +219,33 @@ class SampleImage(object):
 
         self.get_class_count()
 
-        self.data_file = os.path.join(self.out_dir, '{}__{}_samples.txt'.format(self.f_base_points, self.f_base_rst))
+        if isinstance(self.append_name, str):
 
-        # samples file
-        # self.sample_writer = open(self.data_file, 'w')
+            self.data_file = os.path.join(self.out_dir,
+                                          '{POINTS}__{RASTER}_{BASE}_SAMPLES.txt'.format(POINTS=self.f_base_points,
+                                                                                         RASTER=self.f_base_rst,
+                                                                                         BASE=self.append_name))
 
-        # number of samples file
-        self.n_samps = os.path.join(self.out_dir, '{}__{}_info.txt'.format(self.f_base_points, self.f_base_rst))
+            # information samples file
+            self.n_samps = os.path.join(self.out_dir,
+                                        '{POINTS}__{RASTER}_{BASE}_INFO.txt'.format(POINTS=self.f_base_points,
+                                                                                    RASTER=self.f_base_rst,
+                                                                                    BASE=self.append_name))
+
+        else:
+
+            self.data_file = os.path.join(self.out_dir,
+                                          '{POINTS}__{RASTER}_SAMPLES.txt'.format(POINTS=self.f_base_points,
+                                                                                  RASTER=self.f_base_rst))
+
+            # information samples file
+            self.n_samps = os.path.join(self.out_dir,
+                                        '{POINTS}__{RASTER}_INFO.txt'.format(POINTS=self.f_base_points,
+                                                                             RASTER=self.f_base_rst))
 
         # create array of zeros for the class counter
         # self.count_arr = np.zeros(len(self.n_classes), dtype='uint8')
-        self.count_dict = {}
+        self.count_dict = dict()
         for nc in self.class_list:
             self.count_dict[nc] = 0
 
@@ -290,7 +316,8 @@ class SampleImage(object):
         self.shp_info.close()
 
         self.shp_info = None
-        self.m_info = None
+
+        del self.m_info
 
         self.finish()
 
