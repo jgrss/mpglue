@@ -807,11 +807,8 @@ class Samples(object):
 
                 class_subs = dict()
 
-                import pdb
-                pdb.set_trace()
-
-                for clp in self.classes:
-                    class_subs[clp] = perc_samp_each
+                for clp in self.df[self.response_label].unique():
+                    class_subs[int(clp)] = perc_samp_each
 
             for class_key, cl in sorted(class_subs.iteritems()):
 
@@ -819,6 +816,9 @@ class Samples(object):
                     self._stratify(class_key, cl)
                 else:
                     self._sample_groups(class_key, cl)
+
+            import pdb
+            pdb.set_trace()
 
             self.train_idx = sorted(self.train_idx)
             self.test_idx = sorted(list(set(self.df.index.tolist()).difference(self.train_idx)))
