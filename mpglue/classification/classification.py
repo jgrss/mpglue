@@ -3331,8 +3331,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         out_stats=None,
                         stats_from_image=False,
                         calibrate_proba=False,
-                        be_quiet=False,
-                        n_jobs=-1):
+                        be_quiet=False):
 
         """
         Loads, trains, and saves a predictive model.
@@ -3410,7 +3409,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.calibrate_proba = calibrate_proba
         self.class_weight = class_weight
         self.be_quiet = be_quiet
-        self.n_jobs = n_jobs
 
         self.calibrated = False
 
