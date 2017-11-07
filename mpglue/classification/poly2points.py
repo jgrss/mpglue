@@ -72,9 +72,6 @@ def _add_points_from_raster(out_shp,
                                     rows=n_rows,
                                     cols=n_cols)
 
-                import pdb
-                pdb.set_trace()
-
                 # Create the points.
                 if block.max() != no_data_value:
 
@@ -200,6 +197,9 @@ def poly2points(input_polygon,
 
         if not be_quiet:
             logger.info('  Rasterizing {} ...'.format(input_polygon))
+
+        import pdb
+        pdb.set_trace()
 
         # Rasterize the polygon.
         if use_extent:
