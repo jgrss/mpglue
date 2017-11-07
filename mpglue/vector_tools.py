@@ -506,6 +506,7 @@ def rename_vector(input_file, output_file):
             try:
                 os.rename(os.path.join(d_name, associated_file), os.path.join(od_name, '{}{}'.format(of_base, a_ext)))
             except:
+
                 logger.error(gdal.GetLastErrorMsg())
                 logger.error('Could not write {} to file.'.format(of_base))
                 raise IOError

@@ -5137,10 +5137,19 @@ def cumulative_plot_array(image_array, small2large=True, out_fig=None):
     plt.close()
 
 
-def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None,
-                     storage='float32', match_raster=None, bigtiff='no',
-                     in_memory=False, initial_value=0, where_clause=None,
-                     return_array=False, **kwargs):
+def rasterize_vector(in_vector,
+                     out_raster,
+                     burn_id='Id',
+                     cell_size=None,
+                     storage='float32',
+                     match_raster=None,
+                     bigtiff='no',
+                     in_memory=False,
+                     initial_value=0,
+                     where_clause=None,
+                     return_array=False,
+                     all_touched=True,
+                     **kwargs):
 
     """
     Rasterizes a vector dataset
@@ -5158,6 +5167,9 @@ def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None,
         initial_value (Optional[int])
         where_clause (Optional[str])
         return_array (Optional[bool])
+        all_touched (Optional[bool]): Whether to rasterize all pixels touched by the vector. Otherwise,
+            only include pixels that have their centroids inside of the polygon. Default is True.
+        kwargs (Optional[dict]): Creation options.
 
     Examples:
         >>> # rasterize to the extent of the matching raster
@@ -5273,9 +5285,11 @@ def rasterize_vector(in_vector, out_raster, burn_id='Id', cell_size=None,
         #                     v_info.lyr,
         #                     options=rasterize_options)
 
-        gdal.RasterizeLayer(orw.datasource, [1], v_info.lyr,
+        gdal.RasterizeLayer(orw.datasource,
+                            [1],
+                            v_info.lyr,
                             options=['ATTRIBUTE={}'.format(burn_id),
-                                     'ALL_TOUCHED=TRUE'])
+                                     'ALL_TOUCHED={}'.format(str(all_touched).upper())])
 
     if in_memory:
 

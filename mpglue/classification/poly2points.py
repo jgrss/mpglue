@@ -137,6 +137,7 @@ def poly2points(input_polygon,
                 storage='int16',
                 be_quiet=False,
                 skip_factor=1,
+                all_touched=True,
                 block_size_rows=1024,
                 block_size_cols=1024):
 
@@ -158,6 +159,8 @@ def poly2points(input_polygon,
             E.g.,
                 `skip_factor`=1 would create a point at every pixel that has its centroid inside a polygon.
                 `skip_factor`=2 would create a point at every other pixel that has its centroid inside a polygon.
+        all_touched (Optional[bool]): Whether to rasterize all pixels touched by the vector. Otherwise,
+            only include pixels that have their centroids inside of the polygon. Default is True.
         block_size_rows (Optional[int]): The processing row block size, in pixels. Default is 1024.
         block_size_cols (Optional[int]): The processing column block size, in pixels. Default is 1024.
 
@@ -211,7 +214,8 @@ def poly2points(input_polygon,
                                           right=m_info.right,
                                           projection=m_info.projection,
                                           initial_value=no_data_value,
-                                          storage=m_info.storage)
+                                          storage=m_info.storage,
+                                          all_touched=all_touched)
 
             # com = 'gdal_rasterize -init %d -a %s -te %f %f %f %f -tr %f %f -ot Float32 %s %s' % \
             #       (no_data_value, class_id, m_info.left, m_info.bottom, m_info.right, m_info.top, cell_size, cell_size, \
@@ -224,7 +228,8 @@ def poly2points(input_polygon,
                                           cell_size=cell_size,
                                           projection=m_info.projection,
                                           initial_value=no_data_value,
-                                          storage=m_info.storage)
+                                          storage=m_info.storage,
+                                          all_touched=all_touched)
 
             # com = 'gdal_rasterize -init %d -a %s -tr %f %f -ot Float32 %s %s' % \
             #       (no_data_value, class_id, cell_size, cell_size, input_polygon, rasterized_polygons)
