@@ -564,16 +564,29 @@ def merge_vectors(shps2merge, merged_shapefile):
                                                                   out_file))
                     raise IOError
 
-    # Then merge each shapefile into the
-    # output file.
+    # Then merge each shapefile into
+    #   the output file.
     for shp2merge in shps2merge[1:]:
 
-        print('Merging {} ...'.format(shp2merge))
+        logger.info('  Merging {} into {} ...'.format(shp2merge,
+                                                      shps2merge[0]))
 
         try:
-            ogr2ogr.main(['', '-f', 'ESRI Shapefile', '-update', '-append', merged_shapefile, shp2merge, '-nln', of_base])
+
+            ogr2ogr.main(['',
+                          '-f',
+                          'ESRI Shapefile',
+                          '-update',
+                          '-append',
+                          merged_shapefile,
+                          shp2merge,
+                          '-nln',
+                          of_base])
+
         except:
+
             logger.error('Could not merge the vector files.')
+            raise IOError
 
 
 def add_point(x, y, layer_object, field, value2write):
