@@ -379,7 +379,7 @@ class SampleImage(object):
 
             # Check if the sample points fall
             #   within [current] raster boundary.
-            if vector_tools.is_within(x, y, self.m_info):
+            if vector_tools.xy_within_image(x, y, self.m_info):
 
                 # Get x, y coordinates and offsets.
                 x, y, x_off, y_off = vector_tools.get_xy_offsets(image_info=self.m_info, x=x, y=y)

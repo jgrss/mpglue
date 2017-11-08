@@ -835,7 +835,42 @@ def shp2dataframe(input_shp):
     return pd.DataFrame(df)
 
 
-def is_within(x, y, image_info):
+def extent_within_boundary(image_info, geometry):
+
+    """
+    Checks whether an image extent falls entirely within a polygon boundary
+
+    Args:
+        image_info (object)
+        geometry (OGR object)
+    """
+
+    # UL
+    ul_ = ogr.CreateGeometryFromWkt('POINT ({:f} {:f})'.format(image_info.left,
+                                                               image_info.top))
+
+    # UR
+    ur_ = ogr.CreateGeometryFromWkt('POINT ({:f} {:f})'.format(image_info.right,
+                                                               image_info.top))
+
+    # LL
+    ll_ = ogr.CreateGeometryFromWkt('POINT ({:f} {:f})'.format(image_info.left,
+                                                               image_info.bottom))
+
+    # LR
+    lr_ = ogr.CreateGeometryFromWkt('POINT ({:f} {:f})'.format(image_info.right,
+                                                               image_info.bottom))
+
+    if ul_.Within(geometry) and ur_.Within(geometry) and \
+            ll_.Within(geometry) and lr_.Within(geometry):
+
+        return True
+
+    else:
+        return False
+
+
+def xy_within_image(x, y, image_info):
 
     """
     Checks whether x, y coordinates are within an image extent.
@@ -890,6 +925,33 @@ def create_point(coordinate_pair, projection_file):
     return cv
 
 
+class TransformGeometry(object):
+
+    """
+    Transforms a geometry
+
+    Args:
+        geometry (OGR geometry object)
+        in_epsg (int)
+        out_epsg (int)
+    """
+
+    def __init__(self, geometry, in_epsg, out_epsg):
+
+        self.geometry = geometry
+
+        source_sr = osr.SpatialReference()
+        source_sr.ImportFromEPSG(in_epsg)
+
+        target_sr = osr.SpatialReference()
+        target_sr.ImportFromEPSG(out_epsg)
+
+        # Create the transformation.
+        self.coord_transform = osr.CoordinateTransformation(source_sr, target_sr)
+
+        self.geometry.Transform(self.coord_transform)
+
+
 class Transform(object):
 
     """
@@ -902,7 +964,7 @@ class Transform(object):
         target_epsg (int): The target EPSG code.
 
     Examples:
-        >>> from mappy.vector_tools import Transfrom
+        >>> from mpglue.vector_tools import Transfrom
         >>>
         >>> ptr = Transform(740000., 2260000., 102033, 4326)
         >>> print ptr.x, ptr.y
