@@ -1294,8 +1294,9 @@ class Samples(object):
             recode_dict (dict): The recode dictionary.
         """
 
-        new_samps = np.zeros(self.n_samps, dtype='int64')
+        # new_samps = np.zeros(self.n_samps, dtype='int64')
         temp_labels = self.all_samps[:, -1]
+        new_samps = temp_labels.copy()
 
         for recode_key, cl in sorted(recode_dict.iteritems()):
             new_samps[temp_labels == recode_key] = cl
