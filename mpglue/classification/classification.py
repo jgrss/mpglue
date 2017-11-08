@@ -12,6 +12,7 @@ import subprocess
 import ast
 import platform
 import shutil
+import fnmatch
 from copy import copy, deepcopy
 # from multiprocessing import Pool
 # from pathos.multiprocessing import ProcessingPool as Pool
@@ -4437,6 +4438,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 n_jobs=-1,
                 n_jobs_vars=-1,
                 gdal_cache=256,
+                overwrite=False,
                 **kwargs):
 
         """
@@ -4472,6 +4474,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             n_jobs_vars (Optional[int]): The number of processors to use for parallel band loading.
                 Default is -1, or all available processors.
             gdal_cache (Optional[int]). The GDAL cache (MB). Default is 256.
+            overwrite (Optional[bool]): Whether to overwrite an existing `out_image`. Default is False.
             kwargs (Optional): Image read options passed to `mpglue.raster_tools.ropen.read`.
             
         Returns:
@@ -4552,6 +4555,17 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         d_name, f_name = os.path.split(self.out_image)
         f_base, f_ext = os.path.splitext(f_name)
+
+        if os.path.isfile(out_image) and overwrite:
+
+            # Delete all files
+            os.remove(out_image)
+
+            if os.path.isfile(os.path.join(d_name, '{}.ovr'.format(f_name))):
+                os.remove(os.path.join(d_name, '{}.ovr'.format(f_name)))
+
+            if os.path.isfile(os.path.join(d_name, '{}.aux.xml'.format(f_name))):
+                os.remove(os.path.join(d_name, '{}.aux.xml'.format(f_name)))
 
         self.out_image_temp = os.path.join(d_name, '{}_temp.tif'.format(f_base))
         self.temp_model_file = os.path.join(d_name, 'temp_model_file.txt')
