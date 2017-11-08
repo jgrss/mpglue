@@ -656,6 +656,45 @@ def add_polygon(vector_object, xy_pairs=None, field_vals=None, geometry=None):
     feature.Destroy()
 
 
+def dataframe2geo(pddf, x_field='X', y_field='Y', epsg=4326):
+
+    """
+    Converts a Pandas DataFrame to a GeoPandas DataFrame
+
+    Args:
+        pddf (Pandas DataFrame)
+        x_field (str)
+        y_field (str)
+        epsg (int)
+    """
+
+    try:
+        import geopandas as gpd
+    except:
+
+        logger.error('  GeoPandas is required')
+        raise ImportError
+
+    try:
+        import shapely
+        from shapely.geometry import Point
+    except:
+
+        logger.error('  Shapely is required')
+        raise ImportError
+
+    shapely.speedups.enable()
+
+    geometry = [Point(xy) for xy in zip(pddf[x_field], pddf[y_field])]
+    crs = dict(init='epsg:{:d}'.format(epsg))
+
+    return gpd.GeoDataFrame(pddf.drop([x_field,
+                                       y_field],
+                                      axis=1),
+                            crs=crs,
+                            geometry=geometry)
+
+
 def dataframe2dbf(df, dbf_file, my_specs=None):
 
     """
