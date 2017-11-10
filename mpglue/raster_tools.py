@@ -215,7 +215,8 @@ class ReadWrite(object):
              y=0.,
              x=0.,
              check_x=None,
-             check_y=None):
+             check_y=None,
+             **viargs):
 
         """
         Reads a raster as an array
@@ -393,10 +394,12 @@ class ReadWrite(object):
 
         if compute_index != 'none':
 
-            vie = VegIndicesEquations(self.array, chunk_size=-1)
+            vie = VegIndicesEquations(self.array,
+                                      chunk_size=-1)
 
             # exec('self.{} = vie.compute(compute_index.upper())'.format(compute_index.lower()))
-            self.array = vie.compute(compute_index.upper())
+            self.array = vie.compute(compute_index.upper(),
+                                     **viargs)
 
         return self.array
 
