@@ -3440,7 +3440,7 @@ def warp(input_image,
 
             logger.info('  Requested image bounds')
             logger.info(awargs['outputBounds'])
-        
+
         logger.warning('  GDAL returned an exception--check the output file, {}.'.format(output_image))
 
     if return_datasource:
