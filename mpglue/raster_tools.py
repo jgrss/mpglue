@@ -3432,10 +3432,14 @@ def warp(input_image,
 
     warp_options = gdal.WarpOptions(**awargs)
 
-    try:
-        out_ds = gdal.Warp(output_image, input_image, options=warp_options)
-    except:
-        logger.warning('  GDAL returned an exception--check the output file, {}.'.format(output_image))
+    logger.info(warp_options)
+    logger.info(output_image)
+    logger.info(input_image)
+
+    # try:
+    out_ds = gdal.Warp(output_image, input_image, options=warp_options)
+    # except:
+    #     logger.warning('  GDAL returned an exception--check the output file, {}.'.format(output_image))
 
     if return_datasource:
 
