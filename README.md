@@ -230,21 +230,30 @@ vector-tools
 Installation
 ---
 
-#### Install from source (requires Cython)
+#### Install the most up-to-date version from source (requires Cython)
  
 1) Clone MpGlue
 
 ```commandline
 cd <location to clone MpGlue>
+
+# Clone to /mpglue
 git clone https://github.com/jgrss/mpglue.git
 ```
 
 2) Build and install
 
 ```commandline
+cd mpglue
+
+# Build the package
 python setup.py build
+
+# Install into /site-packages
 python setup.py install
 ```
+
+## OR
 
 #### Install stable release with pip
 
