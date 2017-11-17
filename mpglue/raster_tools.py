@@ -527,18 +527,31 @@ class ReadWrite(object):
             return bands2open
         elif isinstance(bands2open, list):
 
-            if len(bands2open) == 0:
-                raise ValueError('\nA band list must be declared.\n')
+            if not bands2open:
+
+                logger.error('  A band list must be declared.\n')
+                raise LenError
+
+            if 0 in bands2open:
+
+                logger.error('  A band list cannot have any zeros. GDAL indexes starting at 1.\n')
+                raise ValueError
 
             if not self.hdf_file:
+
                 if max(bands2open) > self.bands:
-                    raise ValueError('\nThe requested band position cannot be greater than the image bands.\n')
+
+                    logger.error('  The requested band position cannot be greater than the image bands.\n')
+                    raise ValueError
 
         elif isinstance(bands2open, int):
 
             if not self.hdf_file:
+
                 if bands2open > self.bands:
-                    raise ValueError('\nThe requested band position cannot be greater than the image bands.\n')
+
+                    logger.error('  The requested band position cannot be greater than the image bands.\n')
+                    raise ValueError
 
             if bands2open == -1:
                 bands2open = range(1, self.bands+1)
@@ -546,7 +559,9 @@ class ReadWrite(object):
                 bands2open = [bands2open]
 
         else:
-            raise TypeError('The ``bands2open`` parameter must be a dict, list, or int.')
+
+            logger.error('  The ``bands2open`` parameter must be a dict, list, or int.\n')
+            raise TypeError
 
         if self.sort_bands2open and not isinstance(bands2open, dict):
             bands2open = sorted(bands2open)

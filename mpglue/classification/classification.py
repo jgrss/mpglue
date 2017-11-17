@@ -826,7 +826,10 @@ class Samples(object):
 
             if isinstance(clear_observations, np.ndarray):
 
+                # The number of clear observations at test samples
                 self.test_clear = clear_observations[self.test_idx]
+
+                # The number of clear observations at train samples
                 self.train_clear = clear_observations[self.train_idx]
 
             if isinstance(self.sample_weight, np.ndarray):
@@ -1591,7 +1594,7 @@ class Samples(object):
                                                                                                                             bands)
 
         else:
-            logger.warning('  No variables were shaped.')
+            logger.warning('  No variables were shaped for CRF.')
 
         # Arrange the labels.
         if isinstance(labels, list):
@@ -1624,7 +1627,7 @@ class Samples(object):
                 self.labels = np.array(labels, dtype='uint8').reshape(n_patches, rows, cols)
 
         else:
-            logger.warning('  No labels were shaped.')
+            logger.warning('  No labels were shaped for CRF.')
 
         if isinstance(self.p_vars, np.ndarray):
             self.p_vars[np.isnan(self.p_vars) | np.isinf(self.p_vars)] = 0
@@ -3672,7 +3675,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             if not pystruct_installed:
 
-                logger.warning('  Pystruct must be installed to used CRF models.')
+                logger.warning('  Pystruct must be installed to use CRF models.\nEnsure that pystruct and cvxopt are installed.')
                 return
 
             if 'max_iter' not in self.classifier_info_:
