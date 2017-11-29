@@ -3473,7 +3473,12 @@ def warp(input_image,
         out_ds = None
 
 
-def translate(input_image, output_image, cell_size=0, d_type=None, **kwargs):
+def translate(input_image,
+              output_image,
+              cell_size=0,
+              d_type=None,
+              return_datasource=False,
+              **kwargs):
 
     """
     Args:
@@ -3481,6 +3486,7 @@ def translate(input_image, output_image, cell_size=0, d_type=None, **kwargs):
         output_image (str): The output image.
         cell_size (Optional[float]): The output cell size. Default is 0.
         d_type (Optional[str]): Data type to overwrite `outputType`. Default is None.
+        return_datasource (Optional[bool]): Whether to return the datasource object. Default is False.
         kwargs:
             format='GTiff', outputType=0, bandList=None, maskBand=None, width=0, height=0,
             widthPct=0.0, heightPct=0.0, xRes=0.0, yRes=0.0, creationOptions=None, srcWin=None,
@@ -3509,6 +3515,7 @@ def translate(input_image, output_image, cell_size=0, d_type=None, **kwargs):
                                                   **kwargs)
 
     else:
+
         translate_options = gdal.TranslateOptions(xRes=cell_size,
                                                   yRes=cell_size,
                                                   **kwargs)
@@ -3518,7 +3525,19 @@ def translate(input_image, output_image, cell_size=0, d_type=None, **kwargs):
     except:
         logger.warning('  GDAL returned an exception--check the output file, {}.'.format(output_image))
 
-    out_ds = None
+    if return_datasource:
+
+        i_info = ImageInfo()
+
+        i_info.update_info(datasource=out_ds,
+                           hdf_file=False)
+
+        i_info.datasource_info()
+
+        return i_info
+
+    else:
+        out_ds = None
 
 
 def vis2rgb(image_array):
