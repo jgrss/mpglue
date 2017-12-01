@@ -2017,13 +2017,27 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
 
         out_ds = None
 
-    def hist(self, band=1, name_dict=None, bins=256, **kwargs):
+    def hist(self,
+             band=1,
+             i=0,
+             j=0,
+             rows=-1,
+             cols=-1,
+             d_type='byte',
+             name_dict=None,
+             bins=256,
+             **kwargs):
 
         """
         Prints the image histogram
 
         Args:
             band (Optional[int]): The band to get the histogram from.
+            i (Optional[int]): The starting row position.
+            j (Optional[int]): The starting column position.
+            rows (Optional[int]): The number of rows to take.
+            cols (Optional[int]): The number of columns to take.
+            d_type (Optional[str]): The image data type.
             name_dict (Optional[dict]): A dictionary of {value: 'name'} for discrete value arrays.
             bins (Optional[int]): The number of bins.
             kwargs:
@@ -2055,7 +2069,12 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
 
         else:
 
-            the_hist, bin_edges = np.histogram(self.read(bands2open=band),
+            the_hist, bin_edges = np.histogram(self.read(bands2open=band,
+                                                         i=i,
+                                                         j=j,
+                                                         rows=rows,
+                                                         cols=cols,
+                                                         d_type=d_type),
                                                bins=bins,
                                                **kwargs)
 
