@@ -1012,8 +1012,8 @@ class Transform(object):
     Args:
         x (float): The source x coordinate.
         y (float): The source y coordinate.
-        source_epsg (int): The source EPSG code.
-        target_epsg (int): The target EPSG code.
+        source_projection (int): The source projection code. Format can be EPSG, CS, or proj4.
+        target_projection (int): The target projection code. Format can be EPSG, CS, or proj4.
 
     Examples:
         >>> from mpglue.vector_tools import Transfrom
@@ -1023,46 +1023,56 @@ class Transform(object):
         >>> print ptr.x_transform, ptr.y_transform
     """
 
-    def __init__(self, x, y, source_epsg, target_epsg):
+    def __init__(self, x, y, source_projection, target_projection):
 
         self.x = x
         self.y = y
 
-        source_sr = osr.SpatialReference()
-        target_sr = osr.SpatialReference()
+        source_srs = osr.SpatialReference()
+        target_srs = osr.SpatialReference()
 
         try:
 
-            if isinstance(source_epsg, int):
-                source_sr.ImportFromEPSG(source_epsg)
-            elif isinstance(source_epsg, str):
-                # source_sr.ImportFromProj4(source_epsg)
-                source_sr.ImportFromWkt(source_epsg)
+            if isinstance(source_projection, int):
+                source_srs.ImportFromEPSG(source_projection)
+            elif isinstance(source_projection, str):
+
+                if source_projection.startswith('PROJCS'):
+                    source_srs.ImportFromWkt(source_projection)
+                elif source_projection.startswith('+proj'):
+                    source_srs.ImportFromProj4(source_projection)
+                else:
+                    logger.error('The source code could not be read.')
+                    raise ValueError
 
         except:
 
             logger.error(gdal.GetLastErrorMsg())
-            logger.info('EPSG:{:d}'.format(source_epsg))
-            logger.error('The source EPSG code could not be read.')
+            logger.error('The source code could not be read.')
             raise ValueError
 
         try:
 
-            if isinstance(target_epsg, int):
-                target_sr.ImportFromEPSG(target_epsg)
-            elif isinstance(target_epsg, str):
-                # target_sr.ImportFromProj4(source_epsg)
-                target_sr.ImportFromWkt(target_epsg)
+            if isinstance(target_projection, int):
+                target_srs.ImportFromEPSG(target_projection)
+            elif isinstance(target_projection, str):
+
+                if target_projection.startswith('PROJCS'):
+                    target_srs.ImportFromWkt(target_projection)
+                elif target_projection.startswith('+proj'):
+                    target_srs.ImportFromProj4(target_projection)
+                else:
+                    logger.error('The target code could not be read.')
+                    raise ValueError
 
         except:
 
             logger.error(gdal.GetLastErrorMsg())
-            logger.info('EPSG:{:d}'.format(target_epsg))
-            logger.error('The target EPSG code could not be read.')
+            logger.error('The target code could not be read.')
             raise ValueError
 
         try:
-            coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
+            coord_trans = osr.CoordinateTransformation(source_srs, target_srs)
         except:
 
             logger.error(gdal.GetLastErrorMsg())
