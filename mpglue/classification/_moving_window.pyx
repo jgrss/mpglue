@@ -108,11 +108,10 @@ cdef inline DTYPE_float32_t _sqrt(DTYPE_float32_t m) nogil:
 
 
 cdef inline DTYPE_float32_t _spectral_distance(DTYPE_float32_t x1, DTYPE_float32_t x2) nogil:
-    return _abs(x2 - x1)
+    return _pow(x2 - x1, 2.)
 
 
-cdef inline DTYPE_float32_t euclidean_distance(DTYPE_float32_t x1, DTYPE_float32_t x2,
-                                               DTYPE_float32_t y1, DTYPE_float32_t y2) nogil:
+cdef inline DTYPE_float32_t euclidean_distance(DTYPE_float32_t x1, DTYPE_float32_t x2, DTYPE_float32_t y1, DTYPE_float32_t y2) nogil:
     return ((x2 - x1)**2 + (y2 - y1)**2)**.5
 
 
@@ -873,40 +872,48 @@ cdef DTYPE_float32_t _get_mean(DTYPE_float32_t[:, ::1] block,
 cdef DTYPE_float32_t _get_distance(DTYPE_float32_t[:, :] block_dist,
                                    DTYPE_intp_t window_ij,
                                    int hw,
-                                   DTYPE_float32_t[:] dist_weights,
-                                   DTYPE_float32_t no_data_value,
-                                   DTYPE_float32_t weight_value) nogil:
+                                   DTYPE_float32_t[:, ::1] dist_weights,
+                                   DTYPE_float32_t no_data_value) nogil:
 
     cdef:
         Py_ssize_t ii, jj
-        DTYPE_float32_t d = 0.      # spectral distance sum
-        DTYPE_float32_t biv = block_dist[hw, hw]    # center pixel
-        DTYPE_float32_t weight_sum = 6.8284
-        Py_ssize_t ctr = 0
+        DTYPE_float32_t sdist = 0.
+        DTYPE_float32_t wdist = 0.
+        DTYPE_float32_t bcv = block_dist[hw, hw]
+        DTYPE_float32_t window_sum = bcv
+        DTYPE_float32_t bnv, dw
+        Py_ssize_t good_count = 0
 
     # Center pixel
-    if biv == no_data_value:
+    if bcv == no_data_value:
         return 0.
 
     for ii in range(0, window_ij):
 
         for jj in range(0, window_ij):
 
-            if ii != jj:
+            if (ii == hw) and (jj == hw):
+                continue
 
-                # Get the spectral distance between the center pixel
-                #   and the surrounding pixel.
-                if block_dist[ii, jj] != no_data_value:
-                    d += _spectral_distance(block_dist[ii, jj], biv) * dist_weights[ctr]
+            bnv = block_dist[ii, jj]
 
-                ctr += 1
+            # Get the spectral distance between
+            #   the center pixel and the
+            #   neighboring pixels.
+            if bnv != no_data_value:
 
-    if d == 0:
+                dw = dist_weights[ii, jj]
+                sdist += _spectral_distance(bnv, bcv) * dw
+
+                window_sum += bnv
+                wdist += dw
+
+                good_count += 1
+
+    if sdist == 0:
         return 0.
     else:
-
-        # Average spectral distance x the spectral power
-        return (d / weight_sum) * weight_value
+        return (sdist / wdist) * (window_sum / float(good_count))
 
 
 cdef DTYPE_float32_t _get_distance_rgb(DTYPE_float32_t[:, :, :] block,
@@ -2278,17 +2285,16 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] dist_window(DTYPE_float32_t[:, :] image
 
     cdef:
         Py_ssize_t i, j
-        #int dims = image_array.shape[0]
         int rows = image_array.shape[0]
         int cols = image_array.shape[1]
-        int wrows = weights.shape[0]
-        int wcols = weights.shape[1]
-        int half_window = int(window_size / 2)
+        int half_window = <int>(window_size / 2.)
         int row_dims = rows - (half_window*2)
         int col_dims = cols - (half_window*2)
-        DTYPE_float32_t[:, :] out_array = np.zeros((rows, cols), dtype='float32')
-        DTYPE_float32_t[:] dist_weights = np.array([.7071, 1., .7071, 1., 1., .7071, 1., .7071], dtype='float32')
-        DTYPE_float32_t weight_value = 1.
+
+        DTYPE_float32_t[:, ::1] out_array = np.zeros((rows, cols), dtype='float32')
+        DTYPE_float32_t[:, ::1] dist_weights = np.array([[.7071, 1., .7071],
+                                                         [1., 1., 1.],
+                                                         [.7071, 1., .7071]], dtype='float32')
 
     with nogil:
 
@@ -2296,25 +2302,14 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] dist_window(DTYPE_float32_t[:, :] image
 
             for j in range(0, col_dims):
 
-                # weight_value = _pow(weights[i+half_window, j+half_window], 2.)
+                out_array[i+half_window, j+half_window] += _get_distance(image_array[i:i+window_size,
+                                                                                     j:j+window_size],
+                                                                         window_size,
+                                                                         half_window,
+                                                                         dist_weights,
+                                                                         ignore_value)
 
-                #if (wrows == rows) and (wcols == cols):
-                #    weight_value = _pow(weights[i+half_window, j+half_window], 2.)
-                #else:
-                #    weight_value = 1.
-
-                #for dim_i in range(0, dims):
-
-                out_array[i+half_window, j+half_window] += _get_distance(image_array[i:i+window_size, j:j+window_size],
-                                                                         window_size, half_window,
-                                                                         dist_weights, ignore_value, weight_value)
-
-                #out_array[i+half_window, j+half_window] += _get_distance(image_array[value_pos, i+half_window, j+half_window],
-                #                                                         image_array[dim_i, i:i+window_size, j:j+window_size],
-                #                                                         window_size, half_window,
-                #                                                         dist_weights, ignore_value, weight_value)
-
-    return np.float32(out_array) #/ float(dims)
+    return np.float32(out_array)
 
 
 cdef np.ndarray rgb_window(DTYPE_float32_t[:, :, :] image_array, unsigned int window_size):
