@@ -2050,9 +2050,9 @@ cdef tuple get_circle_locations(DTYPE_uint8_t[:, :] circle_block, int window_siz
         DTYPE_intp_t[:] rr = np.zeros(window_size*window_size, dtype='intp')
         DTYPE_intp_t[:] cc = rr.copy()
 
-    for i_ in xrange(0, window_size):
+    for i_ in range(0, window_size):
 
-        for j_ in xrange(0, window_size):
+        for j_ in range(0, window_size):
 
             if circle_block[i_, j_] == 1:
 
@@ -2101,9 +2101,9 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] fill_circles(DTYPE_uint8_t[:, :] image_ar
 
         rr, cc = get_circle_locations(circle, window_size)
 
-        for i in xrange(0, row_dims):
+        for i in range(0, row_dims):
 
-            for j in xrange(0, col_dims):
+            for j in range(0, col_dims):
 
                 image_array[i:i+window_size, j:j+window_size] = _fill_circles(image_array[i:i+window_size,
                                                                                           j:j+window_size],
@@ -2114,13 +2114,80 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] fill_circles(DTYPE_uint8_t[:, :] image_ar
     return np.asarray(image_array).astype(np.uint8)
 
 
+cdef DTYPE_float32_t _fill_basins(DTYPE_float32_t[:, ::1] image_block,
+                                  unsigned int window_size,
+                                  unsigned int half_window,
+                                  unsigned int upper_thresh) nogil:
+
+    cdef:
+        Py_ssize_t ii, jj
+        DTYPE_float32_t bcv = image_block[half_window, half_window]
+        DTYPE_float32_t bnv
+        DTYPE_float32_t block_mean = 0.
+        unsigned int block_counter = 0
+
+    for ii in range(0, window_size):
+
+        for jj in range(0, window_size):
+
+            if (ii == half_window) and (jj == half_window):
+                continue
+
+            bnv = image_block[ii, jj]
+
+            # Greater than the center value?
+            if bnv > bcv:
+
+                block_mean += bnv
+                block_counter += 1
+
+    if block_counter >= upper_thresh:
+
+        # Return the mean of the neighbors
+        return block_mean / float(block_counter)
+
+    else:
+
+        # Return the original center value
+        return bcv
+
+
+cdef np.ndarray[DTYPE_float32_t, ndim=2] fill_basins(DTYPE_float32_t[:, ::1] image2fill,
+                                                     unsigned int window_size):
+
+    """Fills basins"""
+
+    cdef:
+        Py_ssize_t i, j
+        int rows = image2fill.shape[0]
+        int cols = image2fill.shape[1]
+        unsigned int half_window = <int>(window_size / 2.)
+        unsigned int row_dims = rows - (half_window * 2)
+        unsigned int col_dims = cols - (half_window * 2)
+        DTYPE_float32_t[:, ::1] out_array = np.zeros((rows, cols), dtype='float32')
+        unsigned int upper_thresh = (window_size * window_size) - 2
+
+    with nogil:
+
+        for i in range(0, row_dims):
+
+            for j in range(0, col_dims):
+
+                out_array[i+half_window,
+                          j+half_window] = _fill_basins(image2fill[i:i+window_size,
+                                                                   j:j+window_size],
+                                                        window_size,
+                                                        half_window,
+                                                        upper_thresh)
+
+    return np.float32(out_array)
+
+
 cdef np.ndarray[DTYPE_uint8_t, ndim=2] fill_window(DTYPE_uint8_t[:, :] image_array,
                                                    int window_size,
                                                    int n_neighbors):
 
-    """
-    Fills holes
-    """
+    """Fills binary holes"""
 
     cdef:
         int rows = image_array.shape[0]
@@ -2469,8 +2536,24 @@ def moving_window(np.ndarray image_array,
     Args:
         image_array (2d array): The image to process.
         statistic (Optional[str]): The statistic to apply. Default is 'mean'.
+
             Choices are ['mean', 'min', 'max', 'median', 'majority', 'percent', 'sum',
-            'link', 'fill', 'circles', 'distance'. 'rgb_distance'].
+                         'link', 'fill-basins', 'fill', 'circles', 'distance'. 'rgb-distance'].
+
+            mean: Mean of window
+            min: Minimum of window
+            max: Maximum of window
+            median: Median of window
+            majority: Majority value within window
+            percent: Percent of window filled by binary 1s
+            sum: Sum of window
+            link: Links binary endpoints
+            fill-basins: Fills pixels surrounded by higher values
+            fill: Fill 0s surrounded by 1s
+            circles:
+            distance: Computes the spectral distance between the center value and neighbors
+            rgb-distance:
+
         window_size (Optional[int]): The window size (of 1 side). Default is 3.
         skip_block (Optional[int]): A block size skip factor. Default is 0.
         target_value (Optional[int]): A value to target (i.e., only operate on this value).
@@ -2487,9 +2570,22 @@ def moving_window(np.ndarray image_array,
     Returns
     """
 
-    if statistic not in ['mean', 'min', 'max', 'median', 'majority', 'percent', 'sum',
-                         'link', 'fill', 'circles', 'distance', 'rgb_distance', 'inhibition',
-                         'saliency', 'duda']:
+    if statistic not in ['mean',
+                         'min',
+                         'max',
+                         'median',
+                         'majority',
+                         'percent',
+                         'sum',
+                         'link',
+                         'fill-basins',
+                         'fill',
+                         'circles',
+                         'distance',
+                         'rgb-distance',
+                         'inhibition',
+                         'saliency',
+                         'duda']:
 
         raise ValueError('The statistic {} is not an option.'.format(statistic))
 
@@ -2504,27 +2600,40 @@ def moving_window(np.ndarray image_array,
 
     if statistic == 'link':
 
-        return link_window(np.uint8(np.ascontiguousarray(image_array)), window_size,
+        return link_window(np.uint8(np.ascontiguousarray(image_array)),
+                           window_size,
                            np.uint8(np.ascontiguousarray(endpoint_image)),
                            np.uint8(np.ascontiguousarray(gradient_image)),
-                           min_egm, smallest_allowed_gap, medium_allowed_gap)
+                           min_egm,
+                           smallest_allowed_gap,
+                           medium_allowed_gap)
 
     elif statistic == 'saliency':
 
-        return saliency_window(np.float32(np.ascontiguousarray(image_array)), window_size)
+        return saliency_window(np.float32(np.ascontiguousarray(image_array)),
+                               window_size)
 
     elif statistic == 'inhibition':
 
-        return _inhibition(np.float32(np.ascontiguousarray(image_array)), window_size,
+        return _inhibition(np.float32(np.ascontiguousarray(image_array)),
+                           window_size,
                            np.array(inhibition_scales, dtype='float32'))
+
+    elif statistic == 'fill-basins':
+
+        return fill_basins(np.float32(np.ascontiguousarray(image_array)),
+                           window_size)
 
     elif statistic == 'fill':
 
-        return fill_window(np.uint8(np.ascontiguousarray(image_array)), window_size, n_neighbors)
+        return fill_window(np.uint8(np.ascontiguousarray(image_array)),
+                           window_size,
+                           n_neighbors)
 
     elif statistic == 'circles':
 
-        return fill_circles(np.uint8(np.ascontiguousarray(image_array)), circle_list)
+        return fill_circles(np.uint8(np.ascontiguousarray(image_array)),
+                            circle_list)
 
     elif statistic == 'distance':
 
@@ -2534,9 +2643,10 @@ def moving_window(np.ndarray image_array,
                            float(ignore_value),
                            weights=np.float32(np.ascontiguousarray(weights)))
 
-    elif statistic == 'rgb_distance':
+    elif statistic == 'rgb-distance':
 
-        return rgb_window(np.float32(np.ascontiguousarray(image_array)), window_size)
+        return rgb_window(np.float32(np.ascontiguousarray(image_array)),
+                          window_size)
 
     else:
 
