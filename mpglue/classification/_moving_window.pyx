@@ -2153,34 +2153,41 @@ cdef DTYPE_float32_t _fill_basins(DTYPE_float32_t[:, ::1] image_block,
 
 
 cdef np.ndarray[DTYPE_float32_t, ndim=2] fill_basins(DTYPE_float32_t[:, ::1] image2fill,
-                                                     unsigned int window_size):
+                                                     unsigned int window_size,
+                                                     int iterations):
 
     """Fills basins"""
 
     cdef:
-        Py_ssize_t i, j
+        Py_ssize_t i, j, iteration
         int rows = image2fill.shape[0]
         int cols = image2fill.shape[1]
         unsigned int half_window = <int>(window_size / 2.)
         unsigned int row_dims = rows - (half_window * 2)
         unsigned int col_dims = cols - (half_window * 2)
-        DTYPE_float32_t[:, ::1] out_array = np.zeros((rows, cols), dtype='float32')
+        DTYPE_float32_t[:, ::1] out_array
         unsigned int upper_thresh = (window_size * window_size) - 2
 
-    with nogil:
+    for iteration in range(0, iterations):
 
-        for i in range(0, row_dims):
+        out_array = np.zeros((rows, cols), dtype='float32')
 
-            for j in range(0, col_dims):
+        with nogil:
 
-                out_array[i+half_window,
-                          j+half_window] = _fill_basins(image2fill[i:i+window_size,
-                                                                   j:j+window_size],
-                                                        window_size,
-                                                        half_window,
-                                                        upper_thresh)
+            for i in range(0, row_dims):
 
-    return np.float32(out_array)
+                for j in range(0, col_dims):
+
+                    out_array[i+half_window,
+                              j+half_window] = _fill_basins(image2fill[i:i+window_size,
+                                                                       j:j+window_size],
+                                                            window_size,
+                                                            half_window,
+                                                            upper_thresh)
+
+            image2fill[...] = out_array
+
+    return np.float32(image2fill)
 
 
 cdef np.ndarray[DTYPE_uint8_t, ndim=2] fill_window(DTYPE_uint8_t[:, :] image_array,
@@ -2622,7 +2629,8 @@ def moving_window(np.ndarray image_array,
     elif statistic == 'fill-basins':
 
         return fill_basins(np.float32(np.ascontiguousarray(image_array)),
-                           window_size)
+                           window_size,
+                           iterations)
 
     elif statistic == 'fill':
 
