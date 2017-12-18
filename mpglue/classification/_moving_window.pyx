@@ -870,6 +870,7 @@ cdef DTYPE_float32_t _get_mean(DTYPE_float32_t[:, ::1] block,
 
 
 cdef DTYPE_float32_t _get_distance(DTYPE_float32_t[:, :, ::1] image_block_,
+                                   DTYPE_float32_t[:, ::1] vi_block_,
                                    DTYPE_intp_t window_d,
                                    DTYPE_intp_t window_ij,
                                    int hw,
@@ -884,6 +885,10 @@ cdef DTYPE_float32_t _get_distance(DTYPE_float32_t[:, :, ::1] image_block_,
         DTYPE_float32_t bcv             # the block center value
         DTYPE_float32_t bnv             # the neighbor value
         DTYPE_float32_t dw              # the distance weight
+        DTYPE_float32_t vi_sum = 0.     # the vegetation index sum
+        DTYPE_float32_t vcv = vi_block_[hw, hw]             # the vegetation index center value
+        DTYPE_float32_t vnv             # the vegetation index neighbor value
+        DTYPE_float32_t vw              # the vegetation index weight
 
     for ii in range(0, window_ij):
 
@@ -895,6 +900,14 @@ cdef DTYPE_float32_t _get_distance(DTYPE_float32_t[:, :, ::1] image_block_,
 
             wv_sum = 0.
 
+            # Get the distance weight.
+            dw = dist_weights[ii, jj]
+
+            # VEGETATION INDEX DIFFERENCES
+            vnv = vi_block_[ii, jj]
+            vi_sum += (_abs(vcv - vnv) * dw)
+
+            # SPECTRAL DISTANCES
             for di in range(0, window_d):
 
                 # Get the center value
@@ -918,8 +931,8 @@ cdef DTYPE_float32_t _get_distance(DTYPE_float32_t[:, :, ::1] image_block_,
                 # Square root
                 wv_sum **= .5
 
-                # Get the distance weight.
-                dw = dist_weights[ii, jj]
+                # Get the VI weight.
+                vw = vi_block_[ii, jj]
 
                 # Weight the distance.
                 sp_sum += (wv_sum * dw)
@@ -930,7 +943,7 @@ cdef DTYPE_float32_t _get_distance(DTYPE_float32_t[:, :, ::1] image_block_,
     if sp_sum == 0:
         return 0.
     else:
-        return sp_sum / w_sum
+        return vcv * (sp_sum / w_sum) * (vi_sum / 7.8283997)
 
 
 cdef DTYPE_float32_t _get_distance_rgb(DTYPE_float32_t[:, :, :] block,
@@ -2358,15 +2371,17 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] _inhibition(DTYPE_float32_t[:, :] image
 
 cdef np.ndarray[DTYPE_float32_t, ndim=2] dist_window(DTYPE_float32_t[:, :, ::1] image_array,
                                                      DTYPE_intp_t window_size,
-                                                     DTYPE_float32_t ignore_value):
+                                                     DTYPE_float32_t ignore_value,
+                                                     DTYPE_float32_t[:, ::1] vi_array):
 
     """
     Computes the spectral distance
 
     Args:
         image_array (3d array): A 3d ndarray, where (L, M, N), L = layers, M = rows, N = columns.
-        window_size (Optional[int]): The window size. Default is 3.
-        ignore_value (Optional[int or float]): A value to ignore in calculations. Default is None.
+        window_size (int): The window size. Default is 3.
+        ignore_value (int or float): A value to ignore in calculations. Default is None.
+        vi_array (2d array): Vegetation index weights.
     """
 
     cdef:
@@ -2381,6 +2396,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] dist_window(DTYPE_float32_t[:, :, ::1] 
         int col_dims = cols - (half_window*2)
 
         DTYPE_float32_t[:, :, ::1] image_block
+        DTYPE_float32_t[:, ::1] vi_block
         DTYPE_float32_t[:, ::1] out_array = np.zeros((rows, cols), dtype='float32')
         DTYPE_float32_t[:, ::1] dist_weights = np.array([[.7071, 1., .7071],
                                                          [1., 1., 1.],
@@ -2393,8 +2409,10 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] dist_window(DTYPE_float32_t[:, :, ::1] 
             for j in range(0, col_dims):
 
                 image_block = image_array[:, i:i+window_size, j:j+window_size]
+                vi_block = vi_array[i:i+window_size, j:j+window_size]
 
                 out_array[i+half_window, j+half_window] += _get_distance(image_block,
+                                                                         vi_block,
                                                                          bands,
                                                                          window_size,
                                                                          half_window,
@@ -2665,7 +2683,8 @@ def moving_window(np.ndarray image_array,
 
         return dist_window(np.float32(np.ascontiguousarray(image_array)),
                            window_size,
-                           float(ignore_value))
+                           float(ignore_value),
+                           np.float32(np.ascontiguousarray(weights)))
 
     elif statistic == 'rgb-distance':
 
