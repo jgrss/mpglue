@@ -878,28 +878,31 @@ cdef DTYPE_float32_t _get_distance(DTYPE_float32_t[:, :, ::1] image_block_,
 
     cdef:
         Py_ssize_t ii, jj, di
-        DTYPE_float32_t sdist = 0.  # the spectral distance sum
-        DTYPE_float32_t wdist = 0.  # the distance weights sum
-        DTYPE_float32_t bcv         # the block center value
-        DTYPE_float32_t bnv         # the neighbor value
-        DTYPE_float32_t dw          # the distance weight
+        DTYPE_float32_t wv_sum          # the wavelength distance sum
+        DTYPE_float32_t sp_sum = 0.     # the window distance sum
+        DTYPE_float32_t w_sum = 0.      # the distance weights sum
+        DTYPE_float32_t bcv             # the block center value
+        DTYPE_float32_t bnv             # the neighbor value
+        DTYPE_float32_t dw              # the distance weight
 
-    for di in range(0, window_d):
+    for ii in range(0, window_ij):
 
-        # Get the center value
-        bcv = image_block_[di, hw, hw]
+        for jj in range(0, window_ij):
 
-        if bcv != no_data_value:
+            # Skip the center pixel.
+            if (ii == hw) and (jj == hw):
+                continue
 
-            for ii in range(0, window_ij):
+            wv_sum = 0.
 
-                for jj in range(0, window_ij):
+            for di in range(0, window_d):
 
-                    # Skip center pixels
-                    if (ii == hw) and (jj == hw):
-                        continue
+                # Get the center value
+                bcv = image_block_[di, hw, hw]
 
-                    # Get the neighbor value
+                if bcv != no_data_value:
+
+                    # Get the neighbor value.
                     bnv = image_block_[di, ii, jj]
 
                     # Get the spectral distance between
@@ -907,18 +910,27 @@ cdef DTYPE_float32_t _get_distance(DTYPE_float32_t[:, :, ::1] image_block_,
                     #   neighboring pixels.
                     if bnv != no_data_value:
 
-                        # Get the distance weight
-                        dw = dist_weights[ii, jj]
+                        # Get the spectral distance.
+                        wv_sum += _spectral_distance(bnv, bcv)
 
-                        # Get the weighted spectral distance
-                        sdist += _spectral_distance(bnv, bcv) * dw
+            if wv_sum > 0:
 
-                        wdist += dw
+                # Square root
+                wv_sum **= .5
 
-    if sdist == 0:
+                # Get the distance weight.
+                dw = dist_weights[ii, jj]
+
+                # Weight the distance.
+                sp_sum += (wv_sum * dw)
+
+                # Sum the weights.
+                w_sum += dw
+
+    if sp_sum == 0:
         return 0.
     else:
-        return sdist / wdist
+        return sp_sum / w_sum
 
 
 cdef DTYPE_float32_t _get_distance_rgb(DTYPE_float32_t[:, :, :] block,
@@ -2349,15 +2361,12 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] dist_window(DTYPE_float32_t[:, :, ::1] 
                                                      DTYPE_float32_t ignore_value):
 
     """
-    Computes focal (moving window) statistics.
+    Computes the spectral distance
 
     Args:
-        image_array (ndarray): A nd ndarray, where the 1st array is the value array, and all other arrays
-            are the distance arrays.
+        image_array (3d array): A 3d ndarray, where (L, M, N), L = layers, M = rows, N = columns.
         window_size (Optional[int]): The window size. Default is 3.
         ignore_value (Optional[int or float]): A value to ignore in calculations. Default is None.
-        resample (Optional[bool]): Whether to resample to the kernel size. Default is False.
-        weights (Optional[ndarray]): Must match ``window_size`` x ``window_size``.
     """
 
     cdef:
@@ -2372,9 +2381,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] dist_window(DTYPE_float32_t[:, :, ::1] 
         int col_dims = cols - (half_window*2)
 
         DTYPE_float32_t[:, :, ::1] image_block
-
         DTYPE_float32_t[:, ::1] out_array = np.zeros((rows, cols), dtype='float32')
-
         DTYPE_float32_t[:, ::1] dist_weights = np.array([[.7071, 1., .7071],
                                                          [1., 1., 1.],
                                                          [.7071, 1., .7071]], dtype='float32')
