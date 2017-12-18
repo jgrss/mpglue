@@ -869,51 +869,56 @@ cdef DTYPE_float32_t _get_mean(DTYPE_float32_t[:, ::1] block,
         return su / good_values
 
 
-cdef DTYPE_float32_t _get_distance(DTYPE_float32_t[:, :] block_dist,
+cdef DTYPE_float32_t _get_distance(DTYPE_float32_t[:, :, ::1] image_block_,
+                                   DTYPE_intp_t window_d,
                                    DTYPE_intp_t window_ij,
                                    int hw,
                                    DTYPE_float32_t[:, ::1] dist_weights,
                                    DTYPE_float32_t no_data_value) nogil:
 
     cdef:
-        Py_ssize_t ii, jj
-        DTYPE_float32_t sdist = 0.
-        DTYPE_float32_t wdist = 0.
-        DTYPE_float32_t bcv = block_dist[hw, hw]
-        DTYPE_float32_t window_sum = bcv
-        DTYPE_float32_t bnv, dw
-        Py_ssize_t good_count = 0
+        Py_ssize_t ii, jj, di
+        DTYPE_float32_t sdist = 0.  # the spectral distance sum
+        DTYPE_float32_t wdist = 0.  # the distance weights sum
+        DTYPE_float32_t bcv         # the block center value
+        DTYPE_float32_t bnv         # the neighbor value
+        DTYPE_float32_t dw          # the distance weight
 
-    # Center pixel
-    if bcv == no_data_value:
-        return 0.
+    for di in range(0, window_d):
 
-    for ii in range(0, window_ij):
+        # Get the center value
+        bcv = image_block_[di, hw, hw]
 
-        for jj in range(0, window_ij):
+        if bcv != no_data_value:
 
-            if (ii == hw) and (jj == hw):
-                continue
+            for ii in range(0, window_ij):
 
-            bnv = block_dist[ii, jj]
+                for jj in range(0, window_ij):
 
-            # Get the spectral distance between
-            #   the center pixel and the
-            #   neighboring pixels.
-            if bnv != no_data_value:
+                    # Skip center pixels
+                    if (ii == hw) and (jj == hw):
+                        continue
 
-                dw = dist_weights[ii, jj]
-                sdist += _spectral_distance(bnv, bcv) * dw
+                    # Get the neighbor value
+                    bnv = image_block_[di, ii, jj]
 
-                window_sum += bnv
-                wdist += dw
+                    # Get the spectral distance between
+                    #   the center pixel and the
+                    #   neighboring pixels.
+                    if bnv != no_data_value:
 
-                good_count += 1
+                        # Get the distance weight
+                        dw = dist_weights[ii, jj]
+
+                        # Get the weighted spectral distance
+                        sdist += _spectral_distance(bnv, bcv) * dw
+
+                        wdist += dw
 
     if sdist == 0:
         return 0.
     else:
-        return (sdist / wdist) * (window_sum / float(good_count))
+        return sdist / wdist
 
 
 cdef DTYPE_float32_t _get_distance_rgb(DTYPE_float32_t[:, :, :] block,
@@ -2339,11 +2344,9 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] _inhibition(DTYPE_float32_t[:, :] image
     return np.float32(out_image)# / float(n_scales)
 
 
-cdef np.ndarray[DTYPE_float32_t, ndim=2] dist_window(DTYPE_float32_t[:, :] image_array,
+cdef np.ndarray[DTYPE_float32_t, ndim=2] dist_window(DTYPE_float32_t[:, :, ::1] image_array,
                                                      DTYPE_intp_t window_size,
-                                                     DTYPE_intp_t value_pos,
-                                                     DTYPE_float32_t ignore_value,
-                                                     DTYPE_float32_t[:, :] weights):
+                                                     DTYPE_float32_t ignore_value):
 
     """
     Computes focal (moving window) statistics.
@@ -2359,13 +2362,19 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] dist_window(DTYPE_float32_t[:, :] image
 
     cdef:
         Py_ssize_t i, j
-        int rows = image_array.shape[0]
-        int cols = image_array.shape[1]
+
+        unsigned int bands = image_array.shape[0]
+        unsigned int rows = image_array.shape[1]
+        unsigned int cols = image_array.shape[2]
+
         int half_window = <int>(window_size / 2.)
         int row_dims = rows - (half_window*2)
         int col_dims = cols - (half_window*2)
 
+        DTYPE_float32_t[:, :, ::1] image_block
+
         DTYPE_float32_t[:, ::1] out_array = np.zeros((rows, cols), dtype='float32')
+
         DTYPE_float32_t[:, ::1] dist_weights = np.array([[.7071, 1., .7071],
                                                          [1., 1., 1.],
                                                          [.7071, 1., .7071]], dtype='float32')
@@ -2376,8 +2385,10 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] dist_window(DTYPE_float32_t[:, :] image
 
             for j in range(0, col_dims):
 
-                out_array[i+half_window, j+half_window] += _get_distance(image_array[i:i+window_size,
-                                                                                     j:j+window_size],
+                image_block = image_array[:, i:i+window_size, j:j+window_size]
+
+                out_array[i+half_window, j+half_window] += _get_distance(image_block,
+                                                                         bands,
                                                                          window_size,
                                                                          half_window,
                                                                          dist_weights,
@@ -2647,9 +2658,7 @@ def moving_window(np.ndarray image_array,
 
         return dist_window(np.float32(np.ascontiguousarray(image_array)),
                            window_size,
-                           value_pos,
-                           float(ignore_value),
-                           weights=np.float32(np.ascontiguousarray(weights)))
+                           float(ignore_value))
 
     elif statistic == 'rgb-distance':
 
