@@ -886,10 +886,8 @@ cdef DTYPE_float32_t _get_distance(DTYPE_float32_t[:, :, ::1] image_block_,
         DTYPE_float32_t bnv             # the neighbor value
         DTYPE_float32_t dw              # the distance weight
         DTYPE_float32_t vi_sum = 0.     # the vegetation index sum
-        DTYPE_float32_t vw_sum = 0.     # the vegetation weights sum
         DTYPE_float32_t vcv             # the vegetation index center value
         DTYPE_float32_t vnv             # the vegetation index neighbor value
-        DTYPE_float32_t vw              # the vegetation index weight
 
     vcv = vi_block_[hw, hw]
 
@@ -910,9 +908,7 @@ cdef DTYPE_float32_t _get_distance(DTYPE_float32_t[:, :, ::1] image_block_,
             vnv = vi_block_[ii, jj]
 
             if vnv > 0:
-
                 vi_sum += _abs(vcv - vnv) * dw
-                vw_sum += dw
 
             # SPECTRAL DISTANCES
             for di in range(0, window_d):
@@ -938,19 +934,16 @@ cdef DTYPE_float32_t _get_distance(DTYPE_float32_t[:, :, ::1] image_block_,
                 # Square root
                 wv_sum **= .5
 
-                # Get the VI weight.
-                vw = vi_block_[ii, jj]
-
                 # Weight the distance.
                 sp_sum += wv_sum * dw
 
-                # Sum the weights.
-                w_sum += dw
+            # Sum the weights.
+            w_sum += dw
 
     if sp_sum == 0:
         return 0.
     else:
-        return vcv * (sp_sum / w_sum) * (vi_sum / vw_sum)
+        return vcv * (sp_sum / w_sum) * (vi_sum / w_sum)
 
 
 cdef DTYPE_float32_t _get_distance_rgb(DTYPE_float32_t[:, :, :] block,
