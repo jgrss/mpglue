@@ -2301,6 +2301,10 @@ cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
                     zeros_sum += bv
                     zeros_counter += 1
 
+        with gil:
+            print ones_sum, zeros_sum
+            print ones_counter, zeros_counter
+
         # Get the mean along the edge.
         edge_mean = ones_sum / float(ones_counter)
 
@@ -2314,7 +2318,9 @@ cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
         edge_var = _get_ones_var(w_block, image_block, edge_mean, window_size, ones_counter)
 
         with gil:
+            print non_edge_mean, edge_mean,
             print pdiff, edge_var
+            print
 
         if (pdiff >= diff_thresh) and (edge_var < var_thresh):
 
