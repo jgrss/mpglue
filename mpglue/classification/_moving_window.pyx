@@ -2248,29 +2248,31 @@ cdef DTYPE_float32_t _get_ones_var(DTYPE_float32_t[:, ::1] w_block_,
     return i_var / float(ones_counter)
 
 
-cdef DTYPE_float32_t _get_zeros_mean(DTYPE_float32_t[:, ::1] e_block_,
-                                     unsigned int window_size) nogil:
-
-    cdef:
-        Py_ssize_t ib, jb
-        DTYPE_float32_t i_mu = 0.
-
-    for ib in range(0, window_size):
-
-        for jb in range(0, window_size):
-            i_mu += e_block_[ib, jb]
-
-    return i_mu / float(window_size*window_size)
+# cdef DTYPE_float32_t _get_zeros_mean(DTYPE_float32_t[:, ::1] e_block_,
+#                                      unsigned int window_size) nogil:
+#
+#     cdef:
+#         Py_ssize_t ib, jb
+#         DTYPE_float32_t i_mu = 0.
+#
+#     for ib in range(0, window_size):
+#
+#         for jb in range(0, window_size):
+#             i_mu += e_block_[ib, jb]
+#
+#     return i_mu / float(window_size*window_size)
 
 
 cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
                                 unsigned int window_size,
+                                unsigned int hw,
                                 DTYPE_float32_t[:, :, ::1] window_stack,
                                 DTYPE_float32_t diff_thresh,
                                 DTYPE_float32_t var_thresh) nogil:
 
     cdef:
         Py_ssize_t ww, ii, jj
+        DTYPE_float32_t bcv = image_block[hw, hw]
         unsigned int n_windows = window_stack.shape[0]
         DTYPE_float32_t[:, ::1] w_block
         unsigned int ones_counter, zeros_counter
@@ -2330,12 +2332,13 @@ cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
                         break
 
     if is_edge:
-        return _pow(edge_mean, 2.)
+        return edge_mean * 2.
     else:
 
-        non_edge_mean = _get_zeros_mean(image_block, window_size)
+        # non_edge_mean = _get_zeros_mean(image_block, window_size)
+        # return _sqrt(non_edge_mean)
 
-        return _sqrt(non_edge_mean)
+        return bcv / 2.
 
 
 cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image_array,
@@ -2348,48 +2351,76 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image
         unsigned int rows = image_array.shape[0]
         unsigned int cols = image_array.shape[1]
 
-        unsigned int window_size = 5
+        unsigned int window_size = 7
         unsigned int half_window = <int>(window_size / 2.)
         unsigned int row_dims = rows - (half_window * 2)
         unsigned int col_dims = cols - (half_window * 2)
 
         DTYPE_float32_t[:, ::1] out_array = np.zeros((rows, cols), dtype='float32')
 
-        DTYPE_float32_t[:, ::1] w1 = np.array([[0, 0, 1, 0, 0],
-                                               [0, 0, 1, 0, 0],
-                                               [0, 0, 1, 0, 0],
-                                               [0, 0, 1, 0, 0],
-                                               [0, 0, 1, 0, 0]], dtype='float32')
+        DTYPE_float32_t[:, ::1] w1 = np.array([[0, 0, 1, 1, 1, 0, 0],
+                                               [0, 0, 1, 1, 1, 0, 0],
+                                               [0, 0, 1, 1, 1, 0, 0],
+                                               [0, 0, 1, 1, 1, 0, 0],
+                                               [0, 0, 1, 1, 1, 0, 0],
+                                               [0, 0, 1, 1, 1, 0, 0],
+                                               [0, 0, 1, 1, 1, 0, 0]], dtype='float32')
 
-        DTYPE_float32_t[:, ::1] w2 = np.array([[0, 1, 0, 0, 0],
-                                               [0, 1, 1, 0, 0],
-                                               [0, 0, 1, 0, 0],
-                                               [0, 0, 1, 1, 0],
-                                               [0, 0, 0, 1, 0]], dtype='float32')
+        DTYPE_float32_t[:, ::1] w2 = np.array([[0, 0, 1, 0, 0, 0, 0],
+                                               [0, 0, 1, 0, 0, 0, 0],
+                                               [0, 0, 1, 1, 0, 0, 0],
+                                               [0, 0, 0, 1, 0, 0, 0],
+                                               [0, 0, 0, 1, 1, 0, 0],
+                                               [0, 0, 0, 0, 1, 0, 0],
+                                               [0, 0, 0, 0, 1, 0, 0]], dtype='float32')
 
-        DTYPE_float32_t[:, ::1] w3 = np.array([[1, 0, 0, 0, 0],
-                                               [0, 1, 0, 0, 0],
-                                               [0, 0, 1, 0, 0],
-                                               [0, 0, 0, 1, 0],
-                                               [0, 0, 0, 0, 1]], dtype='float32')
+        DTYPE_float32_t[:, ::1] w3 = np.array([[0, 1, 0, 0, 0, 0, 0],
+                                               [0, 1, 1, 0, 0, 0, 0],
+                                               [0, 0, 1, 1, 0, 0, 0],
+                                               [0, 0, 0, 1, 0, 0, 0],
+                                               [0, 0, 0, 1, 1, 0, 0],
+                                               [0, 0, 0, 0, 1, 1, 0],
+                                               [0, 0, 0, 0, 0, 1, 0]], dtype='float32')
 
-        DTYPE_float32_t[:, ::1] w4 = np.array([[0, 0, 0, 0, 0],
-                                               [1, 1, 0, 0, 0],
-                                               [0, 1, 1, 1, 0],
-                                               [0, 0, 0, 1, 1],
-                                               [0, 0, 0, 0, 0]], dtype='float32')
+        DTYPE_float32_t[:, ::1] w4 = np.array([[1, 0, 0, 0, 0, 0, 0],
+                                               [0, 1, 1, 0, 0, 0, 0],
+                                               [0, 1, 1, 1, 0, 0, 0],
+                                               [0, 0, 1, 1, 1, 0, 0],
+                                               [0, 0, 0, 1, 1, 1, 0],
+                                               [0, 0, 0, 0, 1, 1, 0],
+                                               [0, 0, 0, 0, 0, 0, 1]], dtype='float32')
 
-        DTYPE_float32_t[:, ::1] w5 = np.array([[0, 0, 0, 0, 0],
-                                               [0, 0, 0, 0, 0],
-                                               [1, 1, 1, 1, 1],
-                                               [0, 0, 0, 0, 0],
-                                               [0, 0, 0, 0, 0]], dtype='float32')
+        DTYPE_float32_t[:, ::1] w5 = np.array([[0, 0, 0, 0, 0, 0, 0],
+                                               [1, 1, 0, 0, 0, 0, 0],
+                                               [0, 1, 1, 1, 0, 0, 0],
+                                               [0, 0, 1, 1, 1, 0, 0],
+                                               [0, 0, 0, 1, 1, 1, 0],
+                                               [0, 0, 0, 0, 0, 1, 1],
+                                               [0, 0, 0, 0, 0, 0, 0]], dtype='float32')
 
-        DTYPE_float32_t[:, ::1] w6 = np.ascontiguousarray(np.fliplr(np.float32(w4)))
-        DTYPE_float32_t[:, ::1] w7 = np.ascontiguousarray(np.fliplr(np.float32(w3)))
-        DTYPE_float32_t[:, ::1] w8 = np.ascontiguousarray(np.fliplr(np.float32(w2)))
+        DTYPE_float32_t[:, ::1] w6 = np.array([[0, 0, 0, 0, 0, 0, 0],
+                                               [0, 0, 0, 0, 0, 0, 0],
+                                               [1, 1, 1, 0, 0, 0, 0],
+                                               [0, 0, 1, 1, 1, 0, 0],
+                                               [0, 0, 0, 0, 1, 1, 1],
+                                               [0, 0, 0, 0, 0, 0, 0],
+                                               [0, 0, 0, 0, 0, 0, 0]], dtype='float32')
 
-        DTYPE_float32_t[:, :, ::1] window_stack = np.zeros((8, window_size, window_size), dtype='float32')
+        DTYPE_float32_t[:, ::1] w7 = np.array([[0, 0, 0, 0, 0, 0, 0],
+                                               [0, 0, 0, 0, 0, 0, 0],
+                                               [1, 1, 1, 1, 1, 1, 1],
+                                               [1, 1, 1, 1, 1, 1, 1],
+                                               [1, 1, 1, 1, 1, 1, 1],
+                                               [0, 0, 0, 0, 0, 0, 0],
+                                               [0, 0, 0, 0, 0, 0, 0]], dtype='float32')
+
+        DTYPE_float32_t[:, ::1] w8 = np.ascontiguousarray(np.fliplr(np.float32(w6)))
+        DTYPE_float32_t[:, ::1] w9 = np.ascontiguousarray(np.fliplr(np.float32(w5)))
+        DTYPE_float32_t[:, ::1] w10 = np.ascontiguousarray(np.fliplr(np.float32(w4)))
+        DTYPE_float32_t[:, ::1] w11 = np.ascontiguousarray(np.fliplr(np.float32(w3)))
+        DTYPE_float32_t[:, ::1] w12 = np.ascontiguousarray(np.fliplr(np.float32(w2)))
+
+        DTYPE_float32_t[:, :, ::1] window_stack = np.zeros((12, window_size, window_size), dtype='float32')
 
     window_stack[0] = w1
     window_stack[1] = w2
@@ -2399,6 +2430,10 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image
     window_stack[5] = w6
     window_stack[6] = w7
     window_stack[7] = w8
+    window_stack[8] = w9
+    window_stack[9] = w10
+    window_stack[10] = w11
+    window_stack[11] = w12
 
     with nogil:
 
@@ -2410,6 +2445,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image
                           j+half_window] = _egm_morph(image_array[i:i+window_size,
                                                                   j:j+window_size],
                                                       window_size,
+                                                      half_window,
                                                       window_stack,
                                                       diff_thresh,
                                                       var_thresh)
