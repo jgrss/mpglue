@@ -2228,6 +2228,23 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] fill_basins(DTYPE_float32_t[:, ::1] ima
     return np.float32(image2fill)
 
 
+cdef DTYPE_float32_t _get_window_var(DTYPE_float32_t[:, ::1] e_block_,
+                                     DTYPE_float32_t e_mu,
+                                     unsigned int window_size,
+                                     unsigned int counter) nogil:
+
+    cdef:
+        Py_ssize_t ib, jb
+        DTYPE_float32_t i_var = 0.
+
+    for ib in range(0, window_size):
+
+        for jb in range(0, window_size):
+            i_var += _pow(e_block_[ib, jb] - e_mu, 2.)
+
+    return i_var / float(counter)
+
+
 cdef DTYPE_float32_t _get_ones_var(DTYPE_float32_t[:, ::1] w_block_,
                                    DTYPE_float32_t[:, ::1] e_block_,
                                    DTYPE_float32_t e_mu,
@@ -2277,8 +2294,9 @@ cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
         DTYPE_float32_t[:, ::1] w_block
         unsigned int ones_counter, zeros_counter
         DTYPE_float32_t ones_sum, zeros_sum
-        DTYPE_float32_t wv, bv, pdiff, edge_mean, edge_var, non_edge_mean
+        DTYPE_float32_t wv, bv, pdiff, edge_mean, edge_var, non_edge_mean, window_mean, window_var
         bint is_edge = False
+        bint is_noisy = False
 
     for ww in range(0, n_windows):
 
@@ -2307,29 +2325,46 @@ cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
                     zeros_sum += bv
                     zeros_counter += 1
 
-        if ones_sum > 0:
+        # Get the mean of the window.
+        window_mean = (ones_sum + zeros_sum) / float(ones_counter + zeros_counter)
 
-            # Get the mean along the edge.
-            edge_mean = ones_sum / float(ones_counter)
+        # Check for a high mean with low variance.
+        # TODO: threshold parameters
+        if not npy_isnan(window_mean) and (window_mean > .5):
 
-            # Get the mean of non-edges.
-            non_edge_mean = zeros_sum / float(zeros_counter)
+            # Get the window variance.
+            window_var = _get_window_var(image_block, window_mean, window_size, ones_counter+zeros_counter)
 
-            if not npy_isnan(edge_mean) and not npy_isnan(non_edge_mean):
+            if not npy_isnan(window_var) and (window_var < .05):
 
-                # Get the percentage difference between the means.
-                pdiff = _perc_diff(non_edge_mean, edge_mean)
+                is_noisy = True
+                break
 
-                if not npy_isnan(pdiff):
+        if not is_noisy:
 
-                    # Get the variance along the edge.
-                    edge_var = _get_ones_var(w_block, image_block, edge_mean, window_size, ones_counter)
+            if ones_sum > 0:
 
-                    if (pdiff >= diff_thresh) and (edge_var < var_thresh):
+                # Get the mean along the edge.
+                edge_mean = ones_sum / float(ones_counter)
 
-                        is_edge = True
+                # Get the mean of non-edges.
+                non_edge_mean = zeros_sum / float(zeros_counter)
 
-                        break
+                if not npy_isnan(edge_mean) and not npy_isnan(non_edge_mean):
+
+                    # Get the percentage difference between the means.
+                    pdiff = _perc_diff(non_edge_mean, edge_mean)
+
+                    if not npy_isnan(pdiff):
+
+                        # Get the variance along the edge.
+                        edge_var = _get_ones_var(w_block, image_block, edge_mean, window_size, ones_counter)
+
+                        if (pdiff >= diff_thresh) and (edge_var < var_thresh):
+
+                            is_edge = True
+
+                            break
 
     if is_edge:
         return edge_mean * 2.
@@ -2342,8 +2377,8 @@ cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
 
 
 cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image_array,
-                                                   DTYPE_float32_t diff_thresh=.1,
-                                                   DTYPE_float32_t var_thresh=.03):
+                                                   DTYPE_float32_t diff_thresh,
+                                                   DTYPE_float32_t var_thresh):
 
     cdef:
         Py_ssize_t i, j
@@ -2895,8 +2930,8 @@ def moving_window(np.ndarray image_array,
     elif statistic == 'egm-morph':
 
         return egm_morph(np.float32(np.ascontiguousarray(image_array)),
-                         diff_thresh=diff_thresh,
-                         var_thresh=var_thresh)
+                         diff_thresh,
+                         var_thresh)
 
     elif statistic == 'saliency':
 
