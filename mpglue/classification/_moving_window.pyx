@@ -99,6 +99,10 @@ cdef inline int _abs_int(int m) nogil:
     return m*-1 if m < 0 else m
 
 
+cdef inline DTYPE_float32_t _perc_diff(DTYPE_float32_t a, DTYPE_float32_t b) nogil:
+    return (b - a) / ((b + a) / 2.)
+
+
 cdef inline DTYPE_float32_t _pow(DTYPE_float32_t m, DTYPE_float32_t n) nogil:
     return m**n
 
@@ -573,7 +577,7 @@ cdef DTYPE_float32_t _get_std1d(DTYPE_float32_t[:] block_list, int length) nogil
         DTYPE_float32_t block_list_mean = _get_mean1d(block_list, length)
         DTYPE_float32_t s = _pow(block_list[0] - block_list_mean, 2.)
 
-    for ii in xrange(1, length):
+    for ii in range(1, length):
         s += _pow(block_list[ii] - block_list_mean, 2.)
 
     return _sqrt(s / length)
@@ -2220,6 +2224,189 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] fill_basins(DTYPE_float32_t[:, ::1] ima
     return np.float32(image2fill)
 
 
+cdef DTYPE_float32_t _get_ones_var(DTYPE_float32_t[:, ::1] w_block_,
+                                   DTYPE_float32_t[:, ::1] e_block_,
+                                   DTYPE_float32_t e_mu,
+                                   unsigned int window_size,
+                                   unsigned int ones_counter) nogil:
+
+    cdef:
+        Py_ssize_t ib, jb
+        DTYPE_float32_t i_var = 0.
+
+    for ib in range(0, window_size):
+
+        for jb in range(0, window_size):
+
+            if w_block_[ib, jb] == 1:
+                i_var += _pow(e_block_[ib, jb] - e_mu, 2.)
+
+    return i_var / float(ones_counter)
+
+
+cdef DTYPE_float32_t _get_zeros_mean(DTYPE_float32_t[:, ::1] e_block_,
+                                     unsigned int window_size) nogil:
+
+    cdef:
+        Py_ssize_t ib, jb
+        DTYPE_float32_t i_mu = 0.
+
+    for ib in range(0, window_size):
+
+        for jb in range(0, window_size):
+            i_mu += e_block_[ib, jb]
+
+    return i_mu / float(window_size*window_size)
+
+
+cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
+                                unsigned int window_size,
+                                DTYPE_float32_t[:, :, ::1] window_stack,
+                                DTYPE_float32_t diff_thresh,
+                                DTYPE_float32_t var_thresh) nogil:
+
+    cdef:
+        Py_ssize_t ww, ii, jj
+        unsigned int n_windows = window_stack.shape[0]
+        DTYPE_float32_t[:, ::1] w_block
+        unsigned int ones_counter, zeros_counter
+        DTYPE_float32_t ones_sum, zeros_sum
+        DTYPE_float32_t wv, bv, pdiff, edge_mean, edge_var, non_edge_mean
+        bint is_edge = False
+
+    for ww in range(0, n_windows):
+
+        ones_counter = 0
+        zeros_counter = 0
+
+        ones_sum = 0.
+        zeros_sum = 0.
+
+        w_block = window_stack[ww, :, :]
+
+        for ii in range(ii, window_size):
+
+            for jj in range(jj, window_size):
+
+                wv = w_block[ii, jj]
+                bv = image_block[ii, jj]
+
+                if wv == 1:
+
+                    ones_sum += bv
+                    ones_counter += 1
+
+                else:
+
+                    zeros_sum += bv
+                    zeros_counter += 1
+
+        # Get the mean along the edge.
+        edge_mean = ones_sum / float(ones_counter)
+
+        # Get the mean of non-edges.
+        non_edge_mean = zeros_sum / float(zeros_counter)
+
+        # Get the percentage difference between the means.
+        pdiff = _perc_diff(non_edge_mean, edge_mean)
+
+        # Get the variance along the edge.
+        edge_var = _get_ones_var(w_block, image_block, edge_mean, window_size, ones_counter)
+
+        if (pdiff >= diff_thresh) and (edge_var < var_thresh):
+
+            is_edge = True
+
+            break
+
+    if is_edge:
+        return _pow(edge_mean, 2.)
+    else:
+
+        non_edge_mean = _get_zeros_mean(image_block, window_size)
+
+        return _sqrt(non_edge_mean)
+
+
+cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image_array,
+                                                   DTYPE_float32_t diff_thresh=.5,
+                                                   DTYPE_float32_t var_thresh=.02):
+
+    cdef:
+        Py_ssize_t i, j
+
+        unsigned int rows = image_array.shape[0]
+        unsigned int cols = image_array.shape[1]
+
+        unsigned int window_size = 5
+        unsigned int half_window = <int>(window_size / 2.)
+        unsigned int row_dims = rows - (half_window * 2)
+        unsigned int col_dims = cols - (half_window * 2)
+
+        DTYPE_float32_t[:, ::1] out_array = np.zeros((rows, cols), dtype='float32')
+
+        DTYPE_float32_t[:, ::1] w1 = np.array([[0, 0, 1, 0, 0],
+                                               [0, 0, 1, 0, 0],
+                                               [0, 0, 1, 0, 0],
+                                               [0, 0, 1, 0, 0],
+                                               [0, 0, 1, 0, 0]], dtype='float32')
+
+        DTYPE_float32_t[:, ::1] w2 = np.array([[0, 1, 0, 0, 0],
+                                               [0, 1, 1, 0, 0],
+                                               [0, 0, 1, 0, 0],
+                                               [0, 0, 1, 1, 0],
+                                               [0, 0, 0, 1, 0]], dtype='float32')
+
+        DTYPE_float32_t[:, ::1] w3 = np.array([[1, 0, 0, 0, 0],
+                                               [0, 1, 0, 0, 0],
+                                               [0, 0, 1, 0, 0],
+                                               [0, 0, 0, 1, 0],
+                                               [0, 0, 0, 0, 1]], dtype='float32')
+
+        DTYPE_float32_t[:, ::1] w4 = np.array([[0, 0, 0, 0, 0],
+                                               [1, 1, 0, 0, 0],
+                                               [0, 1, 1, 1, 0],
+                                               [0, 0, 0, 1, 1],
+                                               [0, 0, 0, 0, 0]], dtype='float32')
+
+        DTYPE_float32_t[:, ::1] w5 = np.array([[0, 0, 0, 0, 0],
+                                               [0, 0, 0, 0, 0],
+                                               [1, 1, 1, 1, 1],
+                                               [0, 0, 0, 0, 0],
+                                               [0, 0, 0, 0, 0]], dtype='float32')
+
+        DTYPE_float32_t[:, ::1] w6 = np.fliplr(np.float32(w4))
+        DTYPE_float32_t[:, ::1] w7 = np.fliplr(np.float32(w3))
+        DTYPE_float32_t[:, ::1] w8 = np.fliplr(np.float32(w2))
+
+        DTYPE_float32_t[:, :, ::1] window_stack = np.zeros((8, 5, 5), dtype='float32')
+
+    window_stack[0] = w1
+    window_stack[1] = w2
+    window_stack[2] = w3
+    window_stack[3] = w4
+    window_stack[4] = w5
+    window_stack[5] = w6
+    window_stack[6] = w7
+    window_stack[7] = w8
+
+    with nogil:
+
+        for i in range(0, row_dims):
+
+            for j in range(0, col_dims):
+
+                out_array[i+half_window,
+                          j+half_window] = _egm_morph(image_array[i:i+window_size,
+                                                                  j:j+window_size],
+                                                      window_size,
+                                                      window_stack,
+                                                      diff_thresh,
+                                                      var_thresh)
+
+    return np.float32(out_array)
+
+
 cdef np.ndarray[DTYPE_uint8_t, ndim=2] fill_window(DTYPE_uint8_t[:, :] image_array,
                                                    int window_size,
                                                    int n_neighbors):
@@ -2567,7 +2754,7 @@ def moving_window(np.ndarray image_array,
                   weights=None,
                   endpoint_image=None,
                   gradient_image=None,
-                  n_neighbors=4,
+                  int n_neighbors=4,
                   list circle_list=[],
                   int min_egm=25,
                   int smallest_allowed_gap=3,
@@ -2581,21 +2768,26 @@ def moving_window(np.ndarray image_array,
         statistic (Optional[str]): The statistic to apply. Default is 'mean'.
 
             Choices are ['mean', 'min', 'max', 'median', 'majority', 'percent', 'sum',
-                         'link', 'fill-basins', 'fill', 'circles', 'distance'. 'rgb-distance'].
+                         'link', 'fill-basins', 'fill', 'circles', 'distance'. 'rgb-distance',
+                         'inhibition', 'saliency', 'duda'].
 
-            mean: Mean of window
-            min: Minimum of window
-            max: Maximum of window
-            median: Median of window
-            majority: Majority value within window
-            percent: Percent of window filled by binary 1s
-            sum: Sum of window
-            link: Links binary endpoints
+            circles: TODO
+            distance: Computes the spectral distance between the center value and neighbors
+            duda: TODO
+            egm-morph:
             fill-basins: Fills pixels surrounded by higher values
             fill: Fill 0s surrounded by 1s
-            circles:
-            distance: Computes the spectral distance between the center value and neighbors
-            rgb-distance:
+            inhibition: TODO
+            link: Links binary endpoints
+            majority: Majority value within window
+            max: Maximum of window
+            mean: Mean of window
+            median: Median of window
+            min: Minimum of window
+            percent: Percent of window filled by binary 1s
+            rgb-distance: TODO
+            saliency: TODO
+            sum: Sum of window
 
         window_size (Optional[int]): The window size (of 1 side). Default is 3.
         skip_block (Optional[int]): A block size skip factor. Default is 0.
@@ -2613,7 +2805,8 @@ def moving_window(np.ndarray image_array,
     Returns
     """
 
-    if statistic not in ['mean',
+    if statistic not in ['egm-morph',
+                         'mean',
                          'min',
                          'max',
                          'median',
@@ -2650,6 +2843,10 @@ def moving_window(np.ndarray image_array,
                            min_egm,
                            smallest_allowed_gap,
                            medium_allowed_gap)
+
+    elif statistic == 'egm-morph':
+
+        return egm_morph(np.float32(np.ascontiguousarray(image_array)))
 
     elif statistic == 'saliency':
 
