@@ -2379,7 +2379,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image
         DTYPE_float32_t[:, ::1] w7 = np.ascontiguousarray(np.fliplr(np.float32(w3)))
         DTYPE_float32_t[:, ::1] w8 = np.ascontiguousarray(np.fliplr(np.float32(w2)))
 
-        DTYPE_float32_t[:, :, ::1] window_stack = np.zeros((8, 5, 5), dtype='float32', mode='c')
+        DTYPE_float32_t[:, :, ::1] window_stack = np.zeros((8, 5, 5), dtype='float32')
 
     window_stack[0] = w1
     window_stack[1] = w2
