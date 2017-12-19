@@ -2284,9 +2284,9 @@ cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
 
         w_block = window_stack[ww, :, :]
 
-        for ii in range(ii, window_size):
+        for ii in range(0, window_size):
 
-            for jj in range(jj, window_size):
+            for jj in range(0, window_size):
 
                 wv = w_block[ii, jj]
                 bv = image_block[ii, jj]
