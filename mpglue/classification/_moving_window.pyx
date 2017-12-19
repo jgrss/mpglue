@@ -59,6 +59,10 @@ cdef extern from 'stdlib.h':
     DTYPE_float32_t exp(DTYPE_float32_t x)
 
 
+cdef extern from 'numpy/npy_math.h':
+    bint npy_isnan(DTYPE_float32_t value) nogil
+
+
 cdef inline DTYPE_float32_t _get_max_sample(DTYPE_float32_t s1, DTYPE_float32_t s2) nogil:
     return s2 if s2 > s1 else s1
 
@@ -2302,24 +2306,28 @@ cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
                     zeros_counter += 1
 
         if ones_sum > 0:
-    
+
             # Get the mean along the edge.
             edge_mean = ones_sum / float(ones_counter)
 
             # Get the mean of non-edges.
             non_edge_mean = zeros_sum / float(zeros_counter)
 
-            # Get the percentage difference between the means.
-            pdiff = _perc_diff(non_edge_mean, edge_mean)
+            if not npy_isnan(edge_mean) and not npy_isnan(non_edge_mean):
 
-            # Get the variance along the edge.
-            edge_var = _get_ones_var(w_block, image_block, edge_mean, window_size, ones_counter)
+                # Get the percentage difference between the means.
+                pdiff = _perc_diff(non_edge_mean, edge_mean)
 
-            if (pdiff >= diff_thresh) and (edge_var < var_thresh):
+                if not npy_isnan(pdiff):
 
-                is_edge = True
+                    # Get the variance along the edge.
+                    edge_var = _get_ones_var(w_block, image_block, edge_mean, window_size, ones_counter)
 
-                break
+                    if (pdiff >= diff_thresh) and (edge_var < var_thresh):
+
+                        is_edge = True
+
+                        break
 
     if is_edge:
         return _pow(edge_mean, 2.)
