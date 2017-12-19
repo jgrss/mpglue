@@ -2313,6 +2313,9 @@ cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
         # Get the variance along the edge.
         edge_var = _get_ones_var(w_block, image_block, edge_mean, window_size, ones_counter)
 
+        with gil:
+            print pdiff, edge_var
+
         if (pdiff >= diff_thresh) and (edge_var < var_thresh):
 
             is_edge = True
