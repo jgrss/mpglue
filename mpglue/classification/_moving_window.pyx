@@ -2284,18 +2284,12 @@ cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
 
         w_block = window_stack[ww, :, :]
 
-        with gil:
-            print np.float32(image_block)
-
         for ii in range(0, window_size):
 
             for jj in range(0, window_size):
 
                 wv = w_block[ii, jj]
                 bv = image_block[ii, jj]
-
-                with gil:
-                    print wv, bv
 
                 if wv == 1:
 
@@ -2307,39 +2301,25 @@ cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
                     zeros_sum += bv
                     zeros_counter += 1
 
-                with gil:
-                    print ones_sum, zeros_sum
-                    print ones_counter, zeros_counter
-                    print
+        if ones_sum > 0:
+    
+            # Get the mean along the edge.
+            edge_mean = ones_sum / float(ones_counter)
 
-        with gil:
-            print ones_sum, zeros_sum
-            print ones_counter, zeros_counter
-            import sys
-            sys.exit()
+            # Get the mean of non-edges.
+            non_edge_mean = zeros_sum / float(zeros_counter)
 
-        # Get the mean along the edge.
-        edge_mean = ones_sum / float(ones_counter)
+            # Get the percentage difference between the means.
+            pdiff = _perc_diff(non_edge_mean, edge_mean)
 
-        # Get the mean of non-edges.
-        non_edge_mean = zeros_sum / float(zeros_counter)
+            # Get the variance along the edge.
+            edge_var = _get_ones_var(w_block, image_block, edge_mean, window_size, ones_counter)
 
-        # Get the percentage difference between the means.
-        pdiff = _perc_diff(non_edge_mean, edge_mean)
+            if (pdiff >= diff_thresh) and (edge_var < var_thresh):
 
-        # Get the variance along the edge.
-        edge_var = _get_ones_var(w_block, image_block, edge_mean, window_size, ones_counter)
+                is_edge = True
 
-        with gil:
-            print non_edge_mean, edge_mean,
-            print pdiff, edge_var
-            print
-
-        if (pdiff >= diff_thresh) and (edge_var < var_thresh):
-
-            is_edge = True
-
-            break
+                break
 
     if is_edge:
         return _pow(edge_mean, 2.)
