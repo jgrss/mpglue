@@ -2329,8 +2329,8 @@ cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
 
 
 cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image_array,
-                                                   DTYPE_float32_t diff_thresh=.5,
-                                                   DTYPE_float32_t var_thresh=.02):
+                                                   DTYPE_float32_t diff_thresh=.1,
+                                                   DTYPE_float32_t var_thresh=.03):
 
     cdef:
         Py_ssize_t i, j
@@ -2760,7 +2760,9 @@ def moving_window(np.ndarray image_array,
                   int smallest_allowed_gap=3,
                   int medium_allowed_gap=7,
                   list inhibition_scales=[1., .75, .5, .25],
-                  int value_pos=0):
+                  int value_pos=0,
+                  float diff_thresh=.5,
+                  float var_thresh=.02):
 
     """
     Args:
@@ -2846,7 +2848,9 @@ def moving_window(np.ndarray image_array,
 
     elif statistic == 'egm-morph':
 
-        return egm_morph(np.float32(np.ascontiguousarray(image_array)))
+        return egm_morph(np.float32(np.ascontiguousarray(image_array)),
+                         diff_thresh=diff_thresh,
+                         var_thresh=var_thresh)
 
     elif statistic == 'saliency':
 
