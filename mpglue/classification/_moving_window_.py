@@ -2284,12 +2284,18 @@ cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
 
         w_block = window_stack[ww, :, :]
 
+        with gil:
+            print np.float32(image_block)
+
         for ii in range(0, window_size):
 
             for jj in range(0, window_size):
 
                 wv = w_block[ii, jj]
                 bv = image_block[ii, jj]
+
+                with gil:
+                    print wv, bv
 
                 if wv == 1:
 
@@ -2301,9 +2307,16 @@ cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
                     zeros_sum += bv
                     zeros_counter += 1
 
+                with gil:
+                    print ones_sum, zeros_sum
+                    print ones_counter, zeros_counter
+                    print
+
         with gil:
             print ones_sum, zeros_sum
             print ones_counter, zeros_counter
+            import sys
+            sys.exit()
 
         # Get the mean along the edge.
         edge_mean = ones_sum / float(ones_counter)
@@ -2388,7 +2401,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image
         DTYPE_float32_t[:, ::1] w7 = np.ascontiguousarray(np.fliplr(np.float32(w3)))
         DTYPE_float32_t[:, ::1] w8 = np.ascontiguousarray(np.fliplr(np.float32(w2)))
 
-        DTYPE_float32_t[:, :, ::1] window_stack = np.zeros((8, 5, 5), dtype='float32')
+        DTYPE_float32_t[:, :, ::1] window_stack = np.zeros((8, window_size, window_size), dtype='float32')
 
     window_stack[0] = w1
     window_stack[1] = w2
