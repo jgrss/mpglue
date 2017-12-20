@@ -2330,12 +2330,12 @@ cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
 
         # Check for a high mean with low variance.
         # TODO: threshold parameters
-        if not npy_isnan(window_mean) and (window_mean > .5):
+        if not npy_isnan(window_mean) and (window_mean > .7):
 
             # Get the window variance.
             window_var = _get_window_var(image_block, window_mean, window_size, ones_counter+zeros_counter)
 
-            if not npy_isnan(window_var) and (window_var < .05):
+            if not npy_isnan(window_var) and (window_var < .1):
 
                 is_noisy = True
                 break
@@ -2373,7 +2373,7 @@ cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
         # non_edge_mean = _get_zeros_mean(image_block, window_size)
         # return _sqrt(non_edge_mean)
 
-        return bcv / 2.
+        return (bcv / 2.) * -1.
 
 
 cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image_array,
@@ -2390,6 +2390,8 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image
         unsigned int half_window = <int>(window_size / 2.)
         unsigned int row_dims = rows - (half_window * 2)
         unsigned int col_dims = cols - (half_window * 2)
+
+        DTYPE_float32_t morph_value
 
         DTYPE_float32_t[:, ::1] out_array = np.zeros((rows, cols), dtype='float32')
 
@@ -2476,14 +2478,15 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image
 
             for j in range(0, col_dims):
 
-                out_array[i+half_window,
-                          j+half_window] = _egm_morph(image_array[i:i+window_size,
-                                                                  j:j+window_size],
-                                                      window_size,
-                                                      half_window,
-                                                      window_stack,
-                                                      diff_thresh,
-                                                      var_thresh)
+                morph_value = _egm_morph(image_array[i:i+window_size,
+                                                     j:j+window_size],
+                                         window_size,
+                                         half_window,
+                                         window_stack,
+                                         diff_thresh,
+                                         var_thresh)
+
+                image_array[i+half_window, j+half_window] += morph_value
 
     return np.float32(out_array)
 
