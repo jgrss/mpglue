@@ -2457,7 +2457,23 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image
         DTYPE_float32_t[:, ::1] w11 = np.ascontiguousarray(np.fliplr(np.float32(w3)))
         DTYPE_float32_t[:, ::1] w12 = np.ascontiguousarray(np.fliplr(np.float32(w2)))
 
-        DTYPE_float32_t[:, :, ::1] window_stack = np.zeros((12, window_size, window_size), dtype='float32')
+        DTYPE_float32_t[:, ::1] w13 = np.array([[0, 0, 0, 1, 0, 0, 0],
+                                                [0, 0, 0, 1, 0, 0, 0],
+                                                [0, 0, 1, 1, 1, 0, 0],
+                                                [1, 1, 1, 1, 1, 1, 1],
+                                                [0, 0, 1, 1, 1, 0, 0],
+                                                [0, 0, 0, 1, 0, 0, 0],
+                                                [0, 0, 0, 1, 0, 0, 0]], dtype='float32')
+
+        DTYPE_float32_t[:, ::1] w14 = np.array([[1, 0, 0, 0, 0, 0, 1],
+                                                [0, 1, 0, 0, 0, 1, 0],
+                                                [0, 0, 1, 1, 1, 0, 0],
+                                                [0, 0, 1, 1, 1, 0, 0],
+                                                [0, 0, 1, 1, 1, 0, 0],
+                                                [0, 1, 0, 0, 0, 1, 0],
+                                                [1, 0, 0, 0, 0, 0, 1]], dtype='float32')
+
+        DTYPE_float32_t[:, :, ::1] window_stack = np.zeros((14, window_size, window_size), dtype='float32')
 
     window_stack[0] = w1
     window_stack[1] = w2
@@ -2471,6 +2487,8 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image
     window_stack[9] = w10
     window_stack[10] = w11
     window_stack[11] = w12
+    window_stack[12] = w13
+    window_stack[13] = w14
 
     with nogil:
 
