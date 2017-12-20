@@ -2393,7 +2393,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image
 
         DTYPE_float32_t morph_value
 
-        DTYPE_float32_t[:, ::1] out_array = np.zeros((rows, cols), dtype='float32')
+        # DTYPE_float32_t[:, ::1] out_array = np.zeros((rows, cols), dtype='float32')
 
         DTYPE_float32_t[:, ::1] w1 = np.array([[0, 0, 1, 1, 1, 0, 0],
                                                [0, 0, 1, 1, 1, 0, 0],
@@ -2488,7 +2488,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image
 
                 image_array[i+half_window, j+half_window] += morph_value
 
-    return np.float32(out_array)
+    return np.float32(image_array)
 
 
 cdef np.ndarray[DTYPE_uint8_t, ndim=2] fill_window(DTYPE_uint8_t[:, :] image_array,
