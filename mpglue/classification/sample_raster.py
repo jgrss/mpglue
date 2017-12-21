@@ -618,9 +618,19 @@ class SampleImage(object):
                 emat.write_stats(error_file)
 
 
-def sample_raster(points, image, out_dir=None, option=1, class_id='Id', accuracy=False,
-                  field_type='int', use_extent=True, sql_expression_field='Id',
-                  sql_expression_attr=[], neighbors=False, search_ext=['tif'], n_jobs=0):
+def sample_raster(points,
+                  image,
+                  out_dir=None,
+                  option=1,
+                  class_id='Id',
+                  accuracy=False,
+                  field_type='int',
+                  use_extent=True,
+                  sql_expression_field='Id',
+                  sql_expression_attr=None,
+                  neighbors=False,
+                  search_ext=None,
+                  n_jobs=0):
     
     """
     Samples an image, or imagery, using a point, or points, shapefile.
@@ -648,6 +658,12 @@ def sample_raster(points, image, out_dir=None, option=1, class_id='Id', accuracy
     Returns:
         None, writes results to ``out_dir``.
     """
+
+    if not sql_expression_attr:
+        sql_expression_attr = list()
+
+    if not search_ext:
+        search_ext = ['tif']
 
     # 1:1
     if option == 1:
