@@ -84,7 +84,7 @@ class error_matrix(object):
         r_squared (float)
 
     Examples:
-        >>> from mappy.sample import error_matrix
+        >>> from mpglue.classification import error_matrix
         >>>
         >>> emat = error_matrix()
         >>>
