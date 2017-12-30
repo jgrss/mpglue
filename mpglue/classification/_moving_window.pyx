@@ -145,8 +145,10 @@ cdef inline DTYPE_float32_t _translate_quadrant(DTYPE_float32_t coord2translate,
     return _abs(wsh - coord2translate)
 
 
-cdef DTYPE_float32_t _get_line_angle(DTYPE_float32_t point1_y, DTYPE_float32_t point1_x,
-                                     DTYPE_float32_t point2_y, DTYPE_float32_t point2_x,
+cdef DTYPE_float32_t _get_line_angle(DTYPE_float32_t point1_y,
+                                     DTYPE_float32_t point1_x,
+                                     DTYPE_float32_t point2_y,
+                                     DTYPE_float32_t point2_x,
                                      int wsh) nogil:
 
     """
@@ -297,9 +299,9 @@ cdef tuple draw_line_tuple(Py_ssize_t y0, Py_ssize_t x0, Py_ssize_t y1, Py_ssize
     return rr, cc
 
 
-cdef void _extract_values_byte(DTYPE_uint8_t[:, :] block,
-                               DTYPE_float32_t[:] values,
-                               DTYPE_float32_t[:, :] rc_,
+cdef void _extract_values_byte(DTYPE_uint8_t[:, ::1] block,
+                               DTYPE_float32_t[::1] values,
+                               DTYPE_float32_t[:, ::1] rc_,
                                int fl) nogil:
 
     cdef:
@@ -314,26 +316,28 @@ cdef void _extract_values_byte(DTYPE_uint8_t[:, :] block,
         values[fi] = float(block[<int>fi_, <int>fj_])
 
 
-cdef void _extract_values(DTYPE_float32_t[:, :] block,
-                          DTYPE_float32_t[:] values,
-                          DTYPE_float32_t[:, :] rc_,
-                          int fl) nogil:
+cdef void _extract_values(DTYPE_float32_t[:, ::1] block,
+                          DTYPE_float32_t[::1] values,
+                          DTYPE_float32_t[:, ::1] rc_,
+                          unsigned int fl) nogil:
 
     cdef:
         Py_ssize_t fi
-        DTYPE_float32_t fi_, fj_
+        int fi_, fj_
 
     for fi in range(0, fl):
 
-        fi_ = rc_[0, fi]
-        fj_ = rc_[1, fi]
+        fi_ = <int>rc_[0, fi]
+        fj_ = <int>rc_[1, fi]
 
-        values[fi] = block[<int>fi_, <int>fj_]
+        values[fi] = block[fi_, fj_]
 
 
-cdef void draw_line(Py_ssize_t y0, Py_ssize_t x0,
-                    Py_ssize_t y1, Py_ssize_t x1,
-                    DTYPE_float32_t[:, :] rc_) nogil:
+cdef void draw_line(Py_ssize_t y0,
+                    Py_ssize_t x0,
+                    Py_ssize_t y1,
+                    Py_ssize_t x1,
+                    DTYPE_float32_t[:, ::1] rc_) nogil:
 
     """
     Graciously adapated from the Scikit-image team
@@ -421,10 +425,13 @@ cdef void draw_line(Py_ssize_t y0, Py_ssize_t x0,
         x += sx
         d += 2 * dy
 
+    # Store the row index
     rc_[0, dx] = float(y1)
+
+    # Store the column index
     rc_[1, dx] = float(x1)
 
-    # Store the real line length
+    # Store the line length
     rc_[2, 0] = float(dx + 1)
 
 
@@ -555,9 +562,9 @@ cdef DTYPE_uint8_t _get_sum1d(DTYPE_uint8_t[:] block_list, int length) nogil:
     return s
 
 
-cdef void _get_sum1d_f(DTYPE_float32_t[:] block_list,
+cdef void _get_sum1d_f(DTYPE_float32_t[::1] block_list,
                        int length,
-                       DTYPE_float32_t[:] sums_array__) nogil:
+                       DTYPE_float32_t[::1] sums_array__) nogil:
 
     cdef:
         Py_ssize_t fi
@@ -566,9 +573,6 @@ cdef void _get_sum1d_f(DTYPE_float32_t[:] block_list,
     for fi in range(0, length):
 
         bv = block_list[fi]
-
-        if bv <= 5:
-            break
 
         sums_array__[0] += bv    # EGM sum
         sums_array__[1] += 1     # pixel count
@@ -1644,10 +1648,10 @@ cdef Py_ssize_t _orthogonal_opt(DTYPE_float32_t y1,
                                 DTYPE_float32_t y2,
                                 DTYPE_float32_t x2,
                                 DTYPE_float32_t center_value,
-                                int half_window,
-                                int window_size,
-                                DTYPE_float32_t[:, :] edge_image_block,
-                                DTYPE_float32_t[:, :] rc) nogil:
+                                unsigned int half_window,
+                                unsigned int window_size,
+                                DTYPE_float32_t[:, ::1] edge_image_block,
+                                DTYPE_float32_t[:, ::1] rc) nogil:
 
     """
     Finds the maximum number of pixels along an orthogonal
@@ -1663,7 +1667,7 @@ cdef Py_ssize_t _orthogonal_opt(DTYPE_float32_t y1,
         Py_ssize_t y3_, x3_, y3, x3, li
         int rc_shape
         Py_ssize_t max_consecutive = 0
-        DTYPE_float32_t[:] line_values
+        DTYPE_float32_t[::1] line_values
 
     # First, translate the coordinate
     #   to the Cartesian plane.
@@ -1704,7 +1708,7 @@ cdef Py_ssize_t _orthogonal_opt(DTYPE_float32_t y1,
     return max_consecutive
 
 
-cdef void _fill_zeros(DTYPE_float32_t[:] array2fill, int array_length):
+cdef void _fill_zeros(DTYPE_float32_t[::1] array2fill, unsigned int array_length) nogil:
 
     cdef:
         Py_ssize_t fill_idx
@@ -1713,13 +1717,14 @@ cdef void _fill_zeros(DTYPE_float32_t[:] array2fill, int array_length):
         array2fill[fill_idx] = 0.
 
 
-cdef void _optimal_edge_orientation(DTYPE_float32_t[:, :] edge_image_block,
-                                    DTYPE_uint8_t[:] indices,
+cdef void _optimal_edge_orientation(DTYPE_float32_t[:, ::1] edge_image_block,
+                                    DTYPE_uint8_t[::1] indices,
                                     int half_window,
                                     int window_size,
-                                    DTYPE_float32_t[:, :] rc,
-                                    DTYPE_float32_t[:] vars_array_,
-                                    DTYPE_float32_t[:] sums_array_):
+                                    DTYPE_float32_t[:, ::1] rc,
+                                    DTYPE_float32_t[::1] vars_array_,
+                                    DTYPE_float32_t[::1] sums_array,
+                                    DTYPE_float32_t[::1] sums_array_) nogil:
 
     """
     Returns:
@@ -1736,11 +1741,8 @@ cdef void _optimal_edge_orientation(DTYPE_float32_t[:, :] edge_image_block,
         DTYPE_float32_t line_angle = 0.
         DTYPE_float32_t si_max = -9999.
         DTYPE_float32_t center_value = edge_image_block[half_window, half_window]
-        DTYPE_float32_t[:] line_values
+        DTYPE_float32_t[::1] line_values
         DTYPE_float32_t theta_opt
-
-    # Ensure empty
-    _fill_zeros(vars_array_, 3)
 
     # Iterate over top and bottom rows.
     for end_idx in range(0, 2):
@@ -1752,56 +1754,52 @@ cdef void _optimal_edge_orientation(DTYPE_float32_t[:, :] edge_image_block,
         for pix_idx_r in range(0, window_size):
 
             # Ensure empty
-            _fill_zeros(sums_array_, 2)
+            sums_array_[...] = sums_array
 
-            with nogil:
+            # Draw a line from the center pixel
+            #   to the current end coordinate.
+            draw_line(half_window, half_window, end_idx_r, pix_idx_r, rc)
 
-                # Draw a line from the center pixel
-                #   to the current end coordinate.
-                draw_line(half_window, half_window, end_idx_r, pix_idx_r, rc)
-
-                # Get the current line length.
-                rc_shape = <int>rc[2, 0]
+            # Get the current line length.
+            rc_shape = <int>rc[2, 0]
 
             # row of zeros, up to the line length
             line_values = rc[3, :rc_shape]
 
-            with nogil:
+            # Extract the values along the line.
+            _extract_values(edge_image_block, line_values, rc, rc_shape)
 
-                # Extract the values along the line.
-                _extract_values(edge_image_block, line_values, rc, rc_shape)
+            # Get the sum of edge gradient
+            #   magnitudes along the line.
+            _get_sum1d_f(line_values, rc_shape, sums_array_)
 
-                # Get the sum of edge gradient
-                #   magnitudes along the line.
-                _get_sum1d_f(line_values, rc_shape, sums_array_)
+            # Get the angle if there is a new maximum
+            #   edge gradient magnitude.
+            if sums_array_[0] > vars_array_[1]:
 
-                # Get the angle if there is a new maximum
-                #   edge gradient magnitude.
-                if sums_array_[0] > vars_array_[1]:
+                # Get the angle of the line.
+                theta_opt = _get_line_angle(rc[0, 0],
+                                            rc[1, 0],
+                                            rc[0, rc_shape-1],
+                                            rc[1, rc_shape-1],
+                                            window_size-1)
 
-                    # Get the angle of the line.
-                    theta_opt = _get_line_angle(rc[0, 0],
-                                                rc[1, 0],
-                                                rc[0, rc_shape-1],
-                                                rc[1, rc_shape-1],
-                                                window_size-1)
+                nc_opt = _orthogonal_opt(rc[0, 0],
+                                         rc[0, 0],
+                                         rc[0, rc_shape-1],
+                                         rc[1, rc_shape-1],
+                                         center_value,
+                                         half_window,
+                                         window_size,
+                                         edge_image_block,
+                                         rc)
 
-                    nc_opt = _orthogonal_opt(rc[0, 0], 
-                                             rc[0, 0],
-                                             rc[0, rc_shape-1],
-                                             rc[1, rc_shape-1],
-                                             center_value,
-                                             half_window,
-                                             window_size,
-                                             edge_image_block,
-                                             rc)
-
-                    vars_array_[0] = theta_opt          # theta_opt
-                    vars_array_[1] = sums_array_[0]     # si_opt
-                    vars_array_[2] = sums_array_[1]     # n_opt
-                    vars_array_[3] = nc_opt             # nc_opt
-                    vars_array_[4] = pix_idx_r          # y endpoint
-                    vars_array_[5] = end_idx_r          # x endpoint
+                vars_array_[0] = theta_opt          # theta_opt
+                vars_array_[1] = sums_array_[0]     # si_opt
+                vars_array_[2] = sums_array_[1]     # n_opt
+                vars_array_[3] = nc_opt             # nc_opt
+                vars_array_[4] = pix_idx_r          # y endpoint
+                vars_array_[5] = end_idx_r          # x endpoint
 
             # print 'Indices: ', np.array(rc)
             # print 'Shape: ', rc_shape
@@ -1823,71 +1821,68 @@ cdef void _optimal_edge_orientation(DTYPE_float32_t[:, :] edge_image_block,
         for pix_idx_r in range(0, window_size):
 
             # Ensure empty
-            _fill_zeros(sums_array_, 2)
+            sums_array_[...] = sums_array
 
-            with nogil:
+            # Draw a line from the center pixel
+            #   to the current end coordinate.
+            draw_line(half_window, half_window, pix_idx_r, end_idx_r, rc)
 
-                # Draw a line from the center pixel
-                #   to the current end coordinate.
-                draw_line(half_window, half_window, pix_idx_r, end_idx_r, rc)
-
-                # Get the current line length.
-                rc_shape = <int>rc[2, 0]
+            # Get the current line length.
+            rc_shape = <int>rc[2, 0]
 
             # row of zeros, up to the line length
             line_values = rc[3, :rc_shape]
 
-            with nogil:
+            # Extract the values along the line.
+            _extract_values(edge_image_block, line_values, rc, rc_shape)
 
-                # Extract the values along the line.
-                _extract_values(edge_image_block, line_values, rc, rc_shape)
+            # Get the sum of edge gradient
+            #   magnitudes along the line.
+            _get_sum1d_f(line_values, rc_shape, sums_array_)
 
-                # Get the sum of edge gradient
-                #   magnitudes along the line.
-                _get_sum1d_f(line_values, rc_shape, sums_array_)
+            # Get the angle if there is a new maximum
+            #   edge gradient magnitude.
+            if sums_array_[0] > vars_array_[1]:
 
-                # Get the angle if there is a new maximum
-                #   edge gradient magnitude.
-                if sums_array_[0] > vars_array_[1]:
+                # Get the angle of the line.
+                theta_opt = _get_line_angle(rc[0, 0],
+                                            rc[1, 0],
+                                            rc[0, rc_shape-1],
+                                            rc[1, rc_shape-1],
+                                            window_size-1)
 
-                    # Get the angle of the line.
-                    theta_opt = _get_line_angle(rc[0, 0],
-                                                rc[1, 0],
-                                                rc[0, rc_shape-1],
-                                                rc[1, rc_shape-1],
-                                                window_size-1)
+                nc_opt = _orthogonal_opt(rc[0, 0],
+                                         rc[0, 0],
+                                         rc[0, rc_shape-1],
+                                         rc[1, rc_shape-1],
+                                         center_value,
+                                         half_window,
+                                         window_size,
+                                         edge_image_block,
+                                         rc)
 
-                    nc_opt = _orthogonal_opt(rc[0, 0], rc[0, 0],
-                                             rc[0, rc_shape-1],
-                                             rc[1, rc_shape-1],
-                                             center_value,
-                                             half_window,
-                                             window_size,
-                                             edge_image_block,
-                                             rc)
-
-                    vars_array_[0] = theta_opt          # theta_opt
-                    vars_array_[1] = sums_array_[0]     # si_opt
-                    vars_array_[2] = sums_array_[1]     # n_opt
-                    vars_array_[3] = nc_opt             # nc_opt
-                    vars_array_[4] = pix_idx_r          # y endpoint
-                    vars_array_[5] = end_idx_r          # x endpoint
+                vars_array_[0] = theta_opt          # theta_opt
+                vars_array_[1] = sums_array_[0]     # si_opt
+                vars_array_[2] = sums_array_[1]     # n_opt
+                vars_array_[3] = nc_opt             # nc_opt
+                vars_array_[4] = pix_idx_r          # y endpoint
+                vars_array_[5] = end_idx_r          # x endpoint
 
 
-cdef DTYPE_float32_t _edge_linearity(DTYPE_float32_t[:, :] optimal_values_array,
+cdef DTYPE_float32_t _edge_linearity(DTYPE_float32_t[:, ::1] optimal_values_array,
                                      DTYPE_float32_t y_endpoint,
                                      DTYPE_float32_t x_endpoint,
                                      int half_window,
                                      int window_size,
                                      DTYPE_float32_t param_l,
                                      DTYPE_float32_t theta_opt,
-                                     DTYPE_float32_t[:, :] rc) nogil:
+                                     DTYPE_float32_t[:, ::1] rc) nogil:
 
     cdef:
         Py_ssize_t coi
         int rc_shape
         # int iters = <int>((2. * param_l) + 1.)
-        DTYPE_float32_t[:] line_values
+        DTYPE_float32_t[::1] line_values
         DTYPE_float32_t opt_val
         DTYPE_float32_t opt_max = -9999.
 
@@ -1946,27 +1941,35 @@ cdef DTYPE_float32_t _edge_saliency(DTYPE_float32_t si_opt,
     return si_opt * n_opt * nc_opt
 
 
-cdef np.ndarray[DTYPE_float32_t, ndim=3] saliency_window(DTYPE_float32_t[:, :] edge_image, int window_size):
+cdef np.ndarray[DTYPE_float32_t, ndim=3] saliency_window(DTYPE_float32_t[:, ::1] edge_image,
+                                                         unsigned int window_size):
 
     """
     Computes image edge saliency
     """
 
     cdef:
-        int rows = edge_image.shape[0]
-        int cols = edge_image.shape[1]
         Py_ssize_t i, j
-        int half_window = int(window_size / 2.)
-        int row_dims = int(rows - (half_window * 2.))
-        int col_dims = int(cols - (half_window * 2.))
-        DTYPE_float32_t[:, :] out_array_sal = np.zeros((rows, cols), dtype='float32')
-        DTYPE_float32_t[:, :] out_array_lin = np.zeros((rows, cols), dtype='float32')
-        DTYPE_float32_t[:, :, :] out_array_vars = np.zeros((6, rows, cols), dtype='float32') - 9999.
-        DTYPE_uint8_t[:] pix_indices = np.array([0, window_size-1], dtype='uint8')
+
+        unsigned int rows = edge_image.shape[0]
+        unsigned int cols = edge_image.shape[1]
+
+        unsigned int half_window = <int>(window_size / 2.)
+        unsigned int row_dims = <int>(rows - (half_window * 2.))
+        unsigned int col_dims = <int>(cols - (half_window * 2.))
+
+        DTYPE_float32_t[:, ::1] out_array_sal = np.zeros((rows, cols), dtype='float32')
+        DTYPE_float32_t[:, ::1] out_array_lin = np.zeros((rows, cols), dtype='float32')
+        DTYPE_float32_t[:, :, ::1] out_array_vars = np.zeros((6, rows, cols), dtype='float32') - 9999.
+
+        DTYPE_uint8_t[::1] pix_indices = np.array([0, window_size-1], dtype='uint8')
         DTYPE_float32_t param_l = float(half_window + 1)
         DTYPE_float32_t param_v = (param_l / 2.) + 1.
-        DTYPE_float32_t[:, :] rcc = np.zeros((4, window_size*2), dtype='float32')
-        DTYPE_float32_t[:] sums_array = np.zeros(2, dtype='float32')
+        DTYPE_float32_t[:, ::1] rcc = np.zeros((4, window_size*2), dtype='float32')
+
+        DTYPE_float32_t[::1] sums_array = np.zeros(2, dtype='float32')
+        DTYPE_float32_t[::1] sums_array_ = sums_array.copy()
+
         DTYPE_float32_t theta_opt
 
         # The `vars_array` holds:
@@ -1975,50 +1978,56 @@ cdef np.ndarray[DTYPE_float32_t, ndim=3] saliency_window(DTYPE_float32_t[:, :] e
         #   2: n_opt
         #   3: y (i) coordinate of `theta_opt` endpoint
         #   4: x (j) coordinate of `theta_opt` endpoint
-        DTYPE_float32_t[:] vars_array = np.zeros(6, dtype='float32')
+        DTYPE_float32_t[::1] vars_array = np.zeros(6, dtype='float32')
+        DTYPE_float32_t[::1] vars_array_ = vars_array.copy()
 
-    #####################################
-    # Edge orientation derivation (3.3.1)
-    #####################################
-    # It is necessary to iterate over the entire image
-    #   before edge linearity and edge saliency because
-    #   all of the optimum values need to be found.
-    for i in range(0, row_dims):
-        for j in range(0, col_dims):
-
-            if edge_image[i+half_window, j+half_window] > 1:
-
-                # First, get the ...
-                #
-                # theta_opt:
-                #   optimal edge direction
-                # si_opt:
-                #   sum of EGM over the optimum line
-                # n_opt:
-                #   the number of pixels along the optimal line
-                _optimal_edge_orientation(edge_image[i:i+window_size, j:j+window_size],
-                                          pix_indices,
-                                          half_window,
-                                          window_size,
-                                          rcc,
-                                          vars_array,
-                                          sums_array)
-
-                out_array_vars[0, i+half_window, j+half_window] = vars_array[0]     # theta_opt
-                out_array_vars[1, i+half_window, j+half_window] = vars_array[1]     # si_opt
-                out_array_vars[2, i+half_window, j+half_window] = vars_array[2]     # n_opt
-                out_array_vars[3, i+half_window, j+half_window] = vars_array[3]     # nc_opt
-                out_array_vars[4, i+half_window, j+half_window] = vars_array[4]     # y endpoint
-                out_array_vars[5, i+half_window, j+half_window] = vars_array[5]     # x endpoint
-
-
-    ###################################
-    # Edge linearity derivation (3.3.2)
-    ###################################
-    # TODO: collinearity
     with nogil:
 
+        #####################################
+        # Edge orientation derivation (3.3.1)
+        #####################################
+        # It is necessary to iterate over the entire image
+        #   before edge linearity and edge saliency because
+        #   all of the optimum values need to be found.
         for i in range(0, row_dims):
+
+            for j in range(0, col_dims):
+
+                if edge_image[i+half_window, j+half_window] > 1:
+
+                    vars_array_[...] = vars_array
+
+                    # First, get the ...
+                    #
+                    # theta_opt:
+                    #   optimal edge direction
+                    # si_opt:
+                    #   sum of EGM over the optimum line
+                    # n_opt:
+                    #   the number of pixels along the optimal line
+                    _optimal_edge_orientation(edge_image[i:i+window_size,
+                                                         j:j+window_size],
+                                              pix_indices,
+                                              half_window,
+                                              window_size,
+                                              rcc,
+                                              vars_array_,
+                                              sums_array,
+                                              sums_array_)
+
+                    out_array_vars[0, i+half_window, j+half_window] = vars_array[0]     # theta_opt
+                    out_array_vars[1, i+half_window, j+half_window] = vars_array[1]     # si_opt
+                    out_array_vars[2, i+half_window, j+half_window] = vars_array[2]     # n_opt
+                    out_array_vars[3, i+half_window, j+half_window] = vars_array[3]     # nc_opt
+                    out_array_vars[4, i+half_window, j+half_window] = vars_array[4]     # y endpoint
+                    out_array_vars[5, i+half_window, j+half_window] = vars_array[5]     # x endpoint
+
+        ###################################
+        # Edge linearity derivation (3.3.2)
+        ###################################
+        # TODO: collinearity
+        for i in range(0, row_dims):
+
             for j in range(0, col_dims):
 
                 if out_array_vars[0, i+half_window, j+half_window] > -9999:
@@ -2038,12 +2047,11 @@ cdef np.ndarray[DTYPE_float32_t, ndim=3] saliency_window(DTYPE_float32_t[:, :] e
                 else:
                     out_array_lin[i+half_window, j+half_window] = 0.
 
-    ##################################
-    # Edge saliency derivation (3.3.3)
-    ##################################
-    with nogil:
+        ##################################
+        # Edge saliency derivation (3.3.3)
+        ##################################
+        for i in range(0, row_dims):
 
-       for i in range(0, row_dims):
            for j in range(0, col_dims):
 
                if out_array_lin[i+half_window, j+half_window] > 0:
@@ -2152,6 +2160,87 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] fill_circles(DTYPE_uint8_t[:, :] image_ar
     return np.asarray(image_array).astype(np.uint8)
 
 
+cdef DTYPE_float32_t _fill_peaks(DTYPE_float32_t[:, ::1] image_block,
+                                 unsigned int window_size,
+                                 unsigned int half_window,
+                                 unsigned int upper_thresh) nogil:
+
+    cdef:
+        Py_ssize_t ii, jj
+        DTYPE_float32_t bcv = image_block[half_window, half_window]
+        DTYPE_float32_t bnv
+        DTYPE_float32_t block_mean = 0.
+        unsigned int block_counter = 0
+
+    for ii in range(0, window_size):
+
+        for jj in range(0, window_size):
+
+            if (ii == half_window) and (jj == half_window):
+                continue
+
+            bnv = image_block[ii, jj]
+
+            # Less than the center value?
+            if bnv < bcv:
+
+                block_mean += bnv
+                block_counter += 1
+
+    if block_counter >= upper_thresh:
+
+        # Return the mean of the neighbors
+        return block_mean / float(block_counter)
+
+    else:
+
+        # Return the original center value
+        return bcv
+
+
+cdef np.ndarray[DTYPE_float32_t, ndim=2] fill_peaks(DTYPE_float32_t[:, ::1] image2fill,
+                                                    unsigned int window_size,
+                                                    int iterations):
+
+    """Fills peaks"""
+
+    cdef:
+        Py_ssize_t i, j, iteration
+        int rows = image2fill.shape[0]
+        int cols = image2fill.shape[1]
+        unsigned int half_window = <int>(window_size / 2.)
+        unsigned int row_dims = rows - (half_window * 2)
+        unsigned int col_dims = cols - (half_window * 2)
+        DTYPE_float32_t[:, ::1] out_array
+        unsigned int upper_thresh
+
+    if window_size == 3:
+        upper_thresh = (window_size * 2) + 1
+    else:
+        upper_thresh = (window_size * 2) + ((window_size - 2) * 2)
+
+    for iteration in range(0, iterations):
+
+        out_array = np.zeros((rows, cols), dtype='float32')
+
+        with nogil:
+
+            for i in range(0, row_dims):
+
+                for j in range(0, col_dims):
+
+                    out_array[i+half_window,
+                              j+half_window] = _fill_peaks(image2fill[i:i+window_size,
+                                                                      j:j+window_size],
+                                                           window_size,
+                                                           half_window,
+                                                           upper_thresh)
+
+            image2fill[...] = out_array
+
+    return np.float32(image2fill)
+
+
 cdef DTYPE_float32_t _fill_basins(DTYPE_float32_t[:, ::1] image_block,
                                   unsigned int window_size,
                                   unsigned int half_window,
@@ -2204,7 +2293,12 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] fill_basins(DTYPE_float32_t[:, ::1] ima
         unsigned int row_dims = rows - (half_window * 2)
         unsigned int col_dims = cols - (half_window * 2)
         DTYPE_float32_t[:, ::1] out_array
-        unsigned int upper_thresh = (window_size * window_size) - 2
+        unsigned int upper_thresh
+
+    if window_size == 3:
+        upper_thresh = (window_size * 2) + 1
+    else:
+        upper_thresh = (window_size * 2) + ((window_size - 2) * 2)
 
     for iteration in range(0, iterations):
 
@@ -2376,9 +2470,214 @@ cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
         return (bcv / 2.) * -1.
 
 
+cdef void _replace_with_mean(DTYPE_float32_t[:, ::1] edge_block_,
+                             DTYPE_float32_t[:, ::1] bzc,
+                             unsigned int window_size) nogil:
+
+    cdef:
+        Py_ssize_t ii, jj
+        DTYPE_float32_t line_mean = 1000000.
+        # unsigned int line_counter = 0
+
+    for ii in range(0, window_size):
+
+        for jj in range(0, window_size):
+
+            if bzc[ii, jj] == 1:
+
+                # line_mean += edge_block_[ii, jj]
+                # line_counter += 1
+                line_mean = int_min(line_mean, edge_block_[ii, jj])
+
+    # line_mean /= float(line_counter)
+
+    for ii in range(0, window_size):
+
+        for jj in range(0, window_size):
+
+            if bzc[ii, jj] == 1:
+                edge_block_[ii, jj] = line_mean
+
+
+cdef DTYPE_float32_t[:, ::1] _edge_tracker(DTYPE_float32_t[:, ::1] edge_block,
+                                           unsigned int window_size,
+                                           unsigned int hw,
+                                           DTYPE_float32_t[:, ::1] bzc,
+                                           DTYPE_float32_t[:, ::1] bzcz,
+                                           DTYPE_float32_t diff_thresh,
+                                           bint force_line,
+                                           DTYPE_uint8_t[::1] row_neighbors,
+                                           DTYPE_uint8_t[::1] col_neighbors) nogil:
+
+    cdef:
+
+        Py_ssize_t iteration, n, i_, j_
+        unsigned int iterations
+
+        DTYPE_float32_t center_value = edge_block[hw, hw]
+        DTYPE_float32_t compare_value, n_value, abs_diff, min_diff
+
+        int rr, cc, ri, ci, bi, bj
+        unsigned int chi, chj
+
+        bint stop_iters, any_found, min_found
+
+        unsigned int fill_window_size = 3
+        unsigned int fill_half_window = <int>(fill_window_size / 2.)
+        unsigned int window_dims = fill_window_size - (fill_half_window * 2)
+        unsigned int upper_thresh = (fill_window_size * fill_window_size) - 2
+
+    if force_line:
+        iterations = 1
+    else:
+        iterations = 3
+
+    bzc[hw, hw] = 1
+
+    for iteration in range(0, iterations):
+
+        stop_iters = False
+
+        rr, cc = hw, hw
+
+        compare_value = edge_block[hw, hw]
+
+        # 1 = decreasing
+        # 2 = increasing
+        chi = 0
+        chj = 0
+
+        any_found = False
+
+        while True:
+
+            min_diff = diff_thresh
+            min_found = False
+
+            # Check neighboring values
+            for n in range(0, 8):
+
+                ri = rr + (row_neighbors[n] - 1)
+                ci = cc + (col_neighbors[n] - 1)
+
+                if (ri < 0) or (ci < 0):
+
+                    stop_iters = True
+                    break
+
+                if (ri >= window_size) or (ci >= window_size):
+
+                    stop_iters = True
+                    break
+
+                if force_line:
+
+                    if chi > 0:
+
+                        # Ensure decreasing
+                        if chi == 1:
+                            if ri > rr:
+                                continue
+
+                        # Ensure increasing
+                        if chi == 2:
+                            if ri < rr:
+                                continue
+
+                    if chj > 0:
+
+                        # Ensure decreasing
+                        if chj == 1:
+                            if ci > cc:
+                                continue
+
+                        # Ensure increasing
+                        if chj == 2:
+                            if ci < cc:
+                                continue
+
+                if bzc[ri, ci] == 1:
+                    continue
+
+                n_value = edge_block[ri, ci]
+                abs_diff = _abs(compare_value - n_value)
+                # abs_pdiff = _abs(_perc_diff(compare_value, n_value))
+
+                if abs_diff < min_diff:
+
+                    min_diff = abs_diff
+
+                    bi = ri
+                    bj = ci
+
+                    if chi == 0:
+
+                        if bi < rr:
+                            chi = 1
+                        else:
+                            chi = 2
+
+                    if chj == 0:
+
+                        if bj < cc:
+                            chj = 1
+                        else:
+                            chj = 2
+
+                    any_found = True
+                    min_found = True
+
+            if not min_found:
+                break
+
+            if stop_iters:
+                break
+
+            # Track the line
+            bzc[bi, bj] = 1
+
+            rr, cc = bi, bj
+
+            # Continue along the path of least resistance.
+            compare_value = edge_block[rr, cc]
+
+        if not any_found:
+            return edge_block
+
+    for iteration in range(0, 2):
+
+        bzcz[...] = bzc
+
+        for i_ in range(0, window_dims):
+
+            for j_ in range(0, window_dims):
+
+                bzcz[i_+fill_half_window,
+                     j_+fill_half_window] = _fill_basins(bzc[i_:i_+fill_window_size,
+                                                             j_:j_+fill_window_size],
+                                                         fill_window_size,
+                                                         fill_half_window,
+                                                         upper_thresh)
+
+        bzc[...] = bzcz
+
+    # with gil:
+    #
+    #     bzc = np.float32(cv2.morphologyEx(np.float32(bzc),
+    #                                       cv2.MORPH_CLOSE,
+    #                                       np.array([[0, 1, 1], [1, 1, 1], [0, 1, 0]],
+    #                                                dtype='uint8'),
+    #                                       iterations=1))
+
+    _replace_with_mean(edge_block, bzc, window_size)
+
+    return edge_block
+
+
 cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image_array,
+                                                   unsigned int window_size,
                                                    DTYPE_float32_t diff_thresh,
-                                                   DTYPE_float32_t var_thresh):
+                                                   bint force_line):
 
     cdef:
         Py_ssize_t i, j
@@ -2386,109 +2685,16 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image
         unsigned int rows = image_array.shape[0]
         unsigned int cols = image_array.shape[1]
 
-        unsigned int window_size = 7
         unsigned int half_window = <int>(window_size / 2.)
         unsigned int row_dims = rows - (half_window * 2)
         unsigned int col_dims = cols - (half_window * 2)
 
-        DTYPE_float32_t morph_value
+        DTYPE_float32_t[:, ::1] bz = np.zeros((window_size, window_size), dtype='float32')
+        DTYPE_float32_t[:, ::1] bzc = bz.copy()
+        DTYPE_float32_t[:, ::1] bzcz = bz.copy()
 
-        # DTYPE_float32_t[:, ::1] out_array = np.zeros((rows, cols), dtype='float32')
-
-        DTYPE_float32_t[:, ::1] w1 = np.array([[0, 0, 1, 1, 1, 0, 0],
-                                               [0, 0, 1, 1, 1, 0, 0],
-                                               [0, 0, 1, 1, 1, 0, 0],
-                                               [0, 0, 1, 1, 1, 0, 0],
-                                               [0, 0, 1, 1, 1, 0, 0],
-                                               [0, 0, 1, 1, 1, 0, 0],
-                                               [0, 0, 1, 1, 1, 0, 0]], dtype='float32')
-
-        DTYPE_float32_t[:, ::1] w2 = np.array([[0, 0, 1, 0, 0, 0, 0],
-                                               [0, 0, 1, 0, 0, 0, 0],
-                                               [0, 0, 1, 1, 0, 0, 0],
-                                               [0, 0, 0, 1, 0, 0, 0],
-                                               [0, 0, 0, 1, 1, 0, 0],
-                                               [0, 0, 0, 0, 1, 0, 0],
-                                               [0, 0, 0, 0, 1, 0, 0]], dtype='float32')
-
-        DTYPE_float32_t[:, ::1] w3 = np.array([[0, 1, 0, 0, 0, 0, 0],
-                                               [0, 1, 1, 0, 0, 0, 0],
-                                               [0, 0, 1, 1, 0, 0, 0],
-                                               [0, 0, 0, 1, 0, 0, 0],
-                                               [0, 0, 0, 1, 1, 0, 0],
-                                               [0, 0, 0, 0, 1, 1, 0],
-                                               [0, 0, 0, 0, 0, 1, 0]], dtype='float32')
-
-        DTYPE_float32_t[:, ::1] w4 = np.array([[1, 0, 0, 0, 0, 0, 0],
-                                               [0, 1, 1, 0, 0, 0, 0],
-                                               [0, 1, 1, 1, 0, 0, 0],
-                                               [0, 0, 1, 1, 1, 0, 0],
-                                               [0, 0, 0, 1, 1, 1, 0],
-                                               [0, 0, 0, 0, 1, 1, 0],
-                                               [0, 0, 0, 0, 0, 0, 1]], dtype='float32')
-
-        DTYPE_float32_t[:, ::1] w5 = np.array([[0, 0, 0, 0, 0, 0, 0],
-                                               [1, 1, 0, 0, 0, 0, 0],
-                                               [0, 1, 1, 1, 0, 0, 0],
-                                               [0, 0, 1, 1, 1, 0, 0],
-                                               [0, 0, 0, 1, 1, 1, 0],
-                                               [0, 0, 0, 0, 0, 1, 1],
-                                               [0, 0, 0, 0, 0, 0, 0]], dtype='float32')
-
-        DTYPE_float32_t[:, ::1] w6 = np.array([[0, 0, 0, 0, 0, 0, 0],
-                                               [0, 0, 0, 0, 0, 0, 0],
-                                               [1, 1, 1, 0, 0, 0, 0],
-                                               [0, 0, 1, 1, 1, 0, 0],
-                                               [0, 0, 0, 0, 1, 1, 1],
-                                               [0, 0, 0, 0, 0, 0, 0],
-                                               [0, 0, 0, 0, 0, 0, 0]], dtype='float32')
-
-        DTYPE_float32_t[:, ::1] w7 = np.array([[0, 0, 0, 0, 0, 0, 0],
-                                               [0, 0, 0, 0, 0, 0, 0],
-                                               [1, 1, 1, 1, 1, 1, 1],
-                                               [1, 1, 1, 1, 1, 1, 1],
-                                               [1, 1, 1, 1, 1, 1, 1],
-                                               [0, 0, 0, 0, 0, 0, 0],
-                                               [0, 0, 0, 0, 0, 0, 0]], dtype='float32')
-
-        DTYPE_float32_t[:, ::1] w8 = np.ascontiguousarray(np.fliplr(np.float32(w6)))
-        DTYPE_float32_t[:, ::1] w9 = np.ascontiguousarray(np.fliplr(np.float32(w5)))
-        DTYPE_float32_t[:, ::1] w10 = np.ascontiguousarray(np.fliplr(np.float32(w4)))
-        DTYPE_float32_t[:, ::1] w11 = np.ascontiguousarray(np.fliplr(np.float32(w3)))
-        DTYPE_float32_t[:, ::1] w12 = np.ascontiguousarray(np.fliplr(np.float32(w2)))
-
-        DTYPE_float32_t[:, ::1] w13 = np.array([[0, 0, 0, 1, 0, 0, 0],
-                                                [0, 0, 0, 1, 0, 0, 0],
-                                                [0, 0, 1, 1, 1, 0, 0],
-                                                [1, 1, 1, 1, 1, 1, 1],
-                                                [0, 0, 1, 1, 1, 0, 0],
-                                                [0, 0, 0, 1, 0, 0, 0],
-                                                [0, 0, 0, 1, 0, 0, 0]], dtype='float32')
-
-        DTYPE_float32_t[:, ::1] w14 = np.array([[1, 0, 0, 0, 0, 0, 1],
-                                                [0, 1, 0, 0, 0, 1, 0],
-                                                [0, 0, 1, 1, 1, 0, 0],
-                                                [0, 0, 1, 1, 1, 0, 0],
-                                                [0, 0, 1, 1, 1, 0, 0],
-                                                [0, 1, 0, 0, 0, 1, 0],
-                                                [1, 0, 0, 0, 0, 0, 1]], dtype='float32')
-
-        DTYPE_float32_t[:, :, ::1] window_stack = np.zeros((14, window_size, window_size), dtype='float32')
-
-    window_stack[0] = w1
-    window_stack[1] = w2
-    window_stack[2] = w3
-    window_stack[3] = w4
-    window_stack[4] = w5
-    window_stack[5] = w6
-    window_stack[6] = w7
-    window_stack[7] = w8
-    window_stack[8] = w9
-    window_stack[9] = w10
-    window_stack[10] = w11
-    window_stack[11] = w12
-    window_stack[12] = w13
-    window_stack[13] = w14
+        DTYPE_uint8_t[::1] row_neighbors = np.array([0, 0, 0, 1, 1, 2, 2, 2], dtype='uint8')
+        DTYPE_uint8_t[::1] col_neighbors = np.array([0, 1, 2, 0, 2, 0, 1, 2], dtype='uint8')
 
     with nogil:
 
@@ -2496,15 +2702,20 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image
 
             for j in range(0, col_dims):
 
-                morph_value = _egm_morph(image_array[i:i+window_size,
-                                                     j:j+window_size],
-                                         window_size,
-                                         half_window,
-                                         window_stack,
-                                         diff_thresh,
-                                         var_thresh)
+                bzc[...] = bz
+                bzcz[...] = bz
 
-                image_array[i+half_window, j+half_window] += morph_value
+                image_array[i:i+window_size,
+                            j:j+window_size] = _edge_tracker(image_array[i:i+window_size,
+                                                                         j:j+window_size],
+                                                             window_size,
+                                                             half_window,
+                                                             bzc,
+                                                             bzcz,
+                                                             diff_thresh,
+                                                             force_line,
+                                                             row_neighbors,
+                                                             col_neighbors)
 
     return np.float32(image_array)
 
@@ -2864,7 +3075,8 @@ def moving_window(np.ndarray image_array,
                   list inhibition_scales=[1., .75, .5, .25],
                   int value_pos=0,
                   float diff_thresh=.5,
-                  float var_thresh=.02):
+                  float var_thresh=.02,
+                  bint force_line=False):
 
     """
     Args:
@@ -2880,6 +3092,7 @@ def moving_window(np.ndarray image_array,
             duda: TODO
             egm-morph:
             fill-basins: Fills pixels surrounded by higher values
+            fill-peaks: Fills pixels surrounded by lower values
             fill: Fill 0s surrounded by 1s
             inhibition: TODO
             link: Links binary endpoints
@@ -2919,6 +3132,7 @@ def moving_window(np.ndarray image_array,
                          'sum',
                          'link',
                          'fill-basins',
+                         'fill-peaks',
                          'fill',
                          'circles',
                          'distance',
@@ -2951,8 +3165,9 @@ def moving_window(np.ndarray image_array,
     elif statistic == 'egm-morph':
 
         return egm_morph(np.float32(np.ascontiguousarray(image_array)),
+                         window_size,
                          diff_thresh,
-                         var_thresh)
+                         force_line)
 
     elif statistic == 'saliency':
 
@@ -2970,6 +3185,12 @@ def moving_window(np.ndarray image_array,
         return fill_basins(np.float32(np.ascontiguousarray(image_array)),
                            window_size,
                            iterations)
+
+    elif statistic == 'fill-peaks':
+
+        return fill_peaks(np.float32(np.ascontiguousarray(image_array)),
+                          window_size,
+                          iterations)
 
     elif statistic == 'fill':
 
