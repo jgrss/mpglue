@@ -157,7 +157,7 @@ cdef DTYPE_float32_t _get_line_angle(DTYPE_float32_t point1_y,
         point1_x (int): Center point column coordinate.
         point2_y (int): End point row coordinate.
         point2_x (int): End point column coordinate.
-        wsh (int): The window size minus 1.
+        wsh (int): The line length.
     
     point1: [y1, x1]
     point2: [y2, x2]
@@ -1651,9 +1651,8 @@ cdef Py_ssize_t _orthogonal_opt(DTYPE_float32_t y1,
                                 DTYPE_float32_t x2,
                                 DTYPE_float32_t center_value,
                                 unsigned int half_window,
-                                unsigned int window_size,
                                 DTYPE_float32_t[:, ::1] edge_image_block,
-                                DTYPE_float32_t[:, ::1] rc) nogil:
+                                DTYPE_float32_t[:, ::1] rcc2_) nogil:
 
     """
     Finds the maximum number of pixels along an orthogonal
@@ -1666,10 +1665,10 @@ cdef Py_ssize_t _orthogonal_opt(DTYPE_float32_t y1,
     """
 
     cdef:
-        Py_ssize_t y3_, x3_, y3, x3, li
-        int rc_shape
+        int y3_, x3_, y3, x3, li
+        unsigned int rc_length_
         Py_ssize_t max_consecutive = 0
-        DTYPE_float32_t[::1] line_values
+        DTYPE_float32_t[::1] line_values_
 
     # First, translate the coordinate
     #   to the Cartesian plane.
@@ -1681,28 +1680,28 @@ cdef Py_ssize_t _orthogonal_opt(DTYPE_float32_t y1,
     x3 = y3_ * -1       # = -2
 
     # Translate back to a Python grid.
-    y3 = <int>(_abs(float(y3 - half_window)))       # abs(-2 - 2) = 4
+    y3 = <int>(_abs(float(y3) - float(half_window)))       # abs(-2 - 2) = 4
     x3 = x3 + half_window                           # -2 + 2 = 0
 
     # Find the orthogonal line
     # Draw a line from the center pixel
     #   to the current end coordinate.
-    draw_line(<int>y1, <int>y2, <int>y3, <int>x3, rc)
+    draw_line(<int>y1, <int>y2, <int>y3, <int>x3, rcc2_)
 
     # Get the current line length.
-    rc_shape = <int>rc[2, 0]
+    rc_length_ = <int>rcc2_[2, 0]
 
     # row of zeros, up to the line length
-    line_values = rc[3, :rc_shape]
-    
+    line_values_ = rcc2_[3, :rc_length_]
+
     # Extract the values along the line.
-    _extract_values(edge_image_block, line_values, rc, rc_shape)
-    
+    _extract_values(edge_image_block, line_values_, rcc2_, rc_length_)
+
     # Get the the maximum number of consecutive pixels
     #   with values less than the center pixel.
-    for li in range(1, rc_shape):
+    for li in range(1, rc_length_):
 
-        if line_values[li] >= center_value:
+        if line_values_[li] >= center_value:
             break
         else:
             max_consecutive += 1
@@ -1719,11 +1718,85 @@ cdef void _fill_zeros(DTYPE_float32_t[::1] array2fill, unsigned int array_length
         array2fill[fill_idx] = 0.
 
 
+cdef void _get_angle_info(DTYPE_float32_t[:, ::1] edge_image_block,
+                          Py_ssize_t ii_,
+                          Py_ssize_t jj_,
+                          unsigned int window_size,
+                          unsigned int half_window,
+                          DTYPE_float32_t[:, ::1] rcc1,
+                          DTYPE_float32_t[:, ::1] rcc2,
+                          DTYPE_float32_t[::1] sums_array,
+                          DTYPE_float32_t[::1] sums_array_,
+                          DTYPE_float32_t center_value,
+                          DTYPE_float32_t[::1] vars_array__) nogil:
+
+    cdef:
+        unsigned int rc_length
+        Py_ssize_t nc_opt
+        DTYPE_float32_t[::1] line_values
+        DTYPE_float32_t theta_opt
+
+    # Draw a line from the center pixel
+    #   to the current end coordinate.
+    draw_line(half_window, half_window, ii_, jj_, rcc1)
+
+    # Get the current line length.
+    rc_length = <int>rcc1[2, 0]
+
+    # Extract a row of zeros, up to
+    #   the line length.
+    line_values = rcc1[3, :rc_length]
+
+    # Extract the values along the line.
+    _extract_values(edge_image_block, line_values, rcc1, rc_length)
+
+    # Ensure the sums holder is empty.
+    sums_array_[...] = sums_array
+
+    # Get the sum of edge gradient
+    #   magnitudes along the line.
+    _get_sum1d_f(line_values, rc_length, sums_array_)
+
+    # Get the angle if there is a new maximum
+    #   edge gradient magnitude.
+    if sums_array_[0] > vars_array__[1]:
+
+        # Get the angle of the line.
+        theta_opt = _get_line_angle(rcc1[0, 0],
+                                    rcc1[1, 0],
+                                    rcc1[0, rc_length-1],
+                                    rcc1[1, rc_length-1],
+                                    rc_length)
+
+        # Get the maximum number of consecutive
+        #   pixels with an edge intensity value
+        #   less than the center pixel, found
+        #   searching orthogonally to the
+        #   optimal edge direction.
+        nc_opt = _orthogonal_opt(rcc1[0, 0],
+                                 rcc1[1, 0],
+                                 rcc1[0, rc_length-1],
+                                 rcc1[1, rc_length-1],
+                                 center_value,
+                                 half_window,
+                                 edge_image_block,
+                                 rcc2)
+
+        vars_array__[0] = theta_opt          # theta_opt
+        vars_array__[1] = sums_array_[0]     # si_opt
+        vars_array__[2] = sums_array_[1]     # n_opt
+        vars_array__[3] = nc_opt             # nc_opt
+        vars_array__[4] = ii_                # y endpoint
+        vars_array__[5] = jj_                # x endpoint
+
+
 cdef void _optimal_edge_orientation(DTYPE_float32_t[:, ::1] edge_image_block,
                                     DTYPE_uint8_t[::1] indices,
-                                    int half_window,
-                                    int window_size,
-                                    DTYPE_float32_t[:, ::1] rc,
+                                    unsigned int window_size,
+                                    unsigned int half_window,
+                                    unsigned int l_size,
+                                    DTYPE_float32_t[:, ::1] rcc1,
+                                    DTYPE_float32_t[:, ::1] rcc2,
                                     DTYPE_float32_t[::1] vars_array_,
                                     DTYPE_float32_t[::1] sums_array,
                                     DTYPE_float32_t[::1] sums_array_) nogil:
@@ -1737,8 +1810,10 @@ cdef void _optimal_edge_orientation(DTYPE_float32_t[:, ::1] edge_image_block,
     """
 
     cdef:
+        Py_ssize_t ii, jj
+
         Py_ssize_t end_idx, end_idx_r, pix_idx_r, j__, nc_opt
-        int rc_shape
+        unsigned int rc_length
         DTYPE_float32_t si_sum
         DTYPE_float32_t line_angle = 0.
         DTYPE_float32_t si_max = -9999.
@@ -1746,129 +1821,53 @@ cdef void _optimal_edge_orientation(DTYPE_float32_t[:, ::1] edge_image_block,
         DTYPE_float32_t[::1] line_values
         DTYPE_float32_t theta_opt
 
-    # Iterate over top and bottom rows.
-    for end_idx in range(0, 2):
+        # l = 4 :: 3-5
+        unsigned int min_line_length = <int>((l_size / 2.) + 1)
+        unsigned int max_line_length = <int>(l_size + 1)
 
-        # Get the end index (0 or window size-1).
-        end_idx_r = indices[end_idx]
+    #########################
+    # FIRST DO LINES WITH
+    # ENDPOINTS AT THE CENTER
+    #########################
+    for ii in range(0, window_size):
 
-        # Iterate over the window length.
-        for pix_idx_r in range(0, window_size):
+        with gil:
+            print ii
 
-            # Ensure empty
-            sums_array_[...] = sums_array
+        if (ii >= min_line_length) and (ii <= max_line_length):
+            continue
 
-            # Draw a line from the center pixel
-            #   to the current end coordinate.
-            draw_line(half_window, half_window, end_idx_r, pix_idx_r, rc)
+        for jj in range(0, window_size):
 
-            # Get the current line length.
-            rc_shape = <int>rc[2, 0]
+            with gil:
+                print jj
 
-            # row of zeros, up to the line length
-            line_values = rc[3, :rc_shape]
+            if (jj >= min_line_length) and (jj <= max_line_length):
+                continue
 
-            # Extract the values along the line.
-            _extract_values(edge_image_block, line_values, rc, rc_shape)
+            _get_angle_info(edge_image_block,
+                            ii,
+                            jj,
+                            window_size,
+                            half_window,
+                            rcc1,
+                            rcc2,
+                            sums_array,
+                            sums_array_,
+                            center_value,
+                            vars_array_)
 
-            # Get the sum of edge gradient
-            #   magnitudes along the line.
-            _get_sum1d_f(line_values, rc_shape, sums_array_)
+            with gil:
 
-            # Get the angle if there is a new maximum
-            #   edge gradient magnitude.
-            if sums_array_[0] > vars_array_[1]:
+                print vars_array_[0]
+                print vars_array_[1]
+                print vars_array_[2]
+                print vars_array_[3]
+                print vars_array_[4]
+                print vars_array_[5]
 
-                # Get the angle of the line.
-                theta_opt = _get_line_angle(rc[0, 0],
-                                            rc[1, 0],
-                                            rc[0, rc_shape-1],
-                                            rc[1, rc_shape-1],
-                                            window_size-1)
-
-                nc_opt = _orthogonal_opt(rc[0, 0],
-                                         rc[0, 0],
-                                         rc[0, rc_shape-1],
-                                         rc[1, rc_shape-1],
-                                         center_value,
-                                         half_window,
-                                         window_size,
-                                         edge_image_block,
-                                         rc)
-
-                vars_array_[0] = theta_opt          # theta_opt
-                vars_array_[1] = sums_array_[0]     # si_opt
-                vars_array_[2] = sums_array_[1]     # n_opt
-                vars_array_[3] = nc_opt             # nc_opt
-                vars_array_[4] = pix_idx_r          # y endpoint
-                vars_array_[5] = end_idx_r          # x endpoint
-
-            # print 'Indices: ', np.array(rc)
-            # print 'Shape: ', rc_shape
-            # print np.array(edge_image_block)
-            # print 'Line values: ', np.array(line_values)
-            # print 'Sums: ', np.array(sums_array_)
-            # print 'Vars: ', np.array(vars_array_)
-            # print 'Coords: ', rc[0, 0], rc[1, 0], rc[0, rc_shape-1], rc[1, rc_shape-1]
-            # print
-            # return
-
-    # Iterate over top and bottom rows.
-    for end_idx in range(0, 2):
-
-        # Get the end index (0 or window size-1).
-        end_idx_r = indices[end_idx]
-
-        # Iterate over the window length.
-        for pix_idx_r in range(0, window_size):
-
-            # Ensure empty
-            sums_array_[...] = sums_array
-
-            # Draw a line from the center pixel
-            #   to the current end coordinate.
-            draw_line(half_window, half_window, pix_idx_r, end_idx_r, rc)
-
-            # Get the current line length.
-            rc_shape = <int>rc[2, 0]
-
-            # row of zeros, up to the line length
-            line_values = rc[3, :rc_shape]
-
-            # Extract the values along the line.
-            _extract_values(edge_image_block, line_values, rc, rc_shape)
-
-            # Get the sum of edge gradient
-            #   magnitudes along the line.
-            _get_sum1d_f(line_values, rc_shape, sums_array_)
-
-            # Get the angle if there is a new maximum
-            #   edge gradient magnitude.
-            if sums_array_[0] > vars_array_[1]:
-
-                # Get the angle of the line.
-                theta_opt = _get_line_angle(rc[0, 0],
-                                            rc[1, 0],
-                                            rc[0, rc_shape-1],
-                                            rc[1, rc_shape-1],
-                                            window_size-1)
-
-                nc_opt = _orthogonal_opt(rc[0, 0],
-                                         rc[0, 0],
-                                         rc[0, rc_shape-1],
-                                         rc[1, rc_shape-1],
-                                         center_value,
-                                         half_window,
-                                         window_size,
-                                         edge_image_block,
-                                         rc)
-
-                vars_array_[0] = theta_opt          # theta_opt
-                vars_array_[1] = sums_array_[0]     # si_opt
-                vars_array_[2] = sums_array_[1]     # n_opt
-                vars_array_[3] = nc_opt             # nc_opt
-                vars_array_[4] = pix_idx_r          # y endpoint
-                vars_array_[5] = end_idx_r          # x endpoint
+                import sys
+                sys.exit()
 
 
 cdef DTYPE_float32_t _edge_linearity(DTYPE_float32_t[:, ::1] optimal_values_array,
@@ -1944,10 +1943,14 @@ cdef DTYPE_float32_t _edge_saliency(DTYPE_float32_t si_opt,
 
 
 cdef np.ndarray[DTYPE_float32_t, ndim=3] saliency_window(DTYPE_float32_t[:, ::1] edge_image,
-                                                         unsigned int window_size):
+                                                         unsigned int window_size,
+                                                         unsigned int l_size):
 
     """
     Computes image edge saliency
+    
+    Reference:
+        Lin and Roy (2015)
     """
 
     cdef:
@@ -1967,7 +1970,8 @@ cdef np.ndarray[DTYPE_float32_t, ndim=3] saliency_window(DTYPE_float32_t[:, ::1]
         DTYPE_uint8_t[::1] pix_indices = np.array([0, window_size-1], dtype='uint8')
         DTYPE_float32_t param_l = float(half_window + 1)
         DTYPE_float32_t param_v = (param_l / 2.) + 1.
-        DTYPE_float32_t[:, ::1] rcc = np.zeros((4, window_size*2), dtype='float32')
+        DTYPE_float32_t[:, ::1] rc1 = np.zeros((4, window_size*2), dtype='float32')
+        DTYPE_float32_t[:, ::1] rc2 = rc1.copy()
 
         DTYPE_float32_t[::1] sums_array = np.zeros(2, dtype='float32')
         DTYPE_float32_t[::1] sums_array_ = sums_array.copy()
@@ -1995,7 +1999,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=3] saliency_window(DTYPE_float32_t[:, ::1]
 
             for j in range(0, col_dims):
 
-                if edge_image[i+half_window, j+half_window] > 1:
+                if edge_image[i+half_window, j+half_window] > 0:
 
                     vars_array_[...] = vars_array
 
@@ -2010,9 +2014,11 @@ cdef np.ndarray[DTYPE_float32_t, ndim=3] saliency_window(DTYPE_float32_t[:, ::1]
                     _optimal_edge_orientation(edge_image[i:i+window_size,
                                                          j:j+window_size],
                                               pix_indices,
-                                              half_window,
                                               window_size,
-                                              rcc,
+                                              half_window,
+                                              l_size,
+                                              rc1,
+                                              rc2,
                                               vars_array_,
                                               sums_array,
                                               sums_array_)
@@ -2044,7 +2050,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=3] saliency_window(DTYPE_float32_t[:, ::1]
                                                                    window_size,
                                                                    param_l,
                                                                    theta_opt,
-                                                                   rcc)
+                                                                   rc1)
 
                 else:
                     out_array_lin[i+half_window, j+half_window] = 0.
@@ -3076,6 +3082,7 @@ def moving_window(np.ndarray image_array,
                   int medium_allowed_gap=7,
                   list inhibition_scales=[1., .75, .5, .25],
                   int value_pos=0,
+                  int l_size=4,
                   float diff_thresh=.5,
                   float var_thresh=.02,
                   bint force_line=False):
@@ -3174,7 +3181,8 @@ def moving_window(np.ndarray image_array,
     elif statistic == 'saliency':
 
         return saliency_window(np.float32(np.ascontiguousarray(image_array)),
-                               window_size)
+                               window_size,
+                               l_size)
 
     elif statistic == 'inhibition':
 
