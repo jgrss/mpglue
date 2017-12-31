@@ -3279,7 +3279,7 @@ def moving_window(np.ndarray image_array not None,
                   int medium_allowed_gap=7,
                   int inhibition_ws=3,
                   float inhibition_scale=.5,
-                  np.ndarray corners_array=None,
+                  corners_array=None,
                   int inhibition_operation=1,
                   int value_pos=0,
                   int l_size=4,
@@ -3410,12 +3410,17 @@ def moving_window(np.ndarray image_array not None,
 
         disk2[disk1 == 1] = 2
 
+        if not isinstance(corners_array, np.ndarray):
+            corners_array = np.zeros((image_array.shape[0], image_array.shape[1]), dtype='uint8')
+        else:
+            corners_array = np.uint8(np.ascontiguousarray(corners_array))
+
         return _inhibition(np.float32(np.ascontiguousarray(image_array)),
                            window_size,
                            inhibition_scale,
                            np.float32(np.ascontiguousarray(disk2)),
                            iterations,
-                           np.uint8(np.ascontiguousarray(corners_array)),
+                           corners_array,
                            inhibition_operation)
 
     elif statistic == 'fill-basins':
