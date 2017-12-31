@@ -1262,9 +1262,9 @@ cdef tuple _link_endpoints(DTYPE_uint8_t[:, :] edge_block,
     #   in the block.
     if _get_sum_int(endpoints_block, window_size, window_size) > 1:
 
-        for ii in xrange(0, window_size-2):
+        for ii in range(0, window_size-2):
 
-            for jj in xrange(0, window_size-2):
+            for jj in range(0, window_size-2):
 
                 # Cannot connect to direct neighbors or itself.
                 if (_abs(float(ii) - float(center)) <= 1) and (_abs(float(jj) - float(center)) <= 1):
@@ -1640,7 +1640,7 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] link_window(DTYPE_uint8_t[:, :] edge_imag
     endpoint_idx = np.argwhere(np.asarray(endpoint_image) == 1)
     endpoint_idx_rows = endpoint_idx.shape[0]
 
-    for cij in xrange(0, endpoint_idx_rows):
+    for cij in range(0, endpoint_idx_rows):
 
         endpoint_row = endpoint_idx[cij]
 
@@ -1656,8 +1656,14 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] link_window(DTYPE_uint8_t[:, :] edge_imag
         edge_block, ep_block = _link_endpoints(edge_image[isub:isub+window_size, jsub:jsub+window_size],
                                                endpoint_image[isub:isub+window_size, jsub:jsub+window_size],
                                                gradient_image[isub:isub+window_size, jsub:jsub+window_size],
-                                               window_size, angles_dict, h_r, h_c, d_c,
-                                               min_egm, smallest_allowed_gap, medium_allowed_gap)
+                                               window_size,
+                                               angles_dict,
+                                               h_r,
+                                               h_c,
+                                               d_c,
+                                               min_egm,
+                                               smallest_allowed_gap,
+                                               medium_allowed_gap)
 
         edge_image[isub:isub+window_size, jsub:jsub+window_size] = edge_block
         endpoint_image[isub:isub+window_size, jsub:jsub+window_size] = ep_block
@@ -2937,16 +2943,38 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] fill_window(DTYPE_uint8_t[:, :] image_arr
 
 
 cdef DTYPE_float32_t _inhibited_egm(DTYPE_float32_t[:, ::1] block,
+                                    DTYPE_uint8_t[:, ::1] corners_block,
                                     DTYPE_float32_t[:, ::1] inhibition_w,
                                     DTYPE_float32_t inhibition_scale,
                                     unsigned int window_size,
-                                    unsigned int hw) nogil:
+                                    unsigned int hw,
+                                    unsigned int inhibition_operation) nogil:
 
     cdef:
         Py_ssize_t ii, jj
         DTYPE_float32_t center_value = block[hw, hw]
         DTYPE_float32_t inhibition_term = 0.
-        unsigned int counter = 0
+        DTYPE_float32_t center_term = 0.
+        DTYPE_float32_t ini_diff
+        unsigned int term_counter = 0
+        unsigned int center_counter = 0
+        bint center_includes_corner = False
+
+    # Check if there is a corner
+    #   pixel in the center.
+    for ii in range(0, window_size):
+
+        for jj in range(0, window_size):
+
+            if inhibition_w[ii, jj] == 2:
+
+                if corners_block[ii, jj] == 1:
+
+                    center_includes_corner = True
+                    break
+
+    if center_includes_corner:
+        return 0.
 
     # Get the weighted average within the local window.
     #   This is the inhibition term, T.
@@ -2957,21 +2985,46 @@ cdef DTYPE_float32_t _inhibited_egm(DTYPE_float32_t[:, ::1] block,
             if inhibition_w[ii, jj] == 1:
 
                 inhibition_term += block[ii, jj] * inhibition_scale
-                counter += 1
+                term_counter += 1
 
-    inhibition_term /= float(counter)
+            if inhibition_w[ii, jj] == 2:
 
-    if center_value - inhibition_term < 0:
-        return center_value
-    else:
-        return inhibition_term
+                center_term += block[ii, jj] * inhibition_scale
+                center_counter += 1
+
+    inhibition_term /= float(term_counter) * inhibition_scale
+    center_term /= float(center_counter) * inhibition_scale
+
+    ini_diff = inhibition_term - center_term
+
+    if inhibition_operation == 1:
+
+        # The outside term
+        #   should be larger.
+        if ini_diff < 0:
+            ini_diff = 0.
+        else:
+            ini_diff *= -1.
+
+    elif inhibition_operation == 2:
+
+        # The outside term
+        #   should be smaller.
+        if ini_diff > 0:
+            ini_diff = 0.
+        else:
+            ini_diff *= -1.
+
+    return ini_diff
 
 
 cdef np.ndarray[DTYPE_float32_t, ndim=2] _inhibition(DTYPE_float32_t[:, ::1] image_array,
                                                      unsigned int window_size,
                                                      DTYPE_float32_t inhibition_scale,
                                                      DTYPE_float32_t[:, ::1] inhibition_w,
-                                                     unsigned int iterations):
+                                                     unsigned int iterations,
+                                                     DTYPE_uint8_t[:, ::1] corners_array,
+                                                     unsigned int inhibition_operation):
 
     """
     Local EGM inhibition
@@ -2990,6 +3043,9 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] _inhibition(DTYPE_float32_t[:, ::1] ima
         unsigned int row_dims = rows - (half_window*2)
         unsigned int col_dims = cols - (half_window*2)
 
+        DTYPE_float32_t[:, ::1] edge_block
+        DTYPE_uint8_t[:, ::1] corners_block
+
         DTYPE_float32_t[:, ::1] out_array = image_array.copy()
 
     for iteration in range(0, iterations):
@@ -3000,14 +3056,20 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] _inhibition(DTYPE_float32_t[:, ::1] ima
 
                 for j in range(0, col_dims):
 
-                    out_array[i+half_window, j+half_window] -= _inhibited_egm(image_array[i:i+window_size,
-                                                                                          j:j+window_size],
+                    edge_block = image_array[i:i+window_size, j:j+window_size]
+                    corners_block = corners_array[i:i+window_size, j:j+window_size]
+
+                    out_array[i+half_window, j+half_window] -= _inhibited_egm(edge_block,
+                                                                              corners_block,
                                                                               inhibition_w,
                                                                               inhibition_scale,
                                                                               window_size,
-                                                                              half_window)
+                                                                              half_window,
+                                                                              inhibition_operation)
 
             image_array[...] = out_array
+
+        # image_array = np.power(out_array, 2)
 
     return np.float32(out_array)
 
@@ -3200,7 +3262,7 @@ cdef np.ndarray window(DTYPE_float32_t[:, ::1] image_array,
     return np.float32(out_array)
 
 
-def moving_window(np.ndarray image_array,
+def moving_window(np.ndarray image_array not None,
                   str statistic='mean',
                   DTYPE_intp_t window_size=3,
                   int skip_block=0,
@@ -3215,7 +3277,10 @@ def moving_window(np.ndarray image_array,
                   int min_egm=25,
                   int smallest_allowed_gap=3,
                   int medium_allowed_gap=7,
+                  int inhibition_ws=3,
                   float inhibition_scale=.5,
+                  np.ndarray corners_array=None,
+                  int inhibition_operation=1,
                   int value_pos=0,
                   int l_size=4,
                   float diff_thresh=.5,
@@ -3326,9 +3391,7 @@ def moving_window(np.ndarray image_array,
         except ImportError:
             raise ImportError('Pymorph must be installed to use inhibition')
 
-        w1 = window_size - 4
-
-        disk1 = np.uint8(pymorph.sedisk(r=int(w1 / 2.),
+        disk1 = np.uint8(pymorph.sedisk(r=int(inhibition_ws / 2.),
                                         dim=2,
                                         metric='euclidean',
                                         flat=True,
@@ -3341,17 +3404,19 @@ def moving_window(np.ndarray image_array,
                                         h=0) * 1)
 
         disk1 = np.pad(disk1,
-                       (int((window_size - w1) / 2), int((window_size - w1) / 2)),
+                       (int((window_size - inhibition_ws) / 2), int((window_size - inhibition_ws) / 2)),
                        mode='constant',
                        constant_values=(0, 0))
 
-        disk2 -= disk1
+        disk2[disk1 == 1] = 2
 
         return _inhibition(np.float32(np.ascontiguousarray(image_array)),
                            window_size,
                            inhibition_scale,
                            np.float32(np.ascontiguousarray(disk2)),
-                           iterations)
+                           iterations,
+                           np.uint8(np.ascontiguousarray(corners_array)),
+                           inhibition_operation)
 
     elif statistic == 'fill-basins':
 
