@@ -75,7 +75,7 @@ cdef inline DTYPE_float32_t _subtract(DTYPE_float32_t a, DTYPE_float32_t b) nogi
     return a - b
 
 
-cdef inline DTYPE_float32_t int_min(DTYPE_float32_t a, DTYPE_float32_t b) nogil:
+cdef inline DTYPE_float32_t _nogil_get_min(DTYPE_float32_t a, DTYPE_float32_t b) nogil:
     return a if a <= b else b
 
 
@@ -214,7 +214,7 @@ cdef DTYPE_float32_t _get_line_angle(DTYPE_float32_t point1_y,
 
 
 # Define a function pointer to a metric.
-ctypedef DTYPE_float32_t (*metric_ptr)(DTYPE_float32_t[:, ::1], DTYPE_intp_t, DTYPE_intp_t, DTYPE_intp_t, DTYPE_intp_t, DTYPE_float32_t[:, ::1], unsigned int) nogil
+ctypedef DTYPE_float32_t (*metric_ptr)(DTYPE_float32_t[:, ::1], DTYPE_intp_t, DTYPE_intp_t, DTYPE_float32_t, DTYPE_float32_t, DTYPE_float32_t[:, ::1], unsigned int) nogil
 
 
 cdef tuple draw_line_tuple(Py_ssize_t y0, Py_ssize_t x0, Py_ssize_t y1, Py_ssize_t x1):
@@ -265,10 +265,10 @@ cdef tuple draw_line_tuple(Py_ssize_t y0, Py_ssize_t x0, Py_ssize_t y1, Py_ssize
         char steep = 0
         Py_ssize_t x = x0
         Py_ssize_t y = y0
-        Py_ssize_t dx = int(_abs(float(x1) - float(x0)))
-        Py_ssize_t dy = int(_abs(float(y1) - float(y0)))
+        Py_ssize_t dx = <int>(_abs(float(x1) - float(x0)))
+        Py_ssize_t dy = <int>(_abs(float(y1) - float(y0)))
         Py_ssize_t sx, sy, d, i
-        DTYPE_intp_t[:] rr, cc
+        DTYPE_intp_t[::1] rr, cc
         # array template = array('i')
         # array rr, cc
 
@@ -296,7 +296,7 @@ cdef tuple draw_line_tuple(Py_ssize_t y0, Py_ssize_t x0, Py_ssize_t y1, Py_ssize
     # rr = clone(template, int(dx)+1, True)
     # cc = clone(template, int(dx)+1, True)
 
-    for i in xrange(0, dx):
+    for i in range(0, dx):
 
         if steep:
             rr[i] = x
@@ -334,6 +334,23 @@ cdef void _extract_values_byte(DTYPE_uint8_t[:, ::1] block,
         fj_ = rc_[1, fi]
 
         values[fi] = float(block[<int>fi_, <int>fj_])
+
+
+cdef void _extract_values_int(DTYPE_uint8_t[:, ::1] block,
+                              DTYPE_float32_t[::1] values,
+                              DTYPE_float32_t[:, ::1] rc_,
+                              unsigned int fl) nogil:
+
+    cdef:
+        Py_ssize_t fi
+        int fi_, fj_
+
+    for fi in range(0, fl):
+
+        fi_ = <int>rc_[0, fi]
+        fj_ = <int>rc_[1, fi]
+
+        values[fi] = float(block[fi_, fj_])
 
 
 cdef void _extract_values(DTYPE_float32_t[:, ::1] block,
@@ -455,6 +472,131 @@ cdef void draw_line(Py_ssize_t y0,
     rc_[2, 0] = float(dx + 1)
 
 
+cdef void draw_optimum_line(Py_ssize_t y0,
+                            Py_ssize_t x0,
+                            Py_ssize_t y1,
+                            Py_ssize_t x1,
+                            DTYPE_float32_t[:, ::1] rc_,
+                            DTYPE_float32_t[:, ::1] resistance) nogil:
+
+    """
+    Draws a line along the route of least resistance
+    """
+
+    cdef:
+        Py_ssize_t ii_, jj_
+
+        DTYPE_float32_t start_value = resistance[y0, x0]
+        DTYPE_float32_t compare_value, min_diff
+
+        Py_ssize_t track_y = y0
+        Py_ssize_t track_x = x0
+
+        Py_ssize_t gi = y0
+        Py_ssize_t gj = x0
+
+        unsigned int rrows = resistance.shape[0]
+        unsigned int ccols = resistance.shape[1]
+
+        unsigned int line_counter = 1
+
+    rc_[0, 0] = y0
+    rc_[1, 0] = x0
+    rc_[2, 0] = line_counter
+
+    # Continue until the end
+    #   has been reached.
+    while True:
+
+        min_diff = 1000000.
+
+        # Check neighbors
+        for ii_ in range(0, 3):
+
+            # No change
+            if y1 == track_y:
+
+                if ii_ != 1:
+                    continue
+
+            # Increase
+            elif y1 > track_y:
+
+               if ii_ < 1:
+                   continue
+
+            # Decrease
+            else:
+
+                if ii_ > 1:
+                    continue
+
+            # Bounds checking
+            if (track_y + ii_) > y1:
+                track_y = y1
+            else:
+                track_y += ii_
+
+            for jj_ in range(0, 3):
+
+                # No change
+                if x1 == track_x:
+
+                    if jj_ != 1:
+                        continue
+
+                # Increase
+                elif x1 > track_x:
+
+                    if jj_ < 1:
+                        continue
+
+                # Decrease
+                else:
+
+                    if jj_ > 1:
+                        continue
+
+                # Bounds checking
+                if (track_x + jj_) > x1:
+                    track_x = x1
+                else:
+                    track_x += jj_
+
+                compare_value = resistance[track_y, track_y]
+
+                if _abs(start_value - compare_value) < min_diff:
+
+                    min_diff = _abs(start_value - compare_value)
+
+                    gi = track_y
+                    gj = track_x
+
+                track_x = gj
+
+            track_y = gi
+
+        line_counter += 1
+
+        rc_[0, line_counter-1] = gi
+        rc_[1, line_counter-1] = gj
+
+        track_y = gi
+        track_x = gj
+
+        if (gi == y1) and (gj == x1):
+
+            rc_[2, 0] = line_counter
+
+            break
+
+        if line_counter >= rrows:
+
+            rc_[2, 0] = line_counter
+
+            break
+
+
 cdef list _direction_list():
 
     d1_idx = [2, 2, 2, 2, 2], [0, 1, 2, 3, 4]
@@ -534,7 +676,8 @@ cdef dict _direction_dict():
 #     return mu / (v_length + 1)
 
 
-cdef DTYPE_uint8_t _get_mean1d_int(DTYPE_uint8_t[:] block_list, int length):
+cdef DTYPE_uint8_t _get_mean1d_int(DTYPE_uint8_t[::1] block_list,
+                                   unsigned int length):
 
     cdef:
         Py_ssize_t ii
@@ -546,7 +689,8 @@ cdef DTYPE_uint8_t _get_mean1d_int(DTYPE_uint8_t[:] block_list, int length):
     return s / length
 
 
-cdef DTYPE_float32_t _get_mean1d(DTYPE_float32_t[:] block_list, int length) nogil:
+cdef DTYPE_float32_t _get_mean1d(DTYPE_float32_t[:] block_list,
+                                 unsigned int length) nogil:
 
     cdef:
         Py_ssize_t ii
@@ -558,7 +702,8 @@ cdef DTYPE_float32_t _get_mean1d(DTYPE_float32_t[:] block_list, int length) nogi
     return s / length
 
 
-cdef DTYPE_float32_t _get_sum1df(DTYPE_float32_t[:] block_list, int length) nogil:
+cdef DTYPE_float32_t _get_sum1df(DTYPE_float32_t[:] block_list,
+                                 unsigned int length) nogil:
 
     cdef:
         Py_ssize_t fi
@@ -570,13 +715,14 @@ cdef DTYPE_float32_t _get_sum1df(DTYPE_float32_t[:] block_list, int length) nogi
     return s
 
 
-cdef DTYPE_uint8_t _get_sum1d(DTYPE_uint8_t[:] block_list, int length) nogil:
+cdef DTYPE_uint8_t _get_sum1d(DTYPE_uint8_t[::1] block_list,
+                              unsigned int length) nogil:
 
     cdef:
         Py_ssize_t fi
         DTYPE_uint8_t s = block_list[0]
 
-    for fi in xrange(1, length):
+    for fi in range(1, length):
         s += block_list[fi]
 
     return s
@@ -625,7 +771,7 @@ cdef DTYPE_uint8_t _get_argmin1d(DTYPE_float32_t[:] block_list, int length):
 
             b_samp = block_list[ii]
 
-            s = int_min(b_samp, s)
+            s = _nogil_get_min(b_samp, s)
 
             if s == b_samp:
                 argmin = ii
@@ -703,8 +849,8 @@ cdef DTYPE_float32_t _get_median(DTYPE_float32_t[:, :] block, DTYPE_intp_t windo
 cdef DTYPE_float32_t _get_min(DTYPE_float32_t[:, ::1] block,
                               DTYPE_intp_t window_i,
                               DTYPE_intp_t window_j,
-                              DTYPE_intp_t target_value,
-                              DTYPE_intp_t ignore_value,
+                              DTYPE_float32_t target_value,
+                              DTYPE_float32_t ignore_value,
                               DTYPE_float32_t[:, ::1] weights,
                               unsigned int hw) nogil:
 
@@ -712,20 +858,20 @@ cdef DTYPE_float32_t _get_min(DTYPE_float32_t[:, ::1] block,
         Py_ssize_t ii, jj
         DTYPE_float32_t su = 999999.
 
-    if ignore_value != -9999:
+    if ignore_value != -9999.:
 
         for ii in range(0, window_i):
             for jj in range(0, window_j):
 
                 if block[ii, jj] != ignore_value:
-                    su = int_min(block[ii, jj], su)
+                    su = _nogil_get_min(block[ii, jj], su)
 
     else:
 
         for ii in range(0, window_i):
             for jj in range(0, window_j):
 
-                su = int_min(block[ii, jj], su)
+                su = _nogil_get_min(block[ii, jj], su)
 
     return su
 
@@ -733,8 +879,8 @@ cdef DTYPE_float32_t _get_min(DTYPE_float32_t[:, ::1] block,
 cdef DTYPE_float32_t _get_max(DTYPE_float32_t[:, ::1] block,
                               DTYPE_intp_t window_i,
                               DTYPE_intp_t window_j,
-                              DTYPE_intp_t target_value,
-                              DTYPE_intp_t ignore_value,
+                              DTYPE_float32_t target_value,
+                              DTYPE_float32_t ignore_value,
                               DTYPE_float32_t[:, ::1] weights,
                               unsigned int hw) nogil:
 
@@ -742,7 +888,7 @@ cdef DTYPE_float32_t _get_max(DTYPE_float32_t[:, ::1] block,
         Py_ssize_t ii, jj
         DTYPE_float32_t su = -999999.
 
-    if ignore_value != -9999:
+    if ignore_value != -9999.:
 
         for ii in range(0, window_i):
             for jj in range(0, window_j):
@@ -785,7 +931,9 @@ cdef DTYPE_uint8_t _fill_holes(DTYPE_uint8_t[:, :] block,
     return fill_value
 
 
-cdef DTYPE_uint8_t _get_sum_int(DTYPE_uint8_t[:, :] block, unsigned int window_i, unsigned int window_j):
+cdef DTYPE_uint8_t _get_sum_int(DTYPE_uint8_t[:, ::1] block,
+                                unsigned int window_i,
+                                unsigned int window_j) nogil:
 
     cdef:
         Py_ssize_t ii, jj
@@ -794,10 +942,8 @@ cdef DTYPE_uint8_t _get_sum_int(DTYPE_uint8_t[:, :] block, unsigned int window_i
     # with nogil, parallel(num_threads=window_i):
     #
     #     for ii in prange(0, window_i, schedule='static'):
-    for ii in xrange(0, window_i):
-
-        for jj in xrange(0, window_j):
-
+    for ii in range(0, window_i):
+        for jj in range(0, window_j):
             su += block[ii, jj]
 
     return su
@@ -824,8 +970,8 @@ cdef DTYPE_uint8_t _get_sum_uint8(DTYPE_uint8_t[:, :] block, DTYPE_intp_t window
 cdef DTYPE_float32_t _get_sum(DTYPE_float32_t[:, ::1] block,
                               DTYPE_intp_t window_i,
                               DTYPE_intp_t window_j,
-                              DTYPE_intp_t target_value,
-                              DTYPE_intp_t ignore_value,
+                              DTYPE_float32_t target_value,
+                              DTYPE_float32_t ignore_value,
                               DTYPE_float32_t[:, ::1] weights,
                               unsigned int hw) nogil:
 
@@ -833,7 +979,7 @@ cdef DTYPE_float32_t _get_sum(DTYPE_float32_t[:, ::1] block,
         Py_ssize_t ii, jj
         DTYPE_float32_t su = 0.
 
-    if ignore_value != -9999:
+    if ignore_value != -9999.:
 
         # with nogil, parallel(num_threads=window_i):
         #
@@ -862,8 +1008,8 @@ cdef DTYPE_float32_t _get_sum(DTYPE_float32_t[:, ::1] block,
 cdef DTYPE_float32_t _get_mean(DTYPE_float32_t[:, ::1] block,
                                DTYPE_intp_t window_i,
                                DTYPE_intp_t window_j, 
-                               DTYPE_intp_t target_value,
-                               DTYPE_intp_t ignore_value, 
+                               DTYPE_float32_t target_value,
+                               DTYPE_float32_t ignore_value,
                                DTYPE_float32_t[:, ::1] weights,
                                unsigned int hw) nogil:
 
@@ -872,11 +1018,11 @@ cdef DTYPE_float32_t _get_mean(DTYPE_float32_t[:, ::1] block,
         DTYPE_float32_t su = 0.
         int good_values = 0
 
-    if target_value != -9999:
+    if target_value != -9999.:
         if block[hw, hw] != target_value:
             return block[hw, hw]
 
-    if ignore_value != -9999:
+    if ignore_value != -9999.:
 
         for ii in range(0, window_i):
             for jj in range(0, window_j):
@@ -1031,16 +1177,17 @@ cdef DTYPE_float32_t _get_distance_rgb(DTYPE_float32_t[:, :, :] block,
     return color_d / ((hw * hw) - 1)
 
 
-cdef int cy_argwhere(DTYPE_uint8_t[:, :] array1,
-                     DTYPE_uint8_t[:, :] array2,
-                     int dims,
-                     DTYPE_int16_t[:, :] angles_dict) nogil:
+cdef int cy_argwhere(DTYPE_uint8_t[:, ::1] array1,
+                     DTYPE_uint8_t[:, ::1] array2,
+                     unsigned int dims,
+                     DTYPE_int16_t[:, ::1] angles_dict) nogil:
 
     cdef:
         Py_ssize_t i_, j_, i_idx, j_idx
-        int counter = 1
+        unsigned int counter = 1
 
     for i_ in range(0, dims):
+
         for j_ in range(0, dims):
 
             if (array1[i_, j_] == 1) and (array2[i_, j_] == 0):
@@ -1063,19 +1210,28 @@ cdef int cy_argwhere(DTYPE_uint8_t[:, :] array1,
         return angles_dict[i_idx, j_idx]
 
 
-cdef tuple close_end(DTYPE_uint8_t[:, :] edge_block,
-                     DTYPE_uint8_t[:, :] endpoints_block,
-                     DTYPE_uint8_t[:, :] gradient_block,
-                     int angle, int center, DTYPE_intp_t[:] dummy,
-                     DTYPE_intp_t[:] h_r, DTYPE_intp_t[:] h_c, DTYPE_intp_t[:] d_c,
-                     DTYPE_int16_t[:, :] angles_dict, int min_egm, int max_gap):
+cdef tuple close_end(DTYPE_uint8_t[:, ::1] edge_block,
+                     DTYPE_uint8_t[:, ::1] endpoints_block,
+                     DTYPE_float32_t[:, ::1] gradient_block,
+                     int angle,
+                     int center,
+                     DTYPE_float32_t[::1] dummy,
+                     DTYPE_intp_t[::1] h_r,
+                     DTYPE_intp_t[::1] h_c,
+                     DTYPE_intp_t[::1] d_c,
+                     DTYPE_int16_t[:, ::1] angles_dict,
+                     int min_egm,
+                     int max_gap,
+                     DTYPE_float32_t[:, ::1] rcc__):
 
     cdef:
         Py_ssize_t ip, rr_shape, ip_, jp_
-        DTYPE_intp_t[:] rr_, cc_, hr1, hr2
+        DTYPE_intp_t[::1] hr1, hr2
         int mtotal = 3      # The total number of orthogonal pixels required to connect a point with orthogonal lines.
         int connect_angle
         int min_line = 3    # The minimum line length to connect a point to an edge with sufficient EGM
+
+        DTYPE_float32_t[::1] rr_, cc_, line_values__
 
     if angle == 90:
 
@@ -1136,22 +1292,33 @@ cdef tuple close_end(DTYPE_uint8_t[:, :] edge_block,
     else:
         return dummy, dummy, 0, 9999
 
-    for ip in xrange(1, max_gap-2):
+    for ip in range(1, max_gap-2):
 
         if edge_block[center+(ip*ip_), center+(ip*jp_)] == 1:
 
             # Draw a line that would connect the two points.
-            rr_, cc_ = draw_line_tuple(center, center, center+(ip*ip_), center+(ip*jp_))
+            # rr_, cc_ = draw_line_tuple(center, center, center+(ip*ip_), center+(ip*jp_))
+            # rr_shape = rr_.shape[0]
 
-            rr_shape = rr_.shape[0]
+            draw_line(center, center, center+(ip*ip_), center+(ip*jp_), rcc__)
+
+            # Get the current line length.
+            rr_shape = <int>rcc__[2, 0]
+
+            # row of zeros, up to the line length
+            line_values__ = rcc__[3, :rr_shape]
+
+            rr_ = rcc__[0, :rr_shape]
+            cc_ = rcc__[1, :rr_shape]
+
+            # Extract the values along the line.
+            _extract_values(gradient_block, line_values__, rcc__, rr_shape)
 
             # Connect the points if the line is
             #   small and has edge magnitude.
             if rr_shape <= min_line:
 
-                if _get_mean1d_int(extract_values(gradient_block, rr_, cc_, rr_shape),
-                                   rr_shape) >= min_egm:
-
+                if _get_mean1d(line_values__, rr_shape) >= min_egm:
                     return rr_, cc_, 1, 9999
 
             # Check if it is an endpoint or an edge.
@@ -1167,7 +1334,7 @@ cdef tuple close_end(DTYPE_uint8_t[:, :] edge_block,
                                                                  center+(ip*jp_)-2:center+(ip*jp_)+3],
                                                       hr1, hr2, 5), 5) >= mtotal:
 
-                if _get_mean1d_int(extract_values(gradient_block, rr_, cc_, rr_shape), rr_shape) >= min_egm:
+                if _get_mean1d(line_values__, rr_shape) >= min_egm:
                     return rr_, cc_, 1, 9999
 
             break
@@ -1193,13 +1360,16 @@ cdef DTYPE_float32_t[:] extract_values_f(DTYPE_float32_t[:, :] block, DTYPE_intp
     return values
 
 
-cdef DTYPE_uint8_t[:] extract_values(DTYPE_uint8_t[:, :] block, DTYPE_intp_t[:] rr_, DTYPE_intp_t[:] cc_, int fl):
+cdef DTYPE_uint8_t[::1] extract_values(DTYPE_uint8_t[:, ::1] block,
+                                       DTYPE_intp_t[::1] rr_,
+                                       DTYPE_intp_t[::1] cc_,
+                                       unsigned int fl):
 
     cdef:
         Py_ssize_t fi, fi_, fj_
-        DTYPE_uint8_t[:] values = np.zeros(fl, dtype='uint8')
+        DTYPE_uint8_t[::1] values = np.zeros(fl, dtype='uint8')
 
-    for fi in xrange(0, fl):
+    for fi in range(0, fl):
 
         fi_ = rr_[fi]
         fj_ = cc_[fi]
@@ -1209,40 +1379,49 @@ cdef DTYPE_uint8_t[:] extract_values(DTYPE_uint8_t[:, :] block, DTYPE_intp_t[:] 
     return values
 
 
-cdef DTYPE_uint8_t[:, :] fill_block(DTYPE_uint8_t[:, :] block2fill,
-                                    DTYPE_intp_t[:] rr_,
-                                    DTYPE_intp_t[:] cc_,
-                                    int fill_value):
+cdef void _fill_block(DTYPE_uint8_t[:, ::1] block2fill_,
+                      DTYPE_float32_t[::1] rr_,
+                      DTYPE_float32_t[::1] cc_,
+                      unsigned int fill_value,
+                      unsigned int fl) nogil:
 
     cdef:
-        Py_ssize_t fi, fi_, fj_
-        int fl = rr_.shape[0]
+        Py_ssize_t fi
+        unsigned int fi_, fj_
 
     for fi in range(0, fl):
 
-        fi_ = rr_[fi]
-        fj_ = cc_[fi]
+        fi_ = <int>rr_[fi]
+        fj_ = <int>cc_[fi]
 
-        block2fill[fi_, fj_] = fill_value
-
-    return block2fill
+        block2fill_[fi_, fj_] = fill_value
 
 
-cdef tuple _link_endpoints(DTYPE_uint8_t[:, :] edge_block,
-                           DTYPE_uint8_t[:, :] endpoints_block,
-                           DTYPE_uint8_t[:, :] gradient_block,
-                           unsigned int window_size,
-                           DTYPE_int16_t[:, :] angles_dict,
-                           DTYPE_intp_t[:] h_r, DTYPE_intp_t[:] h_c, DTYPE_intp_t[:] d_c,
-                           int min_egm, int smallest_allowed_gap, int medium_allowed_gap):
+cdef void _link_endpoints(DTYPE_uint8_t[:, ::1] edge_block,
+                          DTYPE_uint8_t[:, ::1] endpoints_block,
+                          DTYPE_float32_t[:, ::1] gradient_block,
+                          unsigned int window_size,
+                          DTYPE_int16_t[:, ::1] angles_dict,
+                          DTYPE_intp_t[::1] h_r,
+                          DTYPE_intp_t[::1] h_c,
+                          DTYPE_intp_t[::1] d_c,
+                          int min_egm,
+                          int smallest_allowed_gap,
+                          int medium_allowed_gap,
+                          DTYPE_float32_t[:, ::1] rcc_):
 
     cdef:
-        Py_ssize_t ii, jj, ii_, jj_, rr_shape
+        Py_ssize_t ii, jj, ii_, jj_
         unsigned int smallest_gap = window_size * window_size   # The smallest gap found
-        unsigned int center = int(window_size / 2)
+        unsigned int center = <int>(window_size / 2.)
         int center_angle, connect_angle, ss, match
-        DTYPE_intp_t[:] rr, cc, rr_, cc_
-        DTYPE_intp_t[:] dummy = np.array([], dtype='intp')
+        DTYPE_float32_t[::1] rr_, cc_
+        DTYPE_float32_t[::1] dummy = np.zeros(window_size, dtype='float32')
+
+        unsigned int rc_shape, rc_length_
+        DTYPE_float32_t[::1] line_values_, line_values_g
+
+        DTYPE_float32_t line_mean
 
     if smallest_allowed_gap > window_size:
         smallest_allowed_gap = window_size
@@ -1251,190 +1430,410 @@ cdef tuple _link_endpoints(DTYPE_uint8_t[:, :] edge_block,
         medium_allowed_gap = window_size
 
     # Get the origin angle of the center endpoint.
-    center_angle = cy_argwhere(edge_block[center-1:center+2, center-1:center+2],
-                               endpoints_block[center-1:center+2, center-1:center+2],
-                               3, angles_dict)
+    center_angle = cy_argwhere(edge_block[center-1:center+2,
+                                          center-1:center+2],
+                               endpoints_block[center-1:center+2,
+                                               center-1:center+2],
+                               3,
+                               angles_dict)
 
-    if center_angle == 9999:
-        return edge_block, endpoints_block
+    if (center_angle != 9999):# and (center_angle != 0):
 
-    # There must be at least two endpoints
-    #   in the block.
-    if _get_sum_int(endpoints_block, window_size, window_size) > 1:
+        with nogil:
 
-        for ii in range(0, window_size-2):
+            # There must be at least
+            #   two endpoints in the block.
+            if _get_sum_int(endpoints_block, window_size, window_size) > 1:
 
-            for jj in range(0, window_size-2):
+                for ii in range(1, window_size-1):
 
-                # Cannot connect to direct neighbors or itself.
-                if (_abs(float(ii) - float(center)) <= 1) and (_abs(float(jj) - float(center)) <= 1):
-                    continue
+                    for jj in range(1, window_size-1):
 
-                # Cannot connect with edges because we cannot
-                #   get the angle.
-                if (ii == 0) or (ii == window_size-1) or (jj == 0) or (jj == window_size-1):
-                    continue
+                        # Cannot connect to direct neighbors or itself.
+                        if (_abs(float(ii) - float(center)) <= 1) and (_abs(float(jj) - float(center)) <= 1):
+                            continue
 
-                # Located another endpoint.
-                if endpoints_block[ii, jj] == 1:
+                        # Cannot connect with edges
+                        #   because we cannot
+                        #   get the angle at the
+                        #   window edges.
+                        # if (ii == 0) or (ii == window_size-1) or (jj == 0) or (jj == window_size-1):
+                        #     continue
 
-                    # CONNECT ENDPOINTS WITH SMALL GAP
+                        # Located another endpoint.
+                        if endpoints_block[ii, jj] == 1:
 
-                    # Draw a line between the two endpoints.
-                    rr, cc = draw_line_tuple(center, center, ii, jj)
+                            # CONNECT ENDPOINTS WITH SMALL GAP
 
-                    rr_shape = rr.shape[0]
+                            # Draw a line between the two endpoints.
+                            # rr, cc = draw_line_tuple(center, center, ii, jj)
 
-                    # (2) ONLY CONNECT THE SMALLEST LINE POSSIBLE
-                    if rr_shape >= smallest_gap:
-                        continue
+                            # draw_line(center, center, ii, jj, rcc_)
+                            draw_optimum_line(center, center, ii, jj, rcc_, gradient_block)
 
-                    # (3) CHECK IF THE CONNECTING LINE CROSSES OTHER EDGES
-                    if _get_sum1d(extract_values(edge_block, rr, cc, rr_shape), rr_shape) > 2:
-                        continue
+                            # Get the current line length.
+                            rc_length_ = <int>rcc_[2, 0]
 
-                    # Check the angles if the gap is large.
+                            # row of zeros, up to the line length
+                            line_values_ = rcc_[3, :rc_length_]
+                            line_values_g = rcc_[3, :rc_length_]
 
-                    # 3) CONNECT POINTS WITH SIMILAR ANGLES
-                    connect_angle = cy_argwhere(edge_block[ii-1:ii+2, jj-1:jj+2],
-                                                endpoints_block[ii-1:ii+2, jj-1:jj+2],
-                                                3, angles_dict)
+                            # Extract the values along the line.
+                            _extract_values_int(edge_block, line_values_, rcc_, rc_length_)
+                            # _extract_values(gradient_block, line_values_, rcc_, rc_length_)
 
-                    if connect_angle == 9999:
-                        continue
+                            # rr_shape = rr.shape[0]
 
-                    # Don't accept same angles.
-                    if center_angle == connect_angle:
-                        continue
+                            # (2) ONLY CONNECT THE SMALLEST LINE POSSIBLE
+                            if rc_length_ >= smallest_gap:
+                                continue
 
-                    # For small gaps allow any angle as long
-                    #   as there is sufficient EGM.
-                    if rr_shape <= smallest_allowed_gap:
+                            # (3) CHECK IF THE CONNECTING LINE CROSSES OTHER EDGES
+                            # if _get_sum1d(extract_values(edge_block, rr, cc, rr_shape), rr_shape) > 2:
+                            #     continue
+                            if _get_sum1df(line_values_, rc_length_) > 2:
+                                continue
 
-                        # There must be edge contrast along the line.
-                        if _get_mean1d_int(extract_values(gradient_block, rr, cc, rr_shape), rr_shape) > min_egm:
+                            # Check the angles if the gap is large.
 
-                            rr_, cc_ = rr.copy(), cc.copy()
+                            # 3) CONNECT POINTS WITH SIMILAR ANGLES
+                            connect_angle = cy_argwhere(edge_block[ii-1:ii+2, jj-1:jj+2],
+                                                        endpoints_block[ii-1:ii+2, jj-1:jj+2],
+                                                        3, angles_dict)
 
-                            ii_ = copy(ii)  # ii + 0
-                            jj_ = copy(jj)  # jj + 0
+                            if (connect_angle == 9999):# or (connect_angle == 0):
+                                continue
 
-                            smallest_gap = min(rr_shape, smallest_gap)
+                            # Don't connect same angles.
+                            if center_angle == connect_angle:
+                                continue
 
-                    # For medium-sized gaps allow similar angles, but no
-                    #   asymmetric angles.
-                    elif rr_shape <= medium_allowed_gap:
+                            # Extract the values along the line.
+                            _extract_values(gradient_block, line_values_g, rcc_, rc_length_)
 
-                        match = 0
+                            if rc_length_ == 3:
+                                line_mean = line_values_g[1]
+                            else:
 
-                        # Northwest or southeast of center point
-                        if ((ii < center-2) and (jj < center-2)) or ((ii > center+2) and (jj > center+2)):
+                                # Get the mean EGM along the line,
+                                #   avoiding the endpoints.
+                                line_mean = _get_mean1d(line_values_g[1:rc_length_-1], rc_length_)
 
-                            if (center_angle + connect_angle == 0) or \
-                                ((center_angle == 180) and (connect_angle == -135)) or \
-                                ((center_angle == 90) and (connect_angle == -135)) or \
-                                ((center_angle == -180) and (connect_angle == 135)) or \
-                                ((center_angle == -90) and (connect_angle == 135)):
+                            # For small gaps allow any angle as long
+                            #   as there is sufficient EGM.
+                            if rc_length_ <= smallest_allowed_gap:
 
-                                match = 1
+                                # There must be edge contrast
+                                #   along the line.
+                                if line_mean >= min_egm:
 
-                        # North or south of center point
-                        elif ((ii < center-2) and (center-2 < jj < center+2)) or \
-                            ((ii > center+2) and (center-2 < jj < center + 2)):
+                                    # rr_, cc_ = rr.copy(), cc.copy()
+                                    rr_ = rcc_[0, :rc_length_]
+                                    cc_ = rcc_[1, :rc_length_]
+                                    rc_shape = rc_length_
 
-                            if (center_angle + connect_angle == 0) or \
-                                ((center_angle == 90) and (connect_angle == -135)) or \
-                                ((center_angle == 90) and (connect_angle == -45)) or \
-                                ((center_angle == -90) and (connect_angle == 135)) or \
-                                ((center_angle == -90) and (connect_angle == 45)):
+                                    ii_ = ii + 0
+                                    jj_ = jj + 0
 
-                                match = 1
+                                    smallest_gap = <int>_nogil_get_min(rc_length_, smallest_gap)
 
-                        # Northeast or southwest of center point
-                        elif ((ii < center-2) and (jj > center+2)) or ((ii > center+2) and (jj < center-2)):
+                            # For medium-sized gaps allow similar angles, but no
+                            #   asymmetric angles.
+                            elif rc_length_ > smallest_allowed_gap:
 
-                            if (center_angle + connect_angle == 0) or \
-                                ((center_angle == -180) and (connect_angle == -45)) or \
-                                ((center_angle == 90) and (connect_angle == -45)) or \
-                                ((center_angle == 180) and (connect_angle == 45)) or \
-                                ((center_angle == -90) and (connect_angle == 45)):
+                                match = 0
 
-                                match = 1
+                                ####################
+                                # The columns should
+                                #   not overlap.
+                                ####################
+                                if (_abs(center_angle) == 180) and (_abs(connect_angle) == 180):
 
-                        # East or west of center point
-                        elif ((center-2 < ii < center+2) and (jj > center+2)) or \
-                            ((center-2 < ii < center+2) and (jj < center-2)):
+                                    # The endpoints must be within 3
+                                    #   pixels along the perpendicular plane.
+                                    if _abs(center - ii) <= 3:
 
-                            if (center_angle + connect_angle == 0) or \
-                                ((center_angle == 180) and (connect_angle == -135)) or \
-                                ((center_angle == 180) and (connect_angle == 45)) or \
-                                ((center_angle == -180) and (connect_angle == 135)) or \
-                                ((center_angle == -180) and (connect_angle == -45)):
+                                        if (center_angle == 180) and (connect_angle == -180):
 
-                                match = 1
+                                            if jj <= center:
+                                                match = 1
 
-                        if match == 1:
+                                        elif (center_angle == -180) and (connect_angle == 180):
 
-                            # There must be edge contrast along the line.
-                            # if _get_mean1d_int(extract_values(gradient_block, rr, cc, rr_shape),
-                            #                    rr_shape) >= min_egm:
+                                            if jj >= center:
+                                                match = 1
 
-                            rr_, cc_ = rr.copy(), cc.copy()
+                                elif (_abs(center_angle) == 135) and (_abs(connect_angle) == 180):
 
-                            ii_ = copy(ii)  # ii + 0
-                            jj_ = copy(jj)  # jj + 0
+                                    if (center_angle == 135) and (connect_angle == -180):
 
-                            smallest_gap = min(rr_shape, smallest_gap)
+                                        if jj <= center:
+                                            match = 1
 
-                    # All other gaps must be inverse angles and have
-                    #   a mean edge gradient magnitude over the minimum
-                    #   required.
-                    else:
+                                    elif (center_angle == -135) and (connect_angle == 180):
 
-                        # All other inverse angles.
-                        if center_angle + connect_angle == 0:
+                                        if jj >= center:
+                                            match = 1
 
-                            # There must be edge contrast along the line.
-                            if _get_mean1d_int(extract_values(gradient_block, rr, cc, rr_shape),
-                                               rr_shape) >= min_egm:
+                                elif (_abs(center_angle) == 180) and (_abs(connect_angle) == 135):
 
-                                rr_, cc_ = rr.copy(), cc.copy()
+                                    if (center_angle == 180) and (connect_angle == -135):
 
-                                ii_ = copy(ii)  # ii + 0
-                                jj_ = copy(jj)  # jj + 0
+                                        if jj <= center:
+                                            match = 1
 
-                                smallest_gap = min(rr_shape, smallest_gap)
+                                    elif (center_angle == -180) and (connect_angle == 135):
 
-    # TRY TO CLOSE GAPS FROM ENDPOINTS
+                                        if jj >= center:
+                                            match = 1
 
-    # At this juncture, there doesn't have to
-    #   be two endpoints.
-    if smallest_gap == window_size * window_size:
+                                elif (_abs(center_angle) == 180) and (_abs(connect_angle) == 45):
 
-        rr_, cc_, ss, ii_ = close_end(edge_block, endpoints_block, gradient_block, center_angle,
-                                      center, dummy, h_r, h_c, d_c, angles_dict, min_egm, center)
+                                    if (center_angle == 180) and (connect_angle == 45):
 
-        if ss == 1:
-            smallest_gap = 0
+                                        if jj <= center:
+                                            match = 1
 
-    if smallest_gap < window_size * window_size:
+                                    elif (center_angle == -180) and (connect_angle == -45):
 
-        edge_block = fill_block(edge_block, rr_, cc_, 1)
+                                        if jj >= center:
+                                            match = 1
 
-        # Remove the endpoint
-        endpoints_block[center, center] = 0
+                                #################
+                                # The rows should
+                                #   not overlap.
+                                #################
+                                elif (_abs(center_angle) == 90) and (_abs(connect_angle) == 90):
 
-        if ii_ < 9999:
-            endpoints_block[ii_, jj_] = 0
+                                    # The endpoints must be within 3
+                                    #   pixels along the perpendicular plane.
+                                    if _abs(center - jj) <= 3:
 
-    return edge_block, endpoints_block
+                                        if (center_angle == 90) and (connect_angle == -90):
+
+                                            if ii <= center:
+                                                match = 1
+
+                                        elif (center_angle == -90) and (connect_angle == 90):
+
+                                            if ii >= center:
+                                                match = 1
+
+                                elif (_abs(center_angle) == 90) and (_abs(connect_angle) == 135):
+
+                                    if (center_angle == 90) and (connect_angle == -135):
+
+                                        if ii <= center:
+                                            match = 1
+
+                                    elif (center_angle == -90) and (connect_angle == 135):
+
+                                        if ii >= center:
+                                            match = 1
+
+                                elif (_abs(center_angle) == 90) and (_abs(connect_angle) == 45):
+
+                                    if (center_angle == 90) and (connect_angle == -45):
+
+                                        if ii <= center:
+                                            match = 1
+
+                                    elif (center_angle == -90) and (connect_angle == 45):
+
+                                        if ii >= center:
+                                            match = 1
+
+                                #######################
+                                # The rows and columns
+                                #   should not overlap.
+                                #######################
+                                elif (center_angle == 135) and (connect_angle == -135):
+
+                                    if (ii <= center) and (jj <= center):
+                                        match = 1
+
+                                elif (center_angle == -135) and (connect_angle == 135):
+
+                                    if (ii >= center) and (jj >= center):
+                                        match = 1
+
+                                elif (center_angle == 45) and (connect_angle == -45):
+
+                                    if (ii >= center) and (jj >= center):
+                                        match = 1
+
+                                elif (center_angle == -45) and (connect_angle == 45):
+
+                                    if (ii <= center) and (jj <= center):
+                                        match = 1
+
+                                elif (center_angle == 0) and (connect_angle == 0):
+                                    match = 1
+
+                                else:
+                                    line_mean *= 2.
+
+                                # Northwest or southeast of center point
+                                # if ((ii < center-2) and (jj < center-2)) or ((ii > center+2) and (jj > center+2)):
+                                #
+                                #     if (center_angle + connect_angle == 0) or \
+                                #         ((center_angle == 180) and (connect_angle == -135)) or \
+                                #         ((center_angle == 90) and (connect_angle == -135)) or \
+                                #         ((center_angle == -180) and (connect_angle == 135)) or \
+                                #         ((center_angle == -90) and (connect_angle == 135)):
+                                #
+                                #         match = 1
+                                #
+                                # # North or south of center point
+                                # elif ((ii < center-2) and (center-2 < jj < center+2)) or \
+                                #     ((ii > center+2) and (center-2 < jj < center + 2)):
+                                #
+                                #     if (center_angle + connect_angle == 0) or \
+                                #         ((center_angle == 90) and (connect_angle == -135)) or \
+                                #         ((center_angle == 90) and (connect_angle == -45)) or \
+                                #         ((center_angle == -90) and (connect_angle == 135)) or \
+                                #         ((center_angle == -90) and (connect_angle == 45)):
+                                #
+                                #         match = 1
+                                #
+                                # # Northeast or southwest of center point
+                                # elif ((ii < center-2) and (jj > center+2)) or ((ii > center+2) and (jj < center-2)):
+                                #
+                                #     if (center_angle + connect_angle == 0) or \
+                                #         ((center_angle == -180) and (connect_angle == -45)) or \
+                                #         ((center_angle == 90) and (connect_angle == -45)) or \
+                                #         ((center_angle == 180) and (connect_angle == 45)) or \
+                                #         ((center_angle == -90) and (connect_angle == 45)):
+                                #
+                                #         match = 1
+                                #
+                                # # East or west of center point
+                                # elif ((center-2 < ii < center+2) and (jj > center+2)) or \
+                                #     ((center-2 < ii < center+2) and (jj < center-2)):
+                                #
+                                #     if (center_angle + connect_angle == 0) or \
+                                #         ((center_angle == 180) and (connect_angle == -135)) or \
+                                #         ((center_angle == 180) and (connect_angle == 45)) or \
+                                #         ((center_angle == -180) and (connect_angle == 135)) or \
+                                #         ((center_angle == -180) and (connect_angle == -45)):
+                                #
+                                #         match = 1
+
+                                if match == 1:
+
+                                    # There must be edge contrast
+                                    #   along the line.
+                                    if line_mean >= min_egm:
+
+                                        # rr_, cc_ = rr.copy(), cc.copy()
+                                        rr_ = rcc_[0, :rc_length_]
+                                        cc_ = rcc_[1, :rc_length_]
+                                        rc_shape = rc_length_
+
+                                        ii_ = ii + 0
+                                        jj_ = jj + 0
+
+                                        smallest_gap = <int>_nogil_get_min(rc_length_, smallest_gap)
+
+                                    # with gil:
+                                    #
+                                    #     print np.uint8(gradient_block)
+                                    #     print
+                                    #     print np.uint8(edge_block)
+                                    #     print
+                                    #     print np.uint8(endpoints_block)
+                                    #     print
+                                    #     print np.int16(angles_dict)
+                                    #     print
+                                    #     print center_angle
+                                    #
+                                    #     print endpoints_block[ii, jj]
+                                    #     print ii, jj
+                                    #     print np.uint8(line_values_)
+                                    #     print rc_length_
+                                    #
+                                    #     print 'connection'
+                                    #     print connect_angle
+                                    #     print np.uint8(line_values_g)
+                                    #     print line_mean, min_egm
+                                    #
+                                    #     _fill_block(edge_block, rr_, cc_, 1, rc_shape)
+                                    #     print np.uint8(edge_block)
+                                    #
+                                    #     import sys
+                                    #     sys.exit()
+
+                            # All other gaps must be inverse angles and have
+                            #   a mean edge gradient magnitude over the minimum
+                            #   required.
+                            # else:
+                            #
+                            #     # All other inverse angles.
+                            #     if center_angle + connect_angle == 0:
+                            #
+                            #         # Extract the values along the line.
+                            #         _extract_values(gradient_block, line_values_g, rcc_, rc_length_)
+                            #
+                            #         # There must be edge contrast along the line.
+                            #         if _get_mean1d(line_values_g, rc_length_) >= min_egm:
+                            #
+                            #             # rr_, cc_ = rr.copy(), cc.copy()
+                            #             rr_ = rcc_[0, :rc_length_]
+                            #             cc_ = rcc_[1, :rc_length_]
+                            #             rc_shape = rc_length_
+                            #
+                            #             ii_ = ii + 0
+                            #             jj_ = jj + 0
+                            #
+                            #             smallest_gap = <int>_nogil_get_min(rc_length_, smallest_gap)
+
+        # TRY TO CLOSE GAPS FROM ENDPOINTS
+
+        # At this juncture, there doesn't have to
+        #   be two endpoints.
+        # if smallest_gap == window_size * window_size:
+        #
+        #     rr_, cc_, ss, ii_ = close_end(edge_block,
+        #                                   endpoints_block,
+        #                                   gradient_block,
+        #                                   center_angle,
+        #                                   center,
+        #                                   dummy,
+        #                                   h_r,
+        #                                   h_c,
+        #                                   d_c,
+        #                                   angles_dict,
+        #                                   min_egm,
+        #                                   center,
+        #                                   rcc_)
+        #
+        #     if ss == 1:
+        #         smallest_gap = 0
+
+        if smallest_gap < (window_size * window_size):
+
+            # if rc_shape > 3:
+            #     print np.uint8(edge_block)
+
+            _fill_block(edge_block, rr_, cc_, 1, rc_shape)
+
+            # if rc_shape > 3:
+            #     print np.uint8(edge_block)
+            #     import sys
+            #     sys.exit()
+
+            # Remove the endpoint
+            endpoints_block[center, center] = 0
+
+            if ii_ < 9999:
+                endpoints_block[ii_, jj_] = 0
 
 
 cdef DTYPE_float32_t _duda_operator(DTYPE_float32_t[:, ::1] block,
                                     DTYPE_intp_t window_i,
                                     DTYPE_intp_t window_j,
-                                    DTYPE_intp_t target_value,
-                                    DTYPE_intp_t ignore_value,
+                                    DTYPE_float32_t target_value,
+                                    DTYPE_float32_t ignore_value,
                                     DTYPE_float32_t[:, ::1] weights,
                                     unsigned int hw) nogil:
 
@@ -1474,8 +1873,8 @@ cdef DTYPE_float32_t _duda_operator(DTYPE_float32_t[:, ::1] block,
 cdef DTYPE_float32_t _get_percent(DTYPE_float32_t[:, ::1] block,
                                   DTYPE_intp_t window_i,
                                   DTYPE_intp_t window_j,
-                                  DTYPE_intp_t target_value,
-                                  DTYPE_intp_t ignore_value,
+                                  DTYPE_float32_t target_value,
+                                  DTYPE_float32_t ignore_value,
                                   DTYPE_float32_t[:, ::1] weights,
                                   unsigned int hw) nogil:
 
@@ -1484,7 +1883,7 @@ cdef DTYPE_float32_t _get_percent(DTYPE_float32_t[:, ::1] block,
         DTYPE_float32_t su = 0.
         unsigned int good_values = 0
 
-    if ignore_value != -9999:
+    if ignore_value != -9999.:
 
         for ii in range(0, window_i):
             for jj in range(0, window_j):
@@ -1608,11 +2007,12 @@ cdef DTYPE_float32_t _get_majority(DTYPE_float32_t[:, :] block, DTYPE_intp_t win
     return unique_values[max_idx]
 
 
-cdef np.ndarray[DTYPE_uint8_t, ndim=2] link_window(DTYPE_uint8_t[:, :] edge_image,
+cdef np.ndarray[DTYPE_uint8_t, ndim=2] link_window(DTYPE_uint8_t[:, ::1] edge_image,
                                                    unsigned int window_size,
-                                                   DTYPE_uint8_t[:, :] endpoint_image,
-                                                   DTYPE_uint8_t[:, :] gradient_image,
-                                                   int min_egm, int smallest_allowed_gap,
+                                                   DTYPE_uint8_t[:, ::1] endpoint_image,
+                                                   DTYPE_float32_t[:, ::1] gradient_image,
+                                                   int min_egm,
+                                                   int smallest_allowed_gap,
                                                    int medium_allowed_gap):
 
     """
@@ -1624,20 +2024,24 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] link_window(DTYPE_uint8_t[:, :] edge_imag
         int cols = edge_image.shape[1]
         Py_ssize_t cij, isub, jsub, iplus, jplus
         unsigned int half_window = int(window_size / 2)
-        DTYPE_int64_t[:, :] endpoint_idx
-        DTYPE_int64_t[:] endpoint_row
+        DTYPE_int64_t[:, ::1] endpoint_idx
+        DTYPE_int64_t[::1] endpoint_row
         int endpoint_idx_rows
-        DTYPE_uint8_t[:, :] edge_block, ep_block
 
-        DTYPE_int16_t[:, :] angles_dict = np.array([[-135, -90, -45],
-                                                    [-180, 0, 180],
-                                                    [45, 90, 135]], dtype='int16')
+        DTYPE_uint8_t[:, ::1] edge_block_, ep_block_
+        DTYPE_float32_t[:, ::1] gradient_block_
 
-        DTYPE_intp_t[:] h_r = np.array([2, 2, 2, 2, 2], dtype='intp')
-        DTYPE_intp_t[:] h_c = np.array([0, 1, 2, 3, 4], dtype='intp')
-        DTYPE_intp_t[:] d_c = np.array([4, 3, 2, 1, 0], dtype='intp')
+        DTYPE_int16_t[:, ::1] angles_array = np.array([[-135, -90, -45],
+                                                       [-180, 0, 180],
+                                                       [45, 90, 135]], dtype='int16')
 
-    endpoint_idx = np.argwhere(np.asarray(endpoint_image) == 1)
+        DTYPE_intp_t[::1] h_r = np.array([2, 2, 2, 2, 2], dtype='intp')
+        DTYPE_intp_t[::1] h_c = np.array([0, 1, 2, 3, 4], dtype='intp')
+        DTYPE_intp_t[::1] d_c = np.array([4, 3, 2, 1, 0], dtype='intp')
+
+        DTYPE_float32_t[:, ::1] rcc = np.zeros((4, window_size*2), dtype='float32')
+
+    endpoint_idx = np.ascontiguousarray(np.argwhere(np.uint8(endpoint_image) == 1))
     endpoint_idx_rows = endpoint_idx.shape[0]
 
     for cij in range(0, endpoint_idx_rows):
@@ -1653,20 +2057,30 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] link_window(DTYPE_uint8_t[:, :] edge_imag
         if (isub < 0) or (iplus >= rows) or (jsub < 0) or (jplus >= cols):
             continue
 
-        edge_block, ep_block = _link_endpoints(edge_image[isub:isub+window_size, jsub:jsub+window_size],
-                                               endpoint_image[isub:isub+window_size, jsub:jsub+window_size],
-                                               gradient_image[isub:isub+window_size, jsub:jsub+window_size],
-                                               window_size,
-                                               angles_dict,
-                                               h_r,
-                                               h_c,
-                                               d_c,
-                                               min_egm,
-                                               smallest_allowed_gap,
-                                               medium_allowed_gap)
+        edge_block_ = edge_image[isub:isub+window_size,
+                                 jsub:jsub+window_size]
 
-        edge_image[isub:isub+window_size, jsub:jsub+window_size] = edge_block
-        endpoint_image[isub:isub+window_size, jsub:jsub+window_size] = ep_block
+        ep_block_ = endpoint_image[isub:isub+window_size,
+                                   jsub:jsub+window_size]
+
+        gradient_block_ = gradient_image[isub:isub+window_size,
+                                         jsub:jsub+window_size]
+
+        _link_endpoints(edge_block_,
+                        ep_block_,
+                        gradient_block_,
+                        window_size,
+                        angles_array,
+                        h_r,
+                        h_c,
+                        d_c,
+                        min_egm,
+                        smallest_allowed_gap,
+                        medium_allowed_gap,
+                        rcc)
+
+        edge_image[isub:isub+window_size, jsub:jsub+window_size] = edge_block_
+        endpoint_image[isub:isub+window_size, jsub:jsub+window_size] = ep_block_
 
     return np.uint8(edge_image)
 
@@ -2093,7 +2507,7 @@ cdef DTYPE_float32_t _edge_saliency(DTYPE_float32_t l_edge,
     #     print si_opt, n_opt, nc_opt, c_max, l_sizef
     #
     #     print (si_opt / (l_sizef + 1)) * (n_opt / (l_sizef + 1)) * (nc_opt / (v_sizef + 1))
-    #     print int_min(si_opt / (l_sizef + 1), c_max / l_sizef) * (n_opt / (l_sizef + 1)) * (nc_opt / (v_sizef + 1))
+    #     print _nogil_get_min(si_opt / (l_sizef + 1), c_max / l_sizef) * (n_opt / (l_sizef + 1)) * (nc_opt / (v_sizef + 1))
     #
     #     import sys
     #     sys.exit()
@@ -2102,8 +2516,8 @@ cdef DTYPE_float32_t _edge_saliency(DTYPE_float32_t l_edge,
         return si_opt * (n_opt / n_opt) * (nc_opt / (v_sizef + 1))
         # return (si_opt / (l_sizef + 1)) * (n_opt / (l_sizef + 1))
     else:
-        return int_min(si_opt, c_max / l_sizef) * (n_opt / n_opt) * (nc_opt / (v_sizef + 1))
-        # return int_min(si_opt / (l_sizef + 1), c_max / l_sizef) * (n_opt / (l_sizef + 1))
+        return _nogil_get_min(si_opt, c_max / l_sizef) * (n_opt / n_opt) * (nc_opt / (v_sizef + 1))
+        # return _nogil_get_min(si_opt / (l_sizef + 1), c_max / l_sizef) * (n_opt / (l_sizef + 1))
 
 
 cdef np.ndarray[DTYPE_float32_t, ndim=3] saliency_window(DTYPE_float32_t[:, ::1] edge_image,
@@ -2233,34 +2647,38 @@ cdef np.ndarray[DTYPE_float32_t, ndim=3] saliency_window(DTYPE_float32_t[:, ::1]
     return np.vstack((np.float32(out_array_lin), np.float32(out_array_sal))).reshape(2, rows, cols)
 
 
-cdef DTYPE_uint8_t[:, :] _fill_circles(DTYPE_uint8_t[:, :] image_block, DTYPE_uint8_t[:, :] circle_block,
-                                       DTYPE_intp_t dims, DTYPE_float32_t circle_match,
-                                       DTYPE_intp_t[:] rr_, DTYPE_intp_t[:] cc_):
+cdef DTYPE_uint8_t[:, ::1] _fill_circles(DTYPE_uint8_t[:, ::1] image_block,
+                                         DTYPE_uint8_t[:, ::1] circle_block,
+                                         DTYPE_intp_t dims,
+                                         DTYPE_float32_t circle_match,
+                                         DTYPE_float32_t[::1] rr_,
+                                         DTYPE_float32_t[::1] cc_):
 
     cdef:
         Py_ssize_t i_, j_
         Py_ssize_t overlap_count = 0
+        unsigned int fill_shape = rr_.shape[0]
 
-    for i_ in xrange(0, dims):
+    for i_ in range(0, dims):
 
-        for j_ in xrange(0, dims):
+        for j_ in range(0, dims):
 
             if (image_block[i_, j_] == 1) and (circle_block[i_, j_] == 1):
                 overlap_count += 1
 
     if overlap_count >= circle_match:
-        return fill_block(image_block, rr_, cc_, 1)
-    else:
-        return image_block
+        _fill_block(image_block, rr_, cc_, 1, fill_shape)
+
+    return image_block
 
 
-cdef tuple get_circle_locations(DTYPE_uint8_t[:, :] circle_block, int window_size):
+cdef tuple get_circle_locations(DTYPE_uint8_t[:, ::1] circle_block, int window_size):
 
     cdef:
         Py_ssize_t i_, j_
         Py_ssize_t counter = 0
-        DTYPE_intp_t[:] rr = np.zeros(window_size*window_size, dtype='intp')
-        DTYPE_intp_t[:] cc = rr.copy()
+        DTYPE_float32_t[::1] rr = np.zeros(window_size*window_size, dtype='float32')
+        DTYPE_float32_t[::1] cc = rr.copy()
 
     for i_ in range(0, window_size):
 
@@ -2274,7 +2692,7 @@ cdef tuple get_circle_locations(DTYPE_uint8_t[:, :] circle_block, int window_siz
     return rr[:counter], cc[:counter]
 
 
-cdef np.ndarray[DTYPE_uint8_t, ndim=2] fill_circles(DTYPE_uint8_t[:, :] image_array, list circle_list):
+cdef np.ndarray[DTYPE_uint8_t, ndim=2] fill_circles(DTYPE_uint8_t[:, ::1] image_array, list circle_list):
 
     """
     Fills circles
@@ -2289,13 +2707,13 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] fill_circles(DTYPE_uint8_t[:, :] image_ar
         DTYPE_intp_t window_size
         int row_dims
         int col_dims
-        DTYPE_uint8_t[:, :] circle
+        DTYPE_uint8_t[:, ::1] circle
         DTYPE_uint8_t circle_sum
         DTYPE_float32_t required_percent = .3
         DTYPE_float32_t circle_match
-        DTYPE_intp_t[:] rr, cc
+        DTYPE_float32_t[::1] rr, cc
 
-    for ci in xrange(0, n_circles):
+    for ci in range(0, n_circles):
 
         circle = circle_list[ci]
 
@@ -2321,9 +2739,11 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] fill_circles(DTYPE_uint8_t[:, :] image_ar
                                                                                           j:j+window_size],
                                                                               circle,
                                                                               window_size,
-                                                                              circle_match, rr, cc)
+                                                                              circle_match,
+                                                                              rr,
+                                                                              cc)
 
-    return np.asarray(image_array).astype(np.uint8)
+    return np.uint8(image_array)
 
 
 cdef DTYPE_float32_t _fill_peaks(DTYPE_float32_t[:, ::1] image_block,
@@ -2653,7 +3073,7 @@ cdef void _replace_with_mean(DTYPE_float32_t[:, ::1] edge_block_,
 
                 # line_mean += edge_block_[ii, jj]
                 # line_counter += 1
-                line_mean = int_min(line_mean, edge_block_[ii, jj])
+                line_mean = _nogil_get_min(line_mean, edge_block_[ii, jj])
 
     # line_mean /= float(line_counter)
 
@@ -2942,17 +3362,16 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] fill_window(DTYPE_uint8_t[:, :] image_arr
     return np.uint8(np.asarray(image_array))
 
 
-cdef DTYPE_float32_t _inhibited_egm(DTYPE_float32_t[:, ::1] block,
-                                    DTYPE_uint8_t[:, ::1] corners_block,
-                                    DTYPE_float32_t[:, ::1] inhibition_w,
-                                    DTYPE_float32_t inhibition_scale,
-                                    unsigned int window_size,
-                                    unsigned int hw,
-                                    unsigned int inhibition_operation) nogil:
+cdef DTYPE_float32_t _inhibition(DTYPE_float32_t[:, ::1] block,
+                                 DTYPE_uint8_t[:, ::1] corners_block,
+                                 DTYPE_float32_t[:, ::1] inhibition_w,
+                                 DTYPE_float32_t inhibition_scale,
+                                 unsigned int window_size,
+                                 unsigned int hw,
+                                 unsigned int inhibition_operation) nogil:
 
     cdef:
         Py_ssize_t ii, jj
-        DTYPE_float32_t center_value = block[hw, hw]
         DTYPE_float32_t inhibition_term = 0.
         DTYPE_float32_t center_term = 0.
         DTYPE_float32_t ini_diff
@@ -2987,7 +3406,7 @@ cdef DTYPE_float32_t _inhibited_egm(DTYPE_float32_t[:, ::1] block,
                 inhibition_term += block[ii, jj] * inhibition_scale
                 term_counter += 1
 
-            if inhibition_w[ii, jj] == 2:
+            elif inhibition_w[ii, jj] == 2:
 
                 center_term += block[ii, jj] * inhibition_scale
                 center_counter += 1
@@ -3018,13 +3437,13 @@ cdef DTYPE_float32_t _inhibited_egm(DTYPE_float32_t[:, ::1] block,
     return ini_diff
 
 
-cdef np.ndarray[DTYPE_float32_t, ndim=2] _inhibition(DTYPE_float32_t[:, ::1] image_array,
-                                                     unsigned int window_size,
-                                                     DTYPE_float32_t inhibition_scale,
-                                                     DTYPE_float32_t[:, ::1] inhibition_w,
-                                                     unsigned int iterations,
-                                                     DTYPE_uint8_t[:, ::1] corners_array,
-                                                     unsigned int inhibition_operation):
+cdef np.ndarray[DTYPE_float32_t, ndim=2] inhibition(DTYPE_float32_t[:, ::1] image_array,
+                                                    unsigned int window_size,
+                                                    DTYPE_float32_t inhibition_scale,
+                                                    DTYPE_float32_t[:, ::1] inhibition_w,
+                                                    unsigned int iterations,
+                                                    DTYPE_uint8_t[:, ::1] corners_array,
+                                                    unsigned int inhibition_operation):
 
     """
     Local EGM inhibition
@@ -3059,17 +3478,143 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] _inhibition(DTYPE_float32_t[:, ::1] ima
                     edge_block = image_array[i:i+window_size, j:j+window_size]
                     corners_block = corners_array[i:i+window_size, j:j+window_size]
 
-                    out_array[i+half_window, j+half_window] -= _inhibited_egm(edge_block,
-                                                                              corners_block,
-                                                                              inhibition_w,
-                                                                              inhibition_scale,
-                                                                              window_size,
-                                                                              half_window,
-                                                                              inhibition_operation)
+                    out_array[i+half_window, j+half_window] -= _inhibition(edge_block,
+                                                                           corners_block,
+                                                                           inhibition_w,
+                                                                           inhibition_scale,
+                                                                           window_size,
+                                                                           half_window,
+                                                                           inhibition_operation)
 
-            image_array[...] = out_array
+            if iterations > 1:
+                image_array[...] = out_array
 
-        # image_array = np.power(out_array, 2)
+    return np.float32(out_array)
+
+
+cdef DTYPE_float32_t _line_enhance(DTYPE_float32_t[:, ::1] block,
+                                   DTYPE_float32_t[:, ::1] inhibition_w,
+                                   DTYPE_float32_t inhibition_scale,
+                                   unsigned int window_size,
+                                   unsigned int hw,
+                                   DTYPE_float32_t target_value) nogil:
+
+    cdef:
+        Py_ssize_t ii, jj
+        DTYPE_float32_t center_value = block[hw, hw]
+        DTYPE_float32_t inhibition_term = 0.
+        DTYPE_float32_t center_term = 0.
+        DTYPE_float32_t ini_diff
+        unsigned int term_counter = 0
+        unsigned int center_counter = 0
+
+    # Get the weighted average within the local window.
+    #   This is the inhibition term, T.
+    for ii in range(0, window_size):
+
+        for jj in range(0, window_size):
+
+            if inhibition_w[ii, jj] == 1:
+
+                inhibition_term += block[ii, jj] * inhibition_scale
+                term_counter += 1
+
+            elif inhibition_w[ii, jj] == 2:
+
+                center_term += block[ii, jj] * inhibition_scale
+                center_counter += 1
+
+    inhibition_term /= float(term_counter) * inhibition_scale
+    center_term /= float(center_counter) * inhibition_scale
+
+    ini_diff = center_term - inhibition_term
+
+    # The outside term
+    #   should be smaller.
+    if ini_diff < 0:
+        ini_diff = 0.
+
+    if target_value == -9999.:
+
+        if (center_value + ini_diff) >= 1:
+            return 1. - center_value
+        else:
+            return center_value + ini_diff
+
+    else:
+
+        if center_value >= target_value:
+            return center_value
+        elif (center_value + ini_diff) >= target_value:
+            return target_value - center_value
+        else:
+            return center_value + ini_diff
+
+
+cdef np.ndarray[DTYPE_float32_t, ndim=2] line_enhance(DTYPE_float32_t[:, ::1] image_array,
+                                                      unsigned int window_size,
+                                                      DTYPE_float32_t inhibition_scale,
+                                                      DTYPE_float32_t[:, :, ::1] inhibition_w,
+                                                      unsigned int iterations,
+                                                      DTYPE_float32_t target_value,
+                                                      DTYPE_float32_t ignore_value):
+
+    """
+    Local line enhancement
+    """
+
+    cdef:
+        Py_ssize_t i, j, n_disk
+
+        unsigned int rows = image_array.shape[0]
+        unsigned int cols = image_array.shape[1]
+        unsigned int half_window = int(window_size / 2.)
+        unsigned int row_dims = rows - (half_window*2)
+        unsigned int col_dims = cols - (half_window*2)
+
+        unsigned int n_disks = inhibition_w.shape[0]
+
+        DTYPE_float32_t[:, ::1] edge_block
+        DTYPE_float32_t[:, ::1] disk_block
+
+        DTYPE_float32_t[:, ::1] out_array = image_array.copy()
+
+        DTYPE_float32_t max_intersection, line_intersection
+
+    for iteration in range(0, iterations):
+
+        with nogil:
+
+            for i in range(0, row_dims):
+
+                for j in range(0, col_dims):
+
+                    edge_block = image_array[i:i+window_size, j:j+window_size]
+
+                    if ignore_value != -9999.:
+
+                        if edge_block[half_window, half_window] < ignore_value:
+                            continue
+
+                    max_intersection = 0.
+
+                    for n_disk in range(0, n_disks):
+
+                        disk_block = inhibition_w[n_disk, :, :]
+
+                        line_intersection = _line_enhance(edge_block,
+                                                          disk_block,
+                                                          inhibition_scale,
+                                                          window_size,
+                                                          half_window,
+                                                          target_value)
+
+                        max_intersection = _nogil_get_max(max_intersection, line_intersection)
+
+                    out_array[i+half_window, j+half_window] = max_intersection
+
+            if iterations > 1:
+                image_array[...] = out_array
 
     return np.float32(out_array)
 
@@ -3167,8 +3712,8 @@ cdef np.ndarray rgb_window(DTYPE_float32_t[:, :, :] image_array, unsigned int wi
 cdef np.ndarray window(DTYPE_float32_t[:, ::1] image_array,
                        str statistic,
                        unsigned int window_size,
-                       int target_value,
-                       int ignore_value,
+                       DTYPE_float32_t target_value,
+                       DTYPE_float32_t ignore_value,
                        unsigned int iterations,
                        DTYPE_float32_t[:, ::1] weights,
                        unsigned int skip_block):
@@ -3266,8 +3811,8 @@ def moving_window(np.ndarray image_array not None,
                   str statistic='mean',
                   DTYPE_intp_t window_size=3,
                   int skip_block=0,
-                  int target_value=-9999,
-                  int ignore_value=-9999,
+                  float target_value=-9999.,
+                  float ignore_value=-9999.,
                   int iterations=1,
                   weights=None,
                   endpoint_image=None,
@@ -3294,7 +3839,7 @@ def moving_window(np.ndarray image_array not None,
 
             Choices are ['mean', 'min', 'max', 'median', 'majority', 'percent', 'sum',
                          'link', 'fill-basins', 'fill', 'circles', 'distance'. 'rgb-distance',
-                         'inhibition', 'saliency', 'duda'].
+                         'inhibition', 'line-enhance', 'saliency', 'duda'].
 
             circles: TODO
             distance: Computes the spectral distance between the center value and neighbors
@@ -3304,6 +3849,7 @@ def moving_window(np.ndarray image_array not None,
             fill-peaks: Fills pixels surrounded by lower values
             fill: Fill 0s surrounded by 1s
             inhibition: TODO
+            line-enhance:
             link: Links binary endpoints
             majority: Majority value within window
             max: Maximum of window
@@ -3347,6 +3893,7 @@ def moving_window(np.ndarray image_array not None,
                          'distance',
                          'rgb-distance',
                          'inhibition',
+                         'line-enhance',
                          'saliency',
                          'duda']:
 
@@ -3366,7 +3913,7 @@ def moving_window(np.ndarray image_array not None,
         return link_window(np.uint8(np.ascontiguousarray(image_array)),
                            window_size,
                            np.uint8(np.ascontiguousarray(endpoint_image)),
-                           np.uint8(np.ascontiguousarray(gradient_image)),
+                           np.float32(np.ascontiguousarray(gradient_image)),
                            min_egm,
                            smallest_allowed_gap,
                            medium_allowed_gap)
@@ -3415,13 +3962,85 @@ def moving_window(np.ndarray image_array not None,
         else:
             corners_array = np.uint8(np.ascontiguousarray(corners_array))
 
-        return _inhibition(np.float32(np.ascontiguousarray(image_array)),
-                           window_size,
-                           inhibition_scale,
-                           np.float32(np.ascontiguousarray(disk2)),
-                           iterations,
-                           corners_array,
-                           inhibition_operation)
+        return inhibition(np.float32(np.ascontiguousarray(image_array)),
+                          window_size,
+                          inhibition_scale,
+                          np.float32(np.ascontiguousarray(disk2)),
+                          iterations,
+                          corners_array,
+                          inhibition_operation)
+
+    elif statistic == 'line-enhance':
+
+        try:
+            import pymorph
+        except ImportError:
+            raise ImportError('Pymorph must be installed to use inhibition')
+
+        from scipy.ndimage.interpolation import rotate
+
+        disk_array = np.uint8(pymorph.sedisk(r=int(window_size / 2.),
+                                             dim=2,
+                                             metric='euclidean',
+                                             flat=True,
+                                             h=0) * 1)
+
+        window_half = int(window_size / 2.)
+
+        if window_size - inhibition_ws == 0:
+            inhibition_ws_start = 0
+            inhibition_ws_end = window_size
+        else:
+            inhibition_ws_start = (window_size - inhibition_ws) / 2
+            inhibition_ws_end = window_size - inhibition_ws_start
+
+        # The disk holder.
+        disk_holder = np.zeros((len(range(0, 180, 15)) + len(range(0, 360, 15)),
+                                window_size,
+                                window_size),
+                               dtype='uint8')
+
+        disk_counter = 0
+
+        # Flat line
+        disk_arrayc = disk_array.copy()
+        disk_arrayc[window_half, inhibition_ws_start:inhibition_ws_end] = 2
+
+        for degree in range(0, 180, 15):
+
+            disk_holder[disk_counter] = rotate(disk_arrayc, degree, order=1, reshape=False)
+            disk_counter += 1
+
+        # Half line
+        disk_arrayc = disk_array.copy()
+        disk_arrayc[window_half, window_half:window_half+inhibition_ws] = 2
+
+        for degree in range(0, 360, 15):
+
+            disk_holder[disk_counter] = rotate(disk_arrayc, degree, order=1, reshape=False)
+            disk_counter += 1
+
+        # Right angle
+        # disk_arrayc = disk_array.copy()
+        # disk_arrayc[window_half, window_half:window_half+inhibition_ws] = 2
+        # disk_arrayc[window_half:window_half+inhibition_ws, window_half] = 2
+        #
+        # for degree in range(0, 360, 15):
+        #     disk_holder[disk_counter] = rotate(disk_arrayc, degree, order=1, reshape=False)
+        #     disk_counter += 1
+
+        if not isinstance(corners_array, np.ndarray):
+            corners_array = np.zeros((image_array.shape[0], image_array.shape[1]), dtype='uint8')
+        else:
+            corners_array = np.uint8(np.ascontiguousarray(corners_array))
+
+        return line_enhance(np.float32(np.ascontiguousarray(image_array)),
+                            window_size,
+                            inhibition_scale,
+                            np.float32(np.ascontiguousarray(disk_holder)),
+                            iterations,
+                            target_value,
+                            ignore_value)
 
     elif statistic == 'fill-basins':
 
@@ -3450,7 +4069,7 @@ def moving_window(np.ndarray image_array not None,
 
         return dist_window(np.float32(np.ascontiguousarray(image_array)),
                            window_size,
-                           float(ignore_value),
+                           ignore_value,
                            np.float32(np.ascontiguousarray(weights)))
 
     elif statistic == 'rgb-distance':
