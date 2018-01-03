@@ -1549,19 +1549,19 @@ cdef void _link_endpoints(DTYPE_uint8_t[:, ::1] edge_block,
                                 ####################
                                 if (_abs(center_angle) == 180) and (_abs(connect_angle) == 180):
 
-                                    # The endpoints must be within 3
+                                    # The endpoints must be within 5
                                     #   pixels along the perpendicular plane.
-                                    if _abs(center - ii) <= 3:
+                                    # if _abs(center - ii) <= 5:
 
-                                        if (center_angle == 180) and (connect_angle == -180):
+                                    if (center_angle == 180) and (connect_angle == -180):
 
-                                            if jj <= center:
-                                                match = 1
+                                        if jj <= center:
+                                            match = 1
 
-                                        elif (center_angle == -180) and (connect_angle == 180):
+                                    elif (center_angle == -180) and (connect_angle == 180):
 
-                                            if jj >= center:
-                                                match = 1
+                                        if jj >= center:
+                                            match = 1
 
                                 elif (_abs(center_angle) == 135) and (_abs(connect_angle) == 180):
 
@@ -1605,19 +1605,19 @@ cdef void _link_endpoints(DTYPE_uint8_t[:, ::1] edge_block,
                                 #################
                                 elif (_abs(center_angle) == 90) and (_abs(connect_angle) == 90):
 
-                                    # The endpoints must be within 3
+                                    # The endpoints must be within 5
                                     #   pixels along the perpendicular plane.
-                                    if _abs(center - jj) <= 3:
+                                    # if _abs(center - jj) <= 5:
 
-                                        if (center_angle == 90) and (connect_angle == -90):
+                                    if (center_angle == 90) and (connect_angle == -90):
 
-                                            if ii <= center:
-                                                match = 1
+                                        if ii <= center:
+                                            match = 1
 
-                                        elif (center_angle == -90) and (connect_angle == 90):
+                                    elif (center_angle == -90) and (connect_angle == 90):
 
-                                            if ii >= center:
-                                                match = 1
+                                        if ii >= center:
+                                            match = 1
 
                                 elif (_abs(center_angle) == 90) and (_abs(connect_angle) == 135):
 
