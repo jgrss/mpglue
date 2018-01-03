@@ -477,20 +477,23 @@ cdef void draw_optimum_line(Py_ssize_t y0,
                             Py_ssize_t y1,
                             Py_ssize_t x1,
                             DTYPE_float32_t[:, ::1] rc_,
-                            DTYPE_float32_t[:, ::1] resistance) nogil:
+                            DTYPE_float32_t[:, ::1] resistance,
+                            DTYPE_int16_t[::1] draw_indices) nogil:
 
     """
     Draws a line along the route of least resistance
     """
 
     cdef:
-        Py_ssize_t ii_, jj_
+        Py_ssize_t ii__, jj__
+        int ii_, jj_
 
         DTYPE_float32_t start_value = resistance[y0, x0]
-        DTYPE_float32_t compare_value, min_diff
+        DTYPE_float32_t compare_value, min_diff, start_value_
 
         Py_ssize_t track_y = y0
         Py_ssize_t track_x = x0
+        Py_ssize_t track_y_, track_x_
 
         Py_ssize_t gi = y0
         Py_ssize_t gj = x0
@@ -500,101 +503,134 @@ cdef void draw_optimum_line(Py_ssize_t y0,
 
         unsigned int line_counter = 1
 
+    # The starting y index
     rc_[0, 0] = y0
+
+    # The starting x index
     rc_[1, 0] = x0
-    rc_[2, 0] = line_counter
+
+    # The line length
+    rc_[2, 0] = 1
 
     # Continue until the end
     #   has been reached.
     while True:
 
+        # Initiate a minimum distance.
         min_diff = 1000000.
 
         # Check neighbors
-        for ii_ in range(0, 3):
+        for ii__ in range(0, 3):
+
+            ii_ = draw_indices[ii__]
 
             # No change
             if y1 == track_y:
 
-                if ii_ != 1:
+                if ii_ != 0:
                     continue
 
             # Increase
             elif y1 > track_y:
 
-               if ii_ < 1:
+               if ii_ < 0:
                    continue
 
             # Decrease
             else:
 
-                if ii_ > 1:
+                if ii_ > 0:
                     continue
 
             # Bounds checking
             if (track_y + ii_) > y1:
-                track_y = y1
+                track_y_ = y1
             else:
-                track_y += ii_
+                track_y_ = track_y + ii_
 
-            for jj_ in range(0, 3):
+            for jj__ in range(0, 3):
+
+                jj_ = draw_indices[jj__]
 
                 # No change
                 if x1 == track_x:
 
-                    if jj_ != 1:
+                    if jj_ != 0:
                         continue
 
                 # Increase
                 elif x1 > track_x:
 
-                    if jj_ < 1:
+                    if jj_ < 0:
                         continue
 
                 # Decrease
                 else:
 
-                    if jj_ > 1:
+                    if jj_ > 0:
                         continue
 
                 # Bounds checking
                 if (track_x + jj_) > x1:
-                    track_x = x1
+                    track_x_ = x1
                 else:
-                    track_x += jj_
+                    track_x_ = track_x + jj_
 
+                # Force movement
+                if (ii__ == 1) and (jj__ == 1):
+                    continue
+
+                # Get the resistance value.
                 compare_value = resistance[track_y, track_y]
 
+                # Get the absolute difference
+                #   between the two connecting
+                #   values.
                 if _abs(start_value - compare_value) < min_diff:
 
                     min_diff = _abs(start_value - compare_value)
 
-                    gi = track_y
-                    gj = track_x
+                    gi = track_y_
+                    gj = track_x_
 
-                track_x = gj
+                    start_value_ = start_value
 
-            track_y = gi
+        # Update the optimum
+        #   row and column
+        #   indices.
+        rc_[0, line_counter] = gi
+        rc_[1, line_counter] = gj
+        rc_[2, 0] = line_counter + 1
 
         line_counter += 1
 
-        rc_[0, line_counter-1] = gi
-        rc_[1, line_counter-1] = gj
-
+        # Update the tracking
+        #   coordinates.
         track_y = gi
         track_x = gj
 
+        start_value = start_value_
+
+        # Check if the line is
+        #   within 1 pixel of
+        #   the end.
+        if (_abs(gi - y1) == 1) and (_abs(gj - x1) == 1):
+            break
+
+        # Check if the line finished.
         if (gi == y1) and (gj == x1):
-
-            rc_[2, 0] = line_counter
-
             break
 
         if line_counter >= rrows:
-
-            rc_[2, 0] = line_counter
-
             break
+
+    # Ensure the last coordinate
+    #   is the line end.
+    if rc_[0, <int>rc_[2, 0]-1] != y1:
+
+        rc_[0, line_counter] = y1
+        rc_[1, line_counter] = x1
+        rc_[2, 0] = line_counter + 1
 
 
 cdef list _direction_list():
@@ -1400,7 +1436,7 @@ cdef void _fill_block(DTYPE_uint8_t[:, ::1] block2fill_,
 cdef void _link_endpoints(DTYPE_uint8_t[:, ::1] edge_block,
                           DTYPE_uint8_t[:, ::1] endpoints_block,
                           DTYPE_float32_t[:, ::1] gradient_block,
-                          unsigned int window_size,
+                          unsigned int window_size_,
                           DTYPE_int16_t[:, ::1] angles_dict,
                           DTYPE_intp_t[::1] h_r,
                           DTYPE_intp_t[::1] h_c,
@@ -1408,26 +1444,34 @@ cdef void _link_endpoints(DTYPE_uint8_t[:, ::1] edge_block,
                           int min_egm,
                           int smallest_allowed_gap,
                           int medium_allowed_gap,
-                          DTYPE_float32_t[:, ::1] rcc_):
+                          DTYPE_float32_t[:, ::1] rcc_,
+                          DTYPE_int16_t[::1] draw_indices,
+                          Py_ssize_t i_, Py_ssize_t j_):
 
     cdef:
         Py_ssize_t ii, jj, ii_, jj_
-        unsigned int smallest_gap = window_size * window_size   # The smallest gap found
-        unsigned int center = <int>(window_size / 2.)
+
+        unsigned int smallest_gap = window_size_ * window_size_   # The smallest gap found
+        unsigned int center = <int>(window_size_ / 2.)
         int center_angle, connect_angle, ss, match
+
         DTYPE_float32_t[::1] rr_, cc_
-        DTYPE_float32_t[::1] dummy = np.zeros(window_size, dtype='float32')
+        # DTYPE_float32_t[::1] dummy = np.zeros(window_size_, dtype='float32')
 
         unsigned int rc_shape, rc_length_
+
         DTYPE_float32_t[::1] line_values_, line_values_g
 
         DTYPE_float32_t line_mean
+        DTYPE_float32_t max_line_mean = 0.
 
-    if smallest_allowed_gap > window_size:
-        smallest_allowed_gap = window_size
+        bint short_line
 
-    if medium_allowed_gap > window_size:
-        medium_allowed_gap = window_size
+    if smallest_allowed_gap > window_size_:
+        smallest_allowed_gap = window_size_
+
+    if medium_allowed_gap > window_size_:
+        medium_allowed_gap = window_size_
 
     # Get the origin angle of the center endpoint.
     center_angle = cy_argwhere(edge_block[center-1:center+2,
@@ -1437,17 +1481,17 @@ cdef void _link_endpoints(DTYPE_uint8_t[:, ::1] edge_block,
                                3,
                                angles_dict)
 
-    if (center_angle != 9999):# and (center_angle != 0):
+    if center_angle != 9999:    # and (center_angle != 0):
 
         with nogil:
 
             # There must be at least
             #   two endpoints in the block.
-            if _get_sum_int(endpoints_block, window_size, window_size) > 1:
+            if _get_sum_int(endpoints_block, window_size_, window_size_) > 1:
 
-                for ii in range(1, window_size-1):
+                for ii in range(1, window_size_-1):
 
-                    for jj in range(1, window_size-1):
+                    for jj in range(1, window_size_-1):
 
                         # Cannot connect to direct neighbors or itself.
                         if (_abs(float(ii) - float(center)) <= 1) and (_abs(float(jj) - float(center)) <= 1):
@@ -1457,58 +1501,102 @@ cdef void _link_endpoints(DTYPE_uint8_t[:, ::1] edge_block,
                         #   because we cannot
                         #   get the angle at the
                         #   window edges.
-                        # if (ii == 0) or (ii == window_size-1) or (jj == 0) or (jj == window_size-1):
+                        # if (ii == 0) or (ii == window_size_-1) or (jj == 0) or (jj == window_size_-1):
                         #     continue
 
                         # Located another endpoint.
                         if endpoints_block[ii, jj] == 1:
 
-                            # CONNECT ENDPOINTS WITH SMALL GAP
-
                             # Draw a line between the two endpoints.
-                            # rr, cc = draw_line_tuple(center, center, ii, jj)
+                            if (_abs(ii - center) <= smallest_allowed_gap) and \
+                                    (_abs(jj - center) <= smallest_allowed_gap):
 
-                            # draw_line(center, center, ii, jj, rcc_)
-                            draw_optimum_line(center, center, ii, jj, rcc_, gradient_block)
+                                short_line = True
+
+                                # Draw the straightest line.
+                                draw_line(center, center, ii, jj, rcc_)
+
+                            else:
+
+                                short_line = False
+
+                                # Draw a line along the path
+                                #   of least resistance.
+                                draw_optimum_line(center, center, ii, jj, rcc_, gradient_block, draw_indices)
 
                             # Get the current line length.
                             rc_length_ = <int>rcc_[2, 0]
 
                             # row of zeros, up to the line length
                             line_values_ = rcc_[3, :rc_length_]
-                            line_values_g = rcc_[3, :rc_length_]
 
                             # Extract the values along the line.
                             _extract_values_int(edge_block, line_values_, rcc_, rc_length_)
-                            # _extract_values(gradient_block, line_values_, rcc_, rc_length_)
 
-                            # rr_shape = rr.shape[0]
+                            # with gil:
+                            #
+                            #     if (i_ == 301) and (j_ == 132):
+                            #
+                            #         print np.uint8(edge_block)
+                            #         print np.uint8(endpoints_block)
+                            #         print
+                            #         print np.uint8(rcc_[0, :rc_length_])
+                            #         print np.uint8(rcc_[1, :rc_length_])
+                            #         print
+                            #         print np.int16(angles_dict)
+                            #         print center_angle, connect_angle
+                            #         print ii, jj
+                            #         print rc_length_, smallest_gap
+                            #         print _get_sum1df(line_values_, rc_length_)
+                            #
+                            #         import sys
+                            #
+                            #         sys.exit()
 
-                            # (2) ONLY CONNECT THE SMALLEST LINE POSSIBLE
-                            if rc_length_ >= smallest_gap:
-                                continue
-
-                            # (3) CHECK IF THE CONNECTING LINE CROSSES OTHER EDGES
-                            # if _get_sum1d(extract_values(edge_block, rr, cc, rr_shape), rr_shape) > 2:
-                            #     continue
+                            # CHECK IF THE CONNECTING
+                            #   LINE CROSSES OTHER EDGES
                             if _get_sum1df(line_values_, rc_length_) > 2:
+
+                                # Try a straighter line.
+                                if not short_line:
+
+                                    draw_line(center, center, ii, jj, rcc_)
+
+                                    # Get the current line length.
+                                    rc_length_ = <int>rcc_[2, 0]
+
+                                    # row of zeros, up to the line length
+                                    line_values_ = rcc_[3, :rc_length_]
+
+                                    # Extract the values along the line.
+                                    _extract_values_int(edge_block, line_values_, rcc_, rc_length_)
+
+                                if _get_sum1df(line_values_, rc_length_) > 2:
+                                    continue
+
+                            # CONNECT THE SMALLEST LINE
+                            #   POSSIBLE WITH HIGH EGM
+                            if rc_length_ >= smallest_gap:
                                 continue
 
                             # Check the angles if the gap is large.
 
-                            # 3) CONNECT POINTS WITH SIMILAR ANGLES
+                            # CONNECT POINTS WITH SIMILAR ANGLES
                             connect_angle = cy_argwhere(edge_block[ii-1:ii+2, jj-1:jj+2],
                                                         endpoints_block[ii-1:ii+2, jj-1:jj+2],
                                                         3, angles_dict)
 
-                            if (connect_angle == 9999):# or (connect_angle == 0):
+                            if connect_angle == 9999:     # or (connect_angle == 0):
                                 continue
 
                             # Don't connect same angles.
-                            if center_angle == connect_angle:
-                                continue
+                            # if center_angle == connect_angle:
+                            #     continue
 
-                            # Extract the values along the line.
+                            line_values_g = rcc_[3, :rc_length_]
+
+                            # Extract edge gradient values
+                            #   along the line.
                             _extract_values(gradient_block, line_values_g, rcc_, rc_length_)
 
                             if rc_length_ == 3:
@@ -1536,6 +1624,8 @@ cdef void _link_endpoints(DTYPE_uint8_t[:, ::1] edge_block,
                                     jj_ = jj + 0
 
                                     smallest_gap = <int>_nogil_get_min(rc_length_, smallest_gap)
+
+                                    max_line_mean = line_mean
 
                             # For medium-sized gaps allow similar angles, but no
                             #   asymmetric angles.
@@ -1735,6 +1825,8 @@ cdef void _link_endpoints(DTYPE_uint8_t[:, ::1] edge_block,
 
                                         smallest_gap = <int>_nogil_get_min(rc_length_, smallest_gap)
 
+                                        max_line_mean = line_mean
+
                                     # with gil:
                                     #
                                     #     print np.uint8(gradient_block)
@@ -1791,7 +1883,7 @@ cdef void _link_endpoints(DTYPE_uint8_t[:, ::1] edge_block,
 
         # At this juncture, there doesn't have to
         #   be two endpoints.
-        # if smallest_gap == window_size * window_size:
+        # if smallest_gap == window_size_ * window_size_:
         #
         #     rr_, cc_, ss, ii_ = close_end(edge_block,
         #                                   endpoints_block,
@@ -1810,7 +1902,7 @@ cdef void _link_endpoints(DTYPE_uint8_t[:, ::1] edge_block,
         #     if ss == 1:
         #         smallest_gap = 0
 
-        if smallest_gap < (window_size * window_size):
+        if smallest_gap < (window_size_ * window_size_):
 
             # if rc_shape > 3:
             #     print np.uint8(edge_block)
@@ -2020,13 +2112,16 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] link_window(DTYPE_uint8_t[:, ::1] edge_im
     """
 
     cdef:
-        int rows = edge_image.shape[0]
-        int cols = edge_image.shape[1]
-        Py_ssize_t cij, isub, jsub, iplus, jplus
-        unsigned int half_window = int(window_size / 2)
+        Py_ssize_t cij, isub, jsub, iplus, jplus, sub_counter
+
+        unsigned int rows = edge_image.shape[0]
+        unsigned int cols = edge_image.shape[1]
+        unsigned int half_window, window_size_adj
+
         DTYPE_int64_t[:, ::1] endpoint_idx
         DTYPE_int64_t[::1] endpoint_row
-        int endpoint_idx_rows
+
+        unsigned int endpoint_idx_rows, block_size
 
         DTYPE_uint8_t[:, ::1] edge_block_, ep_block_
         DTYPE_float32_t[:, ::1] gradient_block_
@@ -2039,7 +2134,11 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] link_window(DTYPE_uint8_t[:, ::1] edge_im
         DTYPE_intp_t[::1] h_c = np.array([0, 1, 2, 3, 4], dtype='intp')
         DTYPE_intp_t[::1] d_c = np.array([4, 3, 2, 1, 0], dtype='intp')
 
+        DTYPE_int16_t[::1] draw_indices = np.array([-1, 0, 1], dtype='int16')
+
         DTYPE_float32_t[:, ::1] rcc = np.zeros((4, window_size*2), dtype='float32')
+
+        unsigned int max_iters
 
     endpoint_idx = np.ascontiguousarray(np.argwhere(np.uint8(endpoint_image) == 1))
     endpoint_idx_rows = endpoint_idx.shape[0]
@@ -2048,6 +2147,8 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] link_window(DTYPE_uint8_t[:, ::1] edge_im
 
         endpoint_row = endpoint_idx[cij]
 
+        half_window = <int>(window_size / 2.)
+
         isub = endpoint_row[0] - half_window
         iplus = endpoint_row[0] + half_window
         jsub = endpoint_row[1] - half_window
@@ -2055,21 +2156,56 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] link_window(DTYPE_uint8_t[:, ::1] edge_im
 
         # Bounds checking
         if (isub < 0) or (iplus >= rows) or (jsub < 0) or (jplus >= cols):
+
+            sub_counter = 1
+
+            max_iters = <int>(half_window / 2.)
+            window_size_adj = window_size
+
+            # Try to find a smaller
+            #   window that fits.
+            while True:
+
+                # Reduce the window size.
+                window_size_adj -= 2
+
+                # Get the new half-window size.
+                half_window = <int>(window_size_adj / 2.)
+
+                isub = endpoint_row[0] - half_window
+                iplus = endpoint_row[0] + half_window
+                jsub = endpoint_row[1] - half_window
+                jplus = endpoint_row[1] + half_window
+
+                sub_counter += 1
+
+                if (0 <= isub < rows) and (0 <= iplus < rows) and (0 <= jsub < cols) and (0 <= jplus < cols):
+                    break
+
+                if sub_counter >= max_iters:
+                    break
+
+                if sub_counter <= smallest_allowed_gap:
+                    break
+
+        if (isub < 0) or (iplus >= rows) or (jsub < 0) or (jplus >= cols):
             continue
 
-        edge_block_ = edge_image[isub:isub+window_size,
-                                 jsub:jsub+window_size]
+        edge_block_ = edge_image[isub:iplus,
+                                 jsub:jplus]
 
-        ep_block_ = endpoint_image[isub:isub+window_size,
-                                   jsub:jsub+window_size]
+        ep_block_ = endpoint_image[isub:iplus,
+                                   jsub:jplus]
 
-        gradient_block_ = gradient_image[isub:isub+window_size,
-                                         jsub:jsub+window_size]
+        gradient_block_ = gradient_image[isub:iplus,
+                                         jsub:jplus]
+
+        block_size = edge_block_.shape[0]
 
         _link_endpoints(edge_block_,
                         ep_block_,
                         gradient_block_,
-                        window_size,
+                        block_size,
                         angles_array,
                         h_r,
                         h_c,
@@ -2077,10 +2213,13 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] link_window(DTYPE_uint8_t[:, ::1] edge_im
                         min_egm,
                         smallest_allowed_gap,
                         medium_allowed_gap,
-                        rcc)
+                        rcc,
+                        draw_indices,
+                        isub+<int>(block_size / 2.),
+                        jsub+<int>(block_size / 2.))
 
-        edge_image[isub:isub+window_size, jsub:jsub+window_size] = edge_block_
-        endpoint_image[isub:isub+window_size, jsub:jsub+window_size] = ep_block_
+        edge_image[isub:iplus, jsub:jplus] = edge_block_
+        endpoint_image[isub:iplus, jsub:jplus] = ep_block_
 
     return np.uint8(edge_image)
 
