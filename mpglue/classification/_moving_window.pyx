@@ -2786,6 +2786,74 @@ cdef np.ndarray[DTYPE_float32_t, ndim=3] saliency_window(DTYPE_float32_t[:, ::1]
     return np.vstack((np.float32(out_array_lin), np.float32(out_array_sal))).reshape(2, rows, cols)
 
 
+cdef np.ndarray[DTYPE_float32_t, ndim=2] suppression(DTYPE_float32_t[:, ::1] gradient_array,
+                                                     DTYPE_float32_t[:, ::1] direction_array,
+                                                     unsigned int window_size):
+
+    cdef:
+        Py_ssize_t i, j
+
+        unsigned int rows = gradient_array.shape[0]
+        unsigned int cols = gradient_array.shape[1]
+        unsigned int half_window = <int>(window_size / 2.)
+        unsigned int row_dims = <int>(rows - (half_window * 2.))
+        unsigned int col_dims = <int>(cols - (half_window * 2.))
+
+        DTYPE_float32_t[:, ::1] gradient_block, direction_block
+
+        DTYPE_float32_t edge_gradient, edge_direction
+        DTYPE_float32_t[:, ::1] out_array = np.zeros((rows, cols), dtype='float32')
+
+    with nogil:
+
+        for i in range(0, row_dims):
+
+            for j in range(0, col_dims):
+
+                gradient_block = gradient_array[i:i+window_size, j:j+window_size]
+                direction_block = direction_array[i:i+window_size, j:j+window_size]
+
+                # Get the gradient value
+                #   for the current pixel.
+                edge_gradient = gradient_block[half_window, half_window]
+
+                # Get the gradient direction
+                #   for the current pixel.
+                edge_direction = direction_block[half_window, half_window]
+
+                # Get the local maximum gradient
+                #   along the direction.
+                if (edge_direction <= 22.5) or (edge_direction > 157.5):
+
+                    if (edge_gradient >= gradient_block[half_window, half_window-1]) and \
+                            (edge_gradient >= gradient_block[half_window, half_window+1]):
+
+                        out_array[i, j] = edge_gradient
+
+                elif 22.5 <= edge_direction < 67.5:
+
+                    if (edge_gradient >= gradient_block[half_window+1, half_window-1]) and \
+                            (edge_gradient >= gradient_block[half_window-1, half_window+1]):
+
+                        out_array[i, j] = edge_gradient
+
+                elif 67.5 <= edge_direction < 112.5:
+
+                    if (edge_gradient >= gradient_block[half_window+1, half_window]) and \
+                            (edge_gradient >= gradient_block[half_window-1, half_window]):
+
+                        out_array[i, j] = edge_gradient
+
+                elif 112.5 <= edge_direction < 157.5:
+
+                    if (edge_gradient >= gradient_block[half_window+1, half_window+1]) and \
+                            (edge_gradient >= gradient_block[half_window-1, half_window-1]):
+
+                        out_array[i, j] = edge_gradient
+
+    return np.float32(out_array)
+
+
 cdef DTYPE_uint8_t[:, ::1] _fill_circles(DTYPE_uint8_t[:, ::1] image_block,
                                          DTYPE_uint8_t[:, ::1] circle_block,
                                          DTYPE_intp_t dims,
@@ -3978,7 +4046,7 @@ def moving_window(np.ndarray image_array not None,
 
             Choices are ['mean', 'min', 'max', 'median', 'majority', 'percent', 'sum',
                          'link', 'fill-basins', 'fill', 'circles', 'distance'. 'rgb-distance',
-                         'inhibition', 'line-enhance', 'saliency', 'duda'].
+                         'inhibition', 'line-enhance', 'saliency', 'duda', 'suppression'].
 
             circles: TODO
             distance: Computes the spectral distance between the center value and neighbors
@@ -4034,6 +4102,7 @@ def moving_window(np.ndarray image_array not None,
                          'inhibition',
                          'line-enhance',
                          'saliency',
+                         'suppression',
                          'duda']:
 
         raise ValueError('The statistic {} is not an option.'.format(statistic))
@@ -4069,6 +4138,12 @@ def moving_window(np.ndarray image_array not None,
         return saliency_window(np.float32(np.ascontiguousarray(image_array)),
                                window_size,
                                l_size)
+
+    elif statistic == 'suppression':
+
+        return suppression(np.float32(np.ascontiguousarray(image_array)),
+                           np.float32(np.ascontiguousarray(weights)),
+                           window_size)
 
     elif statistic == 'inhibition':
 
