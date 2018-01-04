@@ -227,6 +227,30 @@ vector-tools
 >>> vrt_builder(comp_dict, '/out_image.vrt', force_type='float32')
 ```
 
+#### Moving window operations
+```python
+>>> from mpglue import moving_window
+>>> 
+>>> # Compute a moving mean over an image.
+>>> with gl.ropen('/input_image.tif') as i_info:
+>>>
+>>>     image_array = i_info.read()
+>>>
+>>>     image_mean = moving_window(image_array,
+>>>                                statistic='mean',
+>>>                                window_size=5)
+>>> del
+>>>
+>>> # Compute the percentage of binary pixels.
+>>> with gl.ropen('/input_image.tif') as i_info:
+>>>
+>>>     image_array = i_info.read()
+>>>
+>>>     image_percent = moving_window(image_array,
+>>>                                   statistic='percent',
+>>>                                   window_size=25)
+```
+
 Installation
 ---
 

@@ -3,7 +3,7 @@ from .vector_tools import vopen
 from .classification.classification import classification, classification_r
 from .classification.error_matrix import error_matrix, object_accuracy
 from .classification.change import change
-from .classification.focal_statistics import focal_statistics
+from .classification._moving_window import moving_window
 from .classification._morph_cells import morph_cells
 from .classification.reclassify import reclassify
 from .classification.recode import recode
@@ -18,7 +18,7 @@ __all__ = ['ropen',
            'vopen',
            'classification', 'classification_r',
            'error_matrix', 'object_accuracy',
-           'focal_statistics', 'morph_cells', 'change', 'reclassify', 'recode',
+           'moving_window', 'morph_cells', 'change', 'reclassify', 'recode',
            'raster_calc',
            'veg_indices', 'VegIndicesEquations',
            'vrt_builder',
