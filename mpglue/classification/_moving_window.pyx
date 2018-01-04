@@ -2870,7 +2870,7 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] seg_dist(DTYPE_float32_t[:, ::1] value_ar
                 block_array = value_array[i:i+window_size, j:j+window_size]
                 center_value = block_array[half_window, half_window]
 
-                if center_value < 1:
+                if center_value < 1.4:
 
                     if center_value == 0:
                         out_array[i, j] = 1
@@ -2888,7 +2888,7 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] seg_dist(DTYPE_float32_t[:, ::1] value_ar
 
                                 max_neighbor = _nogil_get_max(max_neighbor, block_array[ii, jj])
 
-                        if max_neighbor < 1:
+                        if max_neighbor < 1.4:
                             out_array[i, j] = 1
 
     return np.uint8(out_array)
@@ -2940,33 +2940,33 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] suppression(DTYPE_float32_t[:, ::1] gra
 
                     # Get the local maximum gradient
                     #   along the direction.
-                    if (edge_direction <= 22.5) or (edge_direction > 157.5):
+                    if (edge_direction >= 337.5) or (edge_direction < 22.5) or (157.5 <= edge_direction < 202.5):
 
                         if (edge_gradient >= gradient_block[half_window, half_window-ii]) and \
                                 (edge_gradient >= gradient_block[half_window, half_window+ii]):
 
-                            out_array[i, j] = edge_gradient
+                            out_array[i+half_window, j+half_window] = edge_gradient
 
-                    elif 22.5 <= edge_direction < 67.5:
+                    elif (22.5 <= edge_direction < 67.5) or (202.5 <= edge_direction < 247.5):
 
                         if (edge_gradient >= gradient_block[half_window+ii, half_window-ii]) and \
                                 (edge_gradient >= gradient_block[half_window-ii, half_window+ii]):
 
-                            out_array[i, j] = edge_gradient
+                            out_array[i+half_window, j+half_window] = edge_gradient
 
-                    elif 67.5 <= edge_direction < 112.5:
+                    elif (67.5 <= edge_direction < 112.5) or (247.5 <= edge_direction < 292.5):
 
                         if (edge_gradient >= gradient_block[half_window+ii, half_window]) and \
                                 (edge_gradient >= gradient_block[half_window-ii, half_window]):
 
-                            out_array[i, j] = edge_gradient
+                            out_array[i+half_window, j+half_window] = edge_gradient
 
-                    elif 112.5 <= edge_direction < 157.5:
+                    elif (112.5 <= edge_direction < 157.5) or (292.5 <= edge_direction < 337.5):
 
                         if (edge_gradient >= gradient_block[half_window+ii, half_window+ii]) and \
                                 (edge_gradient >= gradient_block[half_window-ii, half_window-ii]):
 
-                            out_array[i, j] = edge_gradient
+                            out_array[i+half_window, j+half_window] = edge_gradient
 
     return np.float32(out_array)
 
