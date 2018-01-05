@@ -2894,6 +2894,272 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] seg_dist(DTYPE_float32_t[:, ::1] value_ar
     return np.uint8(out_array)
 
 
+cdef DTYPE_float32_t _edge_direction(DTYPE_float32_t[:, ::1] gradient_block,
+                                     unsigned int window_size,
+                                     unsigned int half_window,
+                                     DTYPE_float32_t[:, ::1] rc_,
+                                     DTYPE_float32_t[::1] angles1,
+                                     DTYPE_float32_t[::1] angles2,
+                                     DTYPE_float32_t[::1] angles3) nogil:
+
+    """
+    Finds the direction that has the maximum value
+    """
+
+    cdef:
+        Py_ssize_t i1, j1, i2, j2
+        unsigned int rc_length
+        DTYPE_float32_t[::1] line_values
+        DTYPE_float32_t line_mean
+        DTYPE_float32_t angle = -1.
+        DTYPE_float32_t max_mean = 0.
+
+    i1 = 0
+    i2 = window_size - 1
+
+    for j1 in range(0, window_size):
+
+        j2 = (window_size - j1) - 1
+
+        # Draw a line
+        draw_line(i1, j1, i2, j2, rc_)
+
+        # Get the current line length.
+        rc_length = <int>rc_[2, 0]
+
+        # Row of zeros, up to the line length
+        line_values = rc_[3, :rc_length]
+
+        # Extract the values along the optimum angle.
+        _extract_values(gradient_block, line_values, rc_, rc_length)
+
+        # Get the mean along the line.
+        line_mean = _get_mean1d(line_values, rc_length)
+
+        if line_mean > max_mean:
+
+            angle = angles2[j2]
+            max_mean = line_mean
+
+    j1 = 0
+    j2 = window_size - 1
+
+    for i1 in range(half_window, window_size):
+
+        i2 = (window_size - i1) - 1
+
+        # Draw a line
+        draw_line(i1, j1, i2, j2, rc_)
+
+        # Get the current line length.
+        rc_length = <int>rc_[2, 0]
+
+        # Row of zeros, up to the line length
+        line_values = rc_[3, :rc_length]
+
+        # Extract the values along the optimum angle.
+        _extract_values(gradient_block, line_values, rc_, rc_length)
+
+        # Get the mean along the line.
+        line_mean = _get_mean1d(line_values, rc_length)
+
+        if line_mean > max_mean:
+
+            angle = angles1[i2]
+            max_mean = line_mean
+
+    j1 = 0
+    j2 = window_size - 1
+
+    for i2 in range(half_window, window_size):
+
+        i1 = (window_size - i2) - 1
+
+        # Draw a line
+        draw_line(i1, j1, i2, j2, rc_)
+
+        # Get the current line length.
+        rc_length = <int>rc_[2, 0]
+
+        # Row of zeros, up to the line length
+        line_values = rc_[3, :rc_length]
+
+        # Extract the values along the optimum angle.
+        _extract_values(gradient_block, line_values, rc_, rc_length)
+
+        # Get the mean along the line.
+        line_mean = _get_mean1d(line_values, rc_length)
+
+        if line_mean > max_mean:
+
+            angle = angles3[i1]
+            max_mean = line_mean
+
+    return angle
+
+
+cdef np.ndarray[DTYPE_float32_t, ndim=2] edge_direction(DTYPE_float32_t[:, ::1] gradient_array,
+                                                        unsigned int window_size):
+
+    """
+    Finds the edge direction by maximum gradient
+    """
+
+    cdef:
+        Py_ssize_t i, j, a1, a2, a3
+        unsigned int ac
+
+        unsigned int rows = gradient_array.shape[0]
+        unsigned int cols = gradient_array.shape[1]
+        unsigned int half_window = <int>(window_size / 2.)
+        unsigned int row_dims = <int>(rows - (half_window * 2.))
+        unsigned int col_dims = <int>(cols - (half_window * 2.))
+
+        DTYPE_float32_t[:, ::1] gradient_block
+        DTYPE_float32_t[:, ::1] rc = np.zeros((4, window_size*window_size), dtype='float32')
+
+        DTYPE_float32_t[::1] angles1 = np.zeros(half_window-1, dtype='float32')
+        DTYPE_float32_t[::1] angles2 = np.zeros(window_size, dtype='float32')
+        DTYPE_float32_t[::1] angles3 = np.zeros(half_window-2, dtype='float32')
+
+        DTYPE_float32_t edge_gradient, edge_direction
+        DTYPE_float32_t[:, ::1] out_array = np.zeros((rows, cols), dtype='float32')
+
+    ac = 1
+    for a1 in range(0, half_window-1):
+        angles1[a1] = ac
+        ac += 1
+
+    for a2 in range(0, window_size):
+        angles2[a2] = ac
+        ac += 1
+
+    for a3 in range(0, half_window-2):
+        angles3[a3] = ac
+        ac += 1
+
+    with nogil:
+
+        for i in range(0, row_dims):
+
+            for j in range(0, col_dims):
+
+                gradient_block = gradient_array[i:i+window_size, j:j+window_size]
+
+                edge_direction = _edge_direction(gradient_block,
+                                                 window_size,
+                                                 half_window,
+                                                 rc,
+                                                 angles1,
+                                                 angles2,
+                                                 angles3)
+
+                out_array[i+half_window, j+half_window] = edge_direction
+
+    return np.float32(out_array)
+
+
+cdef DTYPE_uint8_t[::1] _extend_endpoints(DTYPE_uint8_t[:, ::1] edge_block_,
+                                          unsigned int window_size,
+                                          unsigned int hw,
+                                          DTYPE_uint8_t[:, ::1] endpoint_block_,
+                                          DTYPE_uint8_t[:, ::1] gradient_block_,
+                                          DTYPE_uint8_t[:, ::1] direction_block_,
+                                          DTYPE_uint8_t[::1] indices_) nogil:
+
+    cdef:
+        Py_ssize_t ii, jj
+        DTYPE_float32_t min_diff = 100000.
+        DTYPE_float32_t end_diff
+
+    for ii in range(0, window_size):
+
+        for jj in range(0, window_size):
+
+            if (ii == hw) and (jj == hw):
+                continue
+
+            # Search for an endpoint.
+            if endpoint_block_[ii, jj] == 1:
+
+                # Compare the direction to
+                #   the center direction.
+                if direction_block_[ii, jj] == direction_block_[hw, hw]:
+
+                    end_diff = _abs(float(gradient_block_[ii, jj]) - float(gradient_block_[hw, hw]))
+
+                    # Compare the gradient value.
+                    if (end_diff <= min_diff) and (end_diff < 25) and (gradient_block_[ii, jj] >= 25):
+
+                        min_diff = end_diff
+
+                        indices_[0] = ii
+                        indices_[1] = jj
+                        indices_[2] = 1
+
+    return indices_
+
+
+cdef np.ndarray[DTYPE_uint8_t, ndim=2] extend_endpoints(DTYPE_uint8_t[:, ::1] edge_array,
+                                                        unsigned int window_size,
+                                                        DTYPE_uint8_t[:, ::1] endpoint_array,
+                                                        DTYPE_uint8_t[:, ::1] gradient_array,
+                                                        DTYPE_uint8_t[:, ::1] direction_array):
+
+    """
+    Extends endpoints along path of same orientation
+    """
+
+    cdef:
+        Py_ssize_t i, j
+
+        unsigned int rows = gradient_array.shape[0]
+        unsigned int cols = gradient_array.shape[1]
+        unsigned int half_window = <int>(window_size / 2.)
+        unsigned int row_dims = <int>(rows - (half_window * 2.))
+        unsigned int col_dims = <int>(cols - (half_window * 2.))
+
+        DTYPE_uint8_t[:, ::1] edge_block
+        DTYPE_uint8_t[:, ::1] endpoint_block
+        DTYPE_uint8_t[:, ::1] gradient_block
+        DTYPE_uint8_t[:, ::1] direction_block
+
+        DTYPE_uint8_t[::1] indices = np.zeros(3, dtype='uint8')
+        DTYPE_uint8_t[::1] indices_ = indices.copy()
+
+    with nogil:
+
+        for i in range(0, row_dims):
+
+            for j in range(0, col_dims):
+
+                edge_block = edge_array[i:i+window_size, j:j+window_size]
+                gradient_block = gradient_array[i:i+window_size, j:j+window_size]
+
+                # Avoid endpoints and other edges.
+                if (edge_array[half_window, half_window] == 0) and (gradient_block[half_window, half_window] >= 25):
+
+                    indices_[...] = indices
+
+                    endpoint_block = endpoint_array[i:i+window_size, j:j+window_size]
+                    direction_block = direction_array[i:i+window_size, j:j+window_size]
+
+                    indices_ = _extend_endpoints(edge_block,
+                                                 window_size,
+                                                 half_window,
+                                                 endpoint_block,
+                                                 gradient_block,
+                                                 direction_block,
+                                                 indices_)
+
+                    if indices_[2] == 1:
+
+                        edge_array[i+half_window, j+half_window] = 1
+                        endpoint_array[i+indices_[0], j+indices_[1]] = 0
+
+    return np.uint8(edge_array)
+
+
 cdef np.ndarray[DTYPE_float32_t, ndim=2] suppression(DTYPE_float32_t[:, ::1] gradient_array,
                                                      DTYPE_float32_t[:, ::1] direction_array,
                                                      unsigned int window_size):
@@ -4139,8 +4405,8 @@ def moving_window(np.ndarray image_array not None,
                   float ignore_value=-9999.,
                   int iterations=1,
                   weights=None,
-                  endpoint_image=None,
-                  gradient_image=None,
+                  endpoint_array=None,
+                  gradient_array=None,
                   int n_neighbors=4,
                   list circle_list=[],
                   int min_egm=25,
@@ -4163,8 +4429,8 @@ def moving_window(np.ndarray image_array not None,
 
             Choices are ['mean', 'min', 'max', 'median', 'majority', 'percent', 'sum',
                          'link', 'fill-basins', 'fill', 'circles', 'distance'. 'rgb-distance',
-                         'inhibition', 'line-enhance', 'saliency', 'duda', 'suppression',
-                         'remove-min', 'seg-dist'].
+                         'inhibition', 'line-enhance', 'saliency', 'duda', 'suppression', 'edge-direction',
+                         'extend-endpoints', 'remove-min', 'seg-dist'].
 
             circles: TODO
             distance: Computes the spectral distance between the center value and neighbors
@@ -4193,8 +4459,8 @@ def moving_window(np.ndarray image_array not None,
         ignore_value (Optional[int]): A value to ignore in calculations. Default is -9999, or don't ignore any values.
         iterations (Optional[int]): The number of iterations to apply the filter. Default is 1.
         weights (Optional[bool]): A ``window_size`` x ``window_size`` array of weights. Default is None.
-        endpoint_image (Optional[2d array]): The endpoint image with ``statistic``='link'. Default is None.
-        gradient_image (Optional[2d array]): The edge gradient image with ``statistic``='link'. Default is None.
+        endpoint_array (Optional[2d array]): The endpoint image with ``statistic``='link'. Default is None.
+        gradient_array (Optional[2d array]): The edge gradient image with ``statistic``='link'. Default is None.
         n_neighbors (Optional[int]): The number of neighbors with ``statistic``='fill'. Default is 4.
             Choices are [2, 4].
         circle_list (Optional[list]: A list of circles. Default is [].
@@ -4221,6 +4487,8 @@ def moving_window(np.ndarray image_array not None,
                          'line-enhance',
                          'saliency',
                          'suppression',
+                         'edge-direction',
+                         'extend-endpoints',
                          'remove-min',
                          'seg-dist',
                          'duda']:
@@ -4230,18 +4498,18 @@ def moving_window(np.ndarray image_array not None,
     if not isinstance(weights, np.ndarray):
         weights = np.ones((window_size, window_size), dtype='float32')
 
-    if not isinstance(endpoint_image, np.ndarray):
-        endpoint_image = np.empty((2, 2), dtype='uint8')
+    if not isinstance(endpoint_array, np.ndarray):
+        endpoint_array = np.empty((2, 2), dtype='uint8')
 
-    if not isinstance(gradient_image, np.ndarray):
-        gradient_image = np.empty((2, 2), dtype='uint8')
+    if not isinstance(gradient_array, np.ndarray):
+        gradient_array = np.empty((2, 2), dtype='uint8')
 
     if statistic == 'link':
 
         return link_window(np.uint8(np.ascontiguousarray(image_array)),
                            window_size,
-                           np.uint8(np.ascontiguousarray(endpoint_image)),
-                           np.float32(np.ascontiguousarray(gradient_image)),
+                           np.uint8(np.ascontiguousarray(endpoint_array)),
+                           np.float32(np.ascontiguousarray(gradient_array)),
                            min_egm,
                            smallest_allowed_gap,
                            medium_allowed_gap)
@@ -4274,6 +4542,19 @@ def moving_window(np.ndarray image_array not None,
         return suppression(np.float32(np.ascontiguousarray(image_array)),
                            np.float32(np.ascontiguousarray(weights)),
                            window_size)
+
+    elif statistic == 'edge-direction':
+
+        return edge_direction(np.float32(np.ascontiguousarray(image_array)),
+                              window_size)
+
+    elif statistic == 'extend-endpoints':
+
+        return extend_endpoints(np.uint8(np.ascontiguousarray(image_array)),
+                                window_size,
+                                np.uint8(np.ascontiguousarray(endpoint_array)),
+                                np.uint8(np.ascontiguousarray(gradient_array)),
+                                np.uint8(np.ascontiguousarray(weights)))
 
     elif statistic == 'inhibition':
 
