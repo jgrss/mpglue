@@ -126,6 +126,9 @@ class VRTBuilder(object):
         self.top = -100000000.
         self.bottom = 100000000.
 
+        import pdb
+        pdb.set_trace()
+
         for im, image in enumerate(image_list):
 
             with raster_tools.ropen(image) as i_info:
