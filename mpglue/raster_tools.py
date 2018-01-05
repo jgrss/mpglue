@@ -1766,10 +1766,9 @@ class SentinelParser(object):
         with open(metadata) as xml_tree:
             xml_object = xmltodict.parse(xml_tree.read())
 
-        import pdb
-        pdb.set_trace()
+        self.level = '1C' if 'n1:Level-1C_User_Product' in xml_object.keys() else '2A'
 
-        base_xml = xml_object['n1:Level-1C_User_Product']
+        base_xml = xml_object['n1:Level-{LEVEL}_User_Product'.format(LEVEL=self.level)]
 
         general_info = base_xml['n1:General_Info']
 
@@ -1777,18 +1776,28 @@ class SentinelParser(object):
 
         self.cloud_cover = float(quality_info['Cloud_Coverage_Assessment'])
 
-        product_info = general_info['Product_Info']
+        product_info = general_info['L{LEVEL}_Product_Info'.format(LEVEL=self.level)]
 
         self.year, self.month, self.day = product_info['GENERATION_TIME'][:10].split('-')
 
         # self.band_list = product_info['Query_Options']['Band_List']
         # self.band_list = [bn for bn in self.band_list['BAND_NAME']]
 
-        granule_list = product_info['Product_Organisation']['Granule_List']
+        granule_list = product_info['L{LEVEL}_Product_Organisation'.format(LEVEL=self.level)]['Granule_List']
 
-        self.band_list = granule_list['Granule']['IMAGE_FILE']
+        self.band_name_dict = dict()
 
-        image_format = granule_list['Granule']['@imageFormat']
+        for granule_index in range(0, len(granule_list)):
+
+            granule_image_list = granule_list[granule_index]['Granule']['IMAGE_FILE_2A']
+
+            # Check if the file name has 20m.
+            if '20m' in granule_image_list[0]:
+                self.band_name_dict['20m'] = granule_list[granule_index]['Granule']['IMAGE_FILE_2A']
+            elif '10m' in granule_image_list[0]:
+                self.band_name_dict['10m'] = granule_list[granule_index]['Granule']['IMAGE_FILE_2A']
+
+            image_format = granule_list[granule_index]['Granule']['@imageFormat']
 
         # self.granule_dict = dict()
         #
@@ -1806,13 +1815,13 @@ class SentinelParser(object):
 
         # print self.granule_dict
 
-        self.level = product_info['PROCESSING_LEVEL']
+        # self.level = product_info['PROCESSING_LEVEL']
         self.product = product_info['PRODUCT_TYPE']
 
         self.series = product_info['Datatake']['SPACECRAFT_NAME']
 
-        self.no_data = int(general_info['Product_Image_Characteristics']['Special_Values'][0]['SPECIAL_VALUE_INDEX'])
-        self.saturated = int(general_info['Product_Image_Characteristics']['Special_Values'][1]['SPECIAL_VALUE_INDEX'])
+        self.no_data = int(general_info['L{LEVEL}_Product_Image_Characteristics'.format(LEVEL=self.level)]['Special_Values'][0]['SPECIAL_VALUE_INDEX'])
+        self.saturated = int(general_info['L{LEVEL}_Product_Image_Characteristics'.format(LEVEL=self.level)]['Special_Values'][1]['SPECIAL_VALUE_INDEX'])
 
 
 class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
