@@ -1766,6 +1766,9 @@ class SentinelParser(object):
         with open(metadata) as xml_tree:
             xml_object = xmltodict.parse(xml_tree.read())
 
+        import pdb
+        pdb.set_trace()
+
         base_xml = xml_object['n1:Level-1C_User_Product']
 
         general_info = base_xml['n1:General_Info']
