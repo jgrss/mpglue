@@ -1817,9 +1817,9 @@ class SentinelParser(object):
                 for granule_image in granule_image_list:
 
                     if '_CLD_' in granule_image:
-                        granule_image_list_full.append(os.path.join(qi_data_dir), granule_image)
+                        granule_image_list_full.append(os.path.join(qi_data_dir, granule_image))
                     else:
-                        granule_image_list_full.append(os.path.join(img_data_dir), 'R20m', granule_image)
+                        granule_image_list_full.append(os.path.join(img_data_dir, 'R20m', granule_image))
 
                 self.band_name_dict['{MGRS}-20m'.format(MGRS=mgrs_code)] = granule_image_list_full
 
@@ -1830,10 +1830,10 @@ class SentinelParser(object):
                 for granule_image in granule_image_list:
 
                     if '_CLD_' in granule_image:
-                        granule_image_list_full.append(os.path.join(qi_data_dir), granule_image)
+                        granule_image_list_full.append(os.path.join(qi_data_dir, granule_image))
                     else:
-                        granule_image_list_full.append(os.path.join(img_data_dir), 'R10m', granule_image)
-                        
+                        granule_image_list_full.append(os.path.join(img_data_dir, 'R10m', granule_image))
+
                 self.band_name_dict['{MGRS}-10m'.format(MGRS=mgrs_code)] = granule_image_list_full
 
             image_format = granule_list[granule_index][granule_key]['@imageFormat']
