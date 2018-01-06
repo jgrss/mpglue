@@ -1838,9 +1838,6 @@ class SentinelParser(object):
 
             image_format = granule_list[granule_index][granule_key]['@imageFormat']
 
-        import pdb
-        pdb.set_trace()
-
         # self.granule_dict = dict()
         #
         # for granule in granule_list:
