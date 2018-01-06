@@ -1764,8 +1764,13 @@ class SentinelParser(object):
 
         if not metadata.endswith('.xml'):
 
-            logger.error('Parser type not supported')
-            raise NameError
+            logger.warning('  Parser type not supported')
+            return
+
+        if metadata.endswith('_report.xml'):
+
+            logger.warning('  Cannot process <report> files.')
+            return
 
         with open(metadata) as xml_tree:
             xml_object = xmltodict.parse(xml_tree.read())
@@ -1774,11 +1779,7 @@ class SentinelParser(object):
 
         self.level = '1C' if 'n1:Level-1C_User_Product' in xml_object.keys() else '2A'
 
-        try:
-            base_xml = xml_object['n1:Level-{LEVEL}_User_Product'.format(LEVEL=self.level)]
-        except:
-            import pdb
-            pdb.set_trace()
+        base_xml = xml_object['n1:Level-{LEVEL}_User_Product'.format(LEVEL=self.level)]
 
         general_info = base_xml['n1:General_Info']
 
