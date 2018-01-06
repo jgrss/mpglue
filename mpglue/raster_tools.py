@@ -1746,11 +1746,15 @@ class LandsatParser(object):
 
 class SentinelParser(object):
 
-    """
-    A class to parse Sentinel 2 metadata
-    """
+    """A class to parse Sentinel 2 metadata"""
 
-    def parse_xml(self, metadata):
+    def parse_xml(self, metadata, mgrs=None):
+
+        """
+        Args:
+            metadata (str)
+            mgrs (Optional[str])
+        """
 
         # xmltodict
         try:
@@ -1798,6 +1802,9 @@ class SentinelParser(object):
                 self.band_name_dict['10m'] = granule_list[granule_index]['Granule']['IMAGE_FILE_2A']
 
             image_format = granule_list[granule_index]['Granule']['@imageFormat']
+
+        import pdb
+        pdb.set_trace()
 
         # self.granule_dict = dict()
         #
