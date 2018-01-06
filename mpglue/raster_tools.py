@@ -1795,7 +1795,7 @@ class SentinelParser(object):
 
             granule_key = 'Granule' if 'Granule' in granule_list[granule_index] else 'Granules'
 
-            image_key = 'IMAGE_FILE_2A' in 'IMAGE_FILE_2A' in granule_list[granule_index][granule_key] else 'IMAGE_ID_2A'
+            image_key = 'IMAGE_FILE_2A' if 'IMAGE_FILE_2A' in granule_list[granule_index][granule_key] else 'IMAGE_ID_2A'
 
             granule_image_list = granule_list[granule_index][granule_key][image_key]
 
