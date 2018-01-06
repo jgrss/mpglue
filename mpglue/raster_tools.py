@@ -1756,6 +1756,8 @@ class SentinelParser(object):
             mgrs (Optional[str])
         """
 
+        self.complete = False
+
         # xmltodict
         try:
             import xmltodict
@@ -1866,6 +1868,8 @@ class SentinelParser(object):
 
         self.no_data = int(general_info['L{LEVEL}_Product_Image_Characteristics'.format(LEVEL=self.level)]['Special_Values'][0]['SPECIAL_VALUE_INDEX'])
         self.saturated = int(general_info['L{LEVEL}_Product_Image_Characteristics'.format(LEVEL=self.level)]['Special_Values'][1]['SPECIAL_VALUE_INDEX'])
+
+        self.complete = True
 
 
 class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
