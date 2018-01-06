@@ -1791,6 +1791,9 @@ class SentinelParser(object):
 
         self.band_name_dict = dict()
 
+        import pdb
+        pdb.set_trace()
+
         for granule_index in range(0, len(granule_list)):
 
             granule_image_list = granule_list[granule_index]['Granule']['IMAGE_FILE_2A']
@@ -1802,9 +1805,6 @@ class SentinelParser(object):
                 self.band_name_dict['10m'] = granule_list[granule_index]['Granule']['IMAGE_FILE_2A']
 
             image_format = granule_list[granule_index]['Granule']['@imageFormat']
-
-        import pdb
-        pdb.set_trace()
 
         # self.granule_dict = dict()
         #
