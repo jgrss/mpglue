@@ -1770,6 +1770,8 @@ class SentinelParser(object):
         with open(metadata) as xml_tree:
             xml_object = xmltodict.parse(xml_tree.read())
 
+        safe_dir = os.path.split(metadata)[0]
+
         self.level = '1C' if 'n1:Level-1C_User_Product' in xml_object.keys() else '2A'
 
         base_xml = xml_object['n1:Level-{LEVEL}_User_Product'.format(LEVEL=self.level)]
@@ -1797,15 +1799,42 @@ class SentinelParser(object):
 
             image_key = 'IMAGE_FILE_2A' if 'IMAGE_FILE_2A' in granule_list[granule_index][granule_key] else 'IMAGE_ID_2A'
 
+            granule_identifier = granule_list[granule_index][granule_key]['@granuleIdentifier']
+
+            img_data_dir = os.path.join(safe_dir, 'GRANULE', granule_identifier, 'IMG_DATA')
+            qi_data_dir = os.path.join(safe_dir, 'GRANULE', granule_identifier, 'QI_DATA')
+
+            # List of image names
             granule_image_list = granule_list[granule_index][granule_key][image_key]
 
             mgrs_code = granule_image_list[0][-13:-8]
 
             # Check if the file name has 20m.
             if '20m' in granule_image_list[0]:
-                self.band_name_dict['{MGRS}-20m'.format(MGRS=mgrs_code)] = granule_image_list
+
+                granule_image_list_full = list()
+
+                for granule_image in granule_image_list:
+
+                    if '_CLD_' in granule_image:
+                        granule_image_list_full.append(os.path.join(qi_data_dir), granule_image)
+                    else:
+                        granule_image_list_full.append(os.path.join(img_data_dir), 'R20m', granule_image)
+
+                self.band_name_dict['{MGRS}-20m'.format(MGRS=mgrs_code)] = granule_image_list_full
+
             elif '10m' in granule_image_list[0]:
-                self.band_name_dict['{MGRS}-10m'.format(MGRS=mgrs_code)] = granule_image_list
+
+                granule_image_list_full = list()
+
+                for granule_image in granule_image_list:
+
+                    if '_CLD_' in granule_image:
+                        granule_image_list_full.append(os.path.join(qi_data_dir), granule_image)
+                    else:
+                        granule_image_list_full.append(os.path.join(img_data_dir), 'R10m', granule_image)
+                        
+                self.band_name_dict['{MGRS}-10m'.format(MGRS=mgrs_code)] = granule_image_list_full
 
             image_format = granule_list[granule_index][granule_key]['@imageFormat']
 
