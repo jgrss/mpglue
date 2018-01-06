@@ -1748,7 +1748,7 @@ class SentinelParser(object):
 
     """A class to parse Sentinel 2 metadata"""
 
-    def parse_xml(self, metadata, mgrs=None):
+    def parse_xml(self, metadata):
 
         """
         Args:
@@ -1791,20 +1791,26 @@ class SentinelParser(object):
 
         self.band_name_dict = dict()
 
-        import pdb
-        pdb.set_trace()
-
         for granule_index in range(0, len(granule_list)):
 
-            granule_image_list = granule_list[granule_index]['Granule']['IMAGE_FILE_2A']
+            granule_key = 'Granule' if 'Granule' in granule_list[granule_index] else 'Granules'
+
+            image_key = 'IMAGE_FILE_2A' in 'IMAGE_FILE_2A' in granule_list[granule_index][granule_key] else 'IMAGE_ID_2A'
+
+            granule_image_list = granule_list[granule_index][granule_key][image_key]
+
+            mgrs_code = granule_image_list[0][-13:-8]
 
             # Check if the file name has 20m.
             if '20m' in granule_image_list[0]:
-                self.band_name_dict['20m'] = granule_list[granule_index]['Granule']['IMAGE_FILE_2A']
+                self.band_name_dict['{MGRS}-20m'.format(MGRS=mgrs_code)] = granule_image_list
             elif '10m' in granule_image_list[0]:
-                self.band_name_dict['10m'] = granule_list[granule_index]['Granule']['IMAGE_FILE_2A']
+                self.band_name_dict['{MGRS}-10m'.format(MGRS=mgrs_code)] = granule_image_list
 
-            image_format = granule_list[granule_index]['Granule']['@imageFormat']
+            image_format = granule_list[granule_index][granule_key]['@imageFormat']
+
+        import pdb
+        pdb.set_trace()
 
         # self.granule_dict = dict()
         #
