@@ -1774,7 +1774,11 @@ class SentinelParser(object):
 
         self.level = '1C' if 'n1:Level-1C_User_Product' in xml_object.keys() else '2A'
 
-        base_xml = xml_object['n1:Level-{LEVEL}_User_Product'.format(LEVEL=self.level)]
+        try:
+            base_xml = xml_object['n1:Level-{LEVEL}_User_Product'.format(LEVEL=self.level)]
+        except:
+            import pdb
+            pdb.set_trace()
 
         general_info = base_xml['n1:General_Info']
 
