@@ -102,11 +102,11 @@ class VRTBuilder(object):
                 raise TypeError
 
         # Ensure order by sorting by `OrderedDict` items.
-        self.in_dict = OrderedDict(sorted(in_dict.keys()))
+        self.in_dict = OrderedDict(sorted(in_dict.items()))
 
         # Use only the first list
         #   for the extent.
-        image_list = self.in_dict.items()[0]
+        image_list = self.in_dict.keys()[0]
 
         if not isinstance(image_list, list):
 
