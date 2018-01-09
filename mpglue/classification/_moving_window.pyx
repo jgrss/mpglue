@@ -3,13 +3,16 @@
 # cython: boundscheck=False
 # cython: wraparound=False
 
-import sys
-from copy import copy
+from __future__ import division
 
-# from cpython.array cimport array, clone
+import cython
+cimport cython
+
 import numpy as np
 cimport numpy as np
-cimport cython
+
+import sys
+from copy import copy
 
 # from libc.math cimport cos, atan2
 # from libc.stdlib cimport c_abs
