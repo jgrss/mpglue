@@ -106,7 +106,7 @@ class VRTBuilder(object):
 
         # Use only the first list
         #   for the extent.
-        image_list = self.in_dict.keys()[0]
+        image_list = self.in_dict.items()[0]
 
         if not isinstance(image_list, list):
 
