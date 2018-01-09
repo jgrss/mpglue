@@ -84,7 +84,7 @@ class VRTBuilder(object):
             if separate:
                 in_dict = dict(zip(map(str, range(1, len(image_search_list)+1)), [[im] for im in image_search_list]))
             else:
-                in_dict = {'1': image_search_list}
+                in_dict = {'001': image_search_list}
 
         elif isinstance(in_dict, list):
 
@@ -92,7 +92,7 @@ class VRTBuilder(object):
             if separate:
                 in_dict = dict(zip(map(str, range(1, len(in_dict)+1)), [[im] for im in in_dict]))
             else:
-                in_dict = {'1': in_dict}
+                in_dict = {'001': in_dict}
 
         else:
 
@@ -102,11 +102,11 @@ class VRTBuilder(object):
                 raise TypeError
 
         # Ensure order by sorting by `OrderedDict` items.
-        self.in_dict = OrderedDict(sorted(in_dict.items()))
+        self.in_dict = OrderedDict(sorted(in_dict.keys()))
 
         # Use only the first list
         #   for the extent.
-        image_list = self.in_dict['1']
+        image_list = self.in_dict.keys()[0]
 
         if not isinstance(image_list, list):
 
@@ -451,7 +451,7 @@ def vrt_builder(in_dict,
                  ...}
 
             where,
-                each dictionary key is an separate layer in the VRT output.
+                each dictionary key is a separate layer in the VRT output.
 
             Note:
                 If `in_dict`=`str`, it is assumed to be a directory and the file names will be sorted.
