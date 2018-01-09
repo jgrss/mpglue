@@ -239,7 +239,8 @@ vector-tools
 >>>     image_mean = moving_window(image_array,
 >>>                                statistic='mean',
 >>>                                window_size=5)
->>> del
+>>>
+>>> del i_info
 >>>
 >>> # Compute the percentage of binary pixels.
 >>> with gl.ropen('/input_image.tif') as i_info:
@@ -249,6 +250,8 @@ vector-tools
 >>>     image_percent = moving_window(image_array,
 >>>                                   statistic='percent',
 >>>                                   window_size=25)
+>>>
+>>> del i_info
 ```
 
 Installation
