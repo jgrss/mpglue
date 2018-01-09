@@ -8,7 +8,7 @@ from __future__ import division
 import sys
 from copy import copy
 
-from cpython.array cimport array, clone
+# from cpython.array cimport array, clone
 import numpy as np
 cimport numpy as np
 cimport cython
