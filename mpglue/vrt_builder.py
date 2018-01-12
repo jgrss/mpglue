@@ -269,7 +269,7 @@ class VRTBuilder(object):
                     #   the correct extent.
                     if subset:
 
-                        if bdk != '1':
+                        if bdk != '001':
 
                             image, sub_directory = self._subset(i_info, image)
 
@@ -419,7 +419,7 @@ class VRTBuilder(object):
                 with raster_tools.ropen(v[0]) as i_info:
                     n_bands = i_info.bands
 
-                i_info = None
+                del i_info
 
             self.band_dict[k] = n_bands
 
