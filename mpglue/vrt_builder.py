@@ -219,7 +219,7 @@ class VRTBuilder(object):
 
             if not be_quiet:
 
-                sys.stdout.write('\rBuilding list {} of {:d} ...'.format(bdk, len(self.band_dict)))
+                sys.stdout.write('\rBuilding list {} of {:03d} ...'.format(bdk, len(self.band_dict)))
                 sys.stdout.flush()
 
             image_list = self.in_dict[bdk]
