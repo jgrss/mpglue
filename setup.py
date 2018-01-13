@@ -95,6 +95,7 @@ def get_console_dict():
                                 'raster-calc=mpglue.raster_calc:main',
                                 'veg-indices=mpglue.veg_indices:main',
                                 'vrt-builder=mpglue.vrt_builder:main',
+                                'vrt-updater=mpglue.vrt_updater:main',
                                 'raster-tools=mpglue.raster_tools:main',
                                 'vector-tools=mpglue.vector_tools:main']}
 
@@ -125,6 +126,7 @@ def setup_package():
                     include_dirs=include_dirs)
 
     setup(**metadata)
+
 
 if __name__ == '__main__':
     setup_package()
