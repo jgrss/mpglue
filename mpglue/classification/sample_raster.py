@@ -573,11 +573,11 @@ class SampleImage(object):
             #   the counter array.
             for nc in self.class_list:
 
-                n_sample_writer.write('Class {:d}: {:d}\n'.format(int(nc),
+                n_sample_writer.write('Class {:d}: {:,d}\n'.format(int(nc),
                                                                   int(self.count_dict[nc])))
 
             # write the total number of samples
-            n_sample_writer.write('Total: {:d}'.format(self.class_sum))
+            n_sample_writer.write('Total: {:,d}'.format(self.class_sum))
 
         if self.class_sum == 0:
 

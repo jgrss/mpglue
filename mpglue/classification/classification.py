@@ -4762,6 +4762,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 self.o_info.update_info(top=self.o_info.top-(start_i*self.o_info.cellY))
                 iwo = start_i
 
+                import pdb
+                pdb.set_trace()
+
             if ('j' in self.kwargs) and ('x' not in self.kwargs):
 
                 start_j = self.kwargs['j']
