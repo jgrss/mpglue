@@ -82,7 +82,10 @@ class VRTBuilder(object):
 
             # Store as a dictionary.
             if separate:
-                in_dict = dict(zip(map(str, range(1, len(image_search_list)+1)), [[im] for im in image_search_list]))
+
+                in_dict = dict(zip(['{:03d}'.format(ci) for ci in range(1, len(image_search_list)+1)],
+                                   [[im] for im in image_search_list]))
+
             else:
                 in_dict = {'001': image_search_list}
 
@@ -90,7 +93,10 @@ class VRTBuilder(object):
 
             # Store as a dictionary.
             if separate:
-                in_dict = dict(zip(map(str, range(1, len(in_dict)+1)), [[im] for im in in_dict]))
+                
+                in_dict = dict(zip(['{:03d}'.format(ci) for ci in range(1, len(in_dict)+1)],
+                                   [[im] for im in in_dict]))
+
             else:
                 in_dict = {'001': in_dict}
 
@@ -565,7 +571,7 @@ def main():
 
     start_time = time.time()
 
-    vrt_builder({'1': args.inputs}, args.output,
+    vrt_builder({'001': args.inputs}, args.output,
                 bands2include=args.bands2include, force_type=args.force_type,
                 subset=args.subset, base_name=args.base_name)
 
