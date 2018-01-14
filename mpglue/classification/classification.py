@@ -4747,7 +4747,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             if ('i' in self.kwargs) and ('y' not in self.kwargs):
 
                 start_i = self.kwargs['i']
-                self.o_info.update_info(top=self.o_info.top-(start_i*self.o_info.cellY))
+                self.o_info.update_info(top=self.o_info.top - (start_i*self.o_info.cellY))
                 iwo = start_i
 
             elif ('i' not in self.kwargs) and ('y' in self.kwargs):
@@ -4759,16 +4759,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                                check_position=False)[3]
 
                 start_i = self.kwargs['i']
-                self.o_info.update_info(top=self.o_info.top-(start_i*self.o_info.cellY))
+                self.o_info.update_info(top=self.o_info.top - (start_i*self.o_info.cellY))
                 iwo = start_i
-
-                import pdb
-                pdb.set_trace()
 
             if ('j' in self.kwargs) and ('x' not in self.kwargs):
 
                 start_j = self.kwargs['j']
-                self.o_info.update_info(left=self.o_info.left+(start_j*self.o_info.cellY))
+                self.o_info.update_info(left=self.o_info.left + (start_j*self.o_info.cellY))
                 jwo = start_j
 
             elif ('j' not in self.kwargs) and ('x' in self.kwargs):
@@ -4780,7 +4777,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                                check_position=False)[2]
 
                 start_j = self.kwargs['j']
-                self.o_info.update_info(left=self.o_info.left + (start_j * self.o_info.cellY))
+                self.o_info.update_info(left=self.o_info.left + (start_j*self.o_info.cellY))
                 jwo = start_j
 
             if 'rows' in self.kwargs:
@@ -4917,6 +4914,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 # Reshape the features for CRF models.
                 if self.classifier_info['classifier'] == 'ChainCRF':
                     features = self._transform4crf(p_vars2reshape=features)[0]
+
+                import pdb
+                pdb.set_trace()
 
                 # Predict class conditional probabilities.
                 if self.get_probs:
