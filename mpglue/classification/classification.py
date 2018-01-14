@@ -3528,9 +3528,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
     def _load_model(self):
 
-        """
-        Loads a previously saved model
-        """
+        """Loads a previously saved model"""
+
+        logger.info('  Loading {} ...'.format(self.input_model))
 
         if '.xml' in self.input_model:
 
