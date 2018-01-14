@@ -4915,8 +4915,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 if self.classifier_info['classifier'] == 'ChainCRF':
                     features = self._transform4crf(p_vars2reshape=features)[0]
 
-                import pdb
-                pdb.set_trace()
+                logger.info('MAX')
+                logger.info(features.max())
+                logger.info(features.mean())
 
                 # Predict class conditional probabilities.
                 if self.get_probs:
