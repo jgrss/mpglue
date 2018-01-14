@@ -12,11 +12,9 @@ import subprocess
 import ast
 import platform
 import shutil
-import fnmatch
 from copy import copy, deepcopy
-# from multiprocessing import Pool
 # from pathos.multiprocessing import ProcessingPool as Pool
-# import multiprocessing as mm
+import multiprocessing as multi
 import joblib
 import itertools
 from collections import OrderedDict
@@ -352,25 +350,26 @@ def predict_scikit_win(feature_sub, input_model):
     return mdl.predict(feature_sub)
 
 
-def predict_scikit(input_model, ip):
+def predict_scikit(pool_iter):
 
     """
     A Scikit-learn prediction function for parallel predictions
 
     Args:
-        input_model (str)
-        ip (int)
+        pool_iter (int)
     """
 
-    if isinstance(input_model, str):
+    ip_ = indice_pairs[pool_iter]
 
-        with open(input_model, 'rb') as p_load:
-            mdl = pickle.load(p_load)[1]
+    # if isinstance(m, str):
+    #
+    #     with open(m, 'rb') as p_load:
+    #         mdl = pickle.load(p_load)[1]
+    #
+    # else:
+    #     mdl = input_model
 
-    else:
-        mdl = input_model
-
-    return mdl.predict(features[ip[0]:ip[0]+ip[1]])
+    return mdl.predict(features[ip_[0]:ip_[0]+ip_[1]])
 
 
 def predict_cv(ci, cs, fn, pc, cr, ig, xy, cinfo, wc):
@@ -4730,7 +4729,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
     def _predict(self):
 
         # Global variables for parallel processing.
-        global features, model_pp, predict_samps
+        global features, model_pp, predict_samps, indice_pairs, mdl
 
         if 'CV' not in self.classifier_info['classifier']:
             model_pp = deepcopy(self.model)
@@ -4964,8 +4963,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         # Get chunks for parallel processing.
                         indice_pairs = list()
                         for i_ in range(1, n_samples+1, self.chunk_size):
+
                             n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
                             indice_pairs.append([i_, n_rows_])
+
                         indice_pairs[-1][1] += 1
 
                         # Make the predictions and convert to a NumPy array.
@@ -5013,29 +5014,38 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                                 else:
 
-                                    predicted = joblib.Parallel(n_jobs=self.n_jobs,
-                                                                max_nbytes=None)(joblib.delayed(predict_scikit)(self.input_model,
-                                                                                                                ip)
-                                                                                 for ip in indice_pairs)
+                                    # predicted = joblib.Parallel(n_jobs=self.n_jobs,
+                                    #                             max_nbytes=None)(joblib.delayed(predict_scikit)(self.input_model,
+                                    #                                                                             ip)
+                                    #                                              for ip in indice_pairs)
+
+                                    mdl = self.load(self.input_model)[1]
+
+                                    pool = multi.Pool(processes=self.n_jobs)
+                                    predicted = pool.map(predict_scikit, range(0, len(indice_pairs)))
+                                    pool.close()
+                                    del pool
 
                             else:
-                                m = self.model
-                                predicted = [predict_scikit(m, ip) for ip in indice_pairs]
+
+                                mdl = self.model
+                                predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
 
                             # Write the predictions to file.
                             out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
                                                                                                                            n_cols),
-                                                          j=j-jwo, i=i-iwo)
+                                                          j=j-jwo,
+                                                          i=i-iwo)
 
                         else:
 
                             if isinstance(self.input_model, str):
-                                m = self.load(self.input_model)[1]
+                                mdl = self.load(self.input_model)[1]
                             else:
-                                m = self.model
+                                mdl = self.model
 
                             # Make the predictions and convert to a NumPy array.
-                            predicted = [predict_scikit(m, ip) for ip in indice_pairs]
+                            predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
 
                             # Write the predictions to file.
                             out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
