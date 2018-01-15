@@ -588,6 +588,7 @@ class Samples(object):
                       norm_struct=True,
                       labs_type='int',
                       recode_dict=None,
+                      vs_all=None,
                       classes2remove=None,
                       sample_weight=None,
                       ignore_feas=None,
@@ -618,7 +619,9 @@ class Samples(object):
                 In MapPy's case, normal is (X,Y,Var1,Var2,Var3,Var4,...,VarN,Labels), 
                 whereas the alternative (i.e., False) is (Labels,Var1,Var2,Var3,Var4,...,VarN)
             labs_type (Optional[str]): Read class labels as integer ('int') or float ('float'). Default is 'int'.
-            recode_dict (Optional[dict]): Dictionary of classes to recode. Default is {}, or empty dictionary.
+            recode_dict (Optional[dict]): A dictionary of classes to recode. Default is {}, or empty dictionary.
+            vs_all (Optional[list]): A list of classes to recode to 1, and all other classes get recoded to 0.
+                Default is None.
             classes2remove (Optional[list]): List of classes to remove from samples. Default is [], or keep
                 all classes.
             sample_weight (Optional[list or 1d array]): Sample weights. Default is None.
@@ -642,6 +645,9 @@ class Samples(object):
 
         if not isinstance(recode_dict, dict):
             recode_dict = dict()
+
+        if not isinstance(vs_all, list):
+            vs_all = list()
 
         if not isinstance(classes2remove, list):
             classes2remove = list()
@@ -783,6 +789,9 @@ class Samples(object):
         # Recode response labels.
         if recode_dict:
             self._recode_labels(recode_dict)
+
+        if vs_all:
+            self._recode_all(vs_all)
 
         # Parse the x, y coordinates.
         self.XY = self.df[[x_label, y_label]].values
@@ -1303,6 +1312,28 @@ class Samples(object):
 
         for recode_key, cl in sorted(recode_dict.iteritems()):
             new_samps[temp_labels == recode_key] = cl
+
+        self.all_samps[:, -1] = new_samps
+        self.df[self.response_label] = new_samps
+
+    def _recode_all(self, vs_all_list):
+
+        """
+        Recodes all classes in list to 1 and all other classes to 0
+
+        Args:
+            vs_all_list (list): The list of classes to recode to 1.
+        """
+
+        temp_labels = self.all_samps[:, -1]
+        new_samps = temp_labels.copy()
+
+        for lc_class in np.unique(temp_labels):
+
+            if lc_class in vs_all_list:
+                new_samps[temp_labels == lc_class] = 1
+            else:
+                new_samps[temp_labels == lc_class] = 0
 
         self.all_samps[:, -1] = new_samps
         self.df[self.response_label] = new_samps
