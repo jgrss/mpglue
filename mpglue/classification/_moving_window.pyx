@@ -145,8 +145,7 @@ cdef inline DTYPE_float32_t _translate_quadrant(DTYPE_float32_t coord2translate,
 cdef DTYPE_float32_t _get_line_angle(DTYPE_float32_t point1_y,
                                      DTYPE_float32_t point1_x,
                                      DTYPE_float32_t point2_y,
-                                     DTYPE_float32_t point2_x,
-                                     int wsh) nogil:
+                                     DTYPE_float32_t point2_x) nogil:
 
     """
     Args:
@@ -2389,8 +2388,7 @@ cdef void _get_angle_info(DTYPE_float32_t[:, ::1] edge_image_block,
         theta_opt = _get_line_angle(rcc1[0, 0],
                                     rcc1[1, 0],
                                     rcc1[0, rc_length-1],
-                                    rcc1[1, rc_length-1],
-                                    rc_length)
+                                    rcc1[1, rc_length-1])
 
         # Get the maximum number of consecutive
         #   pixels with an edge intensity value
@@ -2895,13 +2893,11 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] seg_dist(DTYPE_float32_t[:, ::1] value_ar
     return np.uint8(out_array)
 
 
-cdef DTYPE_float32_t _edge_direction(DTYPE_float32_t[:, ::1] gradient_block,
-                                     unsigned int window_size,
-                                     unsigned int half_window,
-                                     DTYPE_float32_t[:, ::1] rc_,
-                                     DTYPE_float32_t[::1] angles1,
-                                     DTYPE_float32_t[::1] angles2,
-                                     DTYPE_float32_t[::1] angles3) nogil:
+cdef DTYPE_float32_t _get_edge_direction(DTYPE_float32_t[:, ::1] gradient_block,
+                                         unsigned int window_size,
+                                         unsigned int half_window,
+                                         DTYPE_float32_t[:, ::1] rc_,
+                                         DTYPE_uint8_t[:, ::1] disk) nogil:
 
     """
     Finds the direction that has the maximum value
@@ -2915,100 +2911,48 @@ cdef DTYPE_float32_t _edge_direction(DTYPE_float32_t[:, ::1] gradient_block,
         DTYPE_float32_t angle = -1.
         DTYPE_float32_t max_mean = 0.
 
-    i1 = 0
-    i2 = window_size - 1
+    for i1 in range(0, window_size):
 
-    for j1 in range(0, window_size):
+        for j1 in range(0, window_size):
 
-        j2 = (window_size - j1) - 1
+            if disk[i1, j1] == 1:
 
-        # Draw a line
-        draw_line(i1, j1, i2, j2, rc_)
+                i2 = (window_size - i1) - 1
+                j2 = (window_size - j1) - 1
 
-        # Get the current line length.
-        rc_length = <int>rc_[2, 0]
+                # Draw a line
+                draw_line(i1, j1, i2, j2, rc_)
 
-        # Row of zeros, up to the line length
-        line_values = rc_[3, :rc_length]
+                # Get the current line length.
+                rc_length = <int>rc_[2, 0]
 
-        # Extract the values along the optimum angle.
-        _extract_values(gradient_block, line_values, rc_, rc_length)
+                # Row of zeros, up to the line length
+                line_values = rc_[3, :rc_length]
 
-        # Get the mean along the line.
-        line_mean = _get_mean1d(line_values, rc_length)
+                # Extract the values along the optimum angle.
+                _extract_values(gradient_block, line_values, rc_, rc_length)
 
-        if line_mean > max_mean:
+                # Get the mean along the line.
+                line_mean = _get_mean1d(line_values, rc_length)
 
-            angle = angles2[j2]
-            max_mean = line_mean
+                if line_mean > max_mean:
 
-    j1 = 0
-    j2 = window_size - 1
-
-    for i1 in range(half_window, window_size):
-
-        i2 = (window_size - i1) - 1
-
-        # Draw a line
-        draw_line(i1, j1, i2, j2, rc_)
-
-        # Get the current line length.
-        rc_length = <int>rc_[2, 0]
-
-        # Row of zeros, up to the line length
-        line_values = rc_[3, :rc_length]
-
-        # Extract the values along the optimum angle.
-        _extract_values(gradient_block, line_values, rc_, rc_length)
-
-        # Get the mean along the line.
-        line_mean = _get_mean1d(line_values, rc_length)
-
-        if line_mean > max_mean:
-
-            angle = angles1[i2]
-            max_mean = line_mean
-
-    j1 = 0
-    j2 = window_size - 1
-
-    for i2 in range(half_window, window_size):
-
-        i1 = (window_size - i2) - 1
-
-        # Draw a line
-        draw_line(i1, j1, i2, j2, rc_)
-
-        # Get the current line length.
-        rc_length = <int>rc_[2, 0]
-
-        # Row of zeros, up to the line length
-        line_values = rc_[3, :rc_length]
-
-        # Extract the values along the optimum angle.
-        _extract_values(gradient_block, line_values, rc_, rc_length)
-
-        # Get the mean along the line.
-        line_mean = _get_mean1d(line_values, rc_length)
-
-        if line_mean > max_mean:
-
-            angle = angles3[i1]
-            max_mean = line_mean
+                    angle = _get_line_angle(i1, j1, i2, j2)
+                    max_mean = line_mean
 
     return angle
 
 
-cdef np.ndarray[DTYPE_float32_t, ndim=2] edge_direction(DTYPE_float32_t[:, ::1] gradient_array,
-                                                        unsigned int window_size):
+cdef DTYPE_float32_t[:, ::1] get_edge_direction(DTYPE_float32_t[:, ::1] gradient_array,
+                                                unsigned int window_size,
+                                                DTYPE_uint8_t[:, ::1] disk):
 
     """
     Finds the edge direction by maximum gradient
     """
 
     cdef:
-        Py_ssize_t i, j, a1, a2, a3
-        unsigned int ac
+        Py_ssize_t i, j
 
         unsigned int rows = gradient_array.shape[0]
         unsigned int cols = gradient_array.shape[1]
@@ -3019,25 +2963,8 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] edge_direction(DTYPE_float32_t[:, ::1] 
         DTYPE_float32_t[:, ::1] gradient_block
         DTYPE_float32_t[:, ::1] rc = np.zeros((4, window_size*window_size), dtype='float32')
 
-        DTYPE_float32_t[::1] angles1 = np.zeros(half_window-1, dtype='float32')
-        DTYPE_float32_t[::1] angles2 = np.zeros(window_size, dtype='float32')
-        DTYPE_float32_t[::1] angles3 = np.zeros(half_window-2, dtype='float32')
-
         DTYPE_float32_t edge_gradient, edge_direction
         DTYPE_float32_t[:, ::1] out_array = np.zeros((rows, cols), dtype='float32')
-
-    ac = 1
-    for a1 in range(0, half_window-1):
-        angles1[a1] = ac
-        ac += 1
-
-    for a2 in range(0, window_size):
-        angles2[a2] = ac
-        ac += 1
-
-    for a3 in range(0, half_window-2):
-        angles3[a3] = ac
-        ac += 1
 
     with nogil:
 
@@ -3047,17 +2974,18 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] edge_direction(DTYPE_float32_t[:, ::1] 
 
                 gradient_block = gradient_array[i:i+window_size, j:j+window_size]
 
-                edge_direction = _edge_direction(gradient_block,
-                                                 window_size,
-                                                 half_window,
-                                                 rc,
-                                                 angles1,
-                                                 angles2,
-                                                 angles3)
+                edge_direction = _get_edge_direction(gradient_block,
+                                                     window_size,
+                                                     half_window,
+                                                     rc,
+                                                     disk)
+
+                if npy_isnan(edge_direction):
+                    edge_direction = 0.
 
                 out_array[i+half_window, j+half_window] = edge_direction
 
-    return np.float32(out_array)
+    return out_array
 
 
 cdef DTYPE_uint8_t[::1] _extend_endpoints(DTYPE_uint8_t[:, ::1] edge_block_,
@@ -3162,8 +3090,8 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] extend_endpoints(DTYPE_uint8_t[:, ::1] ed
 
 
 cdef np.ndarray[DTYPE_float32_t, ndim=2] suppression(DTYPE_float32_t[:, ::1] gradient_array,
-                                                     DTYPE_float32_t[:, ::1] direction_array,
-                                                     unsigned int window_size):
+                                                     unsigned int window_size,
+                                                     DTYPE_uint8_t[:, ::1] disk):
 
     cdef:
         Py_ssize_t i, j, ii
@@ -3180,6 +3108,10 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] suppression(DTYPE_float32_t[:, ::1] gra
         DTYPE_float32_t[:, ::1] out_array = np.zeros((rows, cols), dtype='float32')
 
         unsigned int window_iters
+
+        DTYPE_float32_t[:, ::1] direction_array = get_edge_direction(gradient_array,
+                                                                     window_size,
+                                                                     disk)
 
     if half_window == 1:
         window_iters = 2
@@ -3207,32 +3139,37 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] suppression(DTYPE_float32_t[:, ::1] gra
 
                     # Get the local maximum gradient
                     #   along the direction.
+
+                    # 0 degrees
                     if (edge_direction >= 337.5) or (edge_direction < 22.5) or (157.5 <= edge_direction < 202.5):
 
-                        if (edge_gradient >= gradient_block[half_window, half_window-ii]) and \
-                                (edge_gradient >= gradient_block[half_window, half_window+ii]):
+                        if (edge_gradient >= gradient_block[half_window-ii, half_window]) and \
+                                (edge_gradient >= gradient_block[half_window+ii, half_window]):
 
                             out_array[i+half_window, j+half_window] = edge_gradient
 
+                    # 45 degrees
                     elif (22.5 <= edge_direction < 67.5) or (202.5 <= edge_direction < 247.5):
-
-                        if (edge_gradient >= gradient_block[half_window+ii, half_window-ii]) and \
-                                (edge_gradient >= gradient_block[half_window-ii, half_window+ii]):
-
-                            out_array[i+half_window, j+half_window] = edge_gradient
-
-                    elif (67.5 <= edge_direction < 112.5) or (247.5 <= edge_direction < 292.5):
-
-                        if (edge_gradient >= gradient_block[half_window+ii, half_window]) and \
-                                (edge_gradient >= gradient_block[half_window-ii, half_window]):
-
-                            out_array[i+half_window, j+half_window] = edge_gradient
-
-                    elif (112.5 <= edge_direction < 157.5) or (292.5 <= edge_direction < 337.5):
 
                         if (edge_gradient >= gradient_block[half_window+ii, half_window+ii]) and \
                                 (edge_gradient >= gradient_block[half_window-ii, half_window-ii]):
 
+                            out_array[i+half_window, j+half_window] = edge_gradient
+
+                    # 90 degrees
+                    elif (67.5 <= edge_direction < 112.5) or (247.5 <= edge_direction < 292.5):
+
+                        if (edge_gradient >= gradient_block[half_window, half_window+ii]) and \
+                                (edge_gradient >= gradient_block[half_window, half_window-ii]):
+
+                            out_array[i+half_window, j+half_window] = edge_gradient
+
+                    # 135 degrees
+                    elif (112.5 <= edge_direction < 157.5) or (292.5 <= edge_direction < 337.5):
+
+                        if (edge_gradient >= gradient_block[half_window-ii, half_window+ii]) and \
+                                (edge_gradient >= gradient_block[half_window+ii, half_window-ii]):
+    
                             out_array[i+half_window, j+half_window] = edge_gradient
 
     return np.float32(out_array)
@@ -4540,14 +4477,63 @@ def moving_window(np.ndarray image_array not None,
 
     elif statistic == 'suppression':
 
+        try:
+            import pymorph
+        except ImportError:
+            raise ImportError('Pymorph must be installed to use inhibition')
+
+        disk1 = np.uint8(pymorph.sedisk(r=int(window_size / 2.),
+                                        dim=2,
+                                        metric='euclidean',
+                                        flat=True,
+                                        h=0) * 1)
+
+        disk2 = np.uint8(pymorph.sedisk(r=int((window_size-2) / 2.),
+                                        dim=2,
+                                        metric='euclidean',
+                                        flat=True,
+                                        h=0) * 1)
+
+        disk2 = np.pad(disk2,
+                       (1, 1),
+                       mode='constant',
+                       constant_values=(0, 0))
+
+        disk3 = np.where((disk1 == 1) & (disk2 == 1), 0, disk1)
+
         return suppression(np.float32(np.ascontiguousarray(image_array)),
-                           np.float32(np.ascontiguousarray(weights)),
-                           window_size)
+                           window_size,
+                           np.uint8(np.ascontiguousarray(disk3)))
 
     elif statistic == 'edge-direction':
 
-        return edge_direction(np.float32(np.ascontiguousarray(image_array)),
-                              window_size)
+        try:
+            import pymorph
+        except ImportError:
+            raise ImportError('Pymorph must be installed to use inhibition')
+
+        disk1 = np.uint8(pymorph.sedisk(r=int(window_size / 2.),
+                                        dim=2,
+                                        metric='euclidean',
+                                        flat=True,
+                                        h=0) * 1)
+
+        disk2 = np.uint8(pymorph.sedisk(r=int((window_size-2) / 2.),
+                                        dim=2,
+                                        metric='euclidean',
+                                        flat=True,
+                                        h=0) * 1)
+
+        disk2 = np.pad(disk2,
+                       (1, 1),
+                       mode='constant',
+                       constant_values=(0, 0))
+
+        disk3 = np.where((disk1 == 1) & (disk2 == 1), 0, disk1)
+
+        return np.float32(get_edge_direction(np.float32(np.ascontiguousarray(image_array)),
+                                             window_size,
+                                             np.uint8(np.ascontiguousarray(disk3))))
 
     elif statistic == 'extend-endpoints':
 

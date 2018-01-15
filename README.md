@@ -230,6 +230,21 @@ vector-tools
 #### Moving window operations
 ```python
 >>> from mpglue import moving_window
+>>>
+>>> # Basic usage
+>>> image_mean = moving_window(<image_array>,
+>>>                            statistic='mean',
+>>>                            window_size=5)
+>>>
+>>> # Compute the edge direction
+>>> edge_theta = moving_window(edge_gradient_array,
+>>>                            statistic='edge-direction',
+>>>                            window_size=9)
+>>>
+>>> # Compute non-maximum suppression
+>>> non_max = moving_window(edge_gradient_array,
+>>>                         statistic='suppression',
+>>>                         window_size=3)
 >>> 
 >>> # Compute a moving mean over an image.
 >>> with gl.ropen('/input_image.tif') as i_info:
