@@ -3345,7 +3345,7 @@ def read(image2open=None,
     if sort_bands2open:
         bands2open = sorted(bands2open)
 
-    # Index the image by x, y coodinates (in map units).
+    # Index the image by x, y coordinates (in map units).
     if abs(y) > 0:
         __, __, __, i = get_xy_offsets(i_info, x=x, y=y)
 

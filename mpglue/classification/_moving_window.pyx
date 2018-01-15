@@ -3110,7 +3110,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] suppression(DTYPE_float32_t[:, ::1] gra
         unsigned int window_iters
 
         DTYPE_float32_t[:, ::1] direction_array = get_edge_direction(gradient_array,
-                                                                     window_size,
+                                                                     (window_size*2)+1,
                                                                      disk)
 
     if half_window == 1:
@@ -3169,7 +3169,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] suppression(DTYPE_float32_t[:, ::1] gra
 
                         if (edge_gradient >= gradient_block[half_window-ii, half_window+ii]) and \
                                 (edge_gradient >= gradient_block[half_window+ii, half_window-ii]):
-    
+
                             out_array[i+half_window, j+half_window] = edge_gradient
 
     return np.float32(out_array)
