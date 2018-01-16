@@ -4439,6 +4439,60 @@ def moving_window(np.ndarray image_array not None,
             Choices are [2, 4].
         circle_list (Optional[list]: A list of circles. Default is [].
 
+    Examples:
+        >>> from mpglue import moving_window
+        >>>
+        >>> # Focal mean
+        >>> output = moving_window(in_array,
+        >>>                        statistic='mean',
+        >>>                        window_size=3)
+        >>>
+        >>> # Focal max
+        >>> output = moving_window(in_array,
+        >>>                        statistic='max',
+        >>>                        window_size=3)
+        >>>
+        >>> # Focal min
+        >>> output = moving_window(in_array,
+        >>>                        statistic='min',
+        >>>                        window_size=3)
+        >>>
+        >>> # Focal majority
+        >>> output = moving_window(in_array,
+        >>>                        statistic='majority',
+        >>>                        window_size=3)
+        >>>
+        >>> # Focal percentage of binary pixels
+        >>> output = moving_window(in_array,
+        >>>                        statistic='percent',
+        >>>                        window_size=25)
+        >>>
+        >>> # Focal sum
+        >>> output = moving_window(in_array,
+        >>>                        statistic='sum',
+        >>>                        window_size=15)
+        >>>
+        >>> # Fill local basins
+        >>> output = moving_window(in_array,
+        >>>                        statistic='fill-basins',
+        >>>                        window_size=5)
+        >>>
+        >>> # Fill local peaks
+        >>> output = moving_window(in_array,
+        >>>                        statistic='fill-peaks',
+        >>>                        window_size=5)
+        >>>
+        >>> # Non-maximum suppression
+        >>> output = moving_window(in_array,
+        >>>                        statistic='suppression',
+        >>>                        window_size=5,
+        >>>                        diff_thresh=.1)
+        >>>
+        >>> # Edge gradient direction
+        >>> output = moving_window(in_array,
+        >>>                        statistic='edge-direction',
+        >>>                        window_size=15)
+
     Returns
     """
 
