@@ -3089,9 +3089,32 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] extend_endpoints(DTYPE_uint8_t[:, ::1] ed
     return np.uint8(edge_array)
 
 
+cdef DTYPE_float32_t _get_disk_mean(DTYPE_float32_t[:, ::1] gradient_block,
+                                    DTYPE_uint8_t[:, ::1] disk_full,
+                                    unsigned int window_size) nogil:
+
+    cdef:
+        Py_ssize_t ii, jj
+        DTYPE_float32_t disk_mu = 0.
+        unsigned int disk_counter = 0
+
+    for ii in range(0, window_size):
+
+        for jj in range(0, window_size):
+
+            if disk_full[ii, jj] == 1:
+
+                disk_mu += gradient_block[ii, jj]
+                disk_counter += 1
+
+    return disk_mu / float(disk_counter)
+
+
 cdef np.ndarray[DTYPE_float32_t, ndim=2] suppression(DTYPE_float32_t[:, ::1] gradient_array,
                                                      unsigned int window_size,
-                                                     DTYPE_uint8_t[:, ::1] disk):
+                                                     DTYPE_float32_t diff_thresh,
+                                                     DTYPE_uint8_t[:, ::1] disk_full,
+                                                     DTYPE_uint8_t[:, ::1] disk_edge):
 
     cdef:
         Py_ssize_t i, j, ii
@@ -3104,14 +3127,14 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] suppression(DTYPE_float32_t[:, ::1] gra
 
         DTYPE_float32_t[:, ::1] gradient_block, direction_block
 
-        DTYPE_float32_t edge_gradient, edge_direction
+        DTYPE_float32_t edge_gradient, edge_direction, disk_mean
         DTYPE_float32_t[:, ::1] out_array = np.zeros((rows, cols), dtype='float32')
 
         unsigned int window_iters
 
         DTYPE_float32_t[:, ::1] direction_array = get_edge_direction(gradient_array,
                                                                      (window_size*2)+1,
-                                                                     disk)
+                                                                     disk_edge)
 
     if half_window == 1:
         window_iters = 2
@@ -3127,6 +3150,11 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] suppression(DTYPE_float32_t[:, ::1] gra
                 gradient_block = gradient_array[i:i+window_size, j:j+window_size]
                 direction_block = direction_array[i:i+window_size, j:j+window_size]
 
+                # Get the EGM mean over the disk.
+                disk_mean = _get_disk_mean(gradient_block,
+                                           disk_full,
+                                           window_size)
+
                 # Get the gradient value
                 #   for the current pixel.
                 edge_gradient = gradient_block[half_window, half_window]
@@ -3135,42 +3163,50 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] suppression(DTYPE_float32_t[:, ::1] gra
                 #   for the current pixel.
                 edge_direction = direction_block[half_window, half_window]
 
-                for ii in range(1, window_iters):
+                if (edge_gradient >= .1) and (disk_mean >= .05):
 
-                    # Get the local maximum gradient
-                    #   along the direction.
+                    out_array[i+half_window, j+half_window] = edge_gradient
+                    continue
 
-                    # 0 degrees
-                    if (edge_direction >= 337.5) or (edge_direction < 22.5) or (157.5 <= edge_direction < 202.5):
+                # The EGM should be >= 125% of the disk mean.
+                if edge_gradient >= (disk_mean + (disk_mean * diff_thresh)):
 
-                        if (edge_gradient >= gradient_block[half_window-ii, half_window]) and \
-                                (edge_gradient >= gradient_block[half_window+ii, half_window]):
+                    for ii in range(1, window_iters):
 
-                            out_array[i+half_window, j+half_window] = edge_gradient
+                        # Get the local maximum gradient
+                        #   along the direction.
 
-                    # 45 degrees
-                    elif (22.5 <= edge_direction < 67.5) or (202.5 <= edge_direction < 247.5):
+                        # 0 degrees
+                        if (edge_direction >= 337.5) or (edge_direction < 22.5) or (157.5 <= edge_direction < 202.5):
 
-                        if (edge_gradient >= gradient_block[half_window+ii, half_window+ii]) and \
-                                (edge_gradient >= gradient_block[half_window-ii, half_window-ii]):
+                            if (edge_gradient >= gradient_block[half_window-ii, half_window]) and \
+                                    (edge_gradient >= gradient_block[half_window+ii, half_window]):
 
-                            out_array[i+half_window, j+half_window] = edge_gradient
+                                out_array[i+half_window, j+half_window] = edge_gradient
 
-                    # 90 degrees
-                    elif (67.5 <= edge_direction < 112.5) or (247.5 <= edge_direction < 292.5):
+                        # 45 degrees
+                        elif (22.5 <= edge_direction < 67.5) or (202.5 <= edge_direction < 247.5):
 
-                        if (edge_gradient >= gradient_block[half_window, half_window+ii]) and \
-                                (edge_gradient >= gradient_block[half_window, half_window-ii]):
+                            if (edge_gradient >= gradient_block[half_window+ii, half_window+ii]) and \
+                                    (edge_gradient >= gradient_block[half_window-ii, half_window-ii]):
 
-                            out_array[i+half_window, j+half_window] = edge_gradient
+                                out_array[i+half_window, j+half_window] = edge_gradient
 
-                    # 135 degrees
-                    elif (112.5 <= edge_direction < 157.5) or (292.5 <= edge_direction < 337.5):
+                        # 90 degrees
+                        elif (67.5 <= edge_direction < 112.5) or (247.5 <= edge_direction < 292.5):
 
-                        if (edge_gradient >= gradient_block[half_window-ii, half_window+ii]) and \
-                                (edge_gradient >= gradient_block[half_window+ii, half_window-ii]):
+                            if (edge_gradient >= gradient_block[half_window, half_window+ii]) and \
+                                    (edge_gradient >= gradient_block[half_window, half_window-ii]):
 
-                            out_array[i+half_window, j+half_window] = edge_gradient
+                                out_array[i+half_window, j+half_window] = edge_gradient
+
+                        # 135 degrees
+                        elif (112.5 <= edge_direction < 157.5) or (292.5 <= edge_direction < 337.5):
+
+                            if (edge_gradient >= gradient_block[half_window-ii, half_window+ii]) and \
+                                    (edge_gradient >= gradient_block[half_window+ii, half_window-ii]):
+
+                                out_array[i+half_window, j+half_window] = edge_gradient
 
     return np.float32(out_array)
 
@@ -4503,6 +4539,8 @@ def moving_window(np.ndarray image_array not None,
 
         return suppression(np.float32(np.ascontiguousarray(image_array)),
                            window_size,
+                           diff_thresh,
+                           np.uint8(np.ascontiguousarray(disk1)),
                            np.uint8(np.ascontiguousarray(disk3)))
 
     elif statistic == 'edge-direction':
