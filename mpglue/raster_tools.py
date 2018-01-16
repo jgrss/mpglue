@@ -3352,7 +3352,7 @@ def read(image2open=None,
     if abs(x) > 0:
         __, __, j, __ = get_xy_offsets(i_info, x=x, y=y)
 
-    if (n_jobs == 0) and not predictions:
+    if (n_jobs in [0, 1]) and not predictions:
 
         kwargs = dict(bands2open=bands2open,
                       i=i,
@@ -3376,7 +3376,7 @@ def read(image2open=None,
 
         # format_dict = {'byte': 'B', 'int16': 'i', 'uint16': 'I', 'float32': 'f', 'float64': 'd'}
 
-        if n_jobs == 0:
+        if n_jobs in [0, 1]:
 
             values = np.asarray([i_info.datasource.GetRasterBand(band).ReadAsArray(j, i, ccols, rrows)
                                  for band in bands2open], dtype=d_type)
