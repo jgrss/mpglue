@@ -3113,6 +3113,7 @@ cdef DTYPE_float32_t _get_disk_mean(DTYPE_float32_t[:, ::1] gradient_block,
 cdef np.ndarray[DTYPE_float32_t, ndim=2] suppression(DTYPE_float32_t[:, ::1] gradient_array,
                                                      unsigned int window_size,
                                                      DTYPE_float32_t diff_thresh,
+                                                     DTYPE_float32_t var_thresh,
                                                      DTYPE_uint8_t[:, ::1] disk_full,
                                                      DTYPE_uint8_t[:, ::1] disk_edge):
 
@@ -3133,7 +3134,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] suppression(DTYPE_float32_t[:, ::1] gra
         unsigned int window_iters
 
         DTYPE_float32_t[:, ::1] direction_array = get_edge_direction(gradient_array,
-                                                                     (window_size*2)+1,
+                                                                     15,
                                                                      disk_edge)
 
     if half_window == 1:
@@ -3163,7 +3164,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] suppression(DTYPE_float32_t[:, ::1] gra
                 #   for the current pixel.
                 edge_direction = direction_block[half_window, half_window]
 
-                if (edge_gradient >= .1) and (disk_mean >= .05):
+                if disk_mean >= var_thresh:
 
                     out_array[i+half_window, j+half_window] = edge_gradient
                     continue
@@ -4439,60 +4440,6 @@ def moving_window(np.ndarray image_array not None,
             Choices are [2, 4].
         circle_list (Optional[list]: A list of circles. Default is [].
 
-    Examples:
-        >>> from mpglue import moving_window
-        >>>
-        >>> # Focal mean
-        >>> output = moving_window(in_array,
-        >>>                        statistic='mean',
-        >>>                        window_size=3)
-        >>>
-        >>> # Focal max
-        >>> output = moving_window(in_array,
-        >>>                        statistic='max',
-        >>>                        window_size=3)
-        >>>
-        >>> # Focal min
-        >>> output = moving_window(in_array,
-        >>>                        statistic='min',
-        >>>                        window_size=3)
-        >>>
-        >>> # Focal majority
-        >>> output = moving_window(in_array,
-        >>>                        statistic='majority',
-        >>>                        window_size=3)
-        >>>
-        >>> # Focal percentage of binary pixels
-        >>> output = moving_window(in_array,
-        >>>                        statistic='percent',
-        >>>                        window_size=25)
-        >>>
-        >>> # Focal sum
-        >>> output = moving_window(in_array,
-        >>>                        statistic='sum',
-        >>>                        window_size=15)
-        >>>
-        >>> # Fill local basins
-        >>> output = moving_window(in_array,
-        >>>                        statistic='fill-basins',
-        >>>                        window_size=5)
-        >>>
-        >>> # Fill local peaks
-        >>> output = moving_window(in_array,
-        >>>                        statistic='fill-peaks',
-        >>>                        window_size=5)
-        >>>
-        >>> # Non-maximum suppression
-        >>> output = moving_window(in_array,
-        >>>                        statistic='suppression',
-        >>>                        window_size=5,
-        >>>                        diff_thresh=.1)
-        >>>
-        >>> # Edge gradient direction
-        >>> output = moving_window(in_array,
-        >>>                        statistic='edge-direction',
-        >>>                        window_size=15)
-
     Returns
     """
 
@@ -4594,6 +4541,7 @@ def moving_window(np.ndarray image_array not None,
         return suppression(np.float32(np.ascontiguousarray(image_array)),
                            window_size,
                            diff_thresh,
+                           var_thresh,
                            np.uint8(np.ascontiguousarray(disk1)),
                            np.uint8(np.ascontiguousarray(disk3)))
 

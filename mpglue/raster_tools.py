@@ -319,14 +319,20 @@ class ReadWrite(object):
         if self.rrows == -1:
             self.rrows = self.rows
         else:
+
             if self.rrows > self.rows:
-                raise ValueError('\nThe requested rows cannot be larger than the image rows.\n')
+
+                self.rrows = self.rows
+                logger.warning('  The requested rows cannot be larger than the image rows.')
 
         if self.ccols == -1:
             self.ccols = self.cols
         else:
+
             if self.ccols > self.cols:
-                raise ValueError('\nThe requested columns cannot be larger than the image columns.\n')
+
+                self.ccols = self.cols
+                logger.warning('  The requested columns cannot be larger than the image columns.')
 
         # Index the image by x, y coordinates (in map units).
         if (abs(y) > 0) and (abs(x) > 0):
@@ -400,6 +406,8 @@ class ReadWrite(object):
             # exec('self.{} = vie.compute(compute_index.upper())'.format(compute_index.lower()))
             self.array = vie.compute(compute_index.upper(),
                                      **viargs)
+
+        self.array[np.isnan(self.array) | np.isinf(self.array)] = 0
 
         return self.array
 
@@ -3291,14 +3299,18 @@ def read(image2open=None,
     else:
 
         if rrows > i_info.rows:
-            raise ValueError('\nThe requested rows cannot be larger than the image rows.\n')
+
+            rrows = i_info.rows
+            logger.warning('  The requested rows cannot be larger than the image rows.')
 
     if ccols == -1:
         ccols = i_info.cols
     else:
 
         if ccols > i_info.cols:
-            raise ValueError('\nThe requested columns cannot be larger than the image columns.\n')
+
+            ccols = i_info.cols
+            logger.warning('  The requested columns cannot be larger than the image columns.')
 
     #################
     # Bounds checking
