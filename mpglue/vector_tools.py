@@ -1016,7 +1016,7 @@ class Transform(object):
         target_projection (int): The target projection code. Format can be EPSG, CS, or proj4.
 
     Examples:
-        >>> from mpglue.vector_tools import Transfrom
+        >>> from mpglue.vector_tools import Transform
         >>>
         >>> ptr = Transform(740000., 2260000., 102033, 4326)
         >>> print ptr.x, ptr.y
