@@ -1037,7 +1037,7 @@ class Transform(object):
                 source_srs.ImportFromEPSG(source_projection)
             elif isinstance(source_projection, str):
 
-                if source_projection.startswith('PROJCS'):
+                if source_projection.startswith('PROJCS') or source_projection.startswith('GEOGCS'):
                     source_srs.ImportFromWkt(source_projection)
                 elif source_projection.startswith('+proj'):
                     source_srs.ImportFromProj4(source_projection)
@@ -1058,14 +1058,11 @@ class Transform(object):
                 target_srs.ImportFromEPSG(target_projection)
             elif isinstance(target_projection, str):
 
-                if target_projection.startswith('PROJCS'):
+                if target_projection.startswith('PROJCS') or target_projection.startswith('GEOGCS'):
                     target_srs.ImportFromWkt(target_projection)
                 elif target_projection.startswith('+proj'):
                     target_srs.ImportFromProj4(target_projection)
                 else:
-
-                    import pdb
-                    pdb.set_trace()
 
                     logger.error('  The target code could not be read.')
                     raise ValueError
