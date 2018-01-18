@@ -1031,6 +1031,9 @@ class Transform(object):
         source_srs = osr.SpatialReference()
         target_srs = osr.SpatialReference()
 
+        import pdb
+        pdb.set_trace()
+
         try:
 
             if isinstance(source_projection, int):
