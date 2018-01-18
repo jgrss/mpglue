@@ -3494,7 +3494,8 @@ def warp(input_image,
         None, writes to `output_image'.
     """
 
-    check_and_create_dir(os.path.split(output_image)[0])
+    if not output_image.endswith('.mem'):
+        check_and_create_dir(os.path.split(output_image)[0])
 
     if isinstance(out_epsg, int):
         out_epsg = 'EPSG:{:d}'.format(out_epsg)
