@@ -1064,6 +1064,9 @@ class Transform(object):
                     target_srs.ImportFromProj4(target_projection)
                 else:
 
+                    import pdb
+                    pdb.set_trace()
+
                     logger.error('  The target code could not be read.')
                     raise ValueError
 
