@@ -1031,9 +1031,6 @@ class Transform(object):
         source_srs = osr.SpatialReference()
         target_srs = osr.SpatialReference()
 
-        import pdb
-        pdb.set_trace()
-
         try:
 
             if isinstance(source_projection, int):
@@ -1045,13 +1042,14 @@ class Transform(object):
                 elif source_projection.startswith('+proj'):
                     source_srs.ImportFromProj4(source_projection)
                 else:
-                    logger.error('The source code could not be read.')
+
+                    logger.error('  The source code could not be read.')
                     raise ValueError
 
         except:
 
             logger.error(gdal.GetLastErrorMsg())
-            logger.error('The source code could not be read.')
+            logger.error('  The source code could not be read.')
             raise ValueError
 
         try:
@@ -1065,13 +1063,14 @@ class Transform(object):
                 elif target_projection.startswith('+proj'):
                     target_srs.ImportFromProj4(target_projection)
                 else:
-                    logger.error('The target code could not be read.')
+
+                    logger.error('  The target code could not be read.')
                     raise ValueError
 
         except:
 
             logger.error(gdal.GetLastErrorMsg())
-            logger.error('The target code could not be read.')
+            logger.error('  The target code could not be read.')
             raise ValueError
 
         try:
@@ -1079,7 +1078,7 @@ class Transform(object):
         except:
 
             logger.error(gdal.GetLastErrorMsg())
-            logger.error('The coordinates could not be transformed.')
+            logger.error('  The coordinates could not be transformed.')
             raise TransformError
 
         self.point = ogr.Geometry(ogr.wkbPoint)
