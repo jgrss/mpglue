@@ -380,7 +380,7 @@ def predict_cv(ci, cs, fn, pc, cr, ig, xy, cinfo, wc):
 
     cl = classification()
     cl.split_samples(fn, perc_samp=pc, classes2remove=cr, ignore_feas=ig, use_xy=xy)
-    cl.construct_model(classifier_info=cinfo, weight_classes=wc, be_quiet=True)
+    cl.construct_model(classifier_info=cinfo, class_weight=wc, be_quiet=True)
 
     return cl.model.predict(features[ci:ci+cs])[1]
 
@@ -404,8 +404,8 @@ class ParameterHandler(object):
 
     def __init__(self, classifier):
 
-        self.equal_params = {'trees': 'n_estimators',
-                             'min_samps': 'min_samples_split'}
+        self.equal_params = dict(trees='n_estimators',
+                                 min_samps='min_samples_split')
 
         self.forests = ['RF', 'EX_RF']
         self.forests_regressed = ['RFR', 'EX_RFR']
@@ -468,6 +468,10 @@ class ParameterHandler(object):
 
         elif classifier in self.boosted:
             self.valid_params = ['base_estimator', 'n_estimators', 'learning_rate', 'algorithm', 'random_state']
+
+        elif classifier == 'Bayes':
+
+            self.valid_params = ['priors']
 
         elif classifier == 'NN':
 
