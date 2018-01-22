@@ -4981,7 +4981,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         # transpose and reshape the predicted labels to (rows x columns)
                         out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
                                                                                                                        n_cols),
-                                                      j=j-jwo, i=i-iwo)
+                                                      j=j-jwo,
+                                                      i=i-iwo)
 
                     elif self.classifier_info['classifier'] in ['C5', 'Cubist']:
 
@@ -5081,7 +5082,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                             # Write the predictions to file.
                             out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
                                                                                                                            n_cols),
-                                                          j=j-jwo, i=i-iwo)
+                                                          j=j-jwo,
+                                                          i=i-iwo)
 
                 self.record_list.append(n_block)
 
