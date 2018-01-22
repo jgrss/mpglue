@@ -106,7 +106,7 @@ try:
     from sklearn.covariance import EllipticEnvelope
     from sklearn.cluster import KMeans
     from sklearn.semi_supervised import label_propagation
-    from sklearn.grid_search import GridSearchCV
+    from sklearn.model_selection import GridSearchCV
     from sklearn import cross_validation
     from sklearn import metrics
     from sklearn.decomposition import PCA as skPCA
@@ -5983,19 +5983,35 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         return df
 
-    def optimize_parameters(self, file_name, classifier_info={'classifier': 'RF'},
-                            n_trees_list=[500, 1000, 1500, 2000], trials_list=[2, 5, 10],
-                            max_depth_list=[25, 30, 35, 40, 45, 50], min_samps_list=[2, 5, 10],
-                            criterion_list=['gini'], rand_vars_list=['sqrt'],
-                            cf_list=[.25, .5, .75], committees_list=[1, 2, 5, 10],
-                            rules_list=[25, 50, 100, 500], extrapolation_list=[0, 1, 5, 10],
+    def optimize_parameters(self,
+                            file_name,
+                            classifier_info={'classifier': 'RF'},
+                            n_trees_list=[500, 1000, 1500, 2000],
+                            trials_list=[2, 5, 10],
+                            max_depth_list=[25, 30, 35, 40, 45, 50],
+                            min_samps_list=[2, 5, 10],
+                            criterion_list=['gini'],
+                            rand_vars_list=['sqrt'],
+                            cf_list=[.25, .5, .75],
+                            committees_list=[1, 2, 5, 10],
+                            rules_list=[25, 50, 100, 500],
+                            extrapolation_list=[0, 1, 5, 10],
                             class_weight_list=[None, 'balanced', 'balanced_subsample'],
                             learn_rate_list=[.1, .2, .4, .6, .8, 1.],
-                            bool_list=[True, False], c_list=[1., 10., 20., 100.],
+                            bool_list=[True, False],
+                            c_list=[1., 10., 20., 100.],
                             gamma_list=[.001, .001, .01, .1, 1., 5.],
-                            k_folds=3, perc_samp=.5, ignore_feas=[], use_xy=False, classes2remove=[],
-                            method='overall', f1_class=0, stratified=False, spacing=1000.,
-                            calibrate_proba=False, output_file=None):
+                            k_folds=3,
+                            perc_samp=.5,
+                            ignore_feas=[],
+                            use_xy=False,
+                            classes2remove=[],
+                            method='overall',
+                            f1_class=0,
+                            stratified=False,
+                            spacing=1000.,
+                            calibrate_proba=False,
+                            output_file=None):
 
         """
         Finds the optimal parameters for a classifier by training and testing a range of classifier parameters
@@ -6174,11 +6190,19 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         if classifier_info['classifier'] in core_classifiers:
 
-            return self.grid_search(classifier_info['classifier'], parameters, file_name,
-                                    k_folds=k_folds, perc_samp=perc_samp, ignore_feas=ignore_feas,
-                                    use_xy=use_xy, classes2remove=classes2remove,
-                                    method=method, f1_class=f1_class, stratified=stratified,
-                                    spacing=spacing, output_file=output_file,
+            return self.grid_search(classifier_info['classifier'],
+                                    parameters,
+                                    file_name,
+                                    k_folds=k_folds,
+                                    perc_samp=perc_samp,
+                                    ignore_feas=ignore_feas,
+                                    use_xy=use_xy,
+                                    classes2remove=classes2remove,
+                                    method=method,
+                                    f1_class=f1_class,
+                                    stratified=stratified,
+                                    spacing=spacing,
+                                    output_file=output_file,
                                     calibrate_proba=calibrate_proba)
 
         elif (method == 'overall') and (classifier_info['classifier'] not in core_classifiers):
@@ -6187,7 +6211,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             grid_search = GridSearchCV(clf,
                                        param_grid=parameters,
-                                       n_jobs=-1,
+                                       n_jobs=classifier_info['n_jobs'],
                                        cv=k_folds,
                                        verbose=1)
 
