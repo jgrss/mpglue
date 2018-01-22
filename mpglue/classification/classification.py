@@ -3596,6 +3596,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         
         """Sets model parameters"""
 
+        if isinstance(self.classifier_info['classifier'], list):
+            return
+
         defaults_ = dict(n_estimators=500,
                          trials=10,
                          max_depth=25,
@@ -3749,11 +3752,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         """Sets the model object"""
 
-        if self.classifier_info['classifier'] in ['ABR', 'GBR', 'EX_RFR', 'RFR', 'EX_RFR', 'SVR', 'SVRA']:
-            self.discrete = False
-        else:
-            self.discrete = True
-
         # Create the model object.
         if isinstance(self.classifier_info['classifier'], list):
 
@@ -3832,6 +3830,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             self.model = ensemble.VotingClassifier(estimators=classifier_list, voting='soft')
 
         else:
+
+            if self.classifier_info['classifier'] in ['ABR', 'GBR', 'EX_RFR', 'RFR', 'EX_RFR', 'SVR', 'SVRA']:
+                self.discrete = False
+            else:
+                self.discrete = True
 
             if self.classifier_info['classifier'] == 'Bayes':
 
