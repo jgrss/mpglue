@@ -3755,9 +3755,16 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         # Create the model object.
         if isinstance(self.classifier_info['classifier'], list):
 
+            classifier_info = copy(self.classifier_info)
+
             classifier_list = list()
 
-            for ci, classifier in enumerate(self.classifier_info['classifier']):
+            for ci, classifier in enumerate(classifier_info['classifier']):
+
+                self.classifier_info = copy(classifier_info)
+                self.classifier_info['classifier'] = classifier
+
+                self._default_parameters()
 
                 if classifier == 'Bayes':
                     classifier_list.append(('Bayes', GaussianNB()))
