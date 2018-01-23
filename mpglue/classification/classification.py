@@ -496,6 +496,9 @@ class ParameterHandler(object):
 
     def check_parameters(self, cinfo, default_params, trials_set=False):
 
+        import pdb
+        pdb.set_trace()
+
         # Set defaults
         for k, v in default_params.iteritems():
 
@@ -3632,8 +3635,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.classifier_info_ = copy(self.classifier_info)
         self.classifier_info_ = vp.check_parameters(self.classifier_info_, defaults_)
 
-        import pdb
-        pdb.set_trace()
 
         # Create a separate instance for AdaBoost base classifiers.
         if class_base.startswith('AB_'):
