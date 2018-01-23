@@ -496,14 +496,14 @@ class ParameterHandler(object):
 
     def check_parameters(self, cinfo, default_params, trials_set=False):
 
-        import pdb
-        pdb.set_trace()
-
         # Set defaults
         for k, v in default_params.iteritems():
 
             if (k not in cinfo) and (k in self.valid_params):
                 cinfo[k] = v
+
+        import pdb
+        pdb.set_trace()
 
         for param_key, param_value in cinfo.copy().iteritems():
 
