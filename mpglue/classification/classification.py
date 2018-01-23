@@ -3759,9 +3759,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         # Create the model object.
         if isinstance(self.classifier_info['classifier'], list):
 
-            import pdb
-            pdb.set_trace()
-
             self.discrete = True
 
             classifier_info = copy(self.classifier_info)
@@ -3769,6 +3766,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             classifier_list = list()
 
             for ci, classifier in enumerate(classifier_info['classifier']):
+
+                print classifier
 
                 self.classifier_info = copy(classifier_info)
                 self.classifier_info['classifier'] = classifier
@@ -3842,6 +3841,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     cal_model.fit(self.p_vars_test, self.labels_test)
 
                     classifier_list[ci] = (classifier, cal_model)
+
+            import pdb
+            pdb.set_trace()
 
             self.model = ensemble.VotingClassifier(estimators=classifier_list, voting='soft')
 
