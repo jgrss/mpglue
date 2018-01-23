@@ -502,9 +502,6 @@ class ParameterHandler(object):
             if (k not in cinfo) and (k in self.valid_params):
                 cinfo[k] = v
 
-        import pdb
-        pdb.set_trace()
-
         for param_key, param_value in cinfo.copy().iteritems():
 
             if param_key in self.equal_params:
@@ -3629,12 +3626,16 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         else:
             class_base = 'none'
 
+        self.classifier_info['classifier'] = 'AB_EX_RF'
+
         vp = ParameterHandler(self.classifier_info['classifier'])
 
         # Check the parameters.
         self.classifier_info_ = copy(self.classifier_info)
         self.classifier_info_ = vp.check_parameters(self.classifier_info_, defaults_)
 
+        import pdb
+        pdb.set_trace()
 
         # Create a separate instance for AdaBoost base classifiers.
         if class_base.startswith('AB_'):
