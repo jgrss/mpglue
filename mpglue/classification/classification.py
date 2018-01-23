@@ -3840,7 +3840,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     classifier_list[ci] = (classifier, cal_model)
 
-            self.model = ensemble.VotingClassifier(estimators=classifier_list, voting='soft')
+            vote_weights = None if 'vote_weights' not in classifier_info else classifier_info['vote_weights']
+
+            self.model = ensemble.VotingClassifier(estimators=classifier_list,
+                                                   voting='soft',
+                                                   weights=vote_weights)
 
             # Reset the original classifier info.
             self.classifier_info = copy(classifier_info)
