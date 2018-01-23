@@ -3759,6 +3759,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         # Create the model object.
         if isinstance(self.classifier_info['classifier'], list):
 
+            import pdb
+            pdb.set_trace()
+
             self.discrete = True
 
             classifier_info = copy(self.classifier_info)
