@@ -3626,16 +3626,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         else:
             class_base = 'none'
 
-        self.classifier_info['classifier'] = 'AB_EX_RF'
-
         vp = ParameterHandler(self.classifier_info['classifier'])
 
         # Check the parameters.
         self.classifier_info_ = copy(self.classifier_info)
         self.classifier_info_ = vp.check_parameters(self.classifier_info_, defaults_)
-
-        import pdb
-        pdb.set_trace()
 
         # Create a separate instance for AdaBoost base classifiers.
         if class_base.startswith('AB_'):
