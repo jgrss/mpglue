@@ -3842,6 +3842,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             self.model = ensemble.VotingClassifier(estimators=classifier_list, voting='soft')
 
+            # Reset the original classifier info.
+            self.classifier_info = copy(classifier_info)
+
         else:
 
             if self.classifier_info['classifier'] in ['ABR', 'GBR', 'EX_RFR', 'RFR', 'EX_RFR', 'SVR', 'SVRA']:
