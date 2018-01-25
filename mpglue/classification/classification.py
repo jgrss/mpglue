@@ -1414,7 +1414,13 @@ class Samples(object):
         self.p_vars = np.float32(np.delete(self.p_vars, idx, axis=0))
         self.labels = np.float32(np.delete(self.labels, idx, axis=0))
 
-    def load4crf(self, predictors, labels, bands2open=None, scale_factor=1., n_jobs=1, **kwargs):
+    def load4crf(self,
+                 predictors,
+                 labels,
+                 bands2open=None,
+                 scale_factor=1.,
+                 n_jobs=1,
+                 **kwargs):
 
         """
         Loads data for Conditional Random Fields on a grid
@@ -4495,6 +4501,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 n_jobs_vars=-1,
                 gdal_cache=256,
                 overwrite=False,
+                track_blocks=False,
                 **kwargs):
 
         """
@@ -4531,6 +4538,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 Default is -1, or all available processors.
             gdal_cache (Optional[int]). The GDAL cache (MB). Default is 256.
             overwrite (Optional[bool]): Whether to overwrite an existing `out_image`. Default is False.
+            track_blocks (Optional[bool]): Whether to keep a record of processed blocks. Default is False.
             kwargs (Optional): Image read options passed to `mpglue.raster_tools.ropen.read`.
             
         Returns:
@@ -4586,6 +4594,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.n_jobs = n_jobs
         self.n_jobs_vars = n_jobs_vars
         self.chunk_size = (self.row_block_size * self.col_block_size) / 100
+        self.track_blocks = track_blocks
         self.kwargs = kwargs
 
         if self.n_jobs == -1:
@@ -4647,13 +4656,15 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             self.i_info = raster_tools.ropen(self.input_image)
 
-            # Block record keeping.
-            self.record_keeping = os.path.join(d_name, '{}_record.txt'.format(f_base))
+            if self.track_blocks:
 
-            if os.path.isfile(self.record_keeping):
-                self.record_list = self.load(self.record_keeping)
-            else:
-                self.record_list = list()
+                # Block record keeping.
+                self.record_keeping = os.path.join(d_name, '{}_record.txt'.format(f_base))
+
+                if os.path.isfile(self.record_keeping):
+                    self.record_list = self.load(self.record_keeping)
+                else:
+                    self.record_list = list()
 
             # Output image information.
             self.o_info = self.i_info.copy()
@@ -4836,24 +4847,21 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             if 'rows' in self.kwargs:
 
                 if self.kwargs['rows'] != -1:
-
                     rows = self.kwargs['rows']
-                    self.o_info.update_info(rows=rows)
 
             if 'cols' in self.kwargs:
 
                 if self.kwargs['cols'] != -1:
-
                     cols = self.kwargs['cols']
-                    self.o_info.update_info(cols=cols)
 
         # Determine which bands to open.
         self._set_bands2open()
 
+        self.o_info.update_info(rows=rows,
+                                cols=cols)
+
         # Setup the object to write to.
         out_raster_object = self._set_output_object()
-
-        out_raster_object.update_info(rows=rows, cols=cols)
 
         if self.get_probs:
             out_bands = [out_raster_object.get_band(bd) for bd in range(1, self.o_info.bands+1)]
@@ -4889,11 +4897,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 n_block += 1
 
-                if n_block in self.record_list:
+                if self.track_blocks:
 
-                    logger.info('  Skipping current block ...')
-                    continue
-                    
+                    if n_block in self.record_list:
+
+                        logger.info('  Skipping current block ...')
+                        continue
+
                 n_cols = self._num_rows_cols(j, block_cols, cols+jwo)
 
                 # Check for zeros in the block.
@@ -4974,7 +4984,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     predicted = self.model.predict_proba(features)
 
                     for cl in range(0, self.n_classes):
-                        out_bands[cl].WriteArray(predicted[:, cl].reshape(n_rows, n_cols), j=j-jwo, i=i-iwo)
+
+                        out_bands[cl].WriteArray(predicted[:, cl].reshape(n_rows,
+                                                                          n_cols),
+                                                 j=j-jwo,
+                                                 i=i-iwo)
 
                 else:
 
@@ -4993,10 +5007,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                             # predicted = np.empty((n_samples, 1), dtype='uint8')
 
                             predicted = joblib.Parallel(n_jobs=self.n_jobs,
-                                                        max_nbytes=None)(joblib.delayed(predict_cv)(chunk, self.chunk_size,
-                                                                                                    self.file_name, self.perc_samp,
+                                                        max_nbytes=None)(joblib.delayed(predict_cv)(chunk,
+                                                                                                    self.chunk_size,
+                                                                                                    self.file_name,
+                                                                                                    self.perc_samp,
                                                                                                     self.classes2remove,
-                                                                                                    self.ignore_feas, self.use_xy,
+                                                                                                    self.ignore_feas,
+                                                                                                    self.use_xy,
                                                                                                     self.classifier_info,
                                                                                                     self.weight_classes)
                                                                          for chunk in range(0, n_samples, self.chunk_size))
@@ -5035,7 +5052,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                             # Write the predictions to file.
                             out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
                                                                                                                            n_cols),
-                                                          j=j-jwo, i=i-iwo)
+                                                          j=j-jwo,
+                                                          i=i-iwo)
 
                         else:
 
@@ -5043,7 +5061,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                                                 self.classifier_info['classifier'],
                                                                                 predict_samps).reshape(n_rows,
                                                                                                        n_cols),
-                                                          j=j-jwo, i=i-iwo)
+                                                          j=j-jwo,
+                                                          i=i-iwo)
 
                     else:
 
@@ -5108,12 +5127,15 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                           j=j-jwo,
                                                           i=i-iwo)
 
-                self.record_list.append(n_block)
+                if self.track_blocks:
 
-                if os.path.isfile(self.record_keeping):
-                    os.remove(self.record_keeping)
+                    self.record_list.append(n_block)
 
-                self.dump(self.record_list, self.record_keeping)
+                    if os.path.isfile(self.record_keeping):
+                        os.remove(self.record_keeping)
+
+                    self.dump(self.record_list,
+                              self.record_keeping)
 
         if self.get_probs:
 
@@ -5131,8 +5153,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         if isinstance(self.mask_background, str):
 
-            self._mask_background(self.out_image_temp, self.out_image, self.mask_background,
-                                  self.background_band, self.background_value, self.minimum_observations,
+            self._mask_background(self.out_image_temp,
+                                  self.out_image,
+                                  self.mask_background,
+                                  self.background_band,
+                                  self.background_value,
+                                  self.minimum_observations,
                                   self.observation_band)
 
     def _set_bands2open(self):
