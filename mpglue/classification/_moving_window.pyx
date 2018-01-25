@@ -116,7 +116,7 @@ cdef inline DTYPE_float32_t _spectral_distance(DTYPE_float32_t x1, DTYPE_float32
     return _pow(x2 - x1, 2.)
 
 
-cdef inline DTYPE_float32_t euclidean_distance(DTYPE_float32_t x1, DTYPE_float32_t x2, DTYPE_float32_t y1, DTYPE_float32_t y2) nogil:
+cdef inline DTYPE_float32_t _euclidean_distance(DTYPE_float32_t x1, DTYPE_float32_t x2, DTYPE_float32_t y1, DTYPE_float32_t y2) nogil:
     return ((x2 - x1)**2 + (y2 - y1)**2)**.5
 
 
@@ -3113,7 +3113,6 @@ cdef DTYPE_float32_t _get_disk_mean(DTYPE_float32_t[:, ::1] gradient_block,
 cdef np.ndarray[DTYPE_float32_t, ndim=2] suppression(DTYPE_float32_t[:, ::1] gradient_array,
                                                      unsigned int window_size,
                                                      DTYPE_float32_t diff_thresh,
-                                                     DTYPE_float32_t var_thresh,
                                                      DTYPE_uint8_t[:, ::1] disk_full,
                                                      DTYPE_uint8_t[:, ::1] disk_edge):
 
@@ -3134,7 +3133,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] suppression(DTYPE_float32_t[:, ::1] gra
         unsigned int window_iters
 
         DTYPE_float32_t[:, ::1] direction_array = get_edge_direction(gradient_array,
-                                                                     15,
+                                                                     (window_size*2)+1,
                                                                      disk_edge)
 
     if half_window == 1:
@@ -3164,7 +3163,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] suppression(DTYPE_float32_t[:, ::1] gra
                 #   for the current pixel.
                 edge_direction = direction_block[half_window, half_window]
 
-                if disk_mean >= var_thresh:
+                if (edge_gradient >= .1) and (disk_mean >= .05):
 
                     out_array[i+half_window, j+half_window] = edge_gradient
                     continue
@@ -3428,6 +3427,163 @@ cdef DTYPE_float32_t _fill_basins(DTYPE_float32_t[:, ::1] image_block,
 
         # Return the original center value
         return bcv
+
+
+cdef DTYPE_float32_t _get_proba_sums(DTYPE_float32_t[:, ::1] proba_block___,
+                                     DTYPE_float32_t[:, ::1] dist_weights,
+                                     unsigned int window_size) nogil:
+
+    cdef:
+        Py_ssize_t ii, jj
+        DTYPE_float32_t proba_sum = 0.
+
+    for ii in range(0, window_size):
+
+        for jj in range(0, window_size):
+            proba_sum += (proba_block___[ii, jj] * dist_weights[ii, jj])
+
+    return proba_sum
+
+
+cdef void _block_add(DTYPE_float32_t[:, ::1] proba_block__,
+                     DTYPE_float32_t[:, ::1] probs_layer,
+                     unsigned int window_size,
+                     DTYPE_float32_t pls) nogil:
+
+    cdef:
+        Py_ssize_t ii, jj
+
+    for ii in range(0, window_size):
+
+        for jj in range(0, window_size):
+            proba_block__[ii, jj] += (probs_layer[ii, jj] * pls)
+
+
+cdef DTYPE_float32_t _k_prob(DTYPE_float32_t[:, :, ::1] probs,
+                             DTYPE_float32_t[:, ::1] proba_block_,
+                             Py_ssize_t current_band,
+                             unsigned int bands,
+                             unsigned int window_size,
+                             DTYPE_float32_t uncertainty,
+                             DTYPE_float32_t[:, ::1] dist_weights) nogil:
+
+    cdef:
+        Py_ssize_t class_iter
+        DTYPE_float32_t[:, ::1] current_layer
+
+    # Iterate over each class
+    for class_iter in range(0, bands):
+
+        current_layer = probs[class_iter, :, :]
+
+        # Get the weighted sum
+
+        if class_iter == current_band:
+
+            # Add the current class probabilities
+            _block_add(proba_block_,
+                       current_layer,
+                       window_size,
+                       1.)
+
+        else:
+
+            # Add the current class probabilities,
+            #   weighted by the uncertainty.
+            _block_add(proba_block_,
+                       current_layer,
+                       window_size,
+                       uncertainty)
+
+    return _get_proba_sums(proba_block_,
+                           dist_weights,
+                           window_size)
+
+
+cdef DTYPE_float32_t[:, ::1] _create_weights(unsigned int window_size,
+                                             unsigned int half_window):
+
+    cdef:
+        Py_ssize_t ri, rj, ri2, rj2
+        DTYPE_float32_t[:, ::1] dist_weights = np.zeros((window_size, window_size), dtype='float32')
+        DTYPE_float32_t rcm = float(half_window)
+        DTYPE_float32_t max_distance
+
+    for ri in range(0, window_size):
+        for rj in range(0, window_size):
+            dist_weights[ri, rj] = _euclidean_distance(float(rj), rcm, float(ri), rcm)
+
+    max_distance = dist_weights[0, 0]
+
+    for ri2 in range(0, window_size):
+        for rj2 in range(0, window_size):
+
+            if dist_weights[ri2, rj2] == 0:
+                dist_weights[ri2, rj2] = 1.
+            else:
+                dist_weights[ri2, rj2] = 1. - (dist_weights[ri2, rj2] / max_distance)
+
+    return dist_weights
+
+
+cdef np.ndarray[DTYPE_float32_t, ndim=3] plr(DTYPE_float32_t[:, :, ::1] proba_array,
+                                             unsigned int window_size,
+                                             unsigned int iterations=3,
+                                             DTYPE_float32_t uncertainty=.5):
+
+    """Posterior-probability Label Relaxation"""
+
+    cdef:
+        Py_ssize_t i, j, iteration, band
+        unsigned int bands = proba_array.shape[0]
+        unsigned int rows = proba_array.shape[1]
+        unsigned int cols = proba_array.shape[2]
+        unsigned int half_window = <int>(window_size / 2.)
+        unsigned int row_dims = rows - (half_window * 2)
+        unsigned int col_dims = cols - (half_window * 2)
+        DTYPE_float32_t[:, :, ::1] out_array = proba_array.copy()
+        DTYPE_float32_t[:, ::1] block_proba = np.zeros((window_size, window_size), dtype='float32')
+        DTYPE_float32_t[:, ::1] proba_block = block_proba.copy()
+        DTYPE_float32_t[:, :, ::1] proba_block_3d
+        DTYPE_float32_t[:, ::1] dist_weights = _create_weights(window_size, half_window)
+        DTYPE_float32_t proba_q, proba_p
+
+    for iteration in range(0, iterations):
+
+        with nogil:
+
+            for i in range(0, row_dims):
+
+                for j in range(0, col_dims):
+
+                    # Current probabilities
+                    proba_block_3d = proba_array[:,
+                                                 i:i+window_size,
+                                                 j:j+window_size]
+
+                    # Iterate over each class.
+                    for band in range(0, bands):
+
+                        # Initiate the block to be filled with zeros
+                        proba_block[...] = block_proba
+
+                        # Get the weighted sum of probabilities
+                        proba_q = _k_prob(proba_block_3d,
+                                          proba_block,
+                                          band+1,
+                                          bands,
+                                          window_size,
+                                          uncertainty,
+                                          dist_weights)
+
+                        proba_p = proba_block_3d[band, half_window, half_window]
+
+                        out_array[band, i+half_window, j+half_window] = proba_q * proba_p
+
+        # Normalize
+        proba_array = np.float32(out_array) / np.float32(out_array).max(axis=0)
+
+    return np.float32(proba_array)
 
 
 cdef np.ndarray[DTYPE_float32_t, ndim=2] fill_basins(DTYPE_float32_t[:, ::1] image2fill,
@@ -4405,7 +4561,7 @@ def moving_window(np.ndarray image_array not None,
             Choices are ['mean', 'min', 'max', 'median', 'majority', 'percent', 'sum',
                          'link', 'fill-basins', 'fill', 'circles', 'distance'. 'rgb-distance',
                          'inhibition', 'line-enhance', 'saliency', 'duda', 'suppression', 'edge-direction',
-                         'extend-endpoints', 'remove-min', 'seg-dist'].
+                         'extend-endpoints', 'remove-min', 'seg-dist', 'plr'].
 
             circles: TODO
             distance: Computes the spectral distance between the center value and neighbors
@@ -4423,6 +4579,7 @@ def moving_window(np.ndarray image_array not None,
             median: Median of window
             min: Minimum of window
             percent: Percent of window filled by binary 1s
+            plr: Posterior-Probability Label Relaxation
             rgb-distance: TODO
             saliency: TODO
             sum: Sum of window
@@ -4440,33 +4597,88 @@ def moving_window(np.ndarray image_array not None,
             Choices are [2, 4].
         circle_list (Optional[list]: A list of circles. Default is [].
 
+    Examples:
+        >>> from mpglue import moving_window
+        >>>
+        >>> # Focal mean
+        >>> output = moving_window(in_array,
+        >>>                        statistic='mean',
+        >>>                        window_size=3)
+        >>>
+        >>> # Focal max
+        >>> output = moving_window(in_array,
+        >>>                        statistic='max',
+        >>>                        window_size=3)
+        >>>
+        >>> # Focal min
+        >>> output = moving_window(in_array,
+        >>>                        statistic='min',
+        >>>                        window_size=3)
+        >>>
+        >>> # Focal majority
+        >>> output = moving_window(in_array,
+        >>>                        statistic='majority',
+        >>>                        window_size=3)
+        >>>
+        >>> # Focal percentage of binary pixels
+        >>> output = moving_window(in_array,
+        >>>                        statistic='percent',
+        >>>                        window_size=25)
+        >>>
+        >>> # Focal sum
+        >>> output = moving_window(in_array,
+        >>>                        statistic='sum',
+        >>>                        window_size=15)
+        >>>
+        >>> # Fill local basins
+        >>> output = moving_window(in_array,
+        >>>                        statistic='fill-basins',
+        >>>                        window_size=5)
+        >>>
+        >>> # Fill local peaks
+        >>> output = moving_window(in_array,
+        >>>                        statistic='fill-peaks',
+        >>>                        window_size=5)
+        >>>
+        >>> # Non-maximum suppression
+        >>> output = moving_window(in_array,
+        >>>                        statistic='suppression',
+        >>>                        window_size=5,
+        >>>                        diff_thresh=.1)
+        >>>
+        >>> # Edge gradient direction
+        >>> output = moving_window(in_array,
+        >>>                        statistic='edge-direction',
+        >>>                        window_size=15)
+
     Returns
     """
 
-    if statistic not in ['egm-morph',
-                         'mean',
-                         'min',
-                         'max',
-                         'median',
-                         'majority',
-                         'percent',
-                         'sum',
-                         'link',
+    if statistic not in ['circles',
+                         'distance',
+                         'edge-direction',
+                         'egm-morph',
+                         'extend-endpoints',
+                         'duda',
                          'fill-basins',
                          'fill-peaks',
                          'fill',
-                         'circles',
-                         'distance',
-                         'rgb-distance',
                          'inhibition',
                          'line-enhance',
-                         'saliency',
-                         'suppression',
-                         'edge-direction',
-                         'extend-endpoints',
+                         'link',
+                         'max',
+                         'majority',
+                         'mean',
+                         'median',
+                         'min',
+                         'percent',
+                         'plr',
                          'remove-min',
+                         'rgb-distance',
+                         'saliency',
                          'seg-dist',
-                         'duda']:
+                         'sum',
+                         'suppression']:
 
         raise ValueError('The statistic {} is not an option.'.format(statistic))
 
@@ -4541,7 +4753,6 @@ def moving_window(np.ndarray image_array not None,
         return suppression(np.float32(np.ascontiguousarray(image_array)),
                            window_size,
                            diff_thresh,
-                           var_thresh,
                            np.uint8(np.ascontiguousarray(disk1)),
                            np.uint8(np.ascontiguousarray(disk3)))
 
@@ -4716,6 +4927,11 @@ def moving_window(np.ndarray image_array not None,
 
         return fill_circles(np.uint8(np.ascontiguousarray(image_array)),
                             circle_list)
+
+    elif statistic == 'plr':
+
+        return plr(np.float32(np.ascontiguousarray(image_array)),
+                   window_size)
 
     elif statistic == 'distance':
 

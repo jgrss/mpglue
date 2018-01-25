@@ -2751,29 +2751,56 @@ def main():
         v_info.close()
 
     elif args.method == 'buffer':
-        buffer_vector(args.input, args.output, distance=args.distance,
-                         epsg=args.epsg, field_name=args.field_name)
+
+        buffer_vector(args.input,
+                      args.output,
+                      distance=args.distance,
+                      epsg=args.epsg,
+                      field_name=args.field_name)
+
     elif args.method == 'fields':
+
         list_field_names(args.input, epsg=args.epsg)
+
     elif args.method == 'select':
-        select_and_save(args.input, args.output, args.field, args.value,
-                        expression=args.expression, epsg=args.epsg)
+
+        select_and_save(args.input,
+                        args.output,
+                        args.field,
+                        args.value,
+                        expression=args.expression,
+                        epsg=args.epsg)
+
     elif args.method == 'spatial':
+
         spatial_intersection(args.input_select, args.input_intersect, args.output, epsg=args.epsg)
+
     elif args.method == 'rename':
+
         rename_vector(args.input, args.output)
+
     elif args.method == 'copy2':
+
         copy_vector(args.input, args.output)
+
     elif args.method == 'delete':
+
         delete_vector(args.input)
+
     elif args.method == 'merge':
+
         merge_vectors(args.shps2merge, args.output)
+
     elif args.method in ['field-xy', 'field-id', 'field-area', 'field-constant',
                          'field-dissolve', 'field-merge', 'field-label', 'field-breaks']:
 
-        add_fields(args.input, output_vector=args.output, method=args.method,
-                   field_names=args.field_names, area_units=args.area_units,
-                   constant=args.constant, epsg=args.epsg,
+        add_fields(args.input,
+                   output_vector=args.output,
+                   method=args.method,
+                   field_names=args.field_names,
+                   area_units=args.area_units,
+                   constant=args.constant,
+                   epsg=args.epsg,
                    field_breaks=ast.literal_eval(args.field_breaks),
                    default_value=args.default_value)
 

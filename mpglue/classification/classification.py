@@ -22,8 +22,9 @@ from collections import OrderedDict
 # import pathos.multiprocessing as M
 # import xml.etree.ElementTree as ET
 
-# MapPy
+# MpGlue
 from .error_matrix import error_matrix
+from ._moving_window import moving_window
 # from mappy.helpers.other.progress_iter import _iteration_parameters
 from .. import raster_tools
 from .. import vector_tools
@@ -350,10 +351,29 @@ def predict_scikit_win(feature_sub, input_model):
     return mdl.predict(feature_sub)
 
 
+def predict_scikit_probas(n_rows, n_cols):
+
+    """
+    A function to get posterior probabilities from Scikit-learn models
+    """
+
+    # `probabilities` shaped as [samples x n classes]
+    probabilities = mdl.predict_proba(features)
+
+    n_classes = probabilities.shape[1]
+
+    # Reshape and run PLR
+    return moving_window(probabilities.T.reshape(n_classes,
+                                                 n_rows,
+                                                 n_cols),
+                         statistic='plr',
+                         window_size=3).argmax(axis=0)
+
+
 def predict_scikit(pool_iter):
 
     """
-    A Scikit-learn prediction function for parallel predictions
+    A function to predict in parallel from Scikit-learn models
 
     Args:
         pool_iter (int)
@@ -4502,6 +4522,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 gdal_cache=256,
                 overwrite=False,
                 track_blocks=False,
+                relax_probabilities=False,
                 **kwargs):
 
         """
@@ -4539,6 +4560,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             gdal_cache (Optional[int]). The GDAL cache (MB). Default is 256.
             overwrite (Optional[bool]): Whether to overwrite an existing `out_image`. Default is False.
             track_blocks (Optional[bool]): Whether to keep a record of processed blocks. Default is False.
+            relax_probabilities (Optional[bool]): Whether to relax posterior probabilities. Default is False.
             kwargs (Optional): Image read options passed to `mpglue.raster_tools.ropen.read`.
             
         Returns:
@@ -4595,6 +4617,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.n_jobs_vars = n_jobs_vars
         self.chunk_size = (self.row_block_size * self.col_block_size) / 100
         self.track_blocks = track_blocks
+        self.relax_probabilities = relax_probabilities
         self.kwargs = kwargs
 
         if self.n_jobs == -1:
@@ -5066,60 +5089,67 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     else:
 
-                        # Get chunks for parallel processing.
-                        indice_pairs = list()
-
-                        for i_ in range(0, n_samples, self.chunk_size):
-
-                            n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
-                            indice_pairs.append([i_, n_rows_])
-
-                        if (self.n_jobs != 0) and (self.n_jobs != 1):
-
-                            # Make the predictions and convert to a NumPy array.
-                            if isinstance(self.input_model, str):
-
-                                if platform.system() == 'Windows':
-
-                                    predicted = joblib.Parallel(n_jobs=self.n_jobs,
-                                                                max_nbytes=None)(joblib.delayed(predict_scikit_win)(features[ip[0]:ip[0]+ip[1]],
-                                                                                                                    self.input_model)
-                                                                                 for ip in indice_pairs)
-
-                                else:
-
-                                    # predicted = joblib.Parallel(n_jobs=self.n_jobs,
-                                    #                             max_nbytes=None)(joblib.delayed(predict_scikit)(self.input_model,
-                                    #                                                                             ip)
-                                    #                                              for ip in indice_pairs)
-
-                                    mdl = self.load(self.input_model)[1]
-
-                                    pool = multi.Pool(processes=self.n_jobs)
-                                    predicted = pool.map(predict_scikit, range(0, len(indice_pairs)))
-                                    pool.close()
-                                    del pool
-
-                            else:
-
-                                mdl = self.model
-                                predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
-
-                            # Write the predictions to file.
-                            out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
-                                                                                                                           n_cols),
-                                                          j=j-jwo,
-                                                          i=i-iwo)
-
-                        else:
+                        if self.relax_probabilities:
 
                             if isinstance(self.input_model, str):
                                 mdl = self.load(self.input_model)[1]
                             else:
                                 mdl = self.model
 
-                            # Make the predictions and convert to a NumPy array.
-                            predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
+                            predicted = predict_scikit_probas(n_rows, n_cols)
+
+                            # Write the predictions to file.
+                            out_raster_object.write_array(predicted,
+                                                          j=j-jwo,
+                                                          i=i-iwo)
+
+                        else:
+
+                            # Get chunks for parallel processing.
+                            indice_pairs = list()
+
+                            for i_ in range(0, n_samples, self.chunk_size):
+
+                                n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
+                                indice_pairs.append([i_, n_rows_])
+
+                            if (self.n_jobs != 0) and (self.n_jobs != 1):
+
+                                # Make the predictions and convert to a NumPy array.
+                                if isinstance(self.input_model, str):
+
+                                    if platform.system() == 'Windows':
+
+                                        predicted = joblib.Parallel(n_jobs=self.n_jobs,
+                                                                    max_nbytes=None)(joblib.delayed(predict_scikit_win)(features[ip[0]:ip[0]+ip[1]],
+                                                                                                                        self.input_model)
+                                                                                     for ip in indice_pairs)
+
+                                    else:
+
+                                        mdl = self.load(self.input_model)[1]
+
+                                        pool = multi.Pool(processes=self.n_jobs)
+
+                                        predicted = pool.map(predict_scikit, range(0, len(indice_pairs)))
+
+                                        pool.close()
+                                        del pool
+
+                                else:
+
+                                    mdl = self.model
+                                    predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
+
+                            else:
+
+                                if isinstance(self.input_model, str):
+                                    mdl = self.load(self.input_model)[1]
+                                else:
+                                    mdl = self.model
+
+                                # Make the predictions and convert to a NumPy array.
+                                predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
 
                             # Write the predictions to file.
                             out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
