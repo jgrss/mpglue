@@ -14,8 +14,8 @@ import platform
 import shutil
 from copy import copy, deepcopy
 # from pathos.multiprocessing import ProcessingPool as Pool
-import multiprocessing as multi
-import joblib
+# import multiprocessing as multi
+# import joblib
 import itertools
 from collections import OrderedDict
 # from operator import itemgetter
@@ -95,12 +95,12 @@ except:
 
 # Scikit-learn
 try:
-    from sklearn.feature_selection import chi2
+    from sklearn import ensemble, tree, cross_validation, metrics, manifold, calibration
+    from sklearn.externals import joblib
+    from sklearn.feature_selection import chi2, VarianceThreshold
     from sklearn.preprocessing import StandardScaler
-    from sklearn import ensemble, tree
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.linear_model import LogisticRegression
-    # from cudatree import RandomForestClassifier
     from sklearn.svm import SVC
     from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis as QDA
     from sklearn.naive_bayes import GaussianNB
@@ -108,13 +108,8 @@ try:
     from sklearn.cluster import KMeans
     from sklearn.semi_supervised import label_propagation
     from sklearn.model_selection import GridSearchCV
-    from sklearn import cross_validation
-    from sklearn import metrics
     from sklearn.decomposition import PCA as skPCA
     from sklearn.decomposition import IncrementalPCA
-    from sklearn import manifold
-    from sklearn import calibration
-    from sklearn.feature_selection import VarianceThreshold
 except ImportError:
     raise ImportError('Scikit-learn must be installed')
 
@@ -3616,7 +3611,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             # Scikit-learn models
             try:
-                self.classifier_info, self.model = self.load(self.input_model)
+
+                # self.classifier_info, self.model = self.load(self.input_model)
+                self.classifier_info, self.model = joblib.load(self.input_model)
+
             except:
 
                 logger.error('  Could not load {}'.format(self.input_model))
@@ -4406,7 +4404,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     self.model.save(self.output_model)
 
                     # Dump the parameters to a text file.
-                    self.dump([self.classifier_info, self.model], self.output_model)
+                    # self.dump([self.classifier_info, self.model], self.output_model)
+
+                    joblib.dump([self.classifier_info,
+                                 self.model],
+                                self.output_model)
 
                 except:
 
@@ -4416,7 +4418,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             else:
 
                 try:
-                    self.dump([self.classifier_info, self.model], self.output_model)
+
+                    # self.dump([self.classifier_info, self.model], self.output_model)
+
+                    joblib.dump([self.classifier_info,
+                                 self.model],
+                                self.output_model)
+
                 except:
 
                     logger.error('  Could not save {} to file.'.format(self.output_model))
@@ -5106,54 +5114,63 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         else:
 
                             # Get chunks for parallel processing.
-                            indice_pairs = list()
+                            # indice_pairs = list()
+                            #
+                            # for i_ in range(0, n_samples, self.chunk_size):
+                            #
+                            #     n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
+                            #     indice_pairs.append([i_, n_rows_])
+                            #
+                            # if (self.n_jobs != 0) and (self.n_jobs != 1):
+                            #
+                            #     # Make the predictions and convert to a NumPy array.
+                            #     if isinstance(self.input_model, str):
+                            #
+                            #         if platform.system() == 'Windows':
+                            #
+                            #             predicted = joblib.Parallel(n_jobs=self.n_jobs,
+                            #                                         max_nbytes=None)(joblib.delayed(predict_scikit_win)(features[ip[0]:ip[0]+ip[1]],
+                            #                                                                                             self.input_model)
+                            #                                                          for ip in indice_pairs)
+                            #
+                            #         else:
+                            #
+                            #             mdl = self.load(self.input_model)[1]
+                            #
+                            #             pool = multi.Pool(processes=self.n_jobs)
+                            #
+                            #             predicted = pool.map(predict_scikit, range(0, len(indice_pairs)))
+                            #
+                            #             pool.close()
+                            #             del pool
+                            #
+                            #     else:
+                            #
+                            #         mdl = self.model
+                            #         predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
+                            #
+                            # else:
 
-                            for i_ in range(0, n_samples, self.chunk_size):
+                            if isinstance(self.input_model, str):
 
-                                n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
-                                indice_pairs.append([i_, n_rows_])
-
-                            if (self.n_jobs != 0) and (self.n_jobs != 1):
-
-                                # Make the predictions and convert to a NumPy array.
-                                if isinstance(self.input_model, str):
-
-                                    if platform.system() == 'Windows':
-
-                                        predicted = joblib.Parallel(n_jobs=self.n_jobs,
-                                                                    max_nbytes=None)(joblib.delayed(predict_scikit_win)(features[ip[0]:ip[0]+ip[1]],
-                                                                                                                        self.input_model)
-                                                                                     for ip in indice_pairs)
-
-                                    else:
-
-                                        mdl = self.load(self.input_model)[1]
-
-                                        pool = multi.Pool(processes=self.n_jobs)
-
-                                        predicted = pool.map(predict_scikit, range(0, len(indice_pairs)))
-
-                                        pool.close()
-                                        del pool
-
-                                else:
-
-                                    mdl = self.model
-                                    predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
+                                # mdl = self.load(self.input_model)[1]
+                                mdl = joblib.load(self.input_model)[1]
 
                             else:
+                                mdl = self.model
 
-                                if isinstance(self.input_model, str):
-                                    mdl = self.load(self.input_model)[1]
-                                else:
-                                    mdl = self.model
-
-                                # Make the predictions and convert to a NumPy array.
-                                predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
+                            # Make the predictions and convert to a NumPy array.
+                            # predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
 
                             # Write the predictions to file.
-                            out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
-                                                                                                                           n_cols),
+                            # out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
+                            #                                                                                                n_cols),
+                            #                               j=j-jwo,
+                            #                               i=i-iwo)
+
+                            # Write the predictions to file.
+                            out_raster_object.write_array(mdl.predict(features).reshape(n_rows,
+                                                                                        n_cols),
                                                           j=j-jwo,
                                                           i=i-iwo)
 
