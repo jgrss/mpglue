@@ -261,11 +261,6 @@ warnings.filterwarnings('ignore')
 #
 #     return int(model.predict(features_1d))
 
-
-def predict_pp(ci, cs):
-    predicted[ci:ci+cs] = model_pp.predict(features[ci:ci+cs])
-
-
 # def predict_cv(arg, **kwarg):
 #     classification.predict_cv(*arg, **kwarg)
 
@@ -4827,8 +4822,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         # Global variables for parallel processing.
         global features, model_pp, predict_samps, indice_pairs, mdl
 
-        if 'CV' not in self.classifier_info['classifier']:
-            model_pp = deepcopy(self.model)
+        # Load the model
+        if isinstance(self.input_model, str):
+            mdl = joblib.load(self.input_model)[1]
+        else:
+            mdl = self.model
 
         start_i = 0
         start_j = 0
@@ -4888,6 +4886,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         # Determine which bands to open.
         self._set_bands2open()
 
+        # Update the output raster size.
         self.o_info.update_info(rows=rows,
                                 cols=cols)
 
@@ -5002,6 +5001,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 n_samples = n_rows * n_cols
 
+                # Scale the features.
                 if isinstance(self.scale_data, str) or self.scale_data:
                     features = self.scaler.transform(features)
 
@@ -5009,8 +5009,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 if self.classifier_info['classifier'] == 'ChainCRF':
                     features = self._transform4crf(p_vars2reshape=features)[0]
 
-                # Predict class conditional probabilities.
                 if self.get_probs:
+
+                    # Predict class conditional probabilities.
 
                     predicted = self.model.predict_proba(features)
 
@@ -5097,7 +5098,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     else:
 
+                        # Scikit-learn models
+
                         if self.relax_probabilities:
+
+                            # Posterior probability label relaxation
 
                             if isinstance(self.input_model, str):
                                 mdl = self.load(self.input_model)[1]
@@ -5150,14 +5155,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                             #         predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
                             #
                             # else:
-
-                            if isinstance(self.input_model, str):
-
-                                # mdl = self.load(self.input_model)[1]
-                                mdl = joblib.load(self.input_model)[1]
-
-                            else:
-                                mdl = self.model
 
                             # Make the predictions and convert to a NumPy array.
                             # predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
