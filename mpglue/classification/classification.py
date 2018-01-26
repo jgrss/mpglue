@@ -4505,7 +4505,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
     def predict(self,
                 input_image,
-                out_image,
+                output_image,
                 additional_layers=None,
                 scale_data=False,
                 band_check=-1,
@@ -4528,6 +4528,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 overwrite=False,
                 track_blocks=False,
                 relax_probabilities=False,
+                write2blocks=False,
                 **kwargs):
 
         """
@@ -4535,7 +4536,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         Args:
             input_image (str): The input image to classify.
-            out_image (str): The output image.
+            output_image (str): The output image.
             additional_layers (Optional[list]): A list of additional images (layers) that are not part
                 of ``input_image``.
             scale_data (Optional[bool]): Whether to scale data. Default is False.
@@ -4563,13 +4564,16 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             n_jobs_vars (Optional[int]): The number of processors to use for parallel band loading.
                 Default is -1, or all available processors.
             gdal_cache (Optional[int]). The GDAL cache (MB). Default is 256.
-            overwrite (Optional[bool]): Whether to overwrite an existing `out_image`. Default is False.
+            overwrite (Optional[bool]): Whether to overwrite an existing `output_image`. Default is False.
             track_blocks (Optional[bool]): Whether to keep a record of processed blocks. Default is False.
             relax_probabilities (Optional[bool]): Whether to relax posterior probabilities. Default is False.
+            write2blocks (Optional[bool]): Whether to individual blocks, otherwise write to one image.
+                Default is False.
+                *In the event of True, each block will be given the name `base image_####base extension`.
             kwargs (Optional): Image read options passed to `mpglue.raster_tools.ropen.read`.
             
         Returns:
-            None, writes to ``out_image``.
+            None, writes to `output_image`.
 
         Examples:
             >>> import mpglue as gl
@@ -4600,7 +4604,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         """
 
         self.input_image = input_image
-        self.out_image = out_image        
+        self.output_image = output_image
         self.additional_layers = additional_layers
         self.ignore_feas = ignore_feas
         self.scale_data = scale_data
@@ -4623,6 +4627,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.chunk_size = (self.row_block_size * self.col_block_size) / 100
         self.track_blocks = track_blocks
         self.relax_probabilities = relax_probabilities
+        self.write2blocks = write2blocks
         self.kwargs = kwargs
 
         if self.n_jobs == -1:
@@ -4646,28 +4651,35 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             return
 
-        d_name, f_name = os.path.split(self.out_image)
-        f_base, f_ext = os.path.splitext(f_name)
+        self.dir_name, f_name = os.path.split(self.output_image)
+        self.output_image_base, self.output_image_ext = os.path.splitext(f_name)
 
-        if os.path.isfile(out_image) and overwrite:
+        # Delete files
+        if os.path.isfile(output_image) and overwrite and not self.write2blocks:
 
-            # Delete all files
-            os.remove(out_image)
+            os.remove(output_image)
 
-            if os.path.isfile(os.path.join(d_name, '{}.ovr'.format(f_name))):
-                os.remove(os.path.join(d_name, '{}.ovr'.format(f_name)))
+            if os.path.isfile(os.path.join(self.dir_name, '{}.ovr'.format(f_name))):
+                os.remove(os.path.join(self.dir_name, '{}.ovr'.format(f_name)))
 
-            if os.path.isfile(os.path.join(d_name, '{}.aux.xml'.format(f_name))):
-                os.remove(os.path.join(d_name, '{}.aux.xml'.format(f_name)))
+            if os.path.isfile(os.path.join(self.dir_name, '{}.aux.xml'.format(f_name))):
+                os.remove(os.path.join(self.dir_name, '{}.aux.xml'.format(f_name)))
 
-        self.out_image_temp = os.path.join(d_name, '{}_temp.tif'.format(f_base))
-        self.temp_model_file = os.path.join(d_name, 'temp_model_file.txt')
+        self.out_image_temp = os.path.join(self.dir_name, '{}_temp.tif'.format(self.output_image_base))
+        self.temp_model_file = os.path.join(self.dir_name, 'temp_model_file.txt')
 
-        if not os.path.isdir(d_name):
-            os.makedirs(d_name)
+        if not os.path.isdir(self.dir_name):
+            os.makedirs(self.dir_name)
 
-        logger.info('  Predicting class labels from {} and writing to {} ...'.format(self.input_image,
-                                                                                     self.out_image))
+        if self.write2blocks:
+
+            logger.info('  Predicting class labels from {} and writing to {} blocks ...'.format(self.input_image,
+                                                                                                self.output_image))
+
+        else:
+
+            logger.info('  Predicting class labels from {} and writing to {} ...'.format(self.input_image,
+                                                                                         self.output_image))
 
         # Conditional Random Fields
         if self.classifier_info['classifier'] == 'GridCRF':
@@ -4684,10 +4696,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             self.i_info = raster_tools.ropen(self.input_image)
 
+            # Block record keeping.
             if self.track_blocks:
 
-                # Block record keeping.
-                self.record_keeping = os.path.join(d_name, '{}_record.txt'.format(f_base))
+                self.record_keeping = os.path.join(self.dir_name, '{}_record.txt'.format(self.output_image_base))
 
                 if os.path.isfile(self.record_keeping):
                     self.record_list = self.load(self.record_keeping)
@@ -4716,6 +4728,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             else:
                 self.o_info.storage = 'byte'
 
+            # Make the predictions
             self._predict()
 
             if self.open_image:
@@ -4758,7 +4771,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         raster_tools.write2raster(np.array(self.model.predict(self.p_vars),
                                            dtype='uint8').reshape(self.im_rows,
                                                                   self.im_cols),
-                                  self.out_image,
+                                  self.output_image,
                                   o_info=o_info)
 
     def _predict4orf(self):
@@ -4780,7 +4793,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                         -model {} -out {} -ram {:d}'.format(self.input_image,
                                                                             self.in_stats,
                                                                             self.in_model,
-                                                                            self.out_image,
+                                                                            self.output_image,
                                                                             self.gdal_cache)
 
         else:
@@ -4796,7 +4809,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 com = 'otbcli_ImageClassifier -in {} -model {} -out {} -ram {:d}'.format(self.input_image,
                                                                                          self.in_model,
-                                                                                         self.out_image,
+                                                                                         self.output_image,
                                                                                          self.gdal_cache)
 
         try:
@@ -4808,7 +4821,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         if isinstance(self.mask_background, str):
 
-            self._mask_background(self.out_image_temp, self.out_image, self.mask_background,
+            self._mask_background(self.out_image_temp, self.output_image, self.mask_background,
                                   self.background_band, self.background_value,
                                   self.minimum_observations, self.observation_band)
 
@@ -4824,83 +4837,47 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         # Global variables for parallel processing.
         global features, model_pp, predict_samps, indice_pairs, mdl
 
-        # Load the model
+        # Load the model.
         if isinstance(self.input_model, str):
             mdl = joblib.load(self.input_model)[1]
         else:
             mdl = self.model
 
+        # Set default indexing variables.
         start_i = 0
         start_j = 0
         rows = self.i_info.rows
         cols = self.i_info.cols
+        image_top = self.i_info.top
+        image_left = self.i_info.left
         iwo = 0
         jwo = 0
 
-        if self.kwargs:
-
-            if ('i' in self.kwargs) and ('y' not in self.kwargs):
-
-                start_i = self.kwargs['i']
-                self.o_info.update_info(top=self.o_info.top - (start_i*self.o_info.cellY))
-                iwo = start_i
-
-            elif ('i' not in self.kwargs) and ('y' in self.kwargs):
-
-                # Index the image by x, y coordinates (in map units).
-                self.kwargs['i'] = vector_tools.get_xy_offsets(self.i_info,
-                                                               x=999.,
-                                                               y=self.kwargs['y'],
-                                                               check_position=False)[3]
-
-                start_i = self.kwargs['i']
-                self.o_info.update_info(top=self.o_info.top - (start_i*self.o_info.cellY))
-                iwo = start_i
-
-            if ('j' in self.kwargs) and ('x' not in self.kwargs):
-
-                start_j = self.kwargs['j']
-                self.o_info.update_info(left=self.o_info.left + (start_j*self.o_info.cellY))
-                jwo = start_j
-
-            elif ('j' not in self.kwargs) and ('x' in self.kwargs):
-
-                # Index the image by x, y coordinates (in map units).
-                self.kwargs['j'] = vector_tools.get_xy_offsets(self.i_info,
-                                                               x=self.kwargs['x'],
-                                                               y=999.,
-                                                               check_position=False)[2]
-
-                start_j = self.kwargs['j']
-                self.o_info.update_info(left=self.o_info.left + (start_j*self.o_info.cellY))
-                jwo = start_j
-
-            if 'rows' in self.kwargs:
-
-                if self.kwargs['rows'] != -1:
-                    rows = self.kwargs['rows']
-
-            if 'cols' in self.kwargs:
-
-                if self.kwargs['cols'] != -1:
-                    cols = self.kwargs['cols']
+        # Update variables for
+        #   sub-image predictions.
+        start_i, start_j, rows, cols, iwo, jwo = self._set_indexing(start_i, start_j, rows, cols, iwo, jwo)
 
         # Determine which bands to open.
         self._set_bands2open()
 
         # Update the output raster size.
+        #
+        # *This will be overwritten in the
+        #   event `write2blocks` is set as True.
         self.o_info.update_info(rows=rows,
                                 cols=cols)
 
         # Setup the object to write to.
-        out_raster_object = self._set_output_object()
+        if not self.write2blocks:
 
-        if self.get_probs:
-            out_bands = [out_raster_object.get_band(bd) for bd in range(1, self.o_info.bands+1)]
-        else:
+            out_raster_object = self._set_output_object()
 
-            out_raster_object.get_band(1)
-            out_raster_object.fill(0)
+            if self.get_probs:
+                out_bands = [out_raster_object.get_band(bd) for bd in range(1, self.o_info.bands+1)]
+            else:
+
+                out_raster_object.get_band(1)
+                out_raster_object.fill(0)
 
         if isinstance(self.scale_data, str):
             self.scaler = self.load(self.scale_data)
@@ -4912,9 +4889,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                                row_block_size=self.row_block_size,
                                                                col_block_size=self.col_block_size)
 
-        # set widget and pbar
-        #ttl_blks_ct, pbar = _iteration_parameters(rows, cols, block_rows, block_cols)
-
         # Determine the number of blocks in the image.
         n_blocks = self._set_n_blocks(rows, cols, block_rows, block_cols)
 
@@ -4925,7 +4899,32 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             for j in range(start_j, cols+jwo, block_cols):
 
+                n_cols = self._num_rows_cols(j, block_cols, cols+jwo)
+
                 logger.info('  Block {:d} of {:d} ...'.format(n_block, n_blocks))
+
+                # Setup the object to write to.
+                if self.write2blocks:
+
+                    self.output_image = os.path.join(self.dir_name,
+                                                     '{BASE}_{BLOCK:04d}{EXT}'.format(BASE=self.output_image_base,
+                                                                                      BLOCK=n_block,
+                                                                                      EXT=self.output_image_ext))
+
+                    self.o_info.update_info(top=image_top - (i*self.o_info.cellY))
+                    iwo = i
+
+                    self.o_info.update_info(left=image_left + (j*self.o_info.cellY))
+                    jwo = j
+
+                    out_raster_object = self._set_output_object()
+
+                    if self.get_probs:
+                        out_bands = [out_raster_object.get_band(bd) for bd in range(1, self.o_info.bands + 1)]
+                    else:
+
+                        out_raster_object.get_band(1)
+                        out_raster_object.fill(0)
 
                 n_block += 1
 
@@ -4935,8 +4934,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                         logger.info('  Skipping current block ...')
                         continue
-
-                n_cols = self._num_rows_cols(j, block_cols, cols+jwo)
 
                 # Check for zeros in the block.
                 if self.band_check != -1:
@@ -5173,6 +5170,23 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                           j=j-jwo,
                                                           i=i-iwo)
 
+                # Close the block file.
+                if self.write2blocks:
+
+                    if self.get_probs:
+
+                        for cl in range(0, self.n_classes):
+
+                            out_bands[cl].GetStatistics(0, 1)
+                            out_bands[cl].FlushCache()
+
+                        del out_bands
+
+                    else:
+
+                        out_raster_object.close_all()
+                        del out_raster_object
+
                 if self.track_blocks:
 
                     self.record_list.append(n_block)
@@ -5183,29 +5197,84 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     self.dump(self.record_list,
                               self.record_keeping)
 
-        if self.get_probs:
+        # Close the file.
+        if not self.write2blocks:
 
-            for cl in range(0, self.n_classes):
+            if self.get_probs:
 
-                out_bands[cl].GetStatistics(0, 1)
-                out_bands[cl].FlushCache()
+                for cl in range(0, self.n_classes):
 
-            del out_bands
+                    out_bands[cl].GetStatistics(0, 1)
+                    out_bands[cl].FlushCache()
 
-        else:
+                del out_bands
 
-            out_raster_object.close_all()
-            del out_raster_object
+            else:
+
+                out_raster_object.close_all()
+                del out_raster_object
 
         if isinstance(self.mask_background, str):
 
             self._mask_background(self.out_image_temp,
-                                  self.out_image,
+                                  self.output_image,
                                   self.mask_background,
                                   self.background_band,
                                   self.background_value,
                                   self.minimum_observations,
                                   self.observation_band)
+
+    def _set_indexing(self, start_i, start_j, rows, cols, iwo, jwo):
+
+        if self.kwargs:
+
+            if ('i' in self.kwargs) and ('y' not in self.kwargs):
+
+                start_i = self.kwargs['i']
+                self.o_info.update_info(top=self.o_info.top - (start_i*self.o_info.cellY))
+                iwo = start_i
+
+            elif ('i' not in self.kwargs) and ('y' in self.kwargs):
+
+                # Index the image by x, y coordinates (in map units).
+                self.kwargs['i'] = vector_tools.get_xy_offsets(self.i_info,
+                                                               x=999.,
+                                                               y=self.kwargs['y'],
+                                                               check_position=False)[3]
+
+                start_i = self.kwargs['i']
+                self.o_info.update_info(top=self.o_info.top - (start_i*self.o_info.cellY))
+                iwo = start_i
+
+            if ('j' in self.kwargs) and ('x' not in self.kwargs):
+
+                start_j = self.kwargs['j']
+                self.o_info.update_info(left=self.o_info.left + (start_j*self.o_info.cellY))
+                jwo = start_j
+
+            elif ('j' not in self.kwargs) and ('x' in self.kwargs):
+
+                # Index the image by x, y coordinates (in map units).
+                self.kwargs['j'] = vector_tools.get_xy_offsets(self.i_info,
+                                                               x=self.kwargs['x'],
+                                                               y=999.,
+                                                               check_position=False)[2]
+
+                start_j = self.kwargs['j']
+                self.o_info.update_info(left=self.o_info.left + (start_j*self.o_info.cellY))
+                jwo = start_j
+
+            if 'rows' in self.kwargs:
+
+                if self.kwargs['rows'] != -1:
+                    rows = self.kwargs['rows']
+
+            if 'cols' in self.kwargs:
+
+                if self.kwargs['cols'] != -1:
+                    cols = self.kwargs['cols']
+
+        return start_i, start_j, rows, cols, iwo, jwo
 
     def _set_bands2open(self):
 
@@ -5232,7 +5301,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         else:
 
-            return raster_tools.create_raster(self.out_image,
+            return raster_tools.create_raster(self.output_image,
                                               self.o_info,
                                               tile=False)
 
