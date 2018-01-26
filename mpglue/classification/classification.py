@@ -3796,7 +3796,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             classifier_list = list()
 
-            for ci, classifier in enumerate(classifier_info['classifier']):
+            ci = 0
+            for classifier in classifier_info['classifier']:
 
                 self.classifier_info = copy(classifier_info)
                 self.classifier_info['classifier'] = classifier
@@ -3817,6 +3818,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 elif classifier == 'EX_RF':
                     voting_sub_model = ensemble.ExtraTreesClassifier(**self.classifier_info_)
+
+                elif classifier == 'DT':
+                    voting_sub_model = tree.DecisionTreeClassifier(**self.classifier_info_)
+
+                elif classifier == 'EX_DT':
+                    voting_sub_model = tree.ExtraTreeClassifier(**self.classifier_info_)
 
                 elif classifier == 'AB_DT':
 
@@ -3914,6 +3921,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     # Update the voting list.
                     classifier_list[ci] = (classifier, voting_sub_model)
+
+                ci += 1
 
             vote_weights = None if 'vote_weights' not in classifier_info else classifier_info['vote_weights']
 
