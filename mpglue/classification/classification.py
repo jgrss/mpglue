@@ -110,6 +110,7 @@ try:
     from sklearn.model_selection import GridSearchCV
     from sklearn.decomposition import PCA as skPCA
     from sklearn.decomposition import IncrementalPCA
+    from sklearn.gaussian_process import GaussianProcessClassifier
 except ImportError:
     raise ImportError('Scikit-learn must be installed')
 
@@ -493,6 +494,15 @@ class ParameterHandler(object):
             self.valid_params = ['penalty', 'dual', 'tol', 'C', 'fit_intercept', 'intercept_scaling',
                                  'class_weight', 'random_state', 'solver', 'max_iter', 'multi_class',
                                  'verbose', 'warm_start', 'n_jobs']
+
+        elif classifier == 'QDA':
+
+            self.valid_params = ['priors', 'reg_param', 'store_covariance', 'tol', 'store_covariances']
+
+        elif classifier == 'Gaussian':
+
+            self.valid_params = ['kernel', 'optimizer', 'n_restarts_optimizer', 'max_iter_predict',
+                                 'warm_start', 'copy_X_train', 'random_state', 'multi_class', 'n_jobs']
 
         elif classifier in ['ChainCRF', 'GridCRF']:
 
@@ -3302,6 +3312,8 @@ class ModelOptions(object):
               {classifier:CVEX_RF,trees:1000,min_samps:0,rand_vars:sqrt(feas),max_depth:25}
         EX_RFR-- Extremely Random Forests (regression problems)
               *Scikit-learn
+        Gaussian-- Gaussian Process (classification problems)
+              *Scikit-learn
         Logistic-- Logistic Regression (classification problems)
               *Scikit-learn
         NN    -- K Nearest Neighbor (classification problems)
@@ -3839,6 +3851,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 elif classifier == 'GB':
                     classifier_list.append(('GB', ensemble.GradientBoostingClassifier(**self.classifier_info_)))
 
+                elif classifier == 'QDA':
+                    classifier_list.append(('QDA', QDA(**self.classifier_info_)))
+
+                elif classifier == 'Gaussian':
+                    classifier_list.append(('Gaussian', GaussianProcessClassifier(**self.classifier_info_)))
+
                 if self.calibrate_proba:
 
                     temp_model = classifier_list[ci][1]
@@ -4005,7 +4023,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             elif self.classifier_info['classifier'] == 'QDA':
 
-                self.model = QDA()
+                self.model = QDA(**self.classifier_info_)
+
+            elif self.classifier_info['classifier'] == 'Gaussian':
+
+                self.model = GaussianProcessClassifier(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'ChainCRF':
 
