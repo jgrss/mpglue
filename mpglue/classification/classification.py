@@ -3804,78 +3804,116 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 self._default_parameters()
 
                 if classifier == 'Bayes':
-                    classifier_list.append(('Bayes', GaussianNB()))
+                    voting_sub_model = GaussianNB(**self.classifier_info_)
 
                 elif classifier == 'NN':
-                    classifier_list.append(('NN', KNeighborsClassifier(**self.classifier_info_)))
+                    voting_sub_model = KNeighborsClassifier(**self.classifier_info_)
 
                 elif classifier == 'Logistic':
-                    classifier_list.append(('Logistic', LogisticRegression(**self.classifier_info_)))
+                    voting_sub_model = LogisticRegression(**self.classifier_info_)
 
                 elif classifier == 'RF':
-                    classifier_list.append(('RF', ensemble.RandomForestClassifier(**self.classifier_info_)))
+                    voting_sub_model = ensemble.RandomForestClassifier(**self.classifier_info_)
 
                 elif classifier == 'EX_RF':
-                    classifier_list.append(('EX_RF', ensemble.ExtraTreesClassifier(**self.classifier_info_)))
+                    voting_sub_model = ensemble.ExtraTreesClassifier(**self.classifier_info_)
 
                 elif classifier == 'AB_DT':
-                    classifier_list.append(('AB_DT',
-                                            ensemble.AdaBoostClassifier(base_estimator=tree.DecisionTreeClassifier(**self.classifier_info_),
-                                                                        **self.classifier_info_base)))
+
+                    voting_sub_model = ensemble.AdaBoostClassifier(base_estimator=tree.DecisionTreeClassifier(**self.classifier_info_),
+                                                                   **self.classifier_info_base)
 
                 elif classifier == 'AB_RF':
-                    classifier_list.append(('AB_RF',
-                                            ensemble.AdaBoostClassifier(base_estimator=ensemble.RandomForestClassifier(**self.classifier_info_),
-                                                                        **self.classifier_info_base)))
+
+                    voting_sub_model = ensemble.AdaBoostClassifier(base_estimator=ensemble.RandomForestClassifier(**self.classifier_info_),
+                                                                   **self.classifier_info_base)
 
                 elif classifier == 'AB_EX_RF':
-                    classifier_list.append(('AB_EX_RF',
-                                            ensemble.AdaBoostClassifier(base_estimator=ensemble.ExtraTreesClassifier(**self.classifier_info_),
-                                                                        **self.classifier_info_base)))
+
+                    voting_sub_model = ensemble.AdaBoostClassifier(base_estimator=ensemble.ExtraTreesClassifier(**self.classifier_info_),
+                                                                   **self.classifier_info_base)
 
                 elif classifier == 'AB_EX_DT':
-                    classifier_list.append(('AB_EX_DT',
-                                            ensemble.AdaBoostClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
-                                                                        **self.classifier_info_base)))
+
+                    voting_sub_model = ensemble.AdaBoostClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
+                                                                   **self.classifier_info_base)
 
                 elif classifier == 'Bag':
-                    classifier_list.append(('Bag',
-                                            ensemble.BaggingClassifier(base_estimator=tree.DecisionTreeClassifier(**self.classifier_info_),
-                                                                       **self.classifier_info_base)))
+
+                    voting_sub_model = ensemble.BaggingClassifier(base_estimator=tree.DecisionTreeClassifier(**self.classifier_info_),
+                                                                  **self.classifier_info_base)
 
                 elif classifier == 'EX_Bag':
-                    classifier_list.append(('EX_Bag',
-                                            ensemble.BaggingClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
-                                                                       **self.classifier_info_base)))
+
+                    voting_sub_model = ensemble.BaggingClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
+                                                                  **self.classifier_info_base)
 
                 elif classifier == 'GB':
-                    classifier_list.append(('GB', ensemble.GradientBoostingClassifier(**self.classifier_info_)))
+                    voting_sub_model = ensemble.GradientBoostingClassifier(**self.classifier_info_)
 
                 elif classifier == 'QDA':
-                    classifier_list.append(('QDA', QDA(**self.classifier_info_)))
+                    voting_sub_model = QDA(**self.classifier_info_)
 
                 elif classifier == 'Gaussian':
-                    classifier_list.append(('Gaussian', GaussianProcessClassifier(**self.classifier_info_)))
+                    voting_sub_model = GaussianProcessClassifier(**self.classifier_info_)
+
+                else:
+
+                    logger.warning('  The model, {MODEL}, is not supported'.format(MODEL=classifier))
+                    continue
+
+                classifier_list.append((classifier,
+                                        voting_sub_model))
 
                 if self.calibrate_proba:
 
-                    temp_model = classifier_list[ci][1]
+                    logger.info('  Calibrating a {MODEL} model ...'.format(MODEL=classifier))
 
                     if isinstance(self.sample_weight, np.ndarray):
-                        temp_model.fit(self.p_vars, self.labels, sample_weight=self.sample_weight)
+
+                        voting_sub_model.fit(self.p_vars,
+                                             self.labels,
+                                             sample_weight=self.sample_weight)
+
                     else:
-                        temp_model.fit(self.p_vars, self.labels)
+
+                        voting_sub_model.fit(self.p_vars,
+                                             self.labels)
 
                     if self.n_samps >= 1000:
-                        cal_model = calibration.CalibratedClassifierCV(temp_model,
+
+                        cal_model = calibration.CalibratedClassifierCV(voting_sub_model,
                                                                        method='isotonic')
+
                     else:
-                        cal_model = calibration.CalibratedClassifierCV(temp_model,
+
+                        cal_model = calibration.CalibratedClassifierCV(voting_sub_model,
                                                                        method='sigmoid')
 
-                    cal_model.fit(self.p_vars_test, self.labels_test)
+                    # Fit the calibrated model
+                    cal_model.fit(self.p_vars_test,
+                                  self.labels_test)
 
+                    # Update the voting list.
                     classifier_list[ci] = (classifier, cal_model)
+
+                else:
+
+                    logger.info('  Fitting a {MODEL} model ...'.format(MODEL=classifier))
+
+                    if isinstance(self.sample_weight, np.ndarray):
+
+                        voting_sub_model.fit(self.p_vars,
+                                             self.labels,
+                                             sample_weight=self.sample_weight)
+
+                    else:
+
+                        voting_sub_model.fit(self.p_vars,
+                                             self.labels)
+
+                    # Update the voting list.
+                    classifier_list[ci] = (classifier, voting_sub_model)
 
             vote_weights = None if 'vote_weights' not in classifier_info else classifier_info['vote_weights']
 
@@ -4267,8 +4305,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 a_or_an = 'a'
 
             if isinstance(self.classifier_info['classifier'], list):
+
                 logger.info('  Training a voting model with {} ...'.format(','.join(self.classifier_info['classifier'])))
+
             else:
+
                 logger.info('  Training {} {} model with {:,d} samples and {:,d} variables ...'.format(a_or_an,
                                                                                                        self.classifier_info['classifier'],
                                                                                                        self.n_samps,
