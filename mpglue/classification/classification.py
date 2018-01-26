@@ -4403,7 +4403,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     joblib.dump([self.classifier_info,
                                  self.model],
-                                self.output_model)
+                                self.output_model,
+                                protocol=-1)
 
                 except:
 
@@ -4418,7 +4419,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     joblib.dump([self.classifier_info,
                                  self.model],
-                                self.output_model)
+                                self.output_model,
+                                protocol=-1)
 
                 except:
 
