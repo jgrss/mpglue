@@ -4991,6 +4991,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         n_block = 1
 
+        print start_i, start_j
+
         for block_index in block_indices:
 
             i = block_index[0]
@@ -5035,7 +5037,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             n_block += 1
 
-        sys.exit()
+        import pdb
+        pdb.set_trace()
 
         n_block = 1
 
