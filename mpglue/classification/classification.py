@@ -4785,7 +4785,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             self.i_info = raster_tools.ropen(self.input_image)
 
             # Block record keeping.
-            if self.track_blocks:
+            if self.track_blocks and not self.write2blocks:
 
                 self.record_keeping = os.path.join(self.dir_name, '{}_record.txt'.format(self.output_image_base))
 
@@ -4937,7 +4937,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         rows = self.i_info.rows
         cols = self.i_info.cols
         image_top = self.i_info.top
+        image_bottom = self.i_info.bottom
         image_left = self.i_info.left
+        image_right = self.i_info.right
         iwo = 0
         jwo = 0
 
@@ -4987,8 +4989,53 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                      block_rows,
                                                      block_cols)
 
-        import pdb
-        pdb.set_trace()
+        n_block = 1
+
+        for block_index in block_indices:
+
+            i = block_index[0]
+            j = block_index[1]
+            n_rows = block_index[2]
+            n_cols = block_index[3]
+
+            print('  Block {:,d} of {:,d} ...'.format(n_block, n_blocks))
+
+            # Setup the object to write to.
+            if self.write2blocks:
+
+                self.output_image = os.path.join(self.dir_name,
+                                                 '{BASE}_{BLOCK:05d}{EXT}'.format(BASE=self.output_image_base,
+                                                                                  BLOCK=n_block,
+                                                                                  EXT=self.output_image_ext))
+
+                if os.path.isfile(self.output_image):
+
+                    if self.overwrite:
+                        os.remove(self.output_image)
+                    else:
+
+                        n_block += 1
+                        continue
+
+                # Update the output image
+                #   information for the
+                #   current block.
+                self.o_info.update_info(top=image_top - (i * self.o_info.cellY),
+                                        left=image_left + (j * self.o_info.cellY),
+                                        rows=n_rows,
+                                        cols=n_cols)
+
+                print i, j, n_rows, n_cols
+                print self.o_info.left, self.o_info.top, self.o_info.right, self.o_info.bottom
+                print
+
+                if (self.o_info.left > image_right) or (self.o_info.top < image_bottom):
+                    print self.o_info.left, self.o_info.top, self.o_info.right, self.o_info.bottom
+                    sys.exit()
+
+            n_block += 1
+
+        sys.exit()
 
         n_block = 1
 
@@ -5032,7 +5079,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 out_raster_object = self._set_output_object()
 
                 if self.get_probs:
-                    out_bands = [out_raster_object.get_band(bd) for bd in range(1, self.o_info.bands + 1)]
+                    out_bands = [out_raster_object.get_band(bd) for bd in range(1, self.o_info.bands+1)]
                 else:
 
                     out_raster_object.get_band(1)
@@ -5040,7 +5087,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             n_block += 1
 
-            if self.track_blocks:
+            if self.track_blocks and not self.write2blocks:
 
                 if n_block in self.record_list:
 
@@ -5063,6 +5110,24 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                              cols=n_cols).max()
 
                 if max_check == 0:
+
+                    # Close the block file.
+                    if self.write2blocks:
+
+                        if self.get_probs:
+
+                            for cl in range(0, self.n_classes):
+
+                                out_bands[cl].GetStatistics(0, 1)
+                                out_bands[cl].FlushCache()
+
+                            del out_bands
+
+                        else:
+
+                            out_raster_object.close_all()
+                            del out_raster_object
+
                     continue
 
             if not self.open_image:
@@ -5295,7 +5360,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     out_raster_object.close_all()
                     del out_raster_object
 
-            if self.track_blocks:
+            if self.track_blocks and not self.write2blocks:
 
                 self.record_list.append(n_block)
 
@@ -5433,7 +5498,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             for j_ in range(start_j, cols+jwo, block_cols):
 
-                n_cols_ = self._num_rows_cols(j_, block_cols, cols + jwo)
+                n_cols_ = self._num_rows_cols(j_, block_cols, cols+jwo)
 
                 block_indices.append((i_, j_, n_rows_, n_cols_))
 
