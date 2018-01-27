@@ -4991,7 +4991,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         n_block = 1
 
-        logger.info('{:d} {:d}'.format(start_i, start_j))
+        import pdb
+        pdb.set_trace()
 
         for block_index in block_indices:
 
