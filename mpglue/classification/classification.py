@@ -4987,6 +4987,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                      block_rows,
                                                      block_cols)
 
+        import pdb
+        pdb.set_trace()
+
         n_block = 1
 
         for block_index in block_indices:
