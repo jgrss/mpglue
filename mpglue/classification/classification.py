@@ -4989,54 +4989,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                      block_rows,
                                                      block_cols)
 
-        # n_block = 1
-        #
-        # for block_index in block_indices:
-        #
-        #     i = block_index[0]
-        #     j = block_index[1]
-        #     n_rows = block_index[2]
-        #     n_cols = block_index[3]
-        #
-        #     logger.info('  Block {:,d} of {:,d} ...'.format(n_block, n_blocks))
-        #
-        #     # Setup the object to write to.
-        #     if self.write2blocks:
-        #
-        #         self.output_image = os.path.join(self.dir_name,
-        #                                          '{BASE}_{BLOCK:05d}{EXT}'.format(BASE=self.output_image_base,
-        #                                                                           BLOCK=n_block,
-        #                                                                           EXT=self.output_image_ext))
-        #
-        #         if os.path.isfile(self.output_image):
-        #
-        #             if self.overwrite:
-        #                 os.remove(self.output_image)
-        #             else:
-        #
-        #                 n_block += 1
-        #                 continue
-        #
-        #         # Update the output image
-        #         #   information for the
-        #         #   current block.
-        #         self.o_info.update_info(top=image_top - (i * self.o_info.cellY),
-        #                                 left=image_left + (j * self.o_info.cellY),
-        #                                 rows=n_rows,
-        #                                 cols=n_cols)
-        #
-        #         logger.info('{:d} {:d} {:d} {:d}'.format(i, j, n_rows, n_cols))
-        #         logger.info('{:f} {:f} {:f} {:f}'.format(self.o_info.left, self.o_info.top, self.o_info.right, self.o_info.bottom))
-        #
-        #         if (self.o_info.left > image_right) or (self.o_info.top < image_bottom):
-        #             print self.o_info.left, self.o_info.top, self.o_info.right, self.o_info.bottom
-        #             sys.exit()
-        #
-        #     n_block += 1
-        #
-        # import pdb
-        # pdb.set_trace()
-
         n_block = 1
 
         for block_index in block_indices:
