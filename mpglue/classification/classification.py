@@ -4983,10 +4983,15 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                                                       BLOCK=n_block,
                                                                                       EXT=self.output_image_ext))
 
-                    self.o_info.update_info(top=image_top - (i*self.o_info.cellY))
-                    iwo = i
+                    # Update the output image
+                    #   information for the
+                    #   current block.
+                    self.o_info.update_info(top=image_top - (i*self.o_info.cellY),
+                                            left=image_left + (j*self.o_info.cellY),
+                                            rows=n_rows,
+                                            cols=n_cols)
 
-                    self.o_info.update_info(left=image_left + (j*self.o_info.cellY))
+                    iwo = i
                     jwo = j
 
                     out_raster_object = self._set_output_object()
