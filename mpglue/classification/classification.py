@@ -4991,7 +4991,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         n_block = 1
 
-        print start_i, start_j
+        logger.info('{:d} {:d}'.format(start_i, start_j))
 
         for block_index in block_indices:
 
@@ -5000,7 +5000,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             n_rows = block_index[2]
             n_cols = block_index[3]
 
-            print('  Block {:,d} of {:,d} ...'.format(n_block, n_blocks))
+            logger.info('  Block {:,d} of {:,d} ...'.format(n_block, n_blocks))
 
             # Setup the object to write to.
             if self.write2blocks:
@@ -5027,9 +5027,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                         rows=n_rows,
                                         cols=n_cols)
 
-                print i, j, n_rows, n_cols
-                print self.o_info.left, self.o_info.top, self.o_info.right, self.o_info.bottom
-                print
+                logger.info('{:d} {:d} {:d} {:d}'.format(i, j, n_rows, n_cols))
+                logger.info('{:f} {:f} {:f} {:f}'.format(self.o_info.left, self.o_info.top, self.o_info.right, self.o_info.bottom))
 
                 if (self.o_info.left > image_right) or (self.o_info.top < image_bottom):
                     print self.o_info.left, self.o_info.top, self.o_info.right, self.o_info.bottom
