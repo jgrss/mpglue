@@ -12,7 +12,7 @@ import subprocess
 import ast
 import platform
 import shutil
-from copy import copy, deepcopy
+from copy import copy#, deepcopy
 # from pathos.multiprocessing import ProcessingPool as Pool
 # import multiprocessing as multi
 # import joblib
@@ -346,19 +346,34 @@ def predict_scikit_probas(n_rows, n_cols):
 
     """
     A function to get posterior probabilities from Scikit-learn models
+
+    Args:
+        n_rows (int)
+        n_cols (int)
     """
 
     # `probabilities` shaped as [samples x n classes]
     probabilities = mdl.predict_proba(features)
 
+    # Get the classes.
+    class_list = mdl.classes_
+
     n_classes = probabilities.shape[1]
 
     # Reshape and run PLR
-    return moving_window(probabilities.T.reshape(n_classes,
-                                                 n_rows,
-                                                 n_cols),
-                         statistic='plr',
-                         window_size=3).argmax(axis=0)
+    probabilities_argmax = moving_window(probabilities.T.reshape(n_classes,
+                                                                 n_rows,
+                                                                 n_cols),
+                                         statistic='plr',
+                                         window_size=3).argmax(axis=0)
+
+    predictions = np.zeros(probabilities_argmax.shape, dtype='uint8')
+
+    # Convert indices to classes.
+    for class_index, real_class in enumerate(class_list):
+        predictions[probabilities_argmax == class_index] = real_class
+
+    return predictions
 
 
 def predict_scikit(pool_iter):
@@ -5195,7 +5210,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     if self.relax_probabilities:
 
+                        # --------------------------------------
                         # Posterior probability label relaxation
+                        # --------------------------------------
 
                         # Write the predictions to file.
                         out_raster_object.write_array(predict_scikit_probas(n_rows,
