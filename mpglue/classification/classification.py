@@ -4973,7 +4973,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 n_cols = self._num_rows_cols(j, block_cols, cols+jwo)
 
-                logger.info('  Block {:d} of {:d} ...'.format(n_block, n_blocks))
+                logger.info('  Block {:,d} of {:,d} ...'.format(n_block, n_blocks))
 
                 # Setup the object to write to.
                 if self.write2blocks:
@@ -7099,13 +7099,13 @@ class classification_r(classification):
 
             logger.info('  Mapping labels ...')
 
-            for i in xrange(0, rows, block_rows):
+            for i in range(0, rows, block_rows):
 
                 n_rows = self._num_rows_cols(i, block_rows, rows)
 
-                for j in xrange(0, cols, block_cols):
+                for j in range(0, cols, block_cols):
 
-                    logger.info('  Block {:d} of {:d} ...'.format(n_block, n_blocks))
+                    logger.info('  Block {:,d} of {:,d} ...'.format(n_block, n_blocks))
                     n_block += 1
 
                     if n_block in self.record_list:
@@ -7116,12 +7116,12 @@ class classification_r(classification):
                     n_cols = self._num_rows_cols(j, block_cols, cols)
 
                     features = raster_tools.read(image2open=input_image,
-                                                    bands2open=bands2open,
-                                                    i=i, j=j,
-                                                    rows=n_rows, cols=n_cols,
-                                                    predictions=True,
-                                                    d_type='float32',
-                                                    n_jobs=-1)
+                                                 bands2open=bands2open,
+                                                 i=i, j=j,
+                                                 rows=n_rows, cols=n_cols,
+                                                 predictions=True,
+                                                 d_type='float32',
+                                                 n_jobs=-1)
 
                     # Load
                     predict_samps = pandas2ri.py2ri(pd.DataFrame(features))
