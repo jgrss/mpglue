@@ -4697,6 +4697,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.n_jobs = n_jobs
         self.n_jobs_vars = n_jobs_vars
         self.chunk_size = (self.row_block_size * self.col_block_size) / 100
+        self.overwrite = overwrite
         self.track_blocks = track_blocks
         self.relax_probabilities = relax_probabilities
         self.write2blocks = write2blocks
@@ -4727,7 +4728,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.output_image_base, self.output_image_ext = os.path.splitext(f_name)
 
         # Delete files
-        if os.path.isfile(output_image) and overwrite and not self.write2blocks:
+        if os.path.isfile(output_image) and self.overwrite and not self.write2blocks:
 
             os.remove(output_image)
 
@@ -4962,317 +4963,327 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                                col_block_size=self.col_block_size)
 
         # Determine the number of blocks in the image.
-        n_blocks = self._set_n_blocks(rows, cols, block_rows, block_cols)
+        block_indices, n_blocks = self._set_n_blocks(start_i,
+                                                     start_j,
+                                                     iwo,
+                                                     jwo,
+                                                     rows,
+                                                     cols,
+                                                     block_rows,
+                                                     block_cols)
 
         n_block = 1
-        for i in range(start_i, rows+iwo, block_rows):
 
-            n_rows = self._num_rows_cols(i, block_rows, rows+iwo)
+        for block_index in block_indices:
 
-            for j in range(start_j, cols+jwo, block_cols):
+            i = block_index[0]
+            j = block_index[1]
+            n_rows = block_index[2]
+            n_cols = block_index[3]
 
-                n_cols = self._num_rows_cols(j, block_cols, cols+jwo)
+            logger.info('  Block {:,d} of {:,d} ...'.format(n_block, n_blocks))
 
-                logger.info('  Block {:,d} of {:,d} ...'.format(n_block, n_blocks))
+            # Setup the object to write to.
+            if self.write2blocks:
 
-                # Setup the object to write to.
-                if self.write2blocks:
+                self.output_image = os.path.join(self.dir_name,
+                                                 '{BASE}_{BLOCK:05d}{EXT}'.format(BASE=self.output_image_base,
+                                                                                  BLOCK=n_block,
+                                                                                  EXT=self.output_image_ext))
 
-                    self.output_image = os.path.join(self.dir_name,
-                                                     '{BASE}_{BLOCK:04d}{EXT}'.format(BASE=self.output_image_base,
-                                                                                      BLOCK=n_block,
-                                                                                      EXT=self.output_image_ext))
+                if os.path.isfile(self.output_image):
 
-                    # Update the output image
-                    #   information for the
-                    #   current block.
-                    self.o_info.update_info(top=image_top - (i*self.o_info.cellY),
-                                            left=image_left + (j*self.o_info.cellY),
-                                            rows=n_rows,
-                                            cols=n_cols)
-
-                    iwo = i
-                    jwo = j
-
-                    out_raster_object = self._set_output_object()
-
-                    if self.get_probs:
-                        out_bands = [out_raster_object.get_band(bd) for bd in range(1, self.o_info.bands + 1)]
+                    if self.overwrite:
+                        os.remove(self.output_image)
                     else:
 
-                        out_raster_object.get_band(1)
-                        out_raster_object.fill(0)
-
-                n_block += 1
-
-                if self.track_blocks:
-
-                    if n_block in self.record_list:
-
-                        logger.info('  Skipping current block ...')
+                        n_block += 1
                         continue
 
-                # Check for zeros in the block.
-                if self.band_check != -1:
+                # Update the output image
+                #   information for the
+                #   current block.
+                self.o_info.update_info(top=image_top - (i*self.o_info.cellY),
+                                        left=image_left + (j*self.o_info.cellY),
+                                        rows=n_rows,
+                                        cols=n_cols)
 
-                    if self.open_image:
+                iwo = i
+                jwo = j
 
-                        self.i_info = raster_tools.ropen(self.input_image)
+                out_raster_object = self._set_output_object()
 
-                        self.open_image = False
+                if self.get_probs:
+                    out_bands = [out_raster_object.get_band(bd) for bd in range(1, self.o_info.bands + 1)]
+                else:
 
-                    max_check = self.i_info.read(bands2open=self.band_check,
-                                                 i=i,
-                                                 j=j,
-                                                 rows=n_rows,
-                                                 cols=n_cols).max()
+                    out_raster_object.get_band(1)
+                    out_raster_object.fill(0)
 
-                    if max_check == 0:
-                        continue
+            n_block += 1
 
-                if not self.open_image:
+            if self.track_blocks:
 
-                    # Close the image information object because it
-                    #   needs to be reopened for parallel ``read``.
-                    self.i_info.close()
-                    self.open_image = True
+                if n_block in self.record_list:
 
-                if 'CV' in self.classifier_info['classifier']:
+                    logger.info('  Skipping current block ...')
+                    continue
 
-                    if len(self.bands2open) != self.model.getVarCount():
+            # Check for zeros in the block.
+            if self.band_check != -1:
+
+                if self.open_image:
+
+                    self.i_info = raster_tools.ropen(self.input_image)
+
+                    self.open_image = False
+
+                max_check = self.i_info.read(bands2open=self.band_check,
+                                             i=i,
+                                             j=j,
+                                             rows=n_rows,
+                                             cols=n_cols).max()
+
+                if max_check == 0:
+                    continue
+
+            if not self.open_image:
+
+                # Close the image information object because it
+                #   needs to be reopened for parallel ``read``.
+                self.i_info.close()
+                self.open_image = True
+
+            if 'CV' in self.classifier_info['classifier']:
+
+                if len(self.bands2open) != self.model.getVarCount():
+
+                    logger.error('  The number of predictive layers does not match the number of model estimators.')
+                    raise AssertionError
+
+            elif (self.classifier_info['classifier'] not in ['C5', 'Cubist', 'QDA', 'ChainCRF']) and \
+                    ('CV' not in self.classifier_info['classifier']):
+
+                if hasattr(self.model, 'n_features_'):
+
+                    if len(self.bands2open) != self.model.n_features_:
 
                         logger.error('  The number of predictive layers does not match the number of model estimators.')
                         raise AssertionError
 
-                elif (self.classifier_info['classifier'] not in ['C5', 'Cubist', 'QDA', 'ChainCRF']) and \
-                        ('CV' not in self.classifier_info['classifier']):
+                if hasattr(self.model, 'base_estimator'):
 
-                    if hasattr(self.model, 'n_features_'):
+                    if hasattr(self.model.base_estimator, 'n_features_'):
 
-                        if len(self.bands2open) != self.model.n_features_:
+                        if len(self.bands2open) != self.model.base_estimator.n_features_:
 
                             logger.error('  The number of predictive layers does not match the number of model estimators.')
                             raise AssertionError
 
-                    if hasattr(self.model, 'base_estimator'):
+            # Get all the bands for the tile. The shape
+            #   of the features is ([rows x columns] x features).
+            features = raster_tools.read(image2open=self.input_image,
+                                         bands2open=self.bands2open,
+                                         i=i,
+                                         j=j,
+                                         rows=n_rows,
+                                         cols=n_cols,
+                                         predictions=True,
+                                         d_type='float32',
+                                         n_jobs=self.n_jobs_vars)
 
-                        if hasattr(self.model.base_estimator, 'n_features_'):
+            n_samples = n_rows * n_cols
 
-                            if len(self.bands2open) != self.model.base_estimator.n_features_:
+            # Scale the features.
+            if isinstance(self.scale_data, str) or self.scale_data:
+                features = self.scaler.transform(features)
 
-                                logger.error('  The number of predictive layers does not match the number of model estimators.')
-                                raise AssertionError
+            # Reshape the features for CRF models.
+            if self.classifier_info['classifier'] == 'ChainCRF':
+                features = self._transform4crf(p_vars2reshape=features)[0]
 
-                # Get all the bands for the tile. The shape
-                #   of the features is ([rows x columns] x features).
-                features = raster_tools.read(image2open=self.input_image,
-                                             bands2open=self.bands2open,
-                                             i=i,
-                                             j=j,
-                                             rows=n_rows,
-                                             cols=n_cols,
-                                             predictions=True,
-                                             d_type='float32',
-                                             n_jobs=self.n_jobs_vars)
+            if self.get_probs:
 
-                n_samples = n_rows * n_cols
+                # Predict class conditional probabilities.
 
-                # Scale the features.
-                if isinstance(self.scale_data, str) or self.scale_data:
-                    features = self.scaler.transform(features)
+                predicted = self.model.predict_proba(features)
 
-                # Reshape the features for CRF models.
-                if self.classifier_info['classifier'] == 'ChainCRF':
-                    features = self._transform4crf(p_vars2reshape=features)[0]
+                for cl in range(0, self.n_classes):
 
-                if self.get_probs:
+                    out_bands[cl].WriteArray(predicted[:, cl].reshape(n_rows,
+                                                                      n_cols),
+                                             j=j-jwo,
+                                             i=i-iwo)
 
-                    # Predict class conditional probabilities.
+            else:
 
-                    predicted = self.model.predict_proba(features)
+                if 'CV' in self.classifier_info['classifier']:
 
-                    for cl in range(0, self.n_classes):
+                    if self.classifier_info['classifier'] == 'CVMLP':
 
-                        out_bands[cl].WriteArray(predicted[:, cl].reshape(n_rows,
-                                                                          n_cols),
-                                                 j=j-jwo,
-                                                 i=i-iwo)
+                        self.model.predict(features, predicted)
 
-                else:
+                        predicted = np.argmax(predicted, axis=1)
 
-                    if 'CV' in self.classifier_info['classifier']:
+                    else:
 
-                        if self.classifier_info['classifier'] == 'CVMLP':
+                        # Setup the global array to write to. This avoids
+                        #   passing it to the joblib workers.
+                        # predicted = np.empty((n_samples, 1), dtype='uint8')
 
-                            self.model.predict(features, predicted)
+                        predicted = joblib.Parallel(n_jobs=self.n_jobs,
+                                                    max_nbytes=None)(joblib.delayed(predict_cv)(chunk,
+                                                                                                self.chunk_size,
+                                                                                                self.file_name,
+                                                                                                self.perc_samp,
+                                                                                                self.classes2remove,
+                                                                                                self.ignore_feas,
+                                                                                                self.use_xy,
+                                                                                                self.classifier_info,
+                                                                                                self.weight_classes)
+                                                                     for chunk in range(0, n_samples, self.chunk_size))
 
-                            predicted = np.argmax(predicted, axis=1)
+                    # transpose and reshape the predicted labels to (rows x columns)
+                    out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
+                                                                                                                   n_cols),
+                                                  j=j-jwo,
+                                                  i=i-iwo)
 
-                        else:
+                elif self.classifier_info['classifier'] in ['C5', 'Cubist']:
 
-                            # Setup the global array to write to. This avoids
-                            #   passing it to the joblib workers.
-                            # predicted = np.empty((n_samples, 1), dtype='uint8')
+                    # Load the predictor variables.
+                    # predict_samps = pandas2ri.py2ri(pd.DataFrame(features))
 
-                            predicted = joblib.Parallel(n_jobs=self.n_jobs,
-                                                        max_nbytes=None)(joblib.delayed(predict_cv)(chunk,
-                                                                                                    self.chunk_size,
-                                                                                                    self.file_name,
-                                                                                                    self.perc_samp,
-                                                                                                    self.classes2remove,
-                                                                                                    self.ignore_feas,
-                                                                                                    self.use_xy,
-                                                                                                    self.classifier_info,
-                                                                                                    self.weight_classes)
-                                                                         for chunk in range(0, n_samples, self.chunk_size))
+                    predict_samps = ro.r.matrix(features, nrow=n_samples, ncol=len(self.bands2open))
+                    predict_samps.colnames = StrVector(self.headers[:-1])
 
-                        # transpose and reshape the predicted labels to (rows x columns)
+                    # Get chunks for parallel processing.
+                    indice_pairs = list()
+                    for i_ in range(1, n_samples+1, self.chunk_size):
+
+                        n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
+                        indice_pairs.append([i_, n_rows_])
+
+                    indice_pairs[-1][1] += 1
+
+                    # Make the predictions and convert to a NumPy array.
+                    if isinstance(self.input_model, str):
+
+                        predicted = joblib.Parallel(n_jobs=self.n_jobs,
+                                                    max_nbytes=None)(joblib.delayed(predict_c5_cubist)(self.input_model,
+                                                                                                       ip)
+                                                                     for ip in indice_pairs)
+
+                        # Write the predictions to file.
                         out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
                                                                                                                        n_cols),
                                                       j=j-jwo,
                                                       i=i-iwo)
 
-                    elif self.classifier_info['classifier'] in ['C5', 'Cubist']:
+                    else:
 
-                        # Load the predictor variables.
-                        # predict_samps = pandas2ri.py2ri(pd.DataFrame(features))
+                        out_raster_object.write_array(_do_c5_cubist_predict(self.model,
+                                                                            self.classifier_info['classifier'],
+                                                                            predict_samps).reshape(n_rows,
+                                                                                                   n_cols),
+                                                      j=j-jwo,
+                                                      i=i-iwo)
 
-                        predict_samps = ro.r.matrix(features, nrow=n_samples, ncol=len(self.bands2open))
-                        predict_samps.colnames = StrVector(self.headers[:-1])
+                else:
+
+                    # Scikit-learn models
+
+                    if self.relax_probabilities:
+
+                        # Posterior probability label relaxation
+
+                        # Write the predictions to file.
+                        out_raster_object.write_array(predict_scikit_probas(n_rows,
+                                                                            n_cols),
+                                                      j=j-jwo,
+                                                      i=i-iwo)
+
+                    else:
 
                         # Get chunks for parallel processing.
-                        indice_pairs = list()
-                        for i_ in range(1, n_samples+1, self.chunk_size):
-
-                            n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
-                            indice_pairs.append([i_, n_rows_])
-
-                        indice_pairs[-1][1] += 1
+                        # indice_pairs = list()
+                        #
+                        # for i_ in range(0, n_samples, self.chunk_size):
+                        #
+                        #     n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
+                        #     indice_pairs.append([i_, n_rows_])
+                        #
+                        # if (self.n_jobs != 0) and (self.n_jobs != 1):
+                        #
+                        #     # Make the predictions and convert to a NumPy array.
+                        #     if isinstance(self.input_model, str):
+                        #
+                        #         if platform.system() == 'Windows':
+                        #
+                        #             predicted = joblib.Parallel(n_jobs=self.n_jobs,
+                        #                                         max_nbytes=None)(joblib.delayed(predict_scikit_win)(features[ip[0]:ip[0]+ip[1]],
+                        #                                                                                             self.input_model)
+                        #                                                          for ip in indice_pairs)
+                        #
+                        #         else:
+                        #
+                        #             mdl = self.load(self.input_model)[1]
+                        #
+                        #             pool = multi.Pool(processes=self.n_jobs)
+                        #
+                        #             predicted = pool.map(predict_scikit, range(0, len(indice_pairs)))
+                        #
+                        #             pool.close()
+                        #             del pool
+                        #
+                        #     else:
+                        #
+                        #         mdl = self.model
+                        #         predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
+                        #
+                        # else:
 
                         # Make the predictions and convert to a NumPy array.
-                        if isinstance(self.input_model, str):
+                        # predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
 
-                            predicted = joblib.Parallel(n_jobs=self.n_jobs,
-                                                        max_nbytes=None)(joblib.delayed(predict_c5_cubist)(self.input_model,
-                                                                                                           ip)
-                                                                         for ip in indice_pairs)
+                        # Write the predictions to file.
+                        # out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
+                        #                                                                                                n_cols),
+                        #                               j=j-jwo,
+                        #                               i=i-iwo)
 
-                            # Write the predictions to file.
-                            out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
-                                                                                                                           n_cols),
-                                                          j=j-jwo,
-                                                          i=i-iwo)
+                        # Write the predictions to file.
+                        out_raster_object.write_array(mdl.predict(features).reshape(n_rows,
+                                                                                    n_cols),
+                                                      j=j-jwo,
+                                                      i=i-iwo)
 
-                        else:
+            # Close the block file.
+            if self.write2blocks:
 
-                            out_raster_object.write_array(_do_c5_cubist_predict(self.model,
-                                                                                self.classifier_info['classifier'],
-                                                                                predict_samps).reshape(n_rows,
-                                                                                                       n_cols),
-                                                          j=j-jwo,
-                                                          i=i-iwo)
+                if self.get_probs:
 
-                    else:
+                    for cl in range(0, self.n_classes):
 
-                        # Scikit-learn models
+                        out_bands[cl].GetStatistics(0, 1)
+                        out_bands[cl].FlushCache()
 
-                        if self.relax_probabilities:
+                    del out_bands
 
-                            # Posterior probability label relaxation
+                else:
 
-                            if isinstance(self.input_model, str):
-                                mdl = self.load(self.input_model)[1]
-                            else:
-                                mdl = self.model
+                    out_raster_object.close_all()
+                    del out_raster_object
 
-                            predicted = predict_scikit_probas(n_rows, n_cols)
+            if self.track_blocks:
 
-                            # Write the predictions to file.
-                            out_raster_object.write_array(predicted,
-                                                          j=j-jwo,
-                                                          i=i-iwo)
+                self.record_list.append(n_block)
 
-                        else:
+                if os.path.isfile(self.record_keeping):
+                    os.remove(self.record_keeping)
 
-                            # Get chunks for parallel processing.
-                            # indice_pairs = list()
-                            #
-                            # for i_ in range(0, n_samples, self.chunk_size):
-                            #
-                            #     n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
-                            #     indice_pairs.append([i_, n_rows_])
-                            #
-                            # if (self.n_jobs != 0) and (self.n_jobs != 1):
-                            #
-                            #     # Make the predictions and convert to a NumPy array.
-                            #     if isinstance(self.input_model, str):
-                            #
-                            #         if platform.system() == 'Windows':
-                            #
-                            #             predicted = joblib.Parallel(n_jobs=self.n_jobs,
-                            #                                         max_nbytes=None)(joblib.delayed(predict_scikit_win)(features[ip[0]:ip[0]+ip[1]],
-                            #                                                                                             self.input_model)
-                            #                                                          for ip in indice_pairs)
-                            #
-                            #         else:
-                            #
-                            #             mdl = self.load(self.input_model)[1]
-                            #
-                            #             pool = multi.Pool(processes=self.n_jobs)
-                            #
-                            #             predicted = pool.map(predict_scikit, range(0, len(indice_pairs)))
-                            #
-                            #             pool.close()
-                            #             del pool
-                            #
-                            #     else:
-                            #
-                            #         mdl = self.model
-                            #         predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
-                            #
-                            # else:
-
-                            # Make the predictions and convert to a NumPy array.
-                            # predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
-
-                            # Write the predictions to file.
-                            # out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
-                            #                                                                                                n_cols),
-                            #                               j=j-jwo,
-                            #                               i=i-iwo)
-
-                            # Write the predictions to file.
-                            out_raster_object.write_array(mdl.predict(features).reshape(n_rows,
-                                                                                        n_cols),
-                                                          j=j-jwo,
-                                                          i=i-iwo)
-
-                # Close the block file.
-                if self.write2blocks:
-
-                    if self.get_probs:
-
-                        for cl in range(0, self.n_classes):
-
-                            out_bands[cl].GetStatistics(0, 1)
-                            out_bands[cl].FlushCache()
-
-                        del out_bands
-
-                    else:
-
-                        out_raster_object.close_all()
-                        del out_raster_object
-
-                if self.track_blocks:
-
-                    self.record_list.append(n_block)
-
-                    if os.path.isfile(self.record_keeping):
-                        os.remove(self.record_keeping)
-
-                    self.dump(self.record_list,
-                              self.record_keeping)
+                self.dump(self.record_list,
+                          self.record_keeping)
 
         # Close the file.
         if not self.write2blocks:
@@ -5382,14 +5393,33 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                               self.o_info,
                                               tile=False)
 
-    def _set_n_blocks(self, rows, cols, block_rows, block_cols):
+    def _set_n_blocks(self,
+                      start_i,
+                      start_j,
+                      iwo,
+                      jwo,
+                      rows,
+                      cols,
+                      block_rows,
+                      block_cols):
+
+        block_indices = list()
 
         n_blocks = 0
-        for i in range(0, rows, block_rows):
-            for j in range(0, cols, block_cols):
+
+        for i_ in range(start_i, rows+iwo, block_rows):
+
+            n_rows_ = self._num_rows_cols(i_, block_rows, rows+iwo)
+
+            for j_ in range(start_j, cols+jwo, block_cols):
+
+                n_cols_ = self._num_rows_cols(j_, block_cols, cols + jwo)
+
+                block_indices.append((i_, j_, n_rows_, n_cols_))
+
                 n_blocks += 1
 
-        return n_blocks
+        return block_indices, n_blocks
 
     def _mask_background(self, image2mask, masked_image, background_image, background_band,
                          background_value, minimum_observations, observation_band):
