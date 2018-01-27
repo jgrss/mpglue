@@ -365,7 +365,7 @@ def predict_scikit_probas(n_rows, n_cols):
                                                                  n_rows,
                                                                  n_cols),
                                          statistic='plr',
-                                         window_size=3).argmax(axis=0)
+                                         window_size=5).argmax(axis=0)
 
     predictions = np.zeros(probabilities_argmax.shape, dtype='uint8')
 
