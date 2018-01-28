@@ -82,6 +82,15 @@ try:
 except ImportError:
    raise ImportError('OpenCV must be installed')
 
+# Pymorph
+try:
+
+    import pymorph
+    pymorph_installed = True
+
+except:
+    pymorph_installed = False
+
 # Pystruct
 try:
 
@@ -342,14 +351,19 @@ def predict_scikit_win(feature_sub, input_model):
     return mdl.predict(feature_sub)
 
 
-def predict_scikit_probas(n_rows, n_cols):
+def predict_scikit_probas(rw, cw, ipadded, jpadded, n_rows, n_cols, morphology):
 
     """
     A function to get posterior probabilities from Scikit-learn models
 
     Args:
+        rw (int)
+        cw (int)
+        ipadded (int)
+        jpadded (int)
         n_rows (int)
         n_cols (int)
+        morphology (bool)
     """
 
     # `probabilities` shaped as [samples x n classes]
@@ -362,8 +376,8 @@ def predict_scikit_probas(n_rows, n_cols):
 
     # Reshape and run PLR
     probabilities_argmax = moving_window(probabilities.T.reshape(n_classes,
-                                                                 n_rows,
-                                                                 n_cols),
+                                                                 rw,
+                                                                 cw),
                                          statistic='plr',
                                          window_size=5).argmax(axis=0)
 
@@ -373,7 +387,17 @@ def predict_scikit_probas(n_rows, n_cols):
     for class_index, real_class in enumerate(class_list):
         predictions[probabilities_argmax == class_index] = real_class
 
-    return predictions
+    if morphology:
+
+        return pymorph.closerec(pymorph.closerec(predictions,
+                                                 Bdil=pymorph.secross(r=3),
+                                                 Bc=pymorph.secross(r=1)),
+                                Bdil=pymorph.secross(r=2),
+                                Bc=pymorph.secross(r=1))[ipadded:ipadded+n_rows,
+                                                         jpadded:jpadded+n_cols]
+
+    else:
+        return predictions[ipadded:ipadded+n_rows, jpadded:jpadded+n_cols]
 
 
 def predict_scikit(pool_iter):
@@ -4616,6 +4640,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 track_blocks=False,
                 relax_probabilities=False,
                 write2blocks=False,
+                morphology=False,
                 **kwargs):
 
         """
@@ -4657,6 +4682,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             write2blocks (Optional[bool]): Whether to individual blocks, otherwise write to one image.
                 Default is False.
                 *In the event of True, each block will be given the name `base image_####base extension`.
+            morphology (Optional[bool]): Whether to apply image morphology to the predicted classes.
+                Default is False.
             kwargs (Optional): Image read options passed to `mpglue.raster_tools.ropen.read`.
             
         Returns:
@@ -4716,6 +4743,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.track_blocks = track_blocks
         self.relax_probabilities = relax_probabilities
         self.write2blocks = write2blocks
+        self.morphology = morphology
         self.kwargs = kwargs
 
         if self.n_jobs == -1:
@@ -4997,6 +5025,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             j = block_index[1]
             n_rows = block_index[2]
             n_cols = block_index[3]
+            iw = block_index[4]
+            jw = block_index[5]
+            rw = block_index[6]
+            cw = block_index[7]
+            pad = block_index[8]
+            ipadded = block_index[9]
+            jpadded = block_index[10]
 
             logger.info('  Block {:,d} of {:,d} ...'.format(n_block, n_blocks))
 
@@ -5052,7 +5087,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 if self.open_image:
 
                     self.i_info = raster_tools.ropen(self.input_image)
-
                     self.open_image = False
 
                 max_check = self.i_info.read(bands2open=self.band_check,
@@ -5119,15 +5153,15 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             #   of the features is ([rows x columns] x features).
             features = raster_tools.read(image2open=self.input_image,
                                          bands2open=self.bands2open,
-                                         i=i,
-                                         j=j,
-                                         rows=n_rows,
-                                         cols=n_cols,
+                                         i=iw,
+                                         j=jw,
+                                         rows=rw,
+                                         cols=cw,
                                          predictions=True,
                                          d_type='float32',
                                          n_jobs=self.n_jobs_vars)
 
-            n_samples = n_rows * n_cols
+            n_samples = rw * cw
 
             # Scale the features.
             if isinstance(self.scale_data, str) or self.scale_data:
@@ -5145,8 +5179,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 for cl in range(0, self.n_classes):
 
-                    out_bands[cl].WriteArray(predicted[:, cl].reshape(n_rows,
-                                                                      n_cols),
+                    out_bands[cl].WriteArray(predicted[:, cl].reshape(n_rows, n_cols),
                                              j=j-jwo,
                                              i=i-iwo)
 
@@ -5235,8 +5268,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         # --------------------------------------
 
                         # Write the predictions to file.
-                        out_raster_object.write_array(predict_scikit_probas(n_rows,
-                                                                            n_cols),
+                        out_raster_object.write_array(predict_scikit_probas(rw,
+                                                                            cw,
+                                                                            ipadded,
+                                                                            jpadded,
+                                                                            n_rows,
+                                                                            n_cols,
+                                                                            self.morphology),
                                                       j=j-jwo,
                                                       i=i-iwo)
 
@@ -5290,10 +5328,24 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         #                               i=i-iwo)
 
                         # Write the predictions to file.
-                        out_raster_object.write_array(mdl.predict(features).reshape(n_rows,
-                                                                                    n_cols),
-                                                      j=j-jwo,
-                                                      i=i-iwo)
+                        if self.morphology:
+
+                            out_raster_object.write_array(
+                                pymorph.closerec(pymorph.closerec(mdl.predict(features).reshape(rw, cw),
+                                                                  Bdil=pymorph.secross(r=3),
+                                                                  Bc=pymorph.secross(r=1)),
+                                                 Bdil=pymorph.secross(r=2),
+                                                 Bc=pymorph.secross(r=1))[ipadded:ipadded+n_rows,
+                                                                          jpadded:jpadded+n_cols],
+                                j=j-jwo,
+                                i=i-iwo)
+
+                        else:
+
+                            out_raster_object.write_array(mdl.predict(features).reshape(n_rows,
+                                                                                        n_cols),
+                                                          j=j-jwo,
+                                                          i=i-iwo)
 
             # Close the block file.
             if self.write2blocks:
@@ -5440,6 +5492,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                       block_rows,
                       block_cols):
 
+        if self.relax_probabilities or self.morphology:
+            pad = 2
+        else:
+            pad = 0
+
         block_indices = list()
 
         n_blocks = 0
@@ -5448,11 +5505,22 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             n_rows_ = self._num_rows_cols(i_, block_rows, rows+iwo)
 
+            # Always =i if pad=0
+            iw_ = 0 if i_ == 0 else i_ - pad
+            ipadded_ = i_ - iw_
+            rww_ = n_rows_ + pad if iw_ == 0 else n_rows_ + (pad * 2)
+            rw_ = self._num_rows_cols(iw_, rww_, rows+iwo)
+
             for j_ in range(start_j, cols+jwo, block_cols):
 
                 n_cols_ = self._num_rows_cols(j_, block_cols, cols+jwo)
 
-                block_indices.append((i_, j_, n_rows_, n_cols_))
+                jw_ = 0 if j_ == 0 else j_ - pad
+                jpadded_ = j_ - jw_
+                cww_ = n_cols_ + pad if jw_ == 0 else n_cols_ + (pad * 2)
+                cw_ = self._num_rows_cols(jw_, cww_, cols+iwo)
+
+                block_indices.append((i_, j_, n_rows_, n_cols_, iw_, jw_, rw_, cw_, pad, ipadded_, jpadded_))
 
                 n_blocks += 1
 
