@@ -5029,7 +5029,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             jw = block_index[5]
             rw = block_index[6]
             cw = block_index[7]
-            pad = block_index[8]
             ipadded = block_index[9]
             jpadded = block_index[10]
 
