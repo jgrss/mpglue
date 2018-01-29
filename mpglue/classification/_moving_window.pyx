@@ -3571,7 +3571,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=3] plr(DTYPE_float32_t[:, :, ::1] proba_ar
     """
 
     cdef:
-        Py_ssize_t i, j, iteration, band
+        Py_ssize_t i, j, iteration, band#, ic, jc, bci, bcj
         unsigned int bands = proba_array.shape[0]
         unsigned int rows = proba_array.shape[1]
         unsigned int cols = proba_array.shape[2]
@@ -3584,7 +3584,25 @@ cdef np.ndarray[DTYPE_float32_t, ndim=3] plr(DTYPE_float32_t[:, :, ::1] proba_ar
         DTYPE_float32_t[:, ::1] weight_sums = block_proba.copy()
         DTYPE_float32_t[:, :, ::1] proba_block_3d
         DTYPE_float32_t[:, ::1] dist_weights = _create_weights(window_size, half_window)
+        # DTYPE_float32_t[:, ::1] compatibility_matrix = np.zeros((bands, bands), dtype='float32')
         DTYPE_float32_t proba_q, proba_p
+
+    # TODO
+    # -------------------------------
+    # Create the compatibility matrix
+    # -------------------------------
+
+    # with nogil:
+    #
+    #     for ic from 0 <= ic < rows by 2:
+    #
+    #         for jc from 0 <= jc < cols by 2:
+    #
+    #             for bci in range(0, bands):
+    #
+    #                 for bcj in range(0, bands):
+    #
+    #                     compatibility_matrix[bci, bcj]
 
     for iteration in range(0, iterations):
 
