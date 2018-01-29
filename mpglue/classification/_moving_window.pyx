@@ -3429,34 +3429,50 @@ cdef DTYPE_float32_t _fill_basins(DTYPE_float32_t[:, ::1] image_block,
         return bcv
 
 
-cdef DTYPE_float32_t _get_proba_sums(DTYPE_float32_t[:, ::1] proba_block___,
-                                     DTYPE_float32_t[:, ::1] dist_weights,
+cdef DTYPE_float32_t _get_proba_mean(DTYPE_float32_t[:, ::1] proba_block___,
+                                     DTYPE_float32_t[:, ::1] weight_sums___,
                                      unsigned int window_size) nogil:
+
+    """Calculates the weighted mean of the relaxed probability sums"""
 
     cdef:
         Py_ssize_t ii, jj
         DTYPE_float32_t proba_sum = 0.
+        DTYPE_float32_t weight_sum = 0.
 
     for ii in range(0, window_size):
 
         for jj in range(0, window_size):
-            proba_sum += (proba_block___[ii, jj] * dist_weights[ii, jj])
 
-    return proba_sum
+            proba_sum += proba_block___[ii, jj]
+            weight_sum += weight_sums___[ii, jj]
+
+    return proba_sum / weight_sum
 
 
-cdef void _block_add(DTYPE_float32_t[:, ::1] proba_block__,
-                     DTYPE_float32_t[:, ::1] probs_layer,
-                     unsigned int window_size,
-                     DTYPE_float32_t pls) nogil:
+cdef void _block_weighted_sum(DTYPE_float32_t[:, ::1] proba_block__,
+                              DTYPE_float32_t[:, ::1] probs_layer,
+                              unsigned int window_size,
+                              DTYPE_float32_t pls,
+                              DTYPE_float32_t[:, ::1] dist_weights,
+                              DTYPE_float32_t[:, ::1] weight_sums__) nogil:
+
+    """Calculates the weighted sum of posterior probabilities"""
 
     cdef:
-        Py_ssize_t ii, jj
+        Py_ssize_t ii, jj, iii, jjj
+        DTYPE_float32_t weight
 
     for ii in range(0, window_size):
 
         for jj in range(0, window_size):
-            proba_block__[ii, jj] += (probs_layer[ii, jj] * pls)
+
+            weight = pls * dist_weights[ii, jj]
+
+            # posterior class probability x class uncertainty x distance weight
+            proba_block__[ii, jj] += (probs_layer[ii, jj] * weight)
+
+            weight_sums__[ii, jj] += weight
 
 
 cdef DTYPE_float32_t _k_prob(DTYPE_float32_t[:, :, ::1] probs,
@@ -3465,7 +3481,8 @@ cdef DTYPE_float32_t _k_prob(DTYPE_float32_t[:, :, ::1] probs,
                              unsigned int bands,
                              unsigned int window_size,
                              DTYPE_float32_t uncertainty,
-                             DTYPE_float32_t[:, ::1] dist_weights) nogil:
+                             DTYPE_float32_t[:, ::1] dist_weights,
+                             DTYPE_float32_t[:, ::1] weight_sums_) nogil:
 
     cdef:
         Py_ssize_t class_iter
@@ -3474,29 +3491,37 @@ cdef DTYPE_float32_t _k_prob(DTYPE_float32_t[:, :, ::1] probs,
     # Iterate over each class
     for class_iter in range(0, bands):
 
+        # The current class probability window
         current_layer = probs[class_iter, :, :]
 
+        # --------------------
         # Get the weighted sum
+        # --------------------
 
         if class_iter == current_band:
 
             # Add the current class probabilities
-            _block_add(proba_block_,
-                       current_layer,
-                       window_size,
-                       1.)
+            _block_weighted_sum(proba_block_,
+                                current_layer,
+                                window_size,
+                                1.,
+                                dist_weights,
+                                weight_sums_)
 
         else:
 
             # Add the current class probabilities,
             #   weighted by the uncertainty.
-            _block_add(proba_block_,
-                       current_layer,
-                       window_size,
-                       uncertainty)
+            _block_weighted_sum(proba_block_,
+                                current_layer,
+                                window_size,
+                                uncertainty,
+                                dist_weights,
+                                weight_sums_)
 
-    return _get_proba_sums(proba_block_,
-                           dist_weights,
+    # Get the weighted mean
+    return _get_proba_mean(proba_block_,
+                           weight_sums_,
                            window_size)
 
 
@@ -3528,10 +3553,22 @@ cdef DTYPE_float32_t[:, ::1] _create_weights(unsigned int window_size,
 
 cdef np.ndarray[DTYPE_float32_t, ndim=3] plr(DTYPE_float32_t[:, :, ::1] proba_array,
                                              unsigned int window_size,
-                                             unsigned int iterations=3,
-                                             DTYPE_float32_t uncertainty=.5):
+                                             unsigned int iterations,
+                                             DTYPE_float32_t uncertainty):
 
-    """Posterior-probability Label Relaxation"""
+    """
+    Posterior-probability Label Relaxation
+    
+    Args:
+        proba_array (3d array): The class posterior probabilities.
+        window_size (int): The moving window size, in pixels.
+        iterations (int): The number of relaxation iterations.
+        uncertainty (float): 
+        
+    Process:
+        proba_q:
+            The Q_i vector equals the sum of probabilities over all classes and neighborhoods.
+    """
 
     cdef:
         Py_ssize_t i, j, iteration, band
@@ -3544,6 +3581,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=3] plr(DTYPE_float32_t[:, :, ::1] proba_ar
         DTYPE_float32_t[:, :, ::1] out_array = proba_array.copy()
         DTYPE_float32_t[:, ::1] block_proba = np.zeros((window_size, window_size), dtype='float32')
         DTYPE_float32_t[:, ::1] proba_block = block_proba.copy()
+        DTYPE_float32_t[:, ::1] weight_sums = block_proba.copy()
         DTYPE_float32_t[:, :, ::1] proba_block_3d
         DTYPE_float32_t[:, ::1] dist_weights = _create_weights(window_size, half_window)
         DTYPE_float32_t proba_q, proba_p
@@ -3564,24 +3602,29 @@ cdef np.ndarray[DTYPE_float32_t, ndim=3] plr(DTYPE_float32_t[:, :, ::1] proba_ar
                     # Iterate over each class.
                     for band in range(0, bands):
 
-                        # Initiate the block to be filled with zeros
+                        # Initiate the block to be filled with zeros.
                         proba_block[...] = block_proba
+                        weight_sums[...] = block_proba
 
-                        # Get the weighted sum of probabilities
+                        # Get the weighted mean
+                        #   of probabilities.
                         proba_q = _k_prob(proba_block_3d,
                                           proba_block,
-                                          band+1,
+                                          band,
                                           bands,
                                           window_size,
                                           uncertainty,
-                                          dist_weights)
+                                          dist_weights,
+                                          weight_sums)
 
                         proba_p = proba_block_3d[band, half_window, half_window]
 
                         out_array[band, i+half_window, j+half_window] = proba_q * proba_p
 
+            proba_array[...] = out_array
+
         # Normalize
-        proba_array = np.float32(out_array) / np.float32(out_array).max(axis=0)
+        # proba_array = np.float32(out_array) / np.float32(out_array).max(axis=0)
 
     return np.float32(proba_array)
 
@@ -4547,11 +4590,11 @@ def moving_window(np.ndarray image_array not None,
                   float inhibition_scale=.5,
                   corners_array=None,
                   int inhibition_operation=1,
-                  int value_pos=0,
                   int l_size=4,
                   float diff_thresh=.5,
                   float var_thresh=.02,
-                  bint force_line=False):
+                  bint force_line=False,
+                  float uncertainty=.5):
 
     """
     Args:
@@ -4596,6 +4639,18 @@ def moving_window(np.ndarray image_array not None,
         n_neighbors (Optional[int]): The number of neighbors with ``statistic``='fill'. Default is 4.
             Choices are [2, 4].
         circle_list (Optional[list]: A list of circles. Default is [].
+        min_egm (Optional[int]): The minimum edge gradient magnitude with statistic='link'.
+        smallest_allowed_gap (Optional[int]): The smallest allowed gap size (in pixels) with statistic='link'.
+        medium_allowed_gap (Optional[int]): The medium allowed gap size (in pixels) with statistic='link'.
+        inhibition_ws (Optional[int]): The window size with statistic='inhibition'.
+        inhibition_scale (Optional[float]): The scale with statistic='inhibition'.
+        corners_array (Optional[2d array]): The corners array with statistic='inhibition'.
+        inhibition_operation (Optional[int]): The inhibition operation with statistic='inhibition'.
+        l_size (Optional[int])
+        diff_thresh (Optional[float])
+        var_thresh (Optional[float])
+        force_line (Optional[bool])
+        uncertainty (Optional[float]): The uncertainty with statistic='plr'.
 
     Examples:
         >>> from mpglue import moving_window
@@ -4931,7 +4986,9 @@ def moving_window(np.ndarray image_array not None,
     elif statistic == 'plr':
 
         return plr(np.float32(np.ascontiguousarray(image_array)),
-                   window_size)
+                   window_size,
+                   iterations,
+                   uncertainty)
 
     elif statistic == 'distance':
 

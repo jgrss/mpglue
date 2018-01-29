@@ -4639,6 +4639,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 overwrite=False,
                 track_blocks=False,
                 relax_probabilities=False,
+                plr_window_size=5,
                 write2blocks=False,
                 morphology=False,
                 **kwargs):
@@ -4679,6 +4680,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             overwrite (Optional[bool]): Whether to overwrite an existing `output_image`. Default is False.
             track_blocks (Optional[bool]): Whether to keep a record of processed blocks. Default is False.
             relax_probabilities (Optional[bool]): Whether to relax posterior probabilities. Default is False.
+            plr_window_size (Optional[int]): The window size for probabilistic label relaxation. Default is 5.
             write2blocks (Optional[bool]): Whether to individual blocks, otherwise write to one image.
                 Default is False.
                 *In the event of True, each block will be given the name `base image_####base extension`.
@@ -4742,6 +4744,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.overwrite = overwrite
         self.track_blocks = track_blocks
         self.relax_probabilities = relax_probabilities
+        self.plr_window_size = plr_window_size
         self.write2blocks = write2blocks
         self.morphology = morphology
         self.kwargs = kwargs
@@ -5492,7 +5495,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                       block_cols):
 
         if self.relax_probabilities or self.morphology:
-            pad = 2
+            pad = int(self.plr_window_size / 2.)
         else:
             pad = 0
 
