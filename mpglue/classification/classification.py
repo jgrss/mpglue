@@ -460,7 +460,7 @@ class ParameterHandler(object):
         self.forests = ['RF', 'EX_RF']
         self.forests_regressed = ['RFR', 'EX_RFR']
 
-        self.bagged = ['Bag', 'BagR']
+        self.bagged = ['Bag', 'EX_Bag', 'BagR']
 
         self.trees = ['DT', 'EX_DT']
         self.trees_regressed = ['DTR', 'EX_DTR']
