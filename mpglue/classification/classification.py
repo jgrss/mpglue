@@ -4648,6 +4648,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 plr_window_size=5,
                 plr_matrix=None,
                 write2blocks=False,
+                block_range=None,
                 morphology=False,
                 **kwargs):
 
@@ -4692,6 +4693,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             write2blocks (Optional[bool]): Whether to individual blocks, otherwise write to one image.
                 Default is False.
                 *In the event of True, each block will be given the name `base image_####base extension`.
+            block_range (Optional[list or tuple]): A start and end range for block processing. Default is None,
+                or start at the first block.
             morphology (Optional[bool]): Whether to apply image morphology to the predicted classes.
                 Default is False.
             kwargs (Optional): Image read options passed to `mpglue.raster_tools.ropen.read`.
@@ -4755,6 +4758,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.plr_window_size = plr_window_size
         self.plr_matrix = plr_matrix
         self.write2blocks = write2blocks
+        self.block_range = block_range
         self.morphology = morphology
         self.kwargs = kwargs
 
@@ -5048,6 +5052,17 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             # Setup the object to write to.
             if self.write2blocks:
+
+                if isinstance(self.block_range, list) or isinstance(self.block_range, tuple):
+
+                    if n_block < self.block_range[0]:
+
+                        n_block += 1
+                        continue
+
+                    # End the process.
+                    if n_block > self.block_range[1]:
+                        break
 
                 self.output_image = os.path.join(self.dir_name,
                                                  '{BASE}_{BLOCK:05d}{EXT}'.format(BASE=self.output_image_base,
