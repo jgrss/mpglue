@@ -439,12 +439,12 @@ def get_available_models():
 
     """Gets a list of available models"""
 
-    return ['AB_DT', 'AB_EX_DT', 'AB_RF', 'AB_EX_RF', 'AB_Bag', 'AB_DTR', 'AB_EX_DTR',
-            'AB_RFR', 'AB_EX_RFR', 'AB_BagR',
-            'Bag', 'BagR', 'Bayes', 'DT', 'DTR',
+    return ['AB_DT', 'AB_EX_DT', 'AB_RF', 'AB_EX_RF', 'AB_DTR', 'AB_EX_DTR',
+            'AB_RFR', 'AB_EX_RFR',
+            'Bag_DT', 'Bag_EX_DT', 'Bag_DTR', 'Bayes', 'DT', 'DTR',
             'EX_DT', 'EX_DTR', 'GB', 'GBR', 'C5', 'Cubist',
             'EX_RF', 'CVEX_RF', 'EX_RFR',
-            'Logistic', 'NN',
+            'Logistic', 'NN', 'Gaussian',
             'RF', 'CVGBoost', 'CVRF', 'RFR', 'CVMLP',
             'SVM', 'SVMR', 'CVSVM', 'CVSVMA', 'CVSVR', 'CVSVRA', 'QDA',
             'ChainCRF', 'GridCRF']
@@ -460,12 +460,12 @@ class ParameterHandler(object):
         self.forests = ['RF', 'EX_RF']
         self.forests_regressed = ['RFR', 'EX_RFR']
 
-        self.bagged = ['Bag', 'EX_Bag', 'BagR']
+        self.bagged = ['Bag_DT', 'Bag_EX_DT', 'Bag_DTR']
 
         self.trees = ['DT', 'EX_DT']
         self.trees_regressed = ['DTR', 'EX_DTR']
 
-        self.boosted = ['AB_DT', 'AB_EX_DT', 'AB_RF', 'AB_EX_RF', 'AB_Bag']
+        self.boosted = ['AB_DT', 'AB_EX_DT', 'AB_RF', 'AB_EX_RF']
 
         self.boosted_g = ['GB']
         self.boosted_g_regressed = ['GBR']
@@ -3321,13 +3321,14 @@ class ModelOptions(object):
               *Scikit-learn
         AB_EX_DTR-- AdaBoost with extremely random trees (regression problems)
               *Scikit-learn
-        Bag   -- Bagging (classification problems)
+        Bag_DT-- Bagged Decision Trees (classification problems)
+              *Scikit-learn              
+        Bag_DTR-- Bagged Decision Trees (regression problems)
               *Scikit-learn
-        BagR  -- Bagging (regression problems)
-              *Scikit-learn
-        Bag_EX_DT-- Bagging with extra trees (classification problems)
+        Bag_EX_DT-- Bagged Decision Trees with extremely randomized trees (classification problems)
               *Scikit-learn
         Bayes -- Naives Bayes (classification problems)
+              *Scikit-learn
         DT    -- Decision Trees based on CART algorithm (classification problems)
               *Scikit-learn
         DTR   -- Decision Trees Regression based on CART algorithm (regression problems)
@@ -3702,15 +3703,18 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.classifier_info_ = copy(self.classifier_info)
         self.classifier_info_ = vp.check_parameters(self.classifier_info_, defaults_)
 
-        # Create a separate instance for AdaBoost base classifiers.
-        if class_base.startswith('AB_'):
+        # Create a separate instance for
+        #   AdaBoost and Bagging base classifiers.
+        if class_base.startswith('AB_') or class_base.startswith('Bag_'):
 
             self.classifier_info_base = copy(self.classifier_info)
             self.classifier_info_base['classifier'] = class_base
 
             if 'trials' in self.classifier_info_base:
+
                 self.classifier_info_base['n_estimators'] = self.classifier_info_base['trials']
                 del self.classifier_info_base['trials']
+
             else:
                 self.classifier_info_base['n_estimators'] = defaults_['trials']
 
@@ -3884,12 +3888,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     voting_sub_model = ensemble.AdaBoostClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
                                                                    **self.classifier_info_base)
 
-                elif classifier == 'Bag':
+                elif classifier == 'Bag_DT':
 
                     voting_sub_model = ensemble.BaggingClassifier(base_estimator=tree.DecisionTreeClassifier(**self.classifier_info_),
                                                                   **self.classifier_info_base)
 
-                elif classifier == 'EX_Bag':
+                elif classifier == 'Bag_EX_DT':
 
                     voting_sub_model = ensemble.BaggingClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
                                                                   **self.classifier_info_base)
@@ -4080,17 +4084,17 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 self.model = ensemble.AdaBoostRegressor(base_estimator=tree.ExtraTreeRegressor(**self.classifier_info_),
                                                         **self.classifier_info_base)
 
-            elif self.classifier_info['classifier'] == 'Bag':
+            elif self.classifier_info['classifier'] == 'Bag_DT':
 
                 self.model = ensemble.BaggingClassifier(base_estimator=tree.DecisionTreeClassifier(**self.classifier_info_),
                                                         **self.classifier_info_base)
 
-            elif self.classifier_info['classifier'] == 'BagR':
+            elif self.classifier_info['classifier'] == 'Bag_DTR':
 
                 self.model = ensemble.BaggingRegressor(base_estimator=tree.DecisionTreeRegressor(**self.classifier_info_),
                                                        **self.classifier_info_base)
 
-            elif self.classifier_info['classifier'] == 'EX_Bag':
+            elif self.classifier_info['classifier'] == 'Bag_EX_DT':
 
                 self.model = ensemble.BaggingClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
                                                         **self.classifier_info_base)
@@ -4841,7 +4845,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             else:
                 self.o_info.bands = 1
 
-            if self.classifier_info['classifier'] in ['ABR', 'ABR_EX_DTR', 'BGR', 'BagR', 'RFR', 'EX_RFR', 'CV_RFR',
+            if self.classifier_info['classifier'] in ['ABR', 'ABR_EX_DTR', 'BGR', 'Bag_DTR', 'RFR', 'EX_RFR', 'CV_RFR',
                                                       'CVEX_RFR', 'SVR', 'SVRA', 'Cubist', 'DTR']:
                 self.o_info.storage = 'float32'
             else:
@@ -6251,7 +6255,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             DataFrame with scores.
         """
 
-        regressors = ['Cubist', 'RFR', 'ABR', 'BagR', 'EX_RFR', 'EX_DTR', 'DTR']
+        regressors = ['Cubist', 'RFR', 'ABR', 'Bag_DTR', 'EX_RFR', 'EX_DTR', 'DTR']
 
         if metric not in ['accuracy', 'r_squared', 'rmse', 'mae', 'medae', 'mse']:
 
@@ -6462,8 +6466,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                  'RFR': ensemble.RandomForestRegressor(n_jobs=-1),
                                  'EX_RF': ensemble.ExtraTreesClassifier(n_jobs=-1),
                                  'EX_RRF': ensemble.ExtraTreesRegressor(n_jobs=-1),
-                                 'Bag': ensemble.BaggingClassifier(base_estimator=tree.DecisionTreeClassifier(),
-                                                                   n_jobs=-1),
+                                 'Bag_DT': ensemble.BaggingClassifier(base_estimator=tree.DecisionTreeClassifier(),
+                                                                      n_jobs=-1),
                                  'AB_DT': ensemble.AdaBoostClassifier(base_estimator=tree.DecisionTreeClassifier()),
                                  'GB': ensemble.GradientBoostingClassifier(),
                                  'DT': tree.DecisionTreeClassifier(),
@@ -6499,14 +6503,14 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             parameters = {'trees': n_trees_list,
                           'rate': learn_rate_list}
 
-        elif classifier_info['classifier'] == 'Bag':
+        elif classifier_info['classifier'] == 'Bag_DT':
 
             parameters = {'n_estimators': n_trees_list,
                           'warm_start': bool_list,
                           'bootstrap': bool_list,                          
                           'bootstrap_features': bool_list}
 
-        elif classifier_info['classifier'] == 'BagR':
+        elif classifier_info['classifier'] == 'Bag_DTR':
 
             parameters = {'trees': n_trees_list,
                           'warm_start': bool_list,
@@ -6564,7 +6568,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         core_classifiers = ['C5', 'Cubist', 'RF', 'RFR',
                             'AB_RF', 'AB_EX_RF', 'AB_DT', 'AB_EX_DT',
-                            'ABR', 'BagR', 'EX_RF', 'EX_RFR', 'EX_DTR', 'DTR']
+                            'ABR', 'Bag_DTR', 'EX_RF', 'EX_RFR', 'EX_DTR', 'DTR']
 
         if classifier_info['classifier'] in core_classifiers:
 
