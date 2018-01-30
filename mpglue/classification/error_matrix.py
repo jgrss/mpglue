@@ -540,7 +540,7 @@ class error_matrix(object):
                 for c in range(1, self.n_classes):
                     write_txt.write('   C {0:5d}'.format(self.class_list[c]))
 
-                write_txt.write('Total   User(%)\n')
+                write_txt.write('   Total   User(%)\n')
 
                 write_txt.write('                -------   ')
 
