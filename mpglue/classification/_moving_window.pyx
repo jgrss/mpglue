@@ -3500,26 +3500,14 @@ cdef DTYPE_float32_t _k_prob(DTYPE_float32_t[:, :, ::1] probs,
         # Get the weighted sum
         # --------------------
 
-        if class_iter == current_band:
-
-            # Add the current class probabilities
-            _block_weighted_sum(proba_block_,
-                                current_layer,
-                                window_size,
-                                compatibility_matrix[current_band, class_iter],
-                                dist_weights,
-                                weight_sums_)
-
-        else:
-
-            # Add the current class probabilities,
-            #   weighted by the uncertainty.
-            _block_weighted_sum(proba_block_,
-                                current_layer,
-                                window_size,
-                                compatibility_matrix[current_band, class_iter],
-                                dist_weights,
-                                weight_sums_)
+        # Add the current class probabilities,
+        #   weighted by the uncertainty.
+        _block_weighted_sum(proba_block_,
+                            current_layer,
+                            window_size,
+                            compatibility_matrix[current_band, class_iter],
+                            dist_weights,
+                            weight_sums_)
 
     # Get the weighted mean
     return _get_proba_mean(proba_block_,
