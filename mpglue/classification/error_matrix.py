@@ -293,15 +293,17 @@ class error_matrix(object):
         Reverses the error matrix to predictions and observations
         """
 
-        observed = []
-        predicted = []
+        observed = list()
+        predicted = list()
 
         for ei in range(0, self.e_matrix.shape[0]):
+
             for ej in range(0, self.e_matrix.shape[1]):
 
                 n_ = self.e_matrix[ei, ej]
 
                 for n in range(0, n_):
+
                     observed.append(ei+1)
                     predicted.append(ej+1)
 
@@ -531,20 +533,18 @@ class error_matrix(object):
                 write_txt.write('Error Matrix\n')
                 write_txt.write('============\n\n')
 
-                write_txt.write('               Observed\n')
-                write_txt.write('               --------\n')
-                write_txt.write('               Class %d   ' % self.class_list[0])
+                write_txt.write('                Observed\n')
+                write_txt.write('                --------\n')
+                write_txt.write('                C {0:5d}'.format(self.class_list[0]))
 
                 for c in range(1, self.n_classes):
-
-                    write_txt.write('Class %d   ' % self.class_list[c])
+                    write_txt.write('   C {0:5d}'.format(self.class_list[c]))
 
                 write_txt.write('Total   User(%)\n')
 
-                write_txt.write('               -------   ')
+                write_txt.write('                -------   ')
 
                 for c in range(0, self.n_classes-1):
-
                     write_txt.write('-------   ')
 
                 write_txt.write('-----   -------\n')
@@ -552,25 +552,13 @@ class error_matrix(object):
                 for i in range(0, self.n_classes):
 
                     if i == 0:
-                        write_txt.write('Predicted| C%d| (' % self.class_list[0])
-                    elif self.class_list[i] >= 10:
-                        write_txt.write('          C%d| ' % self.class_list[i])
+                        write_txt.write('Predicted C{:03d}| ('.format(self.class_list[0]))
                     else:
-                        write_txt.write('           C%d| ' % self.class_list[i])
+                        write_txt.write('          C{:03d}| '.format(self.class_list[i]))
 
                     for j in range(0, self.n_classes):
 
-                        spacer = len(str(int(self.e_matrix[i, j])))
-
-                        if spacer == 1: spacer = 9
-                        elif spacer == 2: spacer = 8
-                        elif spacer == 3: spacer = 7
-                        elif spacer == 4: spacer = 6
-                        elif spacer == 5: spacer = 5
-                        elif spacer == 6: spacer = 4
-                        elif spacer == 7: spacer = 3
-                        elif spacer == 8: spacer = 2
-                        elif spacer == 9: spacer = 1
+                        spacer = 10 - len(str(int(self.e_matrix[i, j])))
 
                         if i == j and i != 0:
                             write_txt.write('(')
@@ -603,21 +591,11 @@ class error_matrix(object):
                     # User's accuracy
                     write_txt.write('{:.2f}\n'.format(self.users[i]))
 
-                write_txt.write('        Total| ')
+                write_txt.write('         Total| ')
 
                 for j in range(0, self.n_classes):
 
-                    spacer = len(str(int(self.e_matrix[:, j].sum())))
-
-                    if spacer == 1: spacer = 9
-                    elif spacer == 2: spacer = 8
-                    elif spacer == 3: spacer = 7
-                    elif spacer == 4: spacer = 6
-                    elif spacer == 5: spacer = 5
-                    elif spacer == 6: spacer = 4
-                    elif spacer == 7: spacer = 3
-                    elif spacer == 8: spacer = 2
-                    elif spacer == 9: spacer = 1
+                    spacer = 10 - len(str(int(self.e_matrix[:, j].sum())))
 
                     write_txt.write('{:d}'.format(self.e_matrix[:, j].sum()))
 
@@ -627,23 +605,13 @@ class error_matrix(object):
                 write_txt.write('({:d})\n'.format(self.e_matrix.sum(axis=0).sum()))
 
                 # Producer's accuracy
-                write_txt.write('  Producer(%)| ')
+                write_txt.write('   Producer(%)| ')
 
                 for pr_j in self.producers:
 
                     pr_jf = '{:.2f}'.format(pr_j)
 
-                    spacer = len(pr_jf)
-
-                    if spacer == 1: spacer = 9
-                    elif spacer == 2: spacer = 8
-                    elif spacer == 3: spacer = 7
-                    elif spacer == 4: spacer = 6
-                    elif spacer == 5: spacer = 5
-                    elif spacer == 6: spacer = 4
-                    elif spacer == 7: spacer = 3
-                    elif spacer == 8: spacer = 2
-                    elif spacer == 9: spacer = 1
+                    spacer = 10 - len(pr_jf)
 
                     write_txt.write(pr_jf)
 
