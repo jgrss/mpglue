@@ -14,6 +14,8 @@ cimport numpy as np
 import sys
 from copy import copy
 
+# from libcpp.map cimport map
+
 # from libc.math cimport cos, atan2
 # from libc.stdlib cimport c_abs
 # from libc.math cimport fabs
@@ -3480,7 +3482,7 @@ cdef DTYPE_float32_t _k_prob(DTYPE_float32_t[:, :, ::1] probs,
                              Py_ssize_t current_band,
                              unsigned int bands,
                              unsigned int window_size,
-                             DTYPE_float32_t uncertainty,
+                             DTYPE_float32_t[:, ::1] compatibility_matrix,
                              DTYPE_float32_t[:, ::1] dist_weights,
                              DTYPE_float32_t[:, ::1] weight_sums_) nogil:
 
@@ -3504,7 +3506,7 @@ cdef DTYPE_float32_t _k_prob(DTYPE_float32_t[:, :, ::1] probs,
             _block_weighted_sum(proba_block_,
                                 current_layer,
                                 window_size,
-                                1.,
+                                compatibility_matrix[current_band, class_iter],
                                 dist_weights,
                                 weight_sums_)
 
@@ -3515,7 +3517,7 @@ cdef DTYPE_float32_t _k_prob(DTYPE_float32_t[:, :, ::1] probs,
             _block_weighted_sum(proba_block_,
                                 current_layer,
                                 window_size,
-                                uncertainty,
+                                compatibility_matrix[current_band, class_iter],
                                 dist_weights,
                                 weight_sums_)
 
@@ -3554,7 +3556,7 @@ cdef DTYPE_float32_t[:, ::1] _create_weights(unsigned int window_size,
 cdef np.ndarray[DTYPE_float32_t, ndim=3] plr(DTYPE_float32_t[:, :, ::1] proba_array,
                                              unsigned int window_size,
                                              unsigned int iterations,
-                                             DTYPE_float32_t uncertainty):
+                                             DTYPE_float32_t[:, ::1] uncertainties):
 
     """
     Posterior-probability Label Relaxation
@@ -3563,7 +3565,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=3] plr(DTYPE_float32_t[:, :, ::1] proba_ar
         proba_array (3d array): The class posterior probabilities.
         window_size (int): The moving window size, in pixels.
         iterations (int): The number of relaxation iterations.
-        uncertainty (float): 
+        uncertainties (dict): A dictionary with class:class uncertainties. 
         
     Process:
         proba_q:
@@ -3571,7 +3573,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=3] plr(DTYPE_float32_t[:, :, ::1] proba_ar
     """
 
     cdef:
-        Py_ssize_t i, j, iteration, band#, ic, jc, bci, bcj
+        Py_ssize_t i, j, iteration, band, bci, bcj
         unsigned int bands = proba_array.shape[0]
         unsigned int rows = proba_array.shape[1]
         unsigned int cols = proba_array.shape[2]
@@ -3584,13 +3586,26 @@ cdef np.ndarray[DTYPE_float32_t, ndim=3] plr(DTYPE_float32_t[:, :, ::1] proba_ar
         DTYPE_float32_t[:, ::1] weight_sums = block_proba.copy()
         DTYPE_float32_t[:, :, ::1] proba_block_3d
         DTYPE_float32_t[:, ::1] dist_weights = _create_weights(window_size, half_window)
-        # DTYPE_float32_t[:, ::1] compatibility_matrix = np.zeros((bands, bands), dtype='float32')
+        DTYPE_float32_t[:, ::1] compatibility_matrix = np.zeros((bands, bands), dtype='float32')
         DTYPE_float32_t proba_q, proba_p
 
     # TODO
     # -------------------------------
     # Create the compatibility matrix
     # -------------------------------
+
+    if uncertainties.shape[0] == bands:
+        compatibility_matrix[...] = uncertainties
+    else:
+
+        for bci in range(0, bands):
+
+            for bcj in range(0, bands):
+
+                if bci == bcj:
+                    compatibility_matrix[bci, bcj] = 1.
+                else:
+                    compatibility_matrix[bci, bcj] = .5
 
     # with nogil:
     #
@@ -3631,7 +3646,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=3] plr(DTYPE_float32_t[:, :, ::1] proba_ar
                                           band,
                                           bands,
                                           window_size,
-                                          uncertainty,
+                                          compatibility_matrix,
                                           dist_weights,
                                           weight_sums)
 
@@ -4611,8 +4626,7 @@ def moving_window(np.ndarray image_array not None,
                   int l_size=4,
                   float diff_thresh=.5,
                   float var_thresh=.02,
-                  bint force_line=False,
-                  float uncertainty=.5):
+                  bint force_line=False):
 
     """
     Args:
@@ -4651,7 +4665,7 @@ def moving_window(np.ndarray image_array not None,
             Default is -9999, or target all values.
         ignore_value (Optional[int]): A value to ignore in calculations. Default is -9999, or don't ignore any values.
         iterations (Optional[int]): The number of iterations to apply the filter. Default is 1.
-        weights (Optional[bool]): A ``window_size`` x ``window_size`` array of weights. Default is None.
+        weights (Optional[2d array]): A ``window_size`` x ``window_size`` array of weights. Default is None.
         endpoint_array (Optional[2d array]): The endpoint image with ``statistic``='link'. Default is None.
         gradient_array (Optional[2d array]): The edge gradient image with ``statistic``='link'. Default is None.
         n_neighbors (Optional[int]): The number of neighbors with ``statistic``='fill'. Default is 4.
@@ -4668,7 +4682,6 @@ def moving_window(np.ndarray image_array not None,
         diff_thresh (Optional[float])
         var_thresh (Optional[float])
         force_line (Optional[bool])
-        uncertainty (Optional[float]): The uncertainty with statistic='plr'.
 
     Examples:
         >>> from mpglue import moving_window
@@ -4756,7 +4769,11 @@ def moving_window(np.ndarray image_array not None,
         raise ValueError('The statistic {} is not an option.'.format(statistic))
 
     if not isinstance(weights, np.ndarray):
-        weights = np.ones((window_size, window_size), dtype='float32')
+
+        if statistic == 'plr':
+            weights = np.ones((1, 1), dtype='float32')
+        else:
+            weights = np.ones((window_size, window_size), dtype='float32')
 
     if not isinstance(endpoint_array, np.ndarray):
         endpoint_array = np.empty((2, 2), dtype='uint8')
@@ -5006,7 +5023,7 @@ def moving_window(np.ndarray image_array not None,
         return plr(np.float32(np.ascontiguousarray(image_array)),
                    window_size,
                    iterations,
-                   uncertainty)
+                   weights)
 
     elif statistic == 'distance':
 

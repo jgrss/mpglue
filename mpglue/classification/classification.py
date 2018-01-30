@@ -351,7 +351,7 @@ def predict_scikit_win(feature_sub, input_model):
     return mdl.predict(feature_sub)
 
 
-def predict_scikit_probas(rw, cw, ipadded, jpadded, n_rows, n_cols, morphology):
+def predict_scikit_probas(rw, cw, ipadded, jpadded, n_rows, n_cols, morphology, plr_matrix):
 
     """
     A function to get posterior probabilities from Scikit-learn models
@@ -364,6 +364,7 @@ def predict_scikit_probas(rw, cw, ipadded, jpadded, n_rows, n_cols, morphology):
         n_rows (int)
         n_cols (int)
         morphology (bool)
+        plr_matrix (2d array)
     """
 
     # `probabilities` shaped as [samples x n classes]
@@ -379,7 +380,8 @@ def predict_scikit_probas(rw, cw, ipadded, jpadded, n_rows, n_cols, morphology):
                                                                  rw,
                                                                  cw),
                                          statistic='plr',
-                                         window_size=5).argmax(axis=0)
+                                         window_size=5,
+                                         weights=plr_matrix).argmax(axis=0)
 
     predictions = np.zeros(probabilities_argmax.shape, dtype='uint8')
 
@@ -4644,6 +4646,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 track_blocks=False,
                 relax_probabilities=False,
                 plr_window_size=5,
+                plr_matrix=None,
                 write2blocks=False,
                 morphology=False,
                 **kwargs):
@@ -4685,6 +4688,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             track_blocks (Optional[bool]): Whether to keep a record of processed blocks. Default is False.
             relax_probabilities (Optional[bool]): Whether to relax posterior probabilities. Default is False.
             plr_window_size (Optional[int]): The window size for probabilistic label relaxation. Default is 5.
+            plr_matrix (Optional[2d array]): The class compatibility matrix. Default is None.
             write2blocks (Optional[bool]): Whether to individual blocks, otherwise write to one image.
                 Default is False.
                 *In the event of True, each block will be given the name `base image_####base extension`.
@@ -4749,6 +4753,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.track_blocks = track_blocks
         self.relax_probabilities = relax_probabilities
         self.plr_window_size = plr_window_size
+        self.plr_matrix = plr_matrix
         self.write2blocks = write2blocks
         self.morphology = morphology
         self.kwargs = kwargs
@@ -5280,7 +5285,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                                             jpadded,
                                                                             n_rows,
                                                                             n_cols,
-                                                                            self.morphology),
+                                                                            self.morphology,
+                                                                            self.plr_matrix),
                                                       j=j-jwo,
                                                       i=i-iwo)
 
