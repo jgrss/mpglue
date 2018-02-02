@@ -404,8 +404,15 @@ class create_vector(CreateDriver):
         None
     """
 
-    def __init__(self, out_vector, field_names=['Id'], epsg=0, projection_from_file=None,
-                 projection=None, field_type='int', geom_type='point', overwrite=True):
+    def __init__(self,
+                 out_vector,
+                 field_names=['Id'],
+                 epsg=0,
+                 projection_from_file=None,
+                 projection=None,
+                 field_type='int',
+                 geom_type='point',
+                 overwrite=True):
 
         self.time_stamp = time.asctime(time.localtime(time.time()))
 
@@ -628,7 +635,7 @@ def add_polygon(vector_object, xy_pairs=None, field_vals=None, geometry=None):
 
     """
     Args:
-        vector_object (object): Class instance of ``create_vector``.
+        vector_object (object): Class instance of `create_vector`.
         xy_pairs (Optional[tuple]): List of x, y coordinates that make the feature. Default is None.
         field_vals (Optional[dict]): A dictionary of field values to write. They should match the order
             of ``field_defs``. Default is [].
@@ -1012,8 +1019,8 @@ class Transform(object):
     Args:
         x (float): The source x coordinate.
         y (float): The source y coordinate.
-        source_projection (int): The source projection code. Format can be EPSG, CS, or proj4.
-        target_projection (int): The target projection code. Format can be EPSG, CS, or proj4.
+        source_projection (int or str): The source projection code. Format can be EPSG, CS, or proj4.
+        target_projection (int or str): The target projection code. Format can be EPSG, CS, or proj4.
 
     Examples:
         >>> from mpglue.vector_tools import Transform

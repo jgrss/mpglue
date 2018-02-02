@@ -174,8 +174,14 @@ RESAMPLE_DICT = dict(average=gdal.GRA_Average,
                      nearest=gdal.GRA_NearestNeighbour,
                      cubic=gdal.GRA_Cubic)
 
-PANSHARPEN_WEIGHTS = dict(oli_tirs=dict(bw=.2, gw=1., rw=1., iw=.1),
-                          etm=dict(bw=.1, gw=1., rw=1., iw=1.))
+PANSHARPEN_WEIGHTS = dict(oli_tirs=dict(bw=.2,
+                                        gw=1.,
+                                        rw=1.,
+                                        iw=.1),
+                          etm=dict(bw=.1,
+                                   gw=1.,
+                                   rw=1.,
+                                   iw=1.))
 
 GOOGLE_CLOUD_SENSORS = dict(oli_tirs='LC08',
                             etm='LE07',
@@ -414,7 +420,7 @@ class ReadWrite(object):
     def _open_array(self, bands2open):
 
         """
-        Opens image bands into an ndarray.
+        Opens image bands into a ndarray.
         
         Args:
              bands2open (int or list)
@@ -576,8 +582,20 @@ class ReadWrite(object):
 
         return bands2open
 
-    def write2raster(self, out_name, write_which='array', o_info=None, x=0, y=0, out_rst=None, write2bands=[],
-                     compress='deflate', tile=False, close_band=True, flush_final=False, write_chunks=False, **kwargs):
+    def write2raster(self,
+                     out_name,
+                     write_which='array',
+                     o_info=None,
+                     x=0,
+                     y=0,
+                     out_rst=None,
+                     write2bands=[],
+                     compress='deflate',
+                     tile=False,
+                     close_band=True,
+                     flush_final=False,
+                     write_chunks=False,
+                     **kwargs):
 
         """
         Writes an array to file.
