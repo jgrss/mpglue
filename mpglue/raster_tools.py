@@ -222,6 +222,9 @@ class ReadWrite(object):
              x=0.,
              check_x=None,
              check_y=None,
+             as_xarray=False,
+             xarray_dims=None,
+             xarray_coords=None,
              **viargs):
 
         """
@@ -256,6 +259,11 @@ class ReadWrite(object):
                 If greater than 0, overrides ``j``.
             check_x (Optional[float]): Check the x offset against ``check_x``. Default is None.
             check_y (Optional[float]): Check the y offset against ``check_y``. Default is None.
+            as_xarray (Optional[bool]): Whether to open the array as a xarray, otherwise as a Numpy array.
+                Default is False.
+            xarray_dims (Optional[list]): Dimension names for xarray. Default is None.
+            xarray_coords (Optional[list]): Coordinates for xarray. Default is None.
+            viargs (Optional[dict]): Keyword arguments passed to `veg_indices`. Default is None.
 
         Attributes:
             array (ndarray)
@@ -296,6 +304,10 @@ class ReadWrite(object):
         self.ccols = cols
 
         self.sort_bands2open = sort_bands2open
+
+        self.as_xarray = as_xarray
+        self.xarray_dims = xarray_dims
+        self.xarray_coords = xarray_coords
 
         if isinstance(bands2open, dict):
 
@@ -415,7 +427,41 @@ class ReadWrite(object):
 
         self.array[np.isnan(self.array) | np.isinf(self.array)] = 0
 
+        if self.as_xarray:
+            self._as_xarray()
+
         return self.array
+
+    def _as_xarray(self):
+
+        """
+        Transforms the NumPy array to a xarray object
+        """
+
+        try:
+            import xarray as xr
+        except:
+            logger.error('  Cannot import xarray')
+            raise ImportError
+
+        if len(self.array.shape) == 3:
+
+            n_bands = self.array.shape[0]
+
+            if not self.xarray_coords:
+                self.xarray_coords = dict(z=('B' + ',B'.join(map(str, range(1, n_bands + 1)))).split(','))
+
+            if not self.xarray_dims:
+                self.xarray_dims = ['z', 'y', 'x']
+
+        else:
+
+            if not self.xarray_dims:
+                self.xarray_dims = ['y', 'x']
+
+        self.array = xr.DataArray(self.array,
+                                  coords=self.xarray_coords,
+                                  dims=self.xarray_dims)
 
     def _open_array(self, bands2open):
 

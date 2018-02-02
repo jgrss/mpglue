@@ -93,6 +93,23 @@ vector-tools
 >>>     i_info.read(compute_index='ndvi', sensor='Landsat')
 >>>     ndvi = i_info.array
 ```
+
+#### Images can also be opened as [xarrays](http://xarray.pydata.org/en/stable/)
+
+```python
+>>> # Open an image as a xarray.
+>>> with gl.ropen('/your/image.tif') as i_info:
+>>>     my_array = i_info.read(as_xarray=True)
+>>>
+>>> # By default, dimensions are named ('z', 'y', 'x') or ('y', 'x').
+>>> # Provide dimension names with `xarray_dims` (3-d temporal image below).
+>>> with gl.ropen('/your/image.tif') as i_info:
+>>>
+>>>     my_array = i_info.read(as_xarray=True,
+>>>                            xarray_dims=['time', 'y', 'x'])
+>>>
+>>> print(my_array.dims)
+```
     
 #### Writing to file:
 
