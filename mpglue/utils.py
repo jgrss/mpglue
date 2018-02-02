@@ -71,3 +71,5 @@ VI_WAVELENGTHS = {'ARVI': ['blue', 'red', 'nir'],
                   'YNDVI': ['yellow', 'nir'],
                   'VCI': ['red', 'nir'],
                   'VISMU': ['blue', 'green', 'red']}
+
+SUPPORTED_VIS = VI_WAVELENGTHS.keys()
