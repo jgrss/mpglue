@@ -236,7 +236,7 @@ vector-tools
 ```python
 >>> # Fill a dictionary with image names.
 >>> comp_dict = {'001': ['/im1.tif', '/im2.tif'],   # VRT layer 1
->>>              '002': ['/im1.tif', '/im2.tif']}    # VRT layer 2
+>>>              '002': ['/im1.tif', '/im2.tif']}   # VRT layer 2
 >>>
 >>> # Stack the images.
 >>> vrt_builder(comp_dict, '/out_image.vrt', force_type='float32')
