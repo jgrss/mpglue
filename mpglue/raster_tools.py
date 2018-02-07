@@ -1126,6 +1126,8 @@ class DatasourceInfo(object):
         self.right = self.left + (self.cols * abs(self.cellY))  # get right extent
         self.bottom = self.top - (self.rows * abs(self.cellX))  # get bottom extent
 
+        self.image_envelope = [self.left, self.right, self.bottom, self.top]
+
         self.extent = dict(left=self.left, right=self.right, bottom=self.bottom, top=self.top)
 
         self.name = self.datasource.GetDriver().ShortName
