@@ -43,3 +43,7 @@ class TransformError(ValueError):
 
 class ArrayShapeError(AssertionError):
     """Raised when an array does not conform to correct shape requirements"""
+
+
+class SensorWavelengthError(NameError):
+    """Raised when a sensor does not support a wavelength"""

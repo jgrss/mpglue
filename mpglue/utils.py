@@ -1,3 +1,6 @@
+from .errors import logger, SensorWavelengthError
+
+
 # Landsat 8
 #   coastal blue, blue, gree, red, NIR, SWIR 1, SWIR 2, cirrus
 #   skips panchromatic (otherwise 8) and 2 thermal bands
@@ -168,3 +171,59 @@ VI_WAVELENGTHS = {'ARVI': ['blue', 'red', 'nir'],
                   'VISMU': ['blue', 'green', 'red']}
 
 SUPPORTED_VIS = VI_WAVELENGTHS.keys()
+
+
+def sensor_wavelength_check(sensor2check, wavelengths):
+
+    """
+    This function cross-checks wavelengths with a sensor
+
+    Args:
+        sensor2check (str): The sensor to check.
+        wavelengths (str list): The wavelengths to check.
+    """
+
+    for wavelength in wavelengths:
+
+        if wavelength not in SENSOR_BAND_DICT[sensor2check]:
+
+            logger.info('  The sensor is given as {SENSOR}, which does not have wavelength {WV}.'.format(SENSOR=sensor2check,
+                                                                                                         WV=wavelength))
+
+            logger.error('  The {WV} is not supported by {SENSOR}.\nPlease specify the correct sensor.'.format(WV=wavelength,
+                                                                                                               SENSOR=sensor2check))
+
+            raise SensorWavelengthError
+
+
+def get_index_bands(spectral_index, sensor):
+
+    """
+    Gets the bands needed to process a spectral index.
+
+    Args:
+        spectral_index (str): The spectral index to process.
+        sensor (str): The satellite sensor.
+
+    Example:
+        >>> spectral_bands = get_index_bands('NDVI', 'Landsat')
+
+    Returns:
+        A list of bands indices, indexed for GDAL (i.e., 1st position = 1).
+    """
+
+    if spectral_index not in SUPPORTED_VIS:
+
+        logger.error('  The spectral index must be one of:  {VIS}'.format(VIS=SUPPORTED_VIS))
+        raise NameError
+
+    if sensor not in SUPPORTED_SENSORS:
+
+        logger.error('  The sensor must be one of:  {SENSORS}'.format(SENSORS=SUPPORTED_SENSORS))
+        raise NameError
+
+    wavelengths = VI_WAVELENGTHS[spectral_index.upper()]
+
+    sensor_wavelength_check(sensor, wavelengths)
+
+    return [SENSOR_BAND_DICT[sensor][wavelength] for wavelength in wavelengths]
