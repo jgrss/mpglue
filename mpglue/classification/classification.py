@@ -351,7 +351,17 @@ def predict_scikit_win(feature_sub, input_model):
     return mdl.predict(feature_sub)
 
 
-def predict_scikit_probas(rw, cw, ipadded, jpadded, n_rows, n_cols, morphology, plr_matrix):
+def predict_scikit_probas_static(features,
+                                 mdl,
+                                 rw,
+                                 cw,
+                                 ipadded,
+                                 jpadded,
+                                 n_rows,
+                                 n_cols,
+                                 morphology,
+                                 plr_matrix,
+                                 plr_window_size):
 
     """
     A function to get posterior probabilities from Scikit-learn models
@@ -365,6 +375,7 @@ def predict_scikit_probas(rw, cw, ipadded, jpadded, n_rows, n_cols, morphology, 
         n_cols (int)
         morphology (bool)
         plr_matrix (2d array)
+        plr_window_size (int)
     """
 
     # `probabilities` shaped as [samples x n classes]
@@ -380,7 +391,59 @@ def predict_scikit_probas(rw, cw, ipadded, jpadded, n_rows, n_cols, morphology, 
                                                                  rw,
                                                                  cw),
                                          statistic='plr',
-                                         window_size=5,
+                                         window_size=plr_window_size,
+                                         weights=plr_matrix).argmax(axis=0)
+
+    predictions = np.zeros(probabilities_argmax.shape, dtype='uint8')
+
+    # Convert indices to classes.
+    for class_index, real_class in enumerate(class_list):
+        predictions[probabilities_argmax == class_index] = real_class
+
+    if morphology:
+
+        return pymorph.closerec(pymorph.closerec(predictions,
+                                                 Bdil=pymorph.secross(r=3),
+                                                 Bc=pymorph.secross(r=1)),
+                                Bdil=pymorph.secross(r=2),
+                                Bc=pymorph.secross(r=1))[ipadded:ipadded+n_rows,
+                                                         jpadded:jpadded+n_cols]
+
+    else:
+        return predictions[ipadded:ipadded+n_rows, jpadded:jpadded+n_cols]
+
+
+def predict_scikit_probas(rw, cw, ipadded, jpadded, n_rows, n_cols, morphology, plr_matrix, plr_window_size):
+
+    """
+    A function to get posterior probabilities from Scikit-learn models
+
+    Args:
+        rw (int)
+        cw (int)
+        ipadded (int)
+        jpadded (int)
+        n_rows (int)
+        n_cols (int)
+        morphology (bool)
+        plr_matrix (2d array)
+        plr_window_size (int)
+    """
+
+    # `probabilities` shaped as [samples x n classes]
+    probabilities = mdl.predict_proba(features)
+
+    # Get the classes.
+    class_list = mdl.classes_
+
+    n_classes = probabilities.shape[1]
+
+    # Reshape and run PLR
+    probabilities_argmax = moving_window(probabilities.T.reshape(n_classes,
+                                                                 rw,
+                                                                 cw),
+                                         statistic='plr',
+                                         window_size=plr_window_size,
                                          weights=plr_matrix).argmax(axis=0)
 
     predictions = np.zeros(probabilities_argmax.shape, dtype='uint8')
@@ -4606,7 +4669,31 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         return p_vars_r, labels_r, p_vars_test_r
 
-    def predict_array(self, array2predict):
+    def predict_array(self,
+                      array2predict,
+                      rows,
+                      cols,
+                      relax_probabilities=False,
+                      plr_window_size=5,
+                      plr_matrix=None,
+                      morphology=False):
+
+        """
+        Makes predictions on an array
+
+        Args:
+            array2predict (2d array): [samples x predictors]
+            rows (int): The array rows for reshaping.
+            cols (int): The array columns for reshaping.
+            relax_probabilities (Optional[bool]): Whether to relax posterior probabilities. Default is False.
+            plr_window_size (Optional[int]): The window size for probabilistic label relaxation. Default is 5.
+            plr_matrix (Optional[2d array]): The class compatibility matrix. Default is None.
+            morphology (Optional[bool]): Whether to apply image morphology to the predicted classes.
+                Default is False.
+
+        Returns:
+            Predictions as a 2d array
+        """
 
         if self.classifier_info['classifier'] in ['C5', 'Cubist']:
 
@@ -4618,7 +4705,23 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             return _do_c5_cubist_predict(self.model, self.classifier_info['classifier'], features)
 
         else:
-            return self.model.predict(array2predict)
+
+            if relax_probabilities:
+
+                return predict_scikit_probas_static(array2predict,
+                                                    self.model,
+                                                    rows,
+                                                    cols,
+                                                    0,
+                                                    0,
+                                                    rows,
+                                                    cols,
+                                                    morphology,
+                                                    plr_matrix,
+                                                    plr_window_size)
+
+            else:
+                return self.model.predict(array2predict).reshape(rows, cols)
 
     def predict(self,
                 input_image,
@@ -5301,7 +5404,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                                             n_rows,
                                                                             n_cols,
                                                                             self.morphology,
-                                                                            self.plr_matrix),
+                                                                            self.plr_matrix,
+                                                                            self.plr_window_size),
                                                       j=j-jwo,
                                                       i=i-iwo)
 
