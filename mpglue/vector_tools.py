@@ -2035,8 +2035,8 @@ def list_field_names(in_shapefile, be_quiet=False, epsg=None):
 
     if not be_quiet:
 
-        print('\n{} has the following fields:\n'.format(f_name))
-        print(df_fields)
+        logger.info('\n{} has the following fields:\n'.format(f_name))
+        logger.info(df_fields)
 
     return df_fields
 
@@ -2083,9 +2083,9 @@ def buffer_vector(file_name, out_vector, distance=None, epsg=None, field_name=No
     with vopen(file_name, epsg=epsg) as v_info:
 
         if isinstance(distance, float):
-            print('\nBuffering {} by {:f} distance ...'.format(f_name, distance))
+            logger.info('  Buffering {} by {:f} distance ...'.format(f_name, distance))
         else:
-            print('\nBuffering {} by field {} ...'.format(f_name, field_name))
+            logger.info('  Buffering {} by field {} ...'.format(f_name, field_name))
 
         # create the output shapefile
         if isinstance(epsg, int):
@@ -2377,7 +2377,7 @@ def add_fields(input_vector,
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                print('Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
+                logger.info('  Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
 
             geometry = feature.GetGeometryRef()
 
@@ -2407,7 +2407,7 @@ def add_fields(input_vector,
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                print('Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
+                logger.info('  Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
 
             try:
                 field_value = float(feature.GetField(field_names[0]))
@@ -2467,7 +2467,7 @@ def add_fields(input_vector,
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                print('Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
+                logger.info('  Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
 
             feature.SetField(field_names[0], fi+1)
 
@@ -2492,7 +2492,7 @@ def add_fields(input_vector,
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                print('Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
+                logger.info('  Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
 
             feature.SetField(field_names[0], constant)
 
@@ -2517,7 +2517,7 @@ def add_fields(input_vector,
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                print('Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
+                logger.info('  Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
 
             geometry = feature.GetGeometryRef()
 
@@ -2551,7 +2551,7 @@ def add_fields(input_vector,
         com = 'ogr2ogr {} {} -dialect sqlite -sql "SELECT ST_Union(geometry), \
         {} FROM {} GROUP BY {}"'.format(output_vector, input_vector, field_names[0], f_base, field_names[0])
 
-        print('Dissolving {} by {} ...'.format(input_vector, field_names[0]))
+        logger.info('  Dissolving {} by {} ...'.format(input_vector, field_names[0]))
 
         subprocess.call(com, shell=True)
 
@@ -2586,7 +2586,7 @@ def add_fields(input_vector,
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                print('Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
+                logger.info('  Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
 
             feature.SetField(field_names[1], class_dictionary[str(feature.GetField(field_names[0]))])
 
@@ -2612,7 +2612,7 @@ def add_fields(input_vector,
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                print('Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
+                logger.info('  Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
 
             feature.SetField(field_names[2],
                              ''.join([str(feature.GetField(field_names[0])), str(feature.GetField(field_names[1]))]))
