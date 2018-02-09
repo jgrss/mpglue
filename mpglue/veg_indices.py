@@ -26,7 +26,6 @@ except:
 from . import utils
 from .errors import logger
 from .helpers import _iteration_parameters
-# from .version import __version__
 
 # Numpy    
 try:
@@ -76,10 +75,6 @@ class SensorInfo(object):
     A class to hold sensor names, wavelengths, and equations.
     """
 
-    # @deprecation.deprecated(deprecated_in='0.2.0',
-    #                         removed_in='0.1.7',
-    #                         current_version=__version__,
-    #                         details='The MODIS sensors with be named MODISc5 and MODISc6, for the respective collections.')
     def __init__(self):
 
         self.sensors = utils.SUPPORTED_SENSORS
