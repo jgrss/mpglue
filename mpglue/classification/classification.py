@@ -396,6 +396,9 @@ def predict_scikit_probas_static(features,
 
     predictions = np.zeros(probabilities_argmax.shape, dtype='uint8')
 
+    import pdb
+    pdb.set_trace()
+
     # Convert indices to classes.
     for class_index, real_class in enumerate(class_list):
         predictions[probabilities_argmax == class_index] = real_class
