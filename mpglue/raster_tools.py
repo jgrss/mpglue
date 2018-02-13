@@ -3794,9 +3794,14 @@ class create_raster(CreateDriver, FileManager, UpdateInfo):
         elif out_name.lower().endswith('.tif'):
 
             if compress.upper() == 'NONE':
-                parameters = ['TILED={}'.format(tile), 'BIGTIFF={}'.format(bigtiff.upper())]
+
+                parameters = ['TILED={}'.format(tile),
+                              'BIGTIFF={}'.format(bigtiff.upper())]
+
             else:
-                parameters = ['TILED={}'.format(tile), 'COMPRESS={}'.format(compress.upper()),
+
+                parameters = ['TILED={}'.format(tile),
+                              'COMPRESS={}'.format(compress.upper()),
                               'BIGTIFF={}'.format(bigtiff.upper())]
 
         elif (out_name.lower().endswith('.dat')) or (out_name.lower().endswith('.bin')):
@@ -3891,8 +3896,15 @@ class create_raster(CreateDriver, FileManager, UpdateInfo):
                             logger.warning('\n{} already exists.'.format(out_name))
                             continue
 
-                    CreateDriver.__init__(self, out_name, out_rows, out_cols, n_bands,
-                                          storage_type, in_memory, overwrite, parameters)
+                    CreateDriver.__init__(self,
+                                          out_name,
+                                          out_rows,
+                                          out_cols,
+                                          n_bands,
+                                          storage_type,
+                                          in_memory,
+                                          overwrite,
+                                          parameters)
 
                     # FileManager.__init__(self)
 
@@ -3929,8 +3941,15 @@ class create_raster(CreateDriver, FileManager, UpdateInfo):
                         logger.warning('\n{} already exists.\nWill not attempt to overwrite.'.format(out_name))
                         return
 
-            CreateDriver.__init__(self, out_name, out_rows, out_cols, n_bands,
-                                  storage_type, in_memory, overwrite, parameters)
+            CreateDriver.__init__(self,
+                                  out_name,
+                                  out_rows,
+                                  out_cols,
+                                  n_bands,
+                                  storage_type,
+                                  in_memory,
+                                  overwrite,
+                                  parameters)
 
             # FileManager.__init__(self)
 
