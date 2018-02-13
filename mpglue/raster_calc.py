@@ -25,9 +25,16 @@ except ImportError:
     raise ImportError('NumPy must be installed')
 
 
-def raster_calc(output, equation=None, out_type='byte', extent=None,
-                overwrite=False, be_quiet=False, out_no_data=0,
-                row_block_size=2048, col_block_size=2048, **kwargs):
+def raster_calc(output,
+                equation=None,
+                out_type='byte',
+                extent=None,
+                overwrite=False,
+                be_quiet=False,
+                out_no_data=0,
+                row_block_size=2048,
+                col_block_size=2048,
+                **kwargs):
 
     """
     Raster calculator
@@ -131,11 +138,16 @@ def raster_calc(output, equation=None, out_type='byte', extent=None,
     for key, value in image_dict.iteritems():
         equation = equation.replace(key, 'array_{}'.format(key))
 
-    # TODO: add more NumPy functions
-    if 'where' in equation:
-        equation = 'np.{}'.format(equation)
+    # Check for NumPy functions.
+    for np_func in dir(np):
+
+        if np_func in equation:
+
+            equation = 'np.{}'.format(equation)
+            break
 
     for kw, vw in info_dict.iteritems():
+
         o_info = copy(vw)
         break
 
@@ -158,17 +170,18 @@ def raster_calc(output, equation=None, out_type='byte', extent=None,
         # Check overlapping extent
         overlap_info = info_list[0].copy()
 
-        for i_ in xrange(1, len(info_list)):
+        for i_ in range(1, len(info_list)):
+
             # Get the minimum overlapping extent
             # from all input images.
             overlap_info = raster_tools.GetMinExtent(overlap_info, info_list[i_])
 
-    o_info.left = overlap_info.left
-    o_info.right = overlap_info.right
-    o_info.top = overlap_info.top
-    o_info.bottom = overlap_info.bottom
-    o_info.rows = overlap_info.rows
-    o_info.cols = overlap_info.cols
+    o_info.update_info(left=overlap_info.left,
+                       right=overlap_info.right,
+                       top=overlap_info.top,
+                       bottom=overlap_info.bottom,
+                       rows=overlap_info.rows,
+                       cols=overlap_info.cols)
 
     if overwrite:
         overwrite_file(output)
@@ -227,7 +240,7 @@ def raster_calc(output, equation=None, out_type='byte', extent=None,
     # close the output drivers
     out_rst.close_all()
 
-    out_rst = None
+    del out_rst
 
     # Cleanup
     for temp_file in temp_files:
