@@ -26,7 +26,7 @@ mappy_name = 'MpGlue'
 maintainer = 'Jordan Graesser'
 maintainer_email = 'graesser@bu.edu'
 description = 'The Glue of MapPy'
-git_url = 'http://github.com/jgrss/glue.git'
+git_url = 'http://github.com/jgrss/mpglue.git'
 
 with open('README.md') as f:
     long_description = f.read()
