@@ -201,6 +201,7 @@ SENSOR_DICT = {'landsat_tm': 'tm',
                'landsat_oli_tirs': 'oli_tirs',
                'oli_tirs': 'oli_tirs',
                'oli': 'oli_tirs',
+               'tirs': 'oli_tirs',
                'lc8': 'oli_tirs',
                'lt8': 'oli_tirs'}
 
