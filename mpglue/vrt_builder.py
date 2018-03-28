@@ -196,7 +196,9 @@ class VRTBuilder(object):
                   force_type=None,
                   subset=False,
                   base_name=None,
-                  be_quiet=False):
+                  be_quiet=False,
+                  relative_path=False,
+                  out_vrt=None):
 
         """
         in_dict (OrderedDict): An ordered dictionary. The main bands should be first, followed by ancillary data.
@@ -204,9 +206,15 @@ class VRTBuilder(object):
                 in_dict = {'1': ['image1.tif', 'image2.tif'],
                           '2': ['dem_tile1.tif', 'dem_tile2.tif', ..., 'dem_tileN.tif']}
 
-        bands2include (Optional[list]): An empty list results in all bands. Default is [].
-        force_type (Optional[str]): Used to force mixed data types. Default is None, or no forcing.
-        subset (Optional[bool]): Whether to subset ancillary data to main data. Default is False.
+        Args:
+            bands2include (Optional[list]): An empty list results in all bands. Default is [].
+            start_band (Optional[int]): The starting band position.
+            force_type (Optional[str]): Used to force mixed data types. Default is None, or no forcing.
+            subset (Optional[bool]): Whether to subset ancillary data to main data. Default is False.
+            base_name (Optional[str])
+            be_quiet (Optional[str]): Whether to be quiet and do not print to screen. Default is False.
+            relative_path (Optional[bool]): Whether to use relative path names. Default is False.
+            out_vrt (Optional[str]): The output VRT file. Default is None.
         """
 
         new_dict = OrderedDict()
@@ -267,8 +275,10 @@ class VRTBuilder(object):
 
                     # Check if the image is outside the current frame.
                     if i_info.outside(self):
+
                         i_info.close()
                         i_info = None
+
                         continue
 
                     # Subset the current image to
@@ -280,8 +290,10 @@ class VRTBuilder(object):
                             image, sub_directory = self._subset(i_info, image)
 
                             if not image:
+
                                 i_info.close()
                                 i_info = None
+
                                 continue
 
                             i_info.close()
@@ -289,10 +301,24 @@ class VRTBuilder(object):
 
                             i_info = raster_tools.ropen(image)
 
-                    __, __, x_offset, y_offset = vector_tools.get_xy_offsets(image_info=self, xy_info=i_info,
-                                                                             round_offset=True, check_position=False)
+                    __, __, x_offset, y_offset = vector_tools.get_xy_offsets(image_info=self,
+                                                                             xy_info=i_info,
+                                                                             round_offset=True,
+                                                                             check_position=False)
 
-                    self.xml_band_ = self.xml_band.replace('image_SourceFilename', image)
+                    # Set the image name.
+                    if relative_path:
+
+                        image_dir, image_name = os.path.split(image)
+                        vrt_dir = os.path.split(out_vrt)[0]
+
+                        relative_image = os.path.join(os.path.relpath(image_dir, vrt_dir), image_name)
+
+                        self.xml_band_ = self.xml_band.replace('image_SourceFilename', relative_image)
+                        self.xml_band_ = self.xml_band_.replace('relativeToVRT="0"', 'relativeToVRT="1"')
+
+                    else:
+                        self.xml_band_ = self.xml_band.replace('image_SourceFilename', image)
 
                     if isinstance(force_type, str):
                         self.xml_band_ = self.xml_band_.replace('image_dataType', FORCE_TYPE_DICT[force_type.lower()])
@@ -443,7 +469,8 @@ def vrt_builder(in_dict,
                 be_quiet=False,
                 overwrite=False,
                 separate=False,
-                search_extension='.tif'):
+                search_extension='.tif',
+                relative_path=False):
 
     """
     Builds a VRT file, accepting raster files with different band counts.
@@ -475,6 +502,7 @@ def vrt_builder(in_dict,
         no_data (Optional[int or float]): The output no data flag. Default is None.
         be_quiet (Optional[bool]): Whether to be quiet and do not print progress. Default is False.
         overwrite (Optional[bool]): Whether to overwrite `out_vrt`, if it exists. Default is False.
+        relative_path (Optional[bool]): Whether to use relative path names. Default is False.
 
     Examples:
         >>> # Stack image bands from a dictionary.
@@ -521,7 +549,9 @@ def vrt_builder(in_dict,
                  force_type=force_type,
                  subset=subset,
                  base_name=base_name,
-                 be_quiet=be_quiet)
+                 be_quiet=be_quiet,
+                 relative_path=relative_path,
+                 out_vrt=out_vrt)
 
     d_name = os.path.split(out_vrt)[0]
 
