@@ -9,6 +9,11 @@ Therefore, MapPy was stripped to its core processing, which became MpGlue. The g
 as [MapPy](https://github.com/jgrss/mappy), [MapPy-dev](https://github.com/jgrss/mappydev), [MapPy-time](https://github.com/jgrss/MapPy-time), 
 and [SpFeas](https://github.com/jgrss/spfeas).
 
+Current version
+---
+
+`0.1.9`
+
 Usage examples
 ---
 
