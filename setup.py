@@ -74,9 +74,7 @@ def get_package_data():
 
         return {'': ['*.md', '*.txt'],
                 'mpglue': ['classification/*.pyx',
-                           'classification/*.pyd',
-                           'stats/*.pyx',
-                           'stats/*.pyd']}
+                           'stats/*.pyx']}
 
     else:
 
