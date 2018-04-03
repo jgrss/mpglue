@@ -202,7 +202,7 @@ def rescale_scaled_jds(the_array, counter=1000):
     Rescales `yyyyddd` values to monotonically increasing values.
             
     Args:
-        the_array
+        the_array (1d array-like, str or int): The Julian day list.
         counter (Optional[int]): The starting index.
     """
 
