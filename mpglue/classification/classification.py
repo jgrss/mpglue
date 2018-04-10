@@ -873,11 +873,8 @@ class Samples(object):
 
         if self.use_xy:
 
-            import pdb
-            pdb.set_trace()
-
             # Reorder the variables and x, y coordinates.
-            self.df = self.df[[self.headers[2:-1] + self.headers[:2] + self.headers[-1]]]
+            self.df = self.df[self.headers[2:-1] + self.headers[:2] + [self.headers[-1]]]
             self.all_samps = self.df.values
 
             self.headers = self.df.columns.tolist()
