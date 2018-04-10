@@ -5296,6 +5296,14 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             if isinstance(self.scale_data, str) or self.scale_data:
                 features = self.scaler.transform(features)
 
+            if self.use_xy:
+
+                self._create_indices(iw, jw, rw, cw)
+
+                features = np.hstack((features,
+                                      self.x_coordinates,
+                                      self.y_coordinates))
+
             # Reshape the features for CRF models.
             if self.classifier_info['classifier'] == 'ChainCRF':
                 features = self._transform4crf(p_vars2reshape=features)[0]
@@ -5749,7 +5757,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         else:
 
-            feature_arrays = []
+            feature_arrays = list()
 
         # for bd in xrange(0, self.i_info.bands):
         for iol in img_obj_list:
@@ -5792,25 +5800,19 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         left = self.i_info.left + (j * self.i_info.cellY)
         top = self.i_info.top - (i * self.i_info.cellY)
 
-        # create the longitudes
-        lons_line = np.arange(left, left + (n_cols*self.i_info.cellY), self.i_info.cellY)
+        # Create the longitudes
+        self.x_coordinates = np.arange(left,
+                                       left + (self.i_info.cellY * n_cols),
+                                       self.i_info.cellY)
 
-        if lons_line.shape[0] > n_cols:
-            lons_line = lons_line[:n_cols]
+        self.x_coordinates = np.tile(self.x_coordinates, n_rows).reshape(n_rows, n_cols)
 
-        lons_line = lons_line.reshape(1, n_cols)
+        # Create latitudes
+        self.y_coordinates = np.arange(top,
+                                       top - (self.i_info.cellY * n_rows),
+                                       -self.i_info.cellY).reshape(n_rows, 1)
 
-        self.x_coordinates = np.repeat(lons_line, n_rows, axis=0).astype(np.float32)
-
-        # create latitudes
-        lats_line = np.arange(top - (n_rows*self.i_info.cellY), top, self.i_info.cellY)[::-1]
-
-        if lats_line.shape[0] > n_rows:
-            lats_line = lats_line[:n_rows]
-
-        lats_line = lats_line.reshape(n_rows, 1)
-
-        self.y_coordinates = np.repeat(lats_line, n_cols, axis=1).astype(np.float32)
+        self.y_coordinates = np.tile(self.y_coordinates, n_cols)
 
     def _get_slope(self, elevation_array, pad=50):
 
