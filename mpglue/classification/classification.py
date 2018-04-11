@@ -5300,6 +5300,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 self._create_indices(iw, jw, rw, cw)
 
+                import pdb
+                pdb.set_trace()
+
                 features = np.hstack((features,
                                       self.x_coordinates,
                                       self.y_coordinates))
