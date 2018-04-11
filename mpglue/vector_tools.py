@@ -1731,7 +1731,7 @@ def get_xy_offsets(image_info=None,
         feature (Optional[object]): Object of ``ogr.Feature``. Default is None.
         xy_info (Optional[object]): Object of ``mappy.vopen`` or ``mappy.ropen``. Default is None.
         round_offset (Optional[bool]): Whether to round offsets. Default is False.
-        check_position (Optional[bool])
+        check_position (Optional[bool]): Whether to check if `x` and `y` are within the extent bounds. Default is False.
 
     Examples:
         >>> from mappy import vector_tools
