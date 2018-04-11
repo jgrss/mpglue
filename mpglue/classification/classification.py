@@ -5084,9 +5084,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         rows = self.i_info.rows
         cols = self.i_info.cols
         image_top = self.i_info.top
-        image_bottom = self.i_info.bottom
         image_left = self.i_info.left
-        image_right = self.i_info.right
         iwo = 0
         jwo = 0
 

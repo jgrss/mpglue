@@ -360,7 +360,7 @@ class VRTBuilder(object):
 
         if not be_quiet:
 
-            print
+            logger.info('')
             logger.info('  Finished processing VRT file')
 
     # def delete_subs(self, sub_directory):
