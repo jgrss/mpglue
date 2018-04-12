@@ -4072,11 +4072,10 @@ def write2raster(out_array,
 
         new_file = True
 
-        o_info.update_info(storage=STORAGE_DICT_r[out_array.dtype.name],
-                           bands=out_dims,
+        o_info.update_info(bands=out_dims,
                            rows=out_rows,
                            cols=out_cols)
-
+        
         if kwargs:
             out_rst = create_raster(out_name, o_info, **kwargs)
         else:
