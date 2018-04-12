@@ -1114,6 +1114,9 @@ class DatasourceInfo(object):
         self.rows = self.datasource.RasterYSize  # get number of rows
         self.cols = self.datasource.RasterXSize  # get number of columns
 
+        self.center_x = self.left + ((self.cols / 2) * self.cellY)
+        self.center_y = self.top - ((self.rows / 2) * self.cellY)
+
         if not self.projection:
             self._get_hdr_info()
 
