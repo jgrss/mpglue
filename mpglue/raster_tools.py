@@ -4075,7 +4075,7 @@ def write2raster(out_array,
         o_info.update_info(bands=out_dims,
                            rows=out_rows,
                            cols=out_cols)
-        
+
         if kwargs:
             out_rst = create_raster(out_name, o_info, **kwargs)
         else:
