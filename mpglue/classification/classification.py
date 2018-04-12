@@ -18,6 +18,7 @@ from copy import copy#, deepcopy
 # import joblib
 import itertools
 from collections import OrderedDict
+import inspect
 # from operator import itemgetter
 # import pathos.multiprocessing as M
 # import xml.etree.ElementTree as ET
@@ -3986,9 +3987,21 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     if isinstance(self.sample_weight, np.ndarray):
 
-                        voting_sub_model.fit(self.p_vars,
-                                             self.labels,
-                                             sample_weight=self.sample_weight)
+                        # Check if the model supports sample weights.
+                        argi = inspect.getargspec(voting_sub_model.fit)
+
+                        if 'sample_weight' in argi.args:
+
+                            logger.info('Sample weight = True')
+    
+                            voting_sub_model.fit(self.p_vars,
+                                                 self.labels,
+                                                 sample_weight=self.sample_weight)
+
+                        else:
+
+                            voting_sub_model.fit(self.p_vars,
+                                                 self.labels)
 
                     else:
 
