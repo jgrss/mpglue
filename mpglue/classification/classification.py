@@ -3992,8 +3992,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                         if 'sample_weight' in argi.args:
 
-                            logger.info('Sample weight = True')
-    
                             voting_sub_model.fit(self.p_vars,
                                                  self.labels,
                                                  sample_weight=self.sample_weight)
