@@ -5673,7 +5673,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             None, writes to ``self.output_image``.
         """
 
-        with raster_tools.ropen(self.out_image_temp) as m_info, raster_tools.ropen(self.mask_background) as b_info:
+        if isinstance(self.mask_background, str):
+            b_info = raster_tools.ropen(self.mask_background)
+
+        with raster_tools.ropen(self.out_image_temp) as m_info:
 
             m_info.get_band(1)
             m_info.storage = 'byte'
@@ -5707,13 +5710,18 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                           d_type='byte')
 
                     # Get the background array.
-                    b_array = raster_tools.read(i_info=b_info,
-                                                bands2open=self.background_band,
-                                                i=i,
-                                                j=j,
-                                                rows=n_rows,
-                                                cols=n_cols,
-                                                d_type='byte')
+                    if isinstance(self.mask_background, str):
+
+                        b_array = raster_tools.read(i_info=b_info,
+                                                    bands2open=self.background_band,
+                                                    i=i,
+                                                    j=j,
+                                                    rows=n_rows,
+                                                    cols=n_cols,
+                                                    d_type='byte')
+
+                    else:
+                        b_array = self.mask_background[i:i+n_rows, j:j+n_cols]
 
                     m_array[b_array == self.background_value] = 0
 
@@ -5732,7 +5740,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     out_rst_object.write_array(m_array, i, j)
 
-        del m_info, b_info
+        del m_info
+
+        if isinstance(self.mask_background, str):
+
+            b_info.close()
+            del b_info
 
         out_rst_object.close_all()
 
