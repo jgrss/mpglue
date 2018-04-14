@@ -200,7 +200,7 @@ vector-tools
 >>> cl.predict('/input_image.tif', '/output_map.tif')
 ```
 
-The `predict` module has other parameters that can be defined.
+A more detailed example
 
 ```python
 >>> cl = gl.classification()
