@@ -205,6 +205,14 @@ The `predict` module has other parameters that can be defined.
 ```python
 >>> cl = gl.classification()
 >>>
+>>> # Load and split land cover samples into test and train.
+>>> cl.split_samples('/land_cover_samples.txt', perc_samp=.7)
+>>>
+>>> # Train a voting classification model and save to file.
+>>> cl.construct_model(classifier_info={'classifier': ['Bayes', 'RF'], 
+>>>                                     'trees': 100},
+>>>                    output_model='classifier.model')
+>>>
 >>> # Load a model from file
 >>> cl.construct_model(input_model='classifier.model')
 >>>
