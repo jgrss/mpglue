@@ -200,6 +200,33 @@ vector-tools
 >>> cl.predict('/input_image.tif', '/output_map.tif')
 ```
 
+The `predict` module has other parameters that can be defined.
+
+```python
+>>> cl = gl.classification()
+>>>
+>>> # Load a model from file
+>>> cl.construct_model(input_model='classifier.model')
+>>>
+>>> # Specify prediction parameters
+>>> cl.predict('/input_image.vrt',
+>>>            '/output_map.tif',
+>>>             bands2open=[1, 4, 5, 6],    # define bands to open (they need to match the training bands)
+>>>             scale_factor=10000.0,       # apply a scale factor to the input image
+>>>             n_jobs=-1,                  # number of processors for the model
+>>>             n_jobs_vars=-1,             # number of processors for band loading
+>>>             row_block_size=500,         # the row block processing size (i.e., row tile size)
+>>>             col_block_size=500,         # the column block processing size (i.e., column tile size)
+>>>             overwrite=True,             # overwrite an existing model
+>>>             relax_probabilities=True,   # apply post-classification probability relaxation
+>>>             morphology=True,            # apply post-classification morphology
+>>>             use_xy=True,                # use x,y location as a predictor (*must be trained)
+>>>             i=500,                      # starting row index to predict
+>>>             j=500,                      # starting column index to predict
+>>>             rows=1000,                  # the number of rows to predict
+>>>             cols=1000)                  # the number of columns to predict
+```
+
 #### Post-classification:
 
 ```python
