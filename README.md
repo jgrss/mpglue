@@ -196,7 +196,7 @@ vector-tools
 >>> # Print the error matrix report.
 >>> cl.emat.write_stats('/text_report.txt')
 >>>
->>> # Predict class labels.
+>>> # Predict class labels on all bands and samples.
 >>> cl.predict('/input_image.tif', '/output_map.tif')
 ```
 
