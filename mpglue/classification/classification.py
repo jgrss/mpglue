@@ -4746,7 +4746,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 in_stats=None,
                 in_model=None,
                 mask_background=None,
-                background_band=2,
+                background_band=1,
                 background_value=0,
                 minimum_observations=0,
                 observation_band=0,
@@ -4783,13 +4783,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             in_stats (Optional[str]): A XML statistics file. Default is None. *Only applicable to Orfeo models.
             in_model (Optional[str]): A model file to load. Default is None. *Only applicable to Orfeo
                 and C5/Cubist models.
-            mask_background (Optional[str]): An image to use as a background mask, applied post-classification.
-                Default is None.
-            background_band (int): The band from ``mask_background`` to use for null background value. Default is 2.
-            background_value (Optional[int]): The background value in ``mask_background``. Default is 0.
+            mask_background (Optional[str or 2d array]): An image or array to use as a background mask,
+                applied post-classification. Default is None.
+            background_band (int): The band from `mask_background` to use for null background value. Default is 1.
+            background_value (Optional[int]): The background value in `mask_background`. Default is 0.
             minimum_observations (Optional[int]): A minimum number of observations in ``mask_background`` to be
                 recoded to 0. Default is 0, or no minimum observation filter.
-            observation_band (Optional[int]): The band position in ``mask_background`` of the ``minimum_observations``
+            observation_band (Optional[int]): The band position in `mask_background` of the `minimum_observations`
                 counts. Default is 0.
             scale_factor (Optional[float]): The scale factor for CRF models. Default is 1.
             row_block_size (Optional[int]): The row block size (pixels). Default is 1024.
@@ -4905,11 +4905,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             os.remove(output_image)
 
-            if os.path.isfile(os.path.join(self.dir_name, '{}.ovr'.format(f_name))):
-                os.remove(os.path.join(self.dir_name, '{}.ovr'.format(f_name)))
+            for ext in ['.ovr', '.aux.xml']:
 
-            if os.path.isfile(os.path.join(self.dir_name, '{}.aux.xml'.format(f_name))):
-                os.remove(os.path.join(self.dir_name, '{}.aux.xml'.format(f_name)))
+                if os.path.isfile(os.path.join(self.dir_name, '{}{}'.format(f_name, ext))):
+                    os.remove(os.path.join(self.dir_name, '{}{}'.format(f_name, ext)))
 
         self.out_image_temp = os.path.join(self.dir_name, '{}_temp.tif'.format(self.output_image_base))
         self.temp_model_file = os.path.join(self.dir_name, 'temp_model_file.txt')
@@ -5067,9 +5066,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         if isinstance(self.mask_background, str):
 
-            self._mask_background(self.out_image_temp, self.output_image, self.mask_background,
-                                  self.background_band, self.background_value,
-                                  self.minimum_observations, self.observation_band)
+            self._mask_background()
 
             # app = otb.Registry.CreateApplication('ImageClassifier')
             # app.SetParameterString('in', input_image)
@@ -5539,15 +5536,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 out_raster_object.close_all()
                 del out_raster_object
 
-        if isinstance(self.mask_background, str):
-
-            self._mask_background(self.out_image_temp,
-                                  self.output_image,
-                                  self.mask_background,
-                                  self.background_band,
-                                  self.background_value,
-                                  self.minimum_observations,
-                                  self.observation_band)
+        if isinstance(self.mask_background, str) or isinstance(self.mask_background, np.ndarray):
+            self._mask_background()
 
     def _set_indexing(self, start_i, start_j, rows, cols, iwo, jwo):
 
@@ -5616,7 +5606,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         """Creates the raster object to write to"""
 
-        if isinstance(self.mask_background, str):
+        if isinstance(self.mask_background, str) or isinstance(self.mask_background, np.ndarray):
 
             return raster_tools.create_raster(self.out_image_temp,
                                               self.o_info,
@@ -5674,39 +5664,31 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         return block_indices, n_blocks
 
-    def _mask_background(self, image2mask, masked_image, background_image, background_band,
-                         background_value, minimum_observations, observation_band):
+    def _mask_background(self):
 
         """
         Recodes background values to zeros
 
-        Args:
-            image2mask (str): The image to mask.
-            masked_image (str): The output masked image.
-            background_image (str): The image with null background values.
-            background_band (int): The band from ``background_image`` to use for null background value.
-            background_value (Optional[int]): The null background value. Default is 0.
-            minimum_observations (Optional[int]): A minimum number of observations to be recoded to 0.
-                Default is 0, or no minimum observation filter.
-            observation_band (Optional[int]): The band position of the observation counts, which is
-                expected to be in ``background_image``. Default is 0.
-
         Returns:
-            None, writes to ``masked_image``.
+            None, writes to ``self.output_image``.
         """
 
-        with raster_tools.ropen(image2mask) as m_info, raster_tools.ropen(background_image) as b_info:
+        with raster_tools.ropen(self.out_image_temp) as m_info, raster_tools.ropen(self.mask_background) as b_info:
 
             m_info.get_band(1)
             m_info.storage = 'byte'
 
-            out_rst_object = raster_tools.create_raster(masked_image, m_info, compress='none', tile=False)
+            out_rst_object = raster_tools.create_raster(self.output_image,
+                                                        m_info,
+                                                        compress='none',
+                                                        tile=False)
 
             out_rst_object.get_band(1)
 
             b_rows, b_cols = m_info.rows, m_info.cols
 
-            block_rows, block_cols = raster_tools.block_dimensions(b_rows, b_cols,
+            block_rows, block_cols = raster_tools.block_dimensions(b_rows,
+                                                                   b_cols,
                                                                    row_block_size=self.row_block_size,
                                                                    col_block_size=self.col_block_size)
 
@@ -5718,40 +5700,45 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     n_cols = self._num_rows_cols(j, block_cols, b_cols)
 
-                    m_array = m_info.read(i=i, j=j,
-                                          rows=n_rows, cols=n_cols,
+                    m_array = m_info.read(i=i,
+                                          j=j,
+                                          rows=n_rows,
+                                          cols=n_cols,
                                           d_type='byte')
 
                     # Get the background array.
                     b_array = raster_tools.read(i_info=b_info,
-                                                bands2open=background_band,
-                                                i=i, j=j,
-                                                rows=n_rows, cols=n_cols,
+                                                bands2open=self.background_band,
+                                                i=i,
+                                                j=j,
+                                                rows=n_rows,
+                                                cols=n_cols,
                                                 d_type='byte')
 
-                    m_array[b_array == background_value] = 0
+                    m_array[b_array == self.background_value] = 0
 
-                    if minimum_observations > 0:
+                    if self.minimum_observations > 0:
 
                         # Get the observation counts array.
                         observation_array = raster_tools.read(i_info=b_info,
-                                                                 bands2open=observation_band,
-                                                                 i=i, j=j,
-                                                                 rows=n_rows, cols=n_cols,
-                                                                 d_type='byte')
+                                                              bands2open=self.observation_band,
+                                                              i=i,
+                                                              j=j,
+                                                              rows=n_rows,
+                                                              cols=n_cols,
+                                                              d_type='byte')
 
-                        m_array[observation_array < minimum_observations] = 0
+                        m_array[observation_array < self.minimum_observations] = 0
 
                     out_rst_object.write_array(m_array, i, j)
 
-        m_info = None
-        b_info = None
+        del m_info, b_info
 
         out_rst_object.close_all()
 
-        out_rst_object = None
+        del out_rst_object
 
-        os.remove(image2mask)
+        os.remove(self.out_image_temp)
 
     def _num_rows_cols(self, pixel_index, block_size, rows_cols):
         return block_size if (pixel_index + block_size) < rows_cols else rows_cols - pixel_index
