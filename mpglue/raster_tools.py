@@ -2231,7 +2231,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
 
         the_hist_pct = (the_hist / self.total_samples) * 100.
 
-        self.value_dict = dict()
+        self.hist_dict = dict()
 
         for i in range(0, bins):
 
@@ -2244,21 +2244,21 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
                     else:
                         label = name_dict[i]
 
-                    self.value_dict[i] = dict(value=i,
+                    self.hist_dict[i] = dict(value=i,
                                               name=label,
                                               count=the_hist[i],
                                               perc=round(the_hist_pct[i], 4))
 
                 else:
 
-                    self.value_dict[i] = dict(value=i,
+                    self.hist_dict[i] = dict(value=i,
                                               count=the_hist[i],
                                               perc=round(the_hist_pct[i], 4))
 
         # Sort the values, largest to smallest
-        self.value_dict = OrderedDict(sorted(self.value_dict.items(),
-                                             key=lambda item: item[1]['count'],
-                                             reverse=True))
+        self.hist_dict = OrderedDict(sorted(self.hist_dict.items(),
+                                            key=lambda item: item[1]['count'],
+                                            reverse=True))
 
     def pca(self, n_components=3):
 
