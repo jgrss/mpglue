@@ -616,28 +616,38 @@ class ArrayHandler(object):
         # for i in xrange(0, array2add.shape[0]):
         #     self.data_storage.append(array2add[i][None])
 
-    def read_array(self, is_3d=False, z=None, i=None, j=None, nz=None, nr=None, nc=None, is_flat=False, d_type='float32'):
+    def read_array(self,
+                   is_3d=False,
+                   z=None,
+                   i=None,
+                   j=None,
+                   nz=None,
+                   nr=None,
+                   nc=None,
+                   is_flat=False,
+                   d_type='float32'):
 
         """
+        Reads an array from a HDF file
+
         Args:
-            is_3d (Optional[bool])
+            is_3d (Optional[bool]): Whether the array is 3-dimensional.
+            z (Optional[int]): The starting index in the 3rd dimension.
+            i (Optional[int or 1d array-like]): The starting row index.
+            j (Optional[int or 1d array-like]): The starting column index.
+            nz (Optional[int]): The number of dimensions to read along the 3rd dimension.
+            nr (Optional[int]): The number of rows to read.
+            nc (Optional[int]): The number of columns to read.
+            is_flat (Optional[bool]): Whether the array is flat, or 1d-like.
+            d_type (Optional[str]): The data type.
         """
-
-        if not isinstance(nz, int):
-            nz = 1
-
-        if not isinstance(nr, int):
-            nr = 1
-
-        if not isinstance(nc, int):
-            nc = 1
 
         if is_3d:
 
             if isinstance(self.group_name, str):
 
                 if not isinstance(z, int):
-                    return self.h5_file.get_node(self.group_name).read()[:].astype(d_type)
+                    return self.h5_file.get_node(self.group_name)[:].astype(d_type)
                 else:
                     return self.h5_file.get_node(self.group_name)[z:z+nz, i:i+nr, j:j+nc].astype(d_type)
 
@@ -656,16 +666,22 @@ class ArrayHandler(object):
                     return self.h5_file.get_node(self.group_name)[i].astype(d_type)
                 else:
 
-                    if isinstance(i, np.ndarray) and not isinstance(j, np.ndarray):
+                    if (isinstance(i, np.ndarray) and isinstance(j, np.ndarray)) or \
+                            (isinstance(i, np.ndarray) or isinstance(j, int)) or \
+                            (isinstance(i, int) or isinstance(j, np.ndarray)):
+
+                        return self.h5_file.get_node(self.group_name)[i, j].astype(d_type)
+
+                    elif isinstance(i, np.ndarray) and not isinstance(j, np.ndarray):
                         return self.h5_file.get_node(self.group_name)[i, :].astype(d_type)
                     elif not isinstance(i, np.ndarray) and isinstance(j, np.ndarray):
                         return self.h5_file.get_node(self.group_name)[:, j].astype(d_type)
                     elif isinstance(i, int) and not isinstance(j, int):
-                        return self.h5_file.get_node(self.group_name)[i:i+nr, :].astype(d_type)
+                        return self.h5_file.get_node(self.group_name).read(start=i, stop=nr).astype(d_type)
                     elif not isinstance(i, int) and isinstance(j, int):
                         return self.h5_file.get_node(self.group_name)[:, j:j+nc].astype(d_type)
                     elif isinstance(i, int) and isinstance(j, int):
-                        return self.h5_file.get_node(self.group_name)[i:i+nr, j:j+nc].astype(d_type)
+                        return self.h5_file.get_node(self.group_name).read(start=i, stop=nr)[:, j:j+nc].astype(d_type)
                     else:
                         return self.h5_file.get_node(self.group_name)[:].astype(d_type)
 
