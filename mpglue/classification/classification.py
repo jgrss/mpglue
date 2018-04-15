@@ -12,10 +12,7 @@ import subprocess
 import ast
 import platform
 import shutil
-from copy import copy#, deepcopy
-# from pathos.multiprocessing import ProcessingPool as Pool
-# import multiprocessing as multi
-# import joblib
+from copy import copy
 import itertools
 from collections import OrderedDict
 import inspect
@@ -26,13 +23,12 @@ import inspect
 # MpGlue
 from .error_matrix import error_matrix
 from ._moving_window import moving_window
-# from mappy.helpers.other.progress_iter import _iteration_parameters
 from .. import raster_tools
 from .. import vector_tools
 from ..helpers import get_path
-from ..errors import logger
+from ..errors import logger, ArrayShapeError
 
-SPFEAS_PATH = get_path()
+MPPATH = get_path()
 
 if sys.version_info[0] != 3:
 
@@ -66,7 +62,6 @@ try:
     from scipy.ndimage.interpolation import zoom
     from scipy.interpolate import interp1d
     from scipy.spatial import distance as sci_dist
-    # from scipy.signal import savgol_filter
 except ImportError:
     raise ImportError('SciPy must be installed')
 
@@ -158,122 +153,8 @@ except:
     # print('Rtree must be installed to use spatial indexing')
     pass
 
-# from numba import jit as numba_jit
-# from parakeet import jit as para_jit
-
 import warnings
 warnings.filterwarnings('ignore')
-
-
-# @numba_jit
-# def predict_opencv_numba3(feas, dims, input_model):
-#
-#     n_feas = dims[0]
-#     rs = dims[1]
-#     cs = dims[2]
-#
-#     # reshape the features
-#     n_samps = rs * cs
-#
-#     out_feas = np.empty(n_samps).astype(np.uint8)
-#
-#     feas = feas.T.reshape(n_samps, n_feas)
-#
-#     for fea_idx in xrange(0, n_samps):
-#
-#         out_feas[fea_idx] = int(input_model(feas[fea_idx]))
-#
-#     return out_feas.reshape(cs, rs).T
-
-
-# @para_jit
-# def predict_opencv_parakeet(feas, dims, scaler, input_model):
-#
-#     n_feas = dims[0]
-#     rs = dims[1]
-#     cs = dims[2]
-#
-#     # reshape the features
-#     n_samps = rs * cs
-#
-#     if isinstance(scaler, str) or scaler:
-#         feas = scaler.transform(feas.T.reshape(n_samps, n_feas))
-#     else:
-#         feas = feas.T.reshape(n_samps, n_feas)
-#
-#     return np.asarray([int(input_model.predict(p_row)) for p_row in feas]).reshape(cs, rs).T
-#
-#
-# @para_jit
-# def predict_opencv_parakeet2(feas, dims, scaler, input_model):
-#
-#     n_feas = dims[0]
-#     rs = dims[1]
-#     cs = dims[2]
-#
-#     # reshape the features
-#     n_samps = rs * cs
-#
-#     if isinstance(scaler, str) or scaler:
-#         feas = scaler.transform(feas.T.reshape(n_samps, n_feas))
-#     else:
-#         feas = feas.T.reshape(n_samps, n_feas)
-#
-#     out_array = np.zeros(n_samps).astype(np.uint8)
-#
-#     for p_row in xrange(0, n_samps):
-#
-#         out_array[p_row] = int(input_model.predict(feas[p_row]))
-#
-#     return out_array
-#
-#
-# @para_jit
-# def predict_opencv_parakeet3(feas, dims, input_model):
-#
-#     n_feas = dims[0]
-#     rs = dims[1]
-#     cs = dims[2]
-#
-#     # reshape the features
-#     n_samps = rs * cs
-#
-#     out_feas = np.empty(n_samps).astype(np.uint8)
-#
-#     feas = feas.T.reshape(n_samps, n_feas)
-#
-#     for fea_idx in xrange(0, n_samps):
-#
-#         out_feas[fea_idx] = int(input_model(feas[fea_idx]))
-#
-#     return out_feas.reshape(cs, rs).T
-
-
-# def _predict_opencv01(features_1d, model_name, predictor):
-#
-#     """
-#     loads the model for each sample
-#
-#     features -- (, n_features) ndarray
-#     model_name -- str
-#         : Full path to the .xml model
-#     predictor -- str
-#         : Name of model ('CVRF', 'CVEX_RF')
-#
-#     Returns
-#     -------
-#     Predicted class label as an integer
-#     """
-#
-#     predictors = {'CVRF': cv2.RTrees(), 'CVEX_RF': cv2.ERTrees()}
-#
-#     model = predictors[predictor]
-#     model.load(model_name)
-#
-#     return int(model.predict(features_1d))
-
-# def predict_cv(arg, **kwarg):
-#     classification.predict_cv(*arg, **kwarg)
 
 
 def _do_c5_cubist_predict(c5_cubist_model, classifier_name, predict_samps, rows_i=None):
@@ -329,27 +210,6 @@ def predict_c5_cubist(input_model, ip):
         return np.array(C50.predict_C5_0(m, newdata=predict_samps.rx(rows_i, True), type='class'), dtype='uint8')
     else:
         return np.array(Cubist.predict_cubist(m, newdata=predict_samps.rx(rows_i, True)), dtype='float32')
-
-
-def predict_scikit_win(feature_sub, input_model):
-
-    """
-    A Scikit-learn prediction function for parallel predictions
-
-    Args:
-        feature_sub (str)
-        input_model (int)
-    """
-
-    if isinstance(input_model, str):
-
-        with open(input_model, 'rb') as p_load:
-            mdl = pickle.load(p_load)[1]
-
-    else:
-        mdl = input_model
-
-    return mdl.predict(feature_sub)
 
 
 def predict_scikit_probas_static(features,
@@ -476,14 +336,6 @@ def predict_scikit(pool_iter):
     """
 
     ip_ = indice_pairs[pool_iter]
-
-    # if isinstance(m, str):
-    #
-    #     with open(m, 'rb') as p_load:
-    #         mdl = pickle.load(p_load)[1]
-    #
-    # else:
-    #     mdl = input_model
 
     return mdl.predict(features[ip_[0]:ip_[0]+ip_[1]])
 
@@ -706,7 +558,9 @@ class Samples(object):
     """
 
     def __init__(self):
+
         self.time_stamp = time.asctime(time.localtime(time.time()))
+        self.sample_info_dict = dict()
 
     def split_samples(self,
                       file_name,
@@ -739,13 +593,13 @@ class Samples(object):
                 samples from the entire set of samples, regardless of which class they are in.
             perc_samp_each (Optional[float]): Percent to sample from each class. Default is 0. *This parameter
                 overrides ``perc_samp`` and forces a percentage of samples from each class.
-            scale_data (Optional[bool]): Whether to scale (normalize) data. Default is False.
+            scale_data (Optional[bool]): Whether to scale (by standardization) data. Default is False.
             class_subs (Optional[dict]): Dictionary of class percentages or number to sample. Default is empty, or None.
                 Example:
                     Sample by percentage = {1:.9, 2:.9, 3:.5}
                     Sample by integer = {1:300, 2:300, 3:150}
             norm_struct (Optional[bool]): Whether the structure of the data is normal. Default is True. 
-                In MapPy's case, normal is (X,Y,Var1,Var2,Var3,Var4,...,VarN,Labels), 
+                In the case of MpGlue, normal is (X,Y,Var1,Var2,Var3,Var4,...,VarN,Labels),
                 whereas the alternative (i.e., False) is (Labels,Var1,Var2,Var3,Var4,...,VarN)
             labs_type (Optional[str]): Read class labels as integer ('int') or float ('float'). Default is 'int'.
             recode_dict (Optional[dict]): A dictionary of classes to recode. Default is {}, or empty dictionary.
@@ -784,9 +638,6 @@ class Samples(object):
         if not isinstance(ignore_feas, list):
             ignore_feas = list()
 
-        # if platform.system() == 'Windows':
-        #     self.file_name = file_name.replace('\\', '/')
-        # else:
         self.file_name = file_name
 
         self.labels_test = None
@@ -1059,10 +910,17 @@ class Samples(object):
         if scale_data:
             self._scale_p_vars()
         else:
+
+            self.scaler = None
             self.scaled = False
 
-    def _stack_samples(self,
-                       counter,
+        self.sample_info_dict['n_feas'] = self.n_feas
+        self.sample_info_dict['n_classes'] = self.n_classes
+        self.sample_info_dict['classes'] = self.classes
+        self.sample_info_dict['scaled'] = self.scaled
+
+    @staticmethod
+    def _stack_samples(counter,
                        test_stk,
                        train_stk,
                        test_samples_temp,
@@ -1857,11 +1715,13 @@ class EndMembers(object):
             http://pysptools.sourceforge.net/nbex_methanol_burner.html
 
         Examples:
-            >>> from mappy.classifiers import classification
-            >>> cl = classification()
+            >>> import mpglue as gl
+            >>>
+            >>> cl = gl.classification()
             >>>
             >>> # remove all classes except the one of interest (here, class 2)
-            >>> cl.split_samples('/land_cover_samples.txt', perc_samp=1.,
+            >>> cl.split_samples('/land_cover_samples.txt',
+            >>>                  perc_samp=1.,
             >>>                  classes2remove=[1, 3, 4, 5, 6],
             >>>                  ignore_feas=[37, 38])
             >>>
@@ -1883,9 +1743,6 @@ class EndMembers(object):
             raise NameError
 
         end_finder = map_methods[method]
-
-        # for an image
-        # image.T.reshape(i_info.rows, i_info.cols, i_info.bands)
 
         self.endmembers = end_finder.extract(self.p_vars.reshape(1, self.n_samps, self.n_feas),
                                              n_members,
@@ -1917,12 +1774,15 @@ class EndMembers(object):
         Examples:
             >>> # An example of automatic endmember extraction for
             >>> #   a chosen class, followed by abundance estimation.
-            >>> from mappy.classifiers import classification
-            >>> cl = classification()
+            >>> import mpglue as gl
+            >>>
+            >>> cl = gl.classification()
             >>>
             >>> # Here we load the samples and remove each class, except 2
-            >>> cl.split_samples('/08N_points_merged_02.txt', perc_samp=1.,
-            >>>                  classes2remove=[1, 3, 4, 5, 6], ignore_feas=[37, 38])
+            >>> cl.split_samples('/08N_points_merged_02.txt',
+            >>>                  perc_samp=1.,
+            >>>                  classes2remove=[1, 3, 4, 5, 6],
+            >>>                  ignore_feas=[37, 38])
             >>>
             >>> # The endmembers for class 2 are automatically extracted.
             >>> cl.extract_endmembers()
@@ -1931,7 +1791,8 @@ class EndMembers(object):
             >>> #   and the <class2keep> parameter is only for masking.
             >>> cl.get_abundance('/subs/08N_all_bands.tif',
             >>>                  '/subs/08N_all_bands_pasture_abundance.tif',
-            >>>                  mask='mask.tif', class2keep=2)
+            >>>                  mask='mask.tif',
+            >>>                  class2keep=2)
         """
 
         try:
@@ -1945,75 +1806,84 @@ class EndMembers(object):
                            ucls=amp.UCLS())
 
         if method not in map_methods:
+
             logger.error('  The {} method is not an option. Choose from fcls, nnls, or ucls.'.format(method))
             raise NameError
 
         mapper = map_methods[method]
 
         # open the input image
-        with raster_tools.ropen(input_image) as i_info:
+        i_info = raster_tools.ropen(input_image)
 
-            arr = i_info.read(bands2open=-1)
+        if i_info.bands <= 1:
 
-            if ignore_feas:
+            logger.error('  The input image must have multiple bands.')
+            raise ArrayShapeError
 
-                ignore_feas = map(int, ignore_feas)
-                arr = np.delete(arr, ignore_feas, axis=0)
+        arr = i_info.read(bands2open=-1)
 
-            arr_dims, arr_rows, arr_cols = arr.shape
+        if ignore_feas:
 
-            self.abundance_maps = mapper.map(arr.T.reshape(arr_rows,
-                                                           arr_cols,
-                                                           arr_dims),
-                                             self.endmembers,
-                                             normalize=True)
+            ignore_feas = map(int, ignore_feas)
+            arr = np.delete(arr, ignore_feas, axis=0)
 
-            r, c, b = self.abundance_maps.shape
+        arr_dims, arr_rows, arr_cols = arr.shape
 
-            self.abundance_maps = self.abundance_maps.reshape(c, r, b).T
+        # Get the abundance maps.
+        self.abundance_maps = mapper.map(arr.T.reshape(arr_rows,
+                                                       arr_cols,
+                                                       arr_dims),
+                                         self.endmembers,
+                                         normalize=True)
 
-            o_info = i_info.copy()
+        r, c, b = self.abundance_maps.shape
 
-            o_info.update_info(bands=1,
-                               storage='float32',)
+        self.abundance_maps = self.abundance_maps.reshape(c, r, b).T
 
-            if isinstance(mask, str):
+        o_info = i_info.copy()
 
-                d_name, f_name = os.path.split(out_image)
-                f_base, f_ext = os.path.splitext(f_name)
+        o_info.update_info(bands=1,
+                           storage='float32',)
 
-                out_img_not_masked = os.path.join(d_name, '{}_not_masked{}'.format(f_base, f_ext))
+        if isinstance(mask, str):
 
-                raster_tools.write2raster(self.abundance_maps[1],
-                                          out_img_not_masked,
-                                          o_info=o_info,
-                                          flush_final=True)
+            d_name, f_name = os.path.split(out_image)
+            f_base, f_ext = os.path.splitext(f_name)
 
-            else:
+            out_img_not_masked = os.path.join(d_name, '{}_not_masked{}'.format(f_base, f_ext))
 
-                raster_tools.write2raster(self.abundance_maps[1],
-                                          out_image,
-                                          o_info=o_info,
-                                          flush_final=True)
+            raster_tools.write2raster(self.abundance_maps[1],
+                                      out_img_not_masked,
+                                      o_info=o_info,
+                                      flush_final=True)
 
-            if isinstance(mask, str):
+        else:
 
-                with raster_tools.ropen(out_img_not_masked) as a_info, raster_tools.ropen(mask) as m_info:
+            raster_tools.write2raster(self.abundance_maps[1],
+                                      out_image,
+                                      o_info=o_info,
+                                      flush_final=True)
 
-                    a_arr = a_info.read()
-                    m_arr = m_info.read()
+        if isinstance(mask, str):
 
-                del a_info, m_info
+            with raster_tools.ropen(out_img_not_masked) as a_info, raster_tools.ropen(mask) as m_info:
 
-                a_arr[m_arr != class2keep] = 0
+                a_arr = a_info.read()
+                m_arr = m_info.read()
 
-                raster_tools.write2raster(a_arr,
-                                          out_image,
-                                          o_info=o_info,
-                                          flush_final=True)
+            del a_info, m_info
 
-            # plt.imshow(amaps.reshape(c, r, b).T[1])
-            # plt.show()
+            a_arr[m_arr != class2keep] = 0
+
+            raster_tools.write2raster(a_arr,
+                                      out_image,
+                                      o_info=o_info,
+                                      flush_final=True)
+
+        # plt.imshow(amaps.reshape(c, r, b).T[1])
+        # plt.show()
+
+        i_info.close()
 
         del i_info
 
@@ -2031,8 +1901,9 @@ class Visualization(object):
         Visualize time series data in parallel coordinates style
 
         Examples:
-            >>> from mappy.classifiers import classification
-            >>> cl = classification()
+            >>> import mpglue as gl
+            >>>
+            >>> cl = gl.classification()
             >>>
             >>> cl.split_samples('/samples.txt', perc_samp_each=.5)
             >>> cl.vis_parallel_coordinates()
@@ -2085,8 +1956,9 @@ class Visualization(object):
                 labels are the class values.
 
         Examples:
-            >>> from mappy.classifiers import classification
-            >>> cl = classification()
+            >>> import mpglue as gl
+            >>>
+            >>> cl = gl.classification()
             >>>
             >>> cl.split_samples('/samples.txt')
             >>> cl.vis_dimensionality_reduction(n_components=3)
@@ -2216,8 +2088,9 @@ class Visualization(object):
                 labels are the class values.
 
         Examples:
-            >>> from mappy.classifiers import classification
-            >>> cl = classification()
+            >>> import mpglue as gl
+            >>>
+            >>> cl = gl.classification()
             >>>
             >>> cl.split_samples('/samples.txt', classes2remove=[1, 4],
             >>>                  class_subs={2:.1, 5:.01, 8:.1, 9:.9})
@@ -2339,8 +2212,9 @@ class Visualization(object):
                 several classifiers (2).
 
         Examples:
-            >>> from mappy.classifiers import classification
-            >>> cl = classification()
+            >>> import mpglue as gl
+            >>>
+            >>> cl = gl.classification()
             >>>
             >>> # load 100% of the samples and scale the data
             >>> cl.split_samples('/samples.txt', scale_data=True, perc_samp=1.)
@@ -2594,8 +2468,9 @@ class Visualization(object):
             show_raw (Optional[bool]): Whether to plot the raw data points. Default is False.
 
         Examples:
-            >>> from mappy.classifiers import classification
-            >>> cl = classification()
+            >>> import mpglue as gl
+            >>>
+            >>> cl = gl.classification()
             >>>
             >>> cl.split_samples('/samples.txt', classes2remove=[1, 4],
             >>>                  class_subs={2:.1, 5:.01, 8:.1, 9:.9})
@@ -3083,7 +2958,7 @@ class Preprocessing(object):
 
             PickleIt.dump(weights_out, compare_samples.replace('.txt', '_w.txt'))
 
-    def _index_samples(self, base_samples, id_label='Id', x_label='X', y_label='Y'):
+    def _index_samples(self, base_samples, x_label='X', y_label='Y'):
 
         """
         Indexes samples into a RTree database
@@ -3191,8 +3066,9 @@ class Preprocessing(object):
             locate_only (Optional[bool]): Whether to locate and do not remove outliers. Default is False.
 
         Examples:
-            >>> from mappy.classifiers import classification
-            >>> cl = classification()
+            >>> import mpglue as gl
+            >>>
+            >>> cl = gl.classification()
             >>>
             >>> # Get predictive variables and class labels data.
             >>>
@@ -3297,8 +3173,9 @@ class Preprocessing(object):
 
         Examples:
             >>> # create the classifier object
-            >>> from mappy.classifiers import classification
-            >>> cl = classification()
+            >>> import mpglue as gl
+            >>>
+            >>> cl = gl.classification()
             >>>
             >>> # get predictive variables and class labels data, sampling 100%
             >>> # the unknown samples should have a class value of -1
@@ -3363,7 +3240,8 @@ class Preprocessing(object):
 
 class ModelOptions(object):
 
-    def model_options(self):
+    @staticmethod
+    def model_options():
 
         return """\
 
@@ -3460,10 +3338,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
     A class for image sampling and classification
 
     Example:
-        >>> from mappy.classifiers import classification
+        >>> import mpglue as gl
         >>>
         >>> # Create the classification object.
-        >>> cl = classification()
+        >>> cl = gl.classification()
         >>>
         >>> # Open land cover samples and split
         >>> #   into train and test datasets.
@@ -3535,8 +3413,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         Examples:
             >>> # create the classifier object
-            >>> from mappy.classifiers import classification
-            >>> cl = classification()
+            >>> import mpglue as gl
+            >>>
+            >>> cl = gl.classification()
             >>>
             >>> # get predictive variables and class labels data
             >>> cl.split_samples('/samples.txt')
@@ -3726,7 +3605,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             try:
 
                 # self.classifier_info, self.model = self.load(self.input_model)
-                self.classifier_info, self.model = joblib.load(self.input_model)
+                self.classifier_info, self.model, self.sample_info_dict = joblib.load(self.input_model)
 
             except:
 
@@ -4593,7 +4472,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     # self.dump([self.classifier_info, self.model], self.output_model)
 
                     joblib.dump([self.classifier_info,
-                                 self.model],
+                                 self.model,
+                                 self.sample_info_dict],
                                 self.output_model,
                                 protocol=-1)
 
@@ -4609,7 +4489,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     # self.dump([self.classifier_info, self.model], self.output_model)
 
                     joblib.dump([self.classifier_info,
-                                 self.model],
+                                 self.model,
+                                 self.sample_info_dict],
                                 self.output_model,
                                 protocol=-1)
 
@@ -4774,7 +4655,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             output_image (str): The output image.
             additional_layers (Optional[list]): A list of additional images (layers) that are not part
                 of ``input_image``.
-            scale_data (Optional[bool]): Whether to scale data. Default is False.
+            scale_data (Optional[bool or str]): Whether to scale (standardize) the data. In this case, a `scaler`
+                object must be present. Otherwise, `scale_data` can be a string pointing to a scaler object to load
+                from file. Default is False.
             band_check (Optional[int]): The band to check for 'no data'. Default is -1, or do not perform check. 
             bands2open (Optional[list]): A list of bands to open, otherwise opens all bands. Default is None.
             ignore_feas (Optional[list]): A list of features (band layers) to ignore. Default is an empty list,
@@ -5123,9 +5006,26 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 out_raster_object.fill(0)
 
         if isinstance(self.scale_data, str):
+
+            if not os.path.isfile(self.scale_data):
+
+                logger.error('  The scaler must be an existing file if given as a string.')
+                raise OSError
+
+            # Load a standardization scaler from file.
             self.scaler = self.load(self.scale_data)
-        elif not self.scale_data:
-            self.scaler = False
+
+        else:
+
+            if self.scale_data:
+
+                if not hasattr(self, 'scaler'):
+
+                    logger.error('  The scaler attribute must exist')
+                    raise AttributeError
+
+            else:
+                self.scaler = None
 
         block_rows, block_cols = raster_tools.block_dimensions(rows,
                                                                cols,
@@ -5304,8 +5204,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             if self.use_xy:
 
+                # Create x,y coordinates for the block.
                 self._create_indices(iw, jw, rw, cw)
 
+                # Append the x,y coordinates to the features.
                 features = np.hstack((features,
                                       self.x_coordinates.ravel()[:, np.newaxis],
                                       self.y_coordinates.ravel()[:, np.newaxis]))
@@ -5753,7 +5655,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         os.remove(self.out_image_temp)
 
-    def _num_rows_cols(self, pixel_index, block_size, rows_cols):
+    @staticmethod
+    def _num_rows_cols(pixel_index, block_size, rows_cols):
         return block_size if (pixel_index + block_size) < rows_cols else rows_cols - pixel_index
 
     def _get_feas(self, img_obj_list, i, j, n_rows, n_cols):
@@ -5823,7 +5726,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         self.y_coordinates = np.tile(self.y_coordinates, n_cols)
 
-    def _get_slope(self, elevation_array, pad=50):
+    @staticmethod
+    def _get_slope(elevation_array, pad=50):
 
         elevation_array = cv2.copyMakeBorder(elevation_array, pad, pad, pad, pad, cv2.BORDER_REFLECT)
 
@@ -5925,8 +5829,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             None, plots results.
 
         Examples:
-            >>> from mappy.classifiers import classification
-            >>> cl = classification()
+            >>> import mpglue as gl
+            >>>
+            >>> cl = gl.classification()
             >>>
             >>> cl.split_samples('/samples.txt', perc_samp=1.)
             >>> cl.construct_model(classifier_info={'classifier': 'RF', 'trees': 500})
@@ -6185,8 +6090,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             additional_features (Optional[list]): Additional features. Default is [].
 
         Examples:
-            >>> from mappy.classifiers import classification
-            >>> cl = classification()
+            >>> import mpglue as gl
+            >>>
+            >>> cl = gl.classification()
             >>>
             >>> cl.add_variable_names(['NDVI', 'EVI2', 'GNDVI', 'NDWI', 'NDBaI'],
             >>>                       ['min', 'max', 'median', 'cv', 'jd', 'slopemx', 'slopemn'],
@@ -6218,7 +6124,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         for k, v in self.variable_names.iteritems():
             logger.info(k, v)
 
-    def sub_feas(self, input_image, out_img, band_list=[]):
+    def sub_feas(self, input_image, out_img, band_list=None):
 
         """
         Subsets features. 
@@ -6233,8 +6139,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             None, writes to ``out_img``.
 
         Examples:
-            >>> from mappy.classifiers import classification
-            >>> cl = classification()
+            >>> import mpglue as gl
+            >>>
+            >>> cl = gl.classification()
             >>>
             >>> cl.split_samples('/samples.txt', scale_data=True)
             >>> cl.rank_feas(rank_method='chi2', top_feas=.2)
@@ -6259,10 +6166,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             os.makedirs(d_name)
 
         if 'vrt' not in f_ext.lower():
+
             out_img_orig = copy(out_img)
             out_img = '%s/%s.vrt' % (d_name, f_base)
 
         if not band_list:
+
             # create the band list
             band_list = ''
             for fea_idx in self.ranked_feas:
@@ -6567,8 +6476,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             >>> # find the optimal parameters (max depth, min samps, trees)
             >>> # randomly sampling 50% (with replacement) and testing on the 50% set aside
             >>> # repeat 5 (k_folds) times and average the results
-            >>> from mappy.classifiers import classification
-            >>> cl = classification()
+            >>> import mpglue as gl
+            >>>
+            >>> cl = gl.classification()
             >>>
             >>> # Find the optimum parameters for an Extremely Randomized Forest.
             >>> cl.optimize_parameters('/samples.txt',
@@ -6582,7 +6492,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             >>>                        use_xy=True, method='f1', f1_class=0)
             >>>
             >>> # Optimizing C5 parameters
-            >>> from mappy.classifiers import classification_r
+            >>> from mpglue.classifiers import classification_r
+            >>>
             >>> cl = classification_r()
             >>>
             >>> df = cl.optimize_parameters('/samples.txt', classifier_info={'classifier': 'C5'},
@@ -6762,8 +6673,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             None, writes results to ``out_img``.
 
         Examples:
-            >>> from mappy.classifiers import classification
-            >>> cl = classification()
+            >>> import mpglue as gl
+            >>>
+            >>> cl = gl.classification()
             >>>
             >>> cl.split_samples('/samples.txt', scale_data=True)
             >>>
@@ -6864,7 +6776,8 @@ class classification_r(classification):
     Class interface to R C5/Cubist
 
     Examples:
-        >>> from mappy.classifiers import classification_r
+        >>> from mpglue.classifiers import classification_r
+        >>>
         >>> cl = classification_r()
         >>>
         >>> # load the samples
@@ -7298,7 +7211,7 @@ class classification_r(classification):
 
             # self.mapC5_dir = os.path.realpath('../helpers/mapC5')
             # python_home = 'C:/Python27/ArcGIS10.1/Lib/site-packages'
-            self.mapC5_dir = os.path.join(SPFEAS_PATH, 'helpers/mapC5')
+            self.mapC5_dir = os.path.join(MPPATH, 'helpers/mapC5')
 
             # copy the mapC5 files to the model directory
             self._copy_mapC5(tree_model)
@@ -8147,6 +8060,7 @@ def main():
 
     logger.info('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
                 (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
+
 
 if __name__ == '__main__':
     main()
