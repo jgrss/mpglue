@@ -2156,6 +2156,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
         out_ds = None
 
     def hist(self,
+             input_array=None,
              band=1,
              i=0,
              j=0,
@@ -2170,6 +2171,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
         Prints the image histogram
 
         Args:
+            input_array (Optional[2d array]): An array to get the histogram from, otherwise, open the array.
             band (Optional[int]): The band to get the histogram from.
             i (Optional[int]): The starting row position.
             j (Optional[int]): The starting column position.
@@ -2199,7 +2201,13 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
         if 'range' not in kwargs:
             kwargs['range'] = (0, bins-1)
 
-        if hasattr(self, 'array'):
+        if isinstance(input_array, np.ndarray):
+
+            the_hist, bin_edges = np.histogram(input_array,
+                                               bins=bins,
+                                               **kwargs)
+
+        elif hasattr(self, 'array') and not isinstance(input_array, np.ndarray):
 
             the_hist, bin_edges = np.histogram(self.array,
                                                bins=bins,
@@ -2216,7 +2224,11 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
                                                bins=bins,
                                                **kwargs)
 
-        self.total_samples = float(the_hist.sum())
+        if kwargs['range'][0] == 0:
+            self.total_samples = float(the_hist[1:].sum())
+        else:
+            self.total_samples = float(the_hist.sum())
+
         the_hist_pct = (the_hist / self.total_samples) * 100.
 
         self.value_dict = dict()
