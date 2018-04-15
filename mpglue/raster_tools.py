@@ -2195,7 +2195,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
             >>> i_info.hist()
             >>>
             >>> # Print the histogram dictionary.
-            >>> print(i_info.value_dict)
+            >>> print(i_info.hist_dict)
         """
 
         if 'range' not in kwargs:
