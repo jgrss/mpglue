@@ -558,9 +558,7 @@ class Samples(object):
     """
 
     def __init__(self):
-
         self.time_stamp = time.asctime(time.localtime(time.time()))
-        self.sample_info_dict = dict()
 
     def split_samples(self,
                       file_name,
@@ -654,6 +652,8 @@ class Samples(object):
 
         self.class_idx = None
         self.clear_idx = None
+
+        self.sample_info_dict = dict()
 
         # Open the data samples.
         if isinstance(self.file_name, str):
