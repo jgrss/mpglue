@@ -4475,6 +4475,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                  self.model,
                                  self.sample_info_dict],
                                 self.output_model,
+                                compress=('zlib', 5),
                                 protocol=-1)
 
                 except:
@@ -4492,6 +4493,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                  self.model,
                                  self.sample_info_dict],
                                 self.output_model,
+                                compress=('zlib', 5),
                                 protocol=-1)
 
                 except:
