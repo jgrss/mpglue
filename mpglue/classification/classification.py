@@ -3382,7 +3382,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         out_stats=None,
                         stats_from_image=False,
                         calibrate_proba=False,
-                        be_quiet=False):
+                        be_quiet=False,
+                        compress_model=False):
 
         """
         Loads, trains, and saves a predictive model.
@@ -3410,6 +3411,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 is False.
             calibrate_proba (Optional[bool]): Whether to calibrate posterior probabilities with a sigmoid
                 calibration. Default is False.
+            be_quiet (Optional[bool]): Whether to be quiet and do not print to screen. Default is False.
+            compress_model (Optional[bool]): Whether to compress the model. Default is False.
 
         Examples:
             >>> # create the classifier object
@@ -3461,6 +3464,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.calibrate_proba = calibrate_proba
         self.class_weight = class_weight
         self.be_quiet = be_quiet
+        self.compress_model = compress_model
 
         self.calibrated = False
 
@@ -4469,13 +4473,17 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     self.model.save(self.output_model)
 
                     # Dump the parameters to a text file.
-                    # self.dump([self.classifier_info, self.model], self.output_model)
+
+                    if self.compress_model:
+                        compress = ('zlib', 5)
+                    else:
+                        compress = 0
 
                     joblib.dump([self.classifier_info,
                                  self.model,
                                  self.sample_info_dict],
                                 self.output_model,
-                                compress=('zlib', 5),
+                                compress=compress,
                                 protocol=-1)
 
                 except:
@@ -4487,13 +4495,16 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 try:
 
-                    # self.dump([self.classifier_info, self.model], self.output_model)
+                    if self.compress_model:
+                        compress = ('zlib', 5)
+                    else:
+                        compress = 0
 
                     joblib.dump([self.classifier_info,
                                  self.model,
                                  self.sample_info_dict],
                                 self.output_model,
-                                compress=('zlib', 5),
+                                compress=compress,
                                 protocol=-1)
 
                 except:
