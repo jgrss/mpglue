@@ -100,10 +100,10 @@ def get_console_dict():
 
 def setup_package():
 
-    if platform.system() != 'Windows':
-        include_dirs = [np.get_include()]
-    else:
-        include_dirs = None
+    # if platform.system() != 'Windows':
+    include_dirs = [np.get_include()]
+    # else:
+    #     include_dirs = None
 
     metadata = dict(name=mappy_name,
                     maintainer=maintainer,
