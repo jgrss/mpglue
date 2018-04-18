@@ -535,8 +535,8 @@ cdef void draw_optimum_line(Py_ssize_t y0,
             # Increase
             elif y1 > track_y:
 
-               if ii_ < 0:
-                   continue
+                if ii_ < 0:
+                    continue
 
             # Decrease
             else:
