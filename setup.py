@@ -100,10 +100,10 @@ def get_console_dict():
 
 def setup_package():
 
-    # if platform.system() != 'Windows':
-    include_dirs = [np.get_include()]
-    # else:
-    #     include_dirs = None
+    if platform.system() != 'Windows':
+        include_dirs = [np.get_include()]
+    else:
+        include_dirs = None
 
     metadata = dict(name=mappy_name,
                     maintainer=maintainer,
@@ -115,8 +115,7 @@ def setup_package():
                     author=author_file,
                     packages=get_packages(),
                     package_data=get_package_data(),
-                    ext_modules=cythonize(get_pyx_list(),
-                                          include_dirs=[np.get_include()]),
+                    ext_modules=cythonize(get_pyx_list()),
                     cmdclass=dict(build_ext=build_ext),
                     zip_safe=False,
                     download_url=git_url,
