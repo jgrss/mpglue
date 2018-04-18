@@ -4237,7 +4237,7 @@ cdef np.ndarray[DTYPE_float32_t, ndim=2] pixel_continuity(DTYPE_float32_t[:, ::1
                         line_dev = _get_line_straightness(rcc,
                                                           rc_length)
 
-                out_array[i+half_window, j+half_window] = line_dev
+                out_array[i+half_window, j+half_window] = 1.0 - (max_line_length / float(window_size))
 
     return np.float32(out_array)
 
