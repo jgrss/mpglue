@@ -86,7 +86,7 @@ cdef inline DTYPE_float32_t _nogil_get_max(DTYPE_float32_t a, DTYPE_float32_t b)
     return a if a >= b else b
 
 
-cdef inline DTYPE_float32_t int_max(DTYPE_float32_t a, DTYPE_float32_t b) nogil:
+cdef inline unsigned int int_max(unsigned int a, unsigned int b) nogil:
     return a if a >= b else b
 
 
@@ -480,7 +480,8 @@ cdef void draw_optimum_line(Py_ssize_t y0,
                             Py_ssize_t x1,
                             DTYPE_float32_t[:, ::1] rc_,
                             DTYPE_float32_t[:, ::1] resistance,
-                            DTYPE_int16_t[::1] draw_indices) nogil:
+                            DTYPE_int16_t[::1] draw_indices,
+                            DTYPE_float32_t min_check) nogil:
 
     """
     Draws a line along the route of least resistance
@@ -625,6 +626,13 @@ cdef void draw_optimum_line(Py_ssize_t y0,
 
         if line_counter >= rrows:
             break
+
+        # Check if the minimum difference is
+        #   greater than the minimum allowed.
+        if min_check != -999.0:
+
+            if min_diff > min_check:
+                break
 
     # Ensure the last coordinate
     #   is the line end.
@@ -932,14 +940,14 @@ cdef DTYPE_float32_t _get_max(DTYPE_float32_t[:, ::1] block,
             for jj in range(0, window_j):
 
                 if block[ii, jj] != ignore_value:
-                    su = int_max(block[ii, jj], su)
+                    su = _nogil_get_max(block[ii, jj], su)
 
     else:
 
         for ii in range(0, window_i):
             for jj in range(0, window_j):
 
-                su = int_max(block[ii, jj], su)
+                su = _nogil_get_max(block[ii, jj], su)
 
     return su
 
@@ -1524,7 +1532,7 @@ cdef void _link_endpoints(DTYPE_uint8_t[:, ::1] edge_block,
 
                                 # Draw a line along the path
                                 #   of least resistance.
-                                draw_optimum_line(center, center, ii, jj, rcc_, gradient_block, draw_indices)
+                                draw_optimum_line(center, center, ii, jj, rcc_, gradient_block, draw_indices, -999.0)
 
                             # Get the current line length.
                             rc_length_ = <int>rcc_[2, 0]
@@ -4045,6 +4053,195 @@ cdef DTYPE_float32_t[:, ::1] _edge_tracker(DTYPE_float32_t[:, ::1] edge_block,
     return edge_block
 
 
+cdef DTYPE_float32_t _get_line_straightness(DTYPE_float32_t[:, ::1] rcc_, unsigned int n) nogil:
+
+    cdef:
+        Py_ssize_t ii
+        DTYPE_float32_t x_avg = 0.0
+        DTYPE_float32_t y_avg = 0.0
+        DTYPE_float32_t var_x = 0.0
+        DTYPE_float32_t cov_xy = 0.0
+        DTYPE_float32_t temp, slope, intercept
+        DTYPE_float32_t alpha_sum = 0.0
+        DTYPE_float32_t[::1] x_ = rcc_[0, :n]
+        DTYPE_float32_t[::1] y_ = rcc_[1, :n]
+
+    for ii in range(0, n):
+
+        x_avg += x_[ii]
+        y_avg += y_[ii]
+
+    x_avg /= n
+    y_avg /= n
+
+    for ii in range(0, n):
+
+        temp = x_[ii] - x_avg
+        var_x += _pow(temp, 2.0)
+        cov_xy += temp * (y_[ii] - y_avg)
+
+    slope = cov_xy / var_x
+
+    intercept = y_avg - slope*x_avg
+
+    # Get the deviation between the original and fitted data.
+    for ii in range(0, n):
+        alpha_sum += _abs((y_[ii] - slope*x_[ii] - intercept) / _sqrt(1.0 + _pow(slope, 2.0)))
+
+    # slope*x + intercept
+
+    return alpha_sum
+
+
+cdef np.ndarray[DTYPE_float32_t, ndim=2] pixel_continuity(DTYPE_float32_t[:, ::1] image_array,
+                                                          unsigned int window_size,
+                                                          DTYPE_float32_t min_thresh):
+
+    """
+    Calculates continuity from a center pixel
+    """
+
+    cdef:
+        Py_ssize_t i, j, ii, jj
+
+        unsigned int rows = image_array.shape[0]
+        unsigned int cols = image_array.shape[1]
+
+        unsigned int half_window = <int>(window_size / 2.)
+        unsigned int row_dims = rows - (half_window * 2)
+        unsigned int col_dims = cols - (half_window * 2)
+
+        DTYPE_float32_t[:, ::1] gradient_block
+        DTYPE_int16_t[::1] draw_indices = np.array([-1, 0, 1], dtype='int16')
+
+        DTYPE_float32_t[:, ::1] rcc = np.zeros((3, window_size*2), dtype='float32')
+        unsigned int rc_length, max_line_length, max_line_length_
+        DTYPE_float32_t line_dev
+
+        DTYPE_float32_t[:, ::1] out_array = np.zeros((rows, cols), dtype='float32')
+
+    with nogil:
+
+        for i in range(0, row_dims):
+
+            for j in range(0, col_dims):
+
+                gradient_block = image_array[i:i+window_size, j:j+window_size]
+
+                max_line_length = 0
+                line_dev = 0.0
+
+                # Get the longest line in the window.
+
+                ii = 0
+                for jj in range(0, window_size):
+
+                    draw_optimum_line(half_window,
+                                      half_window,
+                                      ii,
+                                      jj,
+                                      rcc,
+                                      gradient_block,
+                                      draw_indices,
+                                      min_thresh)
+
+                    # Get the current line length.
+                    rc_length = <int>rcc[2, 0]
+
+                    max_line_length_ = int_max(max_line_length, rc_length)
+
+                    if max_line_length_ > max_line_length:
+
+                        max_line_length = max_line_length_
+
+                        # Fit least squares and find the
+                        #   deviation from the fit.
+                        line_dev = _get_line_straightness(rcc,
+                                                          rc_length)
+
+                jj = 0
+                for ii in range(0, window_size):
+
+                    draw_optimum_line(half_window,
+                                      half_window,
+                                      ii,
+                                      jj,
+                                      rcc,
+                                      gradient_block,
+                                      draw_indices,
+                                      min_thresh)
+
+                    # Get the current line length.
+                    rc_length = <int>rcc[2, 0]
+
+                    max_line_length_ = int_max(max_line_length, rc_length)
+
+                    if max_line_length_ > max_line_length:
+
+                        max_line_length = max_line_length_
+
+                        # Fit least squares and find the
+                        #   deviation from the fit.
+                        line_dev = _get_line_straightness(rcc,
+                                                          rc_length)
+
+                ii = window_size - 1
+                for jj in range(0, window_size):
+
+                    draw_optimum_line(half_window,
+                                      half_window,
+                                      ii,
+                                      jj,
+                                      rcc,
+                                      gradient_block,
+                                      draw_indices,
+                                      min_thresh)
+
+                    # Get the current line length.
+                    rc_length = <int>rcc[2, 0]
+
+                    max_line_length_ = int_max(max_line_length, rc_length)
+
+                    if max_line_length_ > max_line_length:
+
+                        max_line_length = max_line_length_
+
+                        # Fit least squares and find the
+                        #   deviation from the fit.
+                        line_dev = _get_line_straightness(rcc,
+                                                          rc_length)
+
+                jj = window_size - 1
+                for ii in range(0, window_size):
+
+                    draw_optimum_line(half_window,
+                                      half_window,
+                                      ii,
+                                      jj,
+                                      rcc,
+                                      gradient_block,
+                                      draw_indices,
+                                      min_thresh)
+
+                    # Get the current line length.
+                    rc_length = <int>rcc[2, 0]
+
+                    max_line_length_ = int_max(max_line_length, rc_length)
+
+                    if max_line_length_ > max_line_length:
+
+                        max_line_length = max_line_length_
+
+                        # Fit least squares and find the
+                        #   deviation from the fit.
+                        line_dev = _get_line_straightness(rcc,
+                                                          rc_length)
+
+                out_array[i+half_window, j+half_window] = line_dev
+
+    return np.float32(out_array)
+
+
 cdef np.ndarray[DTYPE_float32_t, ndim=2] egm_morph(DTYPE_float32_t[:, ::1] image_array,
                                                    unsigned int window_size,
                                                    DTYPE_float32_t diff_thresh,
@@ -4733,6 +4930,7 @@ def moving_window(np.ndarray image_array not None,
                          'edge-direction',
                          'egm-morph',
                          'extend-endpoints',
+                         'continuity',
                          'duda',
                          'fill-basins',
                          'fill-peaks',
@@ -4785,6 +4983,12 @@ def moving_window(np.ndarray image_array not None,
                          window_size,
                          diff_thresh,
                          force_line)
+
+    elif statistic == 'continuity':
+
+        return pixel_continuity(np.float32(np.ascontiguousarray(image_array)),
+                                window_size,
+                                diff_thresh)
 
     elif statistic == 'saliency':
 
