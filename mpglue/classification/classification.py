@@ -461,6 +461,18 @@ class ParameterHandler(object):
             self.valid_params = ['kernel', 'optimizer', 'n_restarts_optimizer', 'max_iter_predict',
                                  'warm_start', 'copy_X_train', 'random_state', 'multi_class', 'n_jobs']
 
+        elif classifier == 'SVMc':
+
+            self.valid_params = ['C', 'kernel', 'degree', 'gamma', 'coef0', 'shrinking', 'probability',
+                                 'tol', 'cache_size', 'class_weight', 'verbose', 'max_iter',
+                                 'decision_function_shape', 'random_state']
+
+        elif classifier == 'SVMnu':
+
+            self.valid_params = ['nu', 'kernel', 'degree', 'gamma', 'coef0', 'shrinking', 'probability',
+                                 'tol', 'cache_size', 'class_weight', 'verbose', 'max_iter',
+                                 'decision_function_shape', 'random_state']
+
         elif classifier in ['ChainCRF', 'GridCRF']:
 
             self.valid_params = ['max_iter', 'C', 'n_jobs', 'show_loss_every',
@@ -3311,17 +3323,17 @@ class ModelOptions(object):
         CVMLP -- Feed-forward, artificial neural network, multi-layer perceptrons in OpenCV (classification problems)
               {classifier:CVMLP}
         SVMc  -- C-support Support Vector Machine (classification problems)
-              {classifier:SVMc,C:1,g:1.}
+              {classifier:SVMc,C:1,kernel:'rbf',g:1/n_feas}
         SVMcR -- C-support Support Vector Machine (regression problems)
-              {classifier:SVMcR,C:1,g:1.}
+              {classifier:SVMcR,C:1,g:1/n_feas}
         SVMnu -- Nu-support Support Vector Machine (classification problems)
-              {classifier:SVMnu,C:1,g:1.}
+              {classifier:SVMnu,C:1,kernel:'rbf',g:1/n_feas}
         CVSVM -- Support Vector Machine in OpenCV (classification problems)
-              {classifier:CVSVM,C:1,g:1.}
+              {classifier:CVSVM,C:1,g:1.0}
         CVSVMA-- Support Vector Machine, auto-tuned in OpenCV (classification problems)
               {classifier:CVSVMA}
         CVSVMR-- Support Vector Machine in OpenCV (regression problems)
-              {classifier:CVSVMR,C:1,g:1.}
+              {classifier:CVSVMR,C:1,g:1.0}
         CVSVMRA-- Support Vector Machine, auto-tuned in OpenCV (regression problems)
               {classifier:CVSVMRA}
         QDA   -- Quadratic Discriminant Analysis (classification problems)
@@ -3385,7 +3397,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         stats_from_image=False,
                         calibrate_proba=False,
                         be_quiet=False,
-                        compress_model=False):
+                        compress_model=False,
+                        view_calibration=None,
+                        fig_location=None):
 
         """
         Loads, trains, and saves a predictive model.
@@ -3415,6 +3429,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 calibration. Default is False.
             be_quiet (Optional[bool]): Whether to be quiet and do not print to screen. Default is False.
             compress_model (Optional[bool]): Whether to compress the model. Default is False.
+            view_calibration (Optional[int]): View the calibrated probabilities of class `view_calibration`.
+                Default is None.
+            fig_location (Optional[str]): The location to save the `view_calibration` figure. Default is None.
 
         Examples:
             >>> # create the classifier object
@@ -3467,8 +3484,20 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.class_weight = class_weight
         self.be_quiet = be_quiet
         self.compress_model = compress_model
+        self.view_calibration = view_calibration
+        self.fig_location = fig_location
 
         self.calibrated = False
+
+        if isinstance(self.view_calibration, int):
+
+            if not isinstance(self.fig_location, str):
+
+                logger.error('  The output figure location must be given with `view_calibration`.')
+                raise TypeError
+
+            if not os.path.isdir(self.fig_location):
+                os.makedirs(self.fig_location)
 
         if isinstance(self.input_model, str):
 
@@ -3879,49 +3908,100 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     logger.info('  Calibrating a {MODEL} model ...'.format(MODEL=classifier))
 
-                    if isinstance(self.sample_weight, np.ndarray):
+                    if self.n_samps >= 1000:
 
-                        # Check if the model supports sample weights.
-                        argi = inspect.getargspec(voting_sub_model.fit)
+                        cal_model = calibration.CalibratedClassifierCV(base_estimator=voting_sub_model,
+                                                                       method='isotonic',
+                                                                       cv=3)
 
-                        if 'sample_weight' in argi.args:
+                    else:
 
-                            voting_sub_model.fit(self.p_vars,
-                                                 self.labels,
-                                                 sample_weight=self.sample_weight)
+                        cal_model = calibration.CalibratedClassifierCV(base_estimator=voting_sub_model,
+                                                                       method='sigmoid',
+                                                                       cv=3)
+
+                    # Calibrate the model.
+                    cal_model.fit(self.p_vars,
+                                  self.labels,
+                                  sample_weight=self.sample_weight)
+
+                    if isinstance(self.view_calibration, int):
+
+                        logger.info('  Fitting a {MODEL} model ...'.format(MODEL=classifier))
+
+                        if isinstance(self.sample_weight, np.ndarray):
+
+                            # Check if the model supports sample weights.
+                            argi = inspect.getargspec(voting_sub_model.fit)
+
+                            if 'sample_weight' in argi.args:
+
+                                voting_sub_model.fit(self.p_vars,
+                                                     self.labels,
+                                                     sample_weight=self.sample_weight)
+
+                            else:
+
+                                voting_sub_model.fit(self.p_vars,
+                                                     self.labels)
 
                         else:
 
                             voting_sub_model.fit(self.p_vars,
                                                  self.labels)
 
-                    else:
+                        from sklearn.calibration import calibration_curve
 
-                        voting_sub_model.fit(self.p_vars,
-                                             self.labels)
+                        # Plot the calibrated probabilities.
 
-                    if self.n_samps >= 1000:
+                        cal_prob_pos = cal_model.predict_proba(self.p_vars_test)[:, self.view_calibration-1]
+                        uncal_prob_pos = voting_sub_model.predict_proba(self.p_vars_test)[:, self.view_calibration-1]
 
-                        cal_model = calibration.CalibratedClassifierCV(voting_sub_model,
-                                                                       method='isotonic')
+                        cal_fraction_of_positives, cal_mean_predicted_value = calibration_curve(self.labels_test,
+                                                                                                cal_prob_pos,
+                                                                                                n_bins=10)
 
-                    else:
+                        uncal_fraction_of_positives, uncal_mean_predicted_value = calibration_curve(self.labels_test,
+                                                                                                    uncal_prob_pos,
+                                                                                                    n_bins=10)
 
-                        cal_model = calibration.CalibratedClassifierCV(voting_sub_model,
-                                                                       method='sigmoid')
+                        ax = plt.figure().add_subplot(111)
 
-                    # Fit the calibrated model
-                    cal_model.fit(self.p_vars_test,
-                                  self.labels_test)
+                        ax.plot(cal_mean_predicted_value,
+                                cal_fraction_of_positives,
+                                's-',
+                                c='blue',
+                                label='{}, label {:d}, calibrated'.format(classifier, self.view_calibration))
+
+                        ax.plot(uncal_mean_predicted_value,
+                                uncal_fraction_of_positives,
+                                's-',
+                                c='red',
+                                label='{}, label {:d}, Uncalibrated'.format(classifier, self.view_calibration))
+
+                        plt.tight_layout(pad=0.1)
+
+                        out_fig = os.path.join(self.fig_location,
+                                               '{}_{:d}_calibration.png'.format(classifier,
+                                                                                self.view_calibration))
+
+                        logger.info('  Calibration curves saved to {}'.format(out_fig))
+
+                        plt.savefig(out_fig, dpi=300)
+
+                        sys.exit()
 
                     # Update the voting list.
-                    classifier_list[ci] = (classifier, cal_model)
+                    classifier_list[ci] = (classifier, copy(cal_model))
 
                 else:
 
                     logger.info('  Fitting a {MODEL} model ...'.format(MODEL=classifier))
 
-                    if isinstance(self.sample_weight, np.ndarray):
+                    # Check if the model supports sample weights.
+                    argi = inspect.getargspec(voting_sub_model.fit)
+
+                    if 'sample_weight' in argi.args:
 
                         voting_sub_model.fit(self.p_vars,
                                              self.labels,
@@ -3933,7 +4013,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                              self.labels)
 
                     # Update the voting list.
-                    classifier_list[ci] = (classifier, voting_sub_model)
+                    classifier_list[ci] = (classifier, copy(voting_sub_model))
 
                 ci += 1
 
