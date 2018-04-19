@@ -106,7 +106,7 @@ try:
     from sklearn.preprocessing import StandardScaler
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.linear_model import LogisticRegression
-    from sklearn.svm import SVC
+    from sklearn import svm
     from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis as QDA
     from sklearn.naive_bayes import GaussianNB
     from sklearn.covariance import EllipticEnvelope
@@ -364,7 +364,7 @@ def get_available_models():
             'EX_RF', 'CVEX_RF', 'EX_RFR',
             'Logistic', 'NN', 'Gaussian',
             'RF', 'CVGBoost', 'CVRF', 'RFR', 'CVMLP',
-            'SVM', 'SVMR', 'CVSVM', 'CVSVMA', 'CVSVR', 'CVSVRA', 'QDA',
+            'SVMc', 'SVMnu', 'SVMcR', 'CVSVM', 'CVSVMA', 'CVSVR', 'CVSVRA', 'QDA',
             'ChainCRF', 'GridCRF']
 
 
@@ -2264,7 +2264,7 @@ class Visualization(object):
 
                 clf2 = ExtraTreesClassifier(**self.classifier_info_rf)
 
-            elif classifier_info['classifier'] == 'SVM':
+            elif classifier_info['classifier'] == 'SVMc':
 
                 clf1 = SVC(gamma=classifier_info['gamma'], C=classifier_info['C'])
                 clf2 = SVC(gamma=classifier_info['gamma'], C=C2)
@@ -3310,10 +3310,12 @@ class ModelOptions(object):
               *Scikit-learn
         CVMLP -- Feed-forward, artificial neural network, multi-layer perceptrons in OpenCV (classification problems)
               {classifier:CVMLP}
-        SVM   -- Support Vector Machine (classification problems)
-              {classifier:SVM,C:1,g:1.}
-        SVMR  -- Support Vector Machine (regression problems)
-              {classifier:SVMR,C:1,g:1.}
+        SVMc  -- C-support Support Vector Machine (classification problems)
+              {classifier:SVMc,C:1,g:1.}
+        SVMcR -- C-support Support Vector Machine (regression problems)
+              {classifier:SVMcR,C:1,g:1.}
+        SVMnu -- Nu-support Support Vector Machine (classification problems)
+              {classifier:SVMnu,C:1,g:1.}
         CVSVM -- Support Vector Machine in OpenCV (classification problems)
               {classifier:CVSVM,C:1,g:1.}
         CVSVMA-- Support Vector Machine, auto-tuned in OpenCV (classification problems)
@@ -3627,7 +3629,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                          trials=10,
                          max_depth=25,
                          min_samples_split=2,
-                         learning_rate=.1,
+                         learning_rate=0.1,
+                         C=1.0,
+                         nu=0.5,
+                         kernel='rbf',
                          n_jobs=-1)
 
         # Check if model parameters are set,
@@ -3636,7 +3641,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         if 'classifier' not in self.classifier_info:
             self.classifier_info['classifier'] = 'RF'
 
-        if self.classifier_info['classifier'].startswith('AB_'):
+        if self.classifier_info['classifier'].startswith('AB_') or self.classifier_info['classifier'].startswith('Bag_'):
 
             class_base = copy(self.classifier_info['classifier'])
 
@@ -3856,6 +3861,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 elif classifier == 'Gaussian':
                     voting_sub_model = GaussianProcessClassifier(**self.classifier_info_)
 
+                elif classifier == 'SVMc':
+                    voting_sub_model = svm.SVC(**self.classifier_info_)
+
+                elif classifier == 'SVMnu':
+                    voting_sub_model = svm.NuSVC(**self.classifier_info_)
+
                 else:
 
                     logger.warning('  The model, {MODEL}, is not supported'.format(MODEL=classifier))
@@ -4066,9 +4077,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 self.model = ensemble.GradientBoostingRegressor(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'SVM':
+            elif self.classifier_info['classifier'] == 'SVMc':
 
-                self.model = SVC(**self.classifier_info_)
+                self.model = svm.SVC(**self.classifier_info_)
+
+            elif self.classifier_info['classifier'] == 'SVMnu':
+
+                self.model = svm.NuSVC(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'QDA':
 
@@ -4309,6 +4324,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         """Trains a model and saves to file if prompted"""
 
         if not self.be_quiet:
+
+            if not hasattr(self, 'n_samps'):
+                self.n_samps = self.p_vars.shape[0]
+
+            if not hasattr(self, 'n_feas'):
+                self.n_feas = self.p_vars.shape[1]
 
             if self.classifier_info['classifier'][0].lower() in 'aeiou':
                 a_or_an = 'an'
