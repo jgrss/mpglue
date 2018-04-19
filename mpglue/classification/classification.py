@@ -4043,10 +4043,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 self.model = cv2.ml.DTrees_create()
 
-            # elif self.classifier_info['classifier'] in ['CVEX_RF', 'CVEX_RFR']:
-            #
-            #     self.model = cv2.ERTrees()
-
             elif self.classifier_info['classifier'] in ['CVRF', 'CVRFR']:
 
                 if not self.get_probs:
@@ -4313,22 +4309,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         # Set algorithm parameters for OpenCV models.
         #############################################
 
-        # if self.classifier_info['classifier'] == 'Boost':
-        #
-        #     # GBTREES_SQUARED_LOSS, GBTREES_ABSOLUTE_LOSS, GBTREES_HUBER_LOSS, GBTREES_DEVIANCE_LOSS
-        #     self.parameters = dict(loss_function_type=cv2.GBTREES_HUBER_LOSS,
-        #                            subsample_portion=.05,
-        #                            weak_count=self.classifier_info['trees'],
-        #                            max_depth=self.classifier_info['max_depth'])
-
-        if self.classifier_info['classifier'] == 'CART':
-
-            self.parameters = dict(max_depth=self.classifier_info['max_depth'],
-                                   min_sample_count=self.classifier_info['min_samps'],
-                                   use_surrogates=self.var_imp,
-                                   term_crit=(cv2.TERM_CRITERIA_MAX_ITER, self.classifier_info['trees'], .1))
-
-        elif self.classifier_info['classifier'] in ['CVRF', 'CVEX_RF']:
+        if self.classifier_info['classifier'] in ['CART', 'CVRF', 'CVEX_RF']:
 
             self.model.setMaxDepth(self.classifier_info['max_depth'])
             self.model.setMinSampleCount(self.classifier_info['min_samps'])
@@ -4340,14 +4321,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 self.model.setPriors(self.classifier_info['priors'])
             
             self.model.setTruncatePrunedTree(self.classifier_info['truncate'])
-
-            # self.parameters = dict(max_depth=self.classifier_info['max_depth'],
-            #                        min_sample_count=self.classifier_info['min_sample_count'],
-            #                        calc_var_importance=self.classifier_info['calc_var_importance'],
-            #                        nactive_vars=self.classifier_info['nactive_vars'],
-            #                        term_crit=self.classifier_info['term_crit'])
-
-            # termcrit_type=cv2.TERM_CRITERIA_MAX_ITER)    # cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_MAX_ITER
 
         elif self.classifier_info['classifier'] == 'CVMLP':
 
@@ -4377,7 +4350,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         elif self.classifier_info['classifier'] == 'CVSVMA':
 
             # SVM, parameters optimized
-            self.parameters = dict(kernel_type=cv2.ml.SVM_RBF, svm_type=cv2.ml.SVM_C_SVC)
+            self.parameters = dict(kernel_type=cv2.ml.SVM_RBF,
+                                   svm_type=cv2.ml.SVM_C_SVC)
 
         elif self.classifier_info['classifier'] == 'CVSVMR':
 
@@ -4392,7 +4366,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         elif self.classifier_info['classifier'] == 'CVSVMRA':
 
             # SVM regression, parameters optimized
-            self.parameters = dict(kernel_type=cv2.ml.SVM_RBF, svm_type=cv2.ml.SVM_NU_SVR,
+            self.parameters = dict(kernel_type=cv2.ml.SVM_RBF,
+                                   svm_type=cv2.ml.SVM_NU_SVR,
                                    nu=self.classifier_info['nu'])
 
         else:
@@ -4429,28 +4404,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         # OpenCV tree-based models
         if self.classifier_info['classifier'] in ['CART', 'CVRF', 'CVEX_RF']:
-
-            ## first, run the model with all features to get the importance
-            ## then, re-train the model with the desired feature subset
-            # if isinstance(self.rank_method, str):
-
-                ## it is necessary to train a RF model to get the feature importance
-                ## however, this can be skipped if the features are ranked with 'chi2'
-                # if 'RF' in self.rank_method:
-                    # self.model.train(self.p_vars, cv2.CV_ROW_SAMPLE, self.labels, params=self.parameters)
-
-                # rank the features
-                # self.rank_feas(rank_method=self.rank_method, top_feas=self.top_feas)
-
-                # self.model.train(self.p_vars, cv2.CV_ROW_SAMPLE, self.labels, varIdx=self.ranked_feas-1,
-                #                  params=self.parameters)
-
-            # if self.get_probs:
-            #
-            #     self.model = RandomForestClassifier(n_estimators=self.classifier_info['trees'],
-            #                                         min_samples_split=self.classifier_info['min_samps'],
-            #                                         max_depth=self.classifier_info['max_depth'],
-            #                                         n_jobs=-1).fit(self.p_vars, self.labels)
 
             self.model.train(self.p_vars, 0, self.labels)
             # self.model.train(self.p_vars, cv2.CV_ROW_SAMPLE, self.labels, params=self.parameters)
