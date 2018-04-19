@@ -642,6 +642,13 @@ class ArrayHandler(object):
             d_type (Optional[str]): The data type.
         """
 
+        dtype_dict = dict(uint8=np.uint8,
+                          uint16=np.uint16,
+                          float32=np.float32,
+                          float64=np.float64)
+
+        dtype_func = dtype_dict[d_type]
+
         if is_3d:
 
             if isinstance(self.group_name, str):
@@ -663,42 +670,96 @@ class ArrayHandler(object):
             if isinstance(self.group_name, str):
 
                 if is_flat:
-                    return self.h5_file.get_node(self.group_name)[i].astype(d_type)
+                    return dtype_func(self.h5_file.get_node(self.group_name)[i])
                 else:
 
-                    if (isinstance(i, np.ndarray) and isinstance(j, np.ndarray)) or \
-                            (isinstance(i, np.ndarray) or isinstance(j, int)) or \
-                            (isinstance(i, int) or isinstance(j, np.ndarray)):
-
-                        return self.h5_file.get_node(self.group_name)[i, j].astype(d_type)
-
-                    elif isinstance(i, np.ndarray) and not isinstance(j, np.ndarray):
-                        return self.h5_file.get_node(self.group_name)[i, :].astype(d_type)
-                    elif not isinstance(i, np.ndarray) and isinstance(j, np.ndarray):
-                        return self.h5_file.get_node(self.group_name)[:, j].astype(d_type)
-                    elif isinstance(i, int) and not isinstance(j, int):
-                        return self.h5_file.get_node(self.group_name).read(start=i, stop=nr).astype(d_type)
-                    elif not isinstance(i, int) and isinstance(j, int):
-                        return self.h5_file.get_node(self.group_name)[:, j:j+nc].astype(d_type)
-                    elif isinstance(i, int) and isinstance(j, int):
-                        return self.h5_file.get_node(self.group_name).read(start=i, stop=nr)[:, j:j+nc].astype(d_type)
+                    if (i is None) and (j is None):
+                        return dtype_func(self.h5_file.get_node(self.group_name)[:])
                     else:
-                        return self.h5_file.get_node(self.group_name)[:].astype(d_type)
+
+                        if isinstance(i, np.ndarray):
+
+                            if isinstance(j, np.ndarray) or isinstance(j, int):
+                                return dtype_func(self.h5_file.get_node(self.group_name)[i, j])
+                            else:
+                                return dtype_func(self.h5_file.get_node(self.group_name)[i, :])
+
+                        elif isinstance(i, int):
+
+                            if isinstance(nr, int):
+
+                                if isinstance(nc, int):
+                                    return dtype_func(self.h5_file.get_node(self.group_name)(start=i, stop=nr)[:, j:j+nc])
+                                else:
+                                    return dtype_func(self.h5_file.get_node(self.group_name)(start=i, stop=nr)[:, j])
+
+                            else:
+
+                                if isinstance(nc, int):
+                                    return dtype_func(self.h5_file.get_node(self.group_name)[i, j:j+nc])
+                                else:
+                                    return dtype_func(self.h5_file.get_node(self.group_name)[i, j])
+
+                        elif isinstance(j, np.ndarray):
+
+                            if isinstance(i, np.ndarray) or isinstance(i, int):
+                                return dtype_func(self.h5_file.get_node(self.group_name)[i, j])
+                            else:
+                                return dtype_func(self.h5_file.get_node(self.group_name)[:, j])
+
+                        elif isinstance(j, int):
+
+                            if isinstance(nc, int):
+
+                                if isinstance(nr, int):
+                                    return dtype_func(self.h5_file.get_node(self.group_name)[:, j:j+nc])
+                                else:
+                                    return dtype_func(self.h5_file.get_node(self.group_name)(start=i, stop=nr)[:, j])
+
+                            else:
+
+                                if isinstance(nc, int):
+                                    return dtype_func(self.h5_file.get_node(self.group_name)[i, j:j + nc])
+                                else:
+                                    return dtype_func(self.h5_file.get_node(self.group_name)[i, j])
+
+                        else:
+
+                            if isinstance(j, np.ndarray) or isinstance(j, int):
+                                return dtype_func(self.h5_file.get_node(self.group_name)[:, j])
+                            else:
+                                return dtype_func(self.h5_file.get_node(self.group_name).read())
 
             else:
 
-                if isinstance(i, np.ndarray) and not isinstance(j, np.ndarray):
-                    return self.h5_file.root.data[i, :].astype(d_type)
-                elif not isinstance(i, np.ndarray) and isinstance(j, np.ndarray):
-                    return self.h5_file.root.data[:, j].astype(d_type)
-                elif isinstance(i, int) and not isinstance(j, int):
-                    return self.h5_file.root.data[i:i+nr, :].astype(d_type)
-                elif not isinstance(i, int) and isinstance(j, int):
-                    return self.h5_file.root.data[:, j:j+nc].astype(d_type)
-                elif isinstance(i, int) and isinstance(j, int):
-                    return self.h5_file.root.data[i:i+nr, j:j+nc].astype(d_type)
+                if is_flat:
+                    return dtype_func(self.h5_file.root.data[i])
                 else:
-                    return self.h5_file.root.data[:].astype(d_type)
+
+                    if (i is None) and (j is None):
+                        return dtype_func(self.h5_file.root.data[:])
+                    else:
+
+                        if isinstance(i, np.ndarray):
+
+                            if isinstance(j, np.ndarray) or isinstance(j, int):
+                                return dtype_func(self.h5_file.root.data[i, j])
+                            else:
+                                return dtype_func(self.h5_file.root.data[i, :])
+
+                        elif isinstance(i, int):
+
+                            if not isinstance(nr, int):
+                                raise TypeError('The `nr` parameter must be given with i as int.')
+
+                            return dtype_func(self.h5_file.root.data(start=i, stop=nr)[:, j])
+
+                        else:
+
+                            if isinstance(j, np.ndarray) or isinstance(j, int):
+                                return dtype_func(self.h5_file.root.data[:, j])
+                            else:
+                                return dtype_func(self.h5_file.root.data[:])
 
     def _set_filter(self, **kwargs):
 
