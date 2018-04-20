@@ -1314,7 +1314,7 @@ class RTreeManager(object):
                                                           top=en[3],
                                                           right=en[1],
                                                           bottom=en[2]),
-                                              utm='-999')
+                                              utm='1')
 
             del bdy_info, bdy_feature, bdy_geometry
 
