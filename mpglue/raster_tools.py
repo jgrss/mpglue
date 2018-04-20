@@ -3532,6 +3532,7 @@ def _merge_dicts(dict1, dict2):
 def warp(input_image,
          output_image,
          out_epsg=None,
+         out_proj4=None,
          in_epsg=None,
          in_proj4=None,
          resample='nearest',
@@ -3548,6 +3549,7 @@ def warp(input_image,
         input_image (str): The image to warp.
         output_image (str): The output image.
         out_epsg (Optional[int]): The output EPSG projection code.
+        out_proj4 (Optional[str]): The output proj4 projection code.
         in_epsg (Optional[int]): An input EPSG code. Default is None.
         in_proj4 (Optional[str]): An input projection string. Default is None.
         resample (Optional[str]): The resampling method. Default is 'nearest'.
@@ -3581,13 +3583,14 @@ def warp(input_image,
 
     if isinstance(out_epsg, int):
         out_epsg = 'EPSG:{:d}'.format(out_epsg)
+    elif isinstance(out_proj4, str):
+        out_epsg = '"{}"'.format(out_proj4)
 
     in_proj = None
 
     if isinstance(in_epsg, int):
         in_proj = 'EPSG:{:d}'.format(in_epsg)
-
-    if isinstance(in_proj4, str):
+    elif isinstance(in_proj4, str):
         in_proj = in_proj4
 
     if cell_size == 0:
