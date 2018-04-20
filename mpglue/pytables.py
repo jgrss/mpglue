@@ -67,7 +67,7 @@ class SensorInfo(tables.IsDescription):
     jd = tables.UInt16Col()
     jdr = tables.UInt32Col()
     utm = tables.UInt8Col()
-    latitude = tables.StringCol(1)
+    latitude = tables.StringCol(2)
     grid = tables.StringCol(2)
     bands = tables.UInt16Col()
     projection = tables.StringCol(1000)
@@ -1068,7 +1068,7 @@ class manage_pytables(BaseHandler):
                 self.year = year_date[:4]
                 self.date = year_date[4:8]
 
-            elif 'mcd' in self.image_info.filename.lower():
+            elif self.image_info.filename.lower().startswith('mod') or self.image_info.filename.lower().startswith('myd'):
 
                 try:
                     int(self.f_base[self.f_base.find('.') + 1])
