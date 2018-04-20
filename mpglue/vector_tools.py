@@ -1234,13 +1234,14 @@ class RTreeManager(object):
 
     """A class to handle nearest neighbor lookups and spatial intersections with RTree"""
 
-    def __init__(self, base_shapefile=None, file2pickle=None):
+    def __init__(self, base_shapefile=None, file2pickle=None, do_not_pickle=False):
 
         """
         Args:
             base_shapefile (Optional[str]): The base shapefile that will be checked for intersecting features.
                 Default is None, which uses the global MGRS grid.
-            file2pickle (str): A file to pickle.
+            file2pickle (Optional[str])): A file to pickle.
+            do_not_pickle (Optional[bool])
         """
 
         if not rtree_installed:
@@ -1288,22 +1289,53 @@ class RTreeManager(object):
 
         del bdy_info, bdy_feature, bdy_geometry
 
-        if isinstance(file2pickle, str):
-            self.field_dict = PickleIt().load(file2pickle)
+        if do_not_pickle:
+
+            self.field_dict = dict()
+
+            # Setup the RTree index database.
+            with vopen(self.base_shapefile_) as bdy_info:
+
+                # Iterate over each feature.
+                for f in range(0, bdy_info.n_feas):
+
+                    bdy_feature = bdy_info.lyr.GetFeature(f)
+                    latitude = bdy_feature.GetField('Latitude')
+                    grid = bdy_feature.GetField('Grid')
+                    name = bdy_feature.GetField('Name')
+
+                    bdy_geometry = bdy_feature.GetGeometryRef()
+                    en = bdy_geometry.GetEnvelope()
+
+                    self.field_dict[f] = dict(latitude=latitude,
+                                              grid=grid,
+                                              name=name,
+                                              extent=dict(left=en[0],
+                                                          top=en[3],
+                                                          right=en[1],
+                                                          bottom=en[2]),
+                                              utm='')
+
+            del bdy_info, bdy_feature, bdy_geometry
+
         else:
 
-            # Load the RTree info for the MGRS global grid.
-            mgrs_info = os.path.join(MAIN_PATH.replace('mpglue', 'mappy'),
-                                     'utilities',
-                                     'sentinel',
-                                     'utm_grid_info.pickle')
+            if isinstance(file2pickle, str):
+                self.field_dict = PickleIt().load(file2pickle)
+            else:
 
-            if not os.path.isfile(mgrs_info):
+                # Load the RTree info for the MGRS global grid.
+                mgrs_info = os.path.join(MAIN_PATH.replace('mpglue', 'mappy'),
+                                         'utilities',
+                                         'sentinel',
+                                         'utm_grid_info.pickle')
 
-                logger.error('The MGRS global grid information file does not exist.')
-                raise NameError
+                if not os.path.isfile(mgrs_info):
 
-            self.field_dict = PickleIt().load(mgrs_info)
+                    logger.error('The MGRS global grid information file does not exist.')
+                    raise NameError
+
+                self.field_dict = PickleIt().load(mgrs_info)
 
     def get_intersecting_features(self,
                                   shapefile2intersect=None,
