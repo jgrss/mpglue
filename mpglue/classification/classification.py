@@ -5524,7 +5524,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                               i=i-iwo)
 
                                 del predictions
-                                
+
                             else:
 
                                 out_raster_object.write_array(
