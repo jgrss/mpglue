@@ -221,6 +221,7 @@ def predict_scikit_probas_static(features,
                                  n_rows,
                                  n_cols,
                                  morphology,
+                                 do_not_morph,
                                  plr_matrix,
                                  plr_window_size):
 
@@ -235,6 +236,7 @@ def predict_scikit_probas_static(features,
         n_rows (int)
         n_cols (int)
         morphology (bool)
+        do_not_morph (int list)
         plr_matrix (2d array)
         plr_window_size (int)
     """
@@ -263,18 +265,46 @@ def predict_scikit_probas_static(features,
 
     if morphology:
 
-        return pymorph.closerec(pymorph.closerec(predictions,
-                                                 Bdil=pymorph.secross(r=3),
-                                                 Bc=pymorph.secross(r=1)),
-                                Bdil=pymorph.secross(r=2),
-                                Bc=pymorph.secross(r=1))[ipadded:ipadded+n_rows,
-                                                         jpadded:jpadded+n_cols]
+        if isinstance(do_not_morph, list):
+
+            predictions_copy = predictions[ipadded:ipadded+n_rows,
+                                           jpadded:jpadded+n_cols].copy()
+
+            predictions = pymorph.closerec(pymorph.closerec(predictions,
+                                                            Bdil=pymorph.secross(r=3),
+                                                            Bc=pymorph.secross(r=1)),
+                                           Bdil=pymorph.secross(r=2),
+                                           Bc=pymorph.secross(r=1))[ipadded:ipadded+n_rows,
+                                                                    jpadded:jpadded+n_cols]
+
+            for do_not_morph_value in do_not_morph:
+                predictions[predictions_copy == do_not_morph_value] = do_not_morph_value
+
+            return predictions
+
+        else:
+
+            return pymorph.closerec(pymorph.closerec(predictions,
+                                                     Bdil=pymorph.secross(r=3),
+                                                     Bc=pymorph.secross(r=1)),
+                                    Bdil=pymorph.secross(r=2),
+                                    Bc=pymorph.secross(r=1))[ipadded:ipadded+n_rows,
+                                                             jpadded:jpadded+n_cols]
 
     else:
         return predictions[ipadded:ipadded+n_rows, jpadded:jpadded+n_cols]
 
 
-def predict_scikit_probas(rw, cw, ipadded, jpadded, n_rows, n_cols, morphology, plr_matrix, plr_window_size):
+def predict_scikit_probas(rw,
+                          cw,
+                          ipadded,
+                          jpadded,
+                          n_rows,
+                          n_cols,
+                          morphology,
+                          do_not_morph,
+                          plr_matrix,
+                          plr_window_size):
 
     """
     A function to get posterior probabilities from Scikit-learn models
@@ -287,6 +317,7 @@ def predict_scikit_probas(rw, cw, ipadded, jpadded, n_rows, n_cols, morphology, 
         n_rows (int)
         n_cols (int)
         morphology (bool)
+        do_not_morph (int list)
         plr_matrix (2d array)
         plr_window_size (int)
     """
@@ -315,12 +346,30 @@ def predict_scikit_probas(rw, cw, ipadded, jpadded, n_rows, n_cols, morphology, 
 
     if morphology:
 
-        return pymorph.closerec(pymorph.closerec(predictions,
-                                                 Bdil=pymorph.secross(r=3),
-                                                 Bc=pymorph.secross(r=1)),
-                                Bdil=pymorph.secross(r=2),
-                                Bc=pymorph.secross(r=1))[ipadded:ipadded+n_rows,
-                                                         jpadded:jpadded+n_cols]
+        if isinstance(do_not_morph, list):
+
+            predictions_copy = predictions[ipadded:ipadded+n_rows, jpadded:jpadded+n_cols].copy()
+
+            predictions = pymorph.closerec(pymorph.closerec(predictions,
+                                                            Bdil=pymorph.secross(r=3),
+                                                            Bc=pymorph.secross(r=1)),
+                                           Bdil=pymorph.secross(r=2),
+                                           Bc=pymorph.secross(r=1))[ipadded:ipadded+n_rows,
+                                                                    jpadded:jpadded+n_cols]
+
+            for do_not_morph_value in do_not_morph:
+                predictions[predictions_copy == do_not_morph_value] = do_not_morph_value
+
+            return predictions
+
+        else:
+
+            return pymorph.closerec(pymorph.closerec(predictions,
+                                                     Bdil=pymorph.secross(r=3),
+                                                     Bc=pymorph.secross(r=1)),
+                                    Bdil=pymorph.secross(r=2),
+                                    Bc=pymorph.secross(r=1))[ipadded:ipadded+n_rows,
+                                                             jpadded:jpadded+n_cols]
 
     else:
         return predictions[ipadded:ipadded+n_rows, jpadded:jpadded+n_cols]
@@ -4635,7 +4684,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                       relax_probabilities=False,
                       plr_window_size=5,
                       plr_matrix=None,
-                      morphology=False):
+                      morphology=False,
+                      do_not_morph=None):
 
         """
         Makes predictions on an array
@@ -4649,6 +4699,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             plr_matrix (Optional[2d array]): The class compatibility matrix. Default is None.
             morphology (Optional[bool]): Whether to apply image morphology to the predicted classes.
                 Default is False.
+            do_not_morph (Optional[int list]): A list of classes not to morph with `morphology=True`. Default is None.
 
         Returns:
             Predictions as a 2d array
@@ -4676,6 +4727,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                     rows,
                                                     cols,
                                                     morphology,
+                                                    do_not_morph,
                                                     plr_matrix,
                                                     plr_window_size)
 
@@ -4712,6 +4764,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 write2blocks=False,
                 block_range=None,
                 morphology=False,
+                do_not_morph=None,
                 **kwargs):
 
         """
@@ -4761,6 +4814,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 or start at the first block.
             morphology (Optional[bool]): Whether to apply image morphology to the predicted classes.
                 Default is False.
+            do_not_morph (Optional[int list]): A list of classes not to morph with `morphology=True`. Default is None.
             kwargs (Optional): Image read options passed to `mpglue.raster_tools.ropen.read`.
             
         Returns:
@@ -4824,6 +4878,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.write2blocks = write2blocks
         self.block_range = block_range
         self.morphology = morphology
+        self.do_not_morph = do_not_morph
         self.kwargs = kwargs
 
         if self.n_jobs == -1:
@@ -5387,6 +5442,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                                             n_rows,
                                                                             n_cols,
                                                                             self.morphology,
+                                                                            self.do_not_morph,
                                                                             self.plr_matrix,
                                                                             self.plr_window_size),
                                                       j=j-jwo,
@@ -5444,15 +5500,42 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         # Write the predictions to file.
                         if self.morphology:
 
-                            out_raster_object.write_array(
-                                pymorph.closerec(pymorph.closerec(mdl.predict(features).reshape(rw, cw),
-                                                                  Bdil=pymorph.secross(r=3),
-                                                                  Bc=pymorph.secross(r=1)),
-                                                 Bdil=pymorph.secross(r=2),
-                                                 Bc=pymorph.secross(r=1))[ipadded:ipadded+n_rows,
-                                                                          jpadded:jpadded+n_cols],
-                                j=j-jwo,
-                                i=i-iwo)
+                            if isinstance(self.do_not_morph, list):
+
+                                predictions = mdl.predict(features).reshape(rw, cw)
+
+                                predictions_copy = predictions[ipadded:ipadded+n_rows,
+                                                               jpadded:jpadded+n_cols].copy()
+
+                                predictions = pymorph.closerec(pymorph.closerec(predictions,
+                                                                                Bdil=pymorph.secross(r=3),
+                                                                                Bc=pymorph.secross(r=1)),
+                                                               Bdil=pymorph.secross(r=2),
+                                                               Bc=pymorph.secross(r=1))[ipadded:ipadded+n_rows,
+                                                                                        jpadded:jpadded+n_cols]
+
+                                for do_not_morph_value in self.do_not_morph:
+                                    predictions[predictions_copy == do_not_morph_value] = do_not_morph_value
+
+                                del predictions_copy
+
+                                out_raster_object.write_array(predictions,
+                                                              j=j-jwo,
+                                                              i=i-iwo)
+
+                                del predictions
+                                
+                            else:
+
+                                out_raster_object.write_array(
+                                    pymorph.closerec(pymorph.closerec(mdl.predict(features).reshape(rw, cw),
+                                                                      Bdil=pymorph.secross(r=3),
+                                                                      Bc=pymorph.secross(r=1)),
+                                                     Bdil=pymorph.secross(r=2),
+                                                     Bc=pymorph.secross(r=1))[ipadded:ipadded+n_rows,
+                                                                              jpadded:jpadded+n_cols],
+                                    j=j-jwo,
+                                    i=i-iwo)
 
                         else:
 
@@ -5460,6 +5543,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                                                         n_cols),
                                                           j=j-jwo,
                                                           i=i-iwo)
+
+            del features
 
             # Close the block file.
             if self.write2blocks:
