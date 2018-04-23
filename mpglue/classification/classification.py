@@ -4507,9 +4507,15 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         else:
 
             if isinstance(self.sample_weight, np.ndarray):
-                self.model.fit(self.p_vars, self.labels, sample_weight=self.sample_weight)
+
+                self.model.fit(self.p_vars,
+                               self.labels,
+                               sample_weight=self.sample_weight)
+
             else:
-                self.model.fit(self.p_vars, self.labels)
+
+                self.model.fit(self.p_vars,
+                               self.labels)
 
             if self.calibrate_proba:
 
@@ -4519,53 +4525,36 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 if hasattr(self.model, 'feature_importances_'):
                     feature_importances_ = copy(self.model.feature_importances_)
 
-                # clf_probs = self.model.predict_proba(self.p_vars_test)
-
-                if self.n_samps >= 1000:
-                    self.model = calibration.CalibratedClassifierCV(self.model, method='isotonic', cv='prefit')
-                else:
-                    self.model = calibration.CalibratedClassifierCV(self.model, method='sigmoid', cv='prefit')
-
-                # Limit the test size.
-                samp_thresh = 5000
-                if self.p_vars_test.shape[0] > samp_thresh:
-
-                    pdf = pd.DataFrame(self.p_vars_test)
-                    pdf['GROUP'] = self.labels_test
-
-                    n_groups = len(pdf.GROUP.unique())
-
-                    group_samps = int(float(samp_thresh) / n_groups)
-
-                    dfg = pdf.groupby('GROUP', group_keys=False).apply(lambda xr_: xr_.sample(min(len(xr_),
-                                                                                                  group_samps)))
-
-                    idx = dfg.index.values.ravel()
-
-                    self.model.fit(self.p_vars_test[idx], self.labels_test[idx])
-
-                else:
-                    self.model.fit(self.p_vars_test, self.labels_test)
+                # if self.n_samps >= 1000:
+                #     self.model = calibration.CalibratedClassifierCV(self.model, method='isotonic', cv='prefit')
+                # else:
+                #     self.model = calibration.CalibratedClassifierCV(self.model, method='sigmoid', cv='prefit')
+                #
+                # # Limit the test size.
+                # samp_thresh = 5000
+                # if self.p_vars_test.shape[0] > samp_thresh:
+                #
+                #     pdf = pd.DataFrame(self.p_vars_test)
+                #     pdf['GROUP'] = self.labels_test
+                #
+                #     n_groups = len(pdf.GROUP.unique())
+                #
+                #     group_samps = int(float(samp_thresh) / n_groups)
+                #
+                #     dfg = pdf.groupby('GROUP', group_keys=False).apply(lambda xr_: xr_.sample(min(len(xr_),
+                #                                                                                   group_samps)))
+                #
+                #     idx = dfg.index.values.ravel()
+                #
+                #     self.model.fit(self.p_vars_test[idx], self.labels_test[idx])
+                #
+                # else:
+                #     self.model.fit(self.p_vars_test, self.labels_test)
 
                 if isinstance(feature_importances_, np.ndarray):
                     self.model.feature_importances_ = feature_importances_
 
                 self.calibrated = True
-
-                # clf_probs_cal = self.model_.predict_proba(self.p_vars_test)
-                #
-                # import matplotlib.pyplot as plt
-                #
-                # plt.figure(0)
-                # colors = ['r', 'g', 'b', 'orange', 'purple', 'green', 'yellow', 'black', 'cyan', 'magenta', 'gray']
-                # for i in range(clf_probs.shape[0]):
-                #     plt.arrow(clf_probs[i, 0], clf_probs[i, 1],
-                #               clf_probs_cal[i, 0] - clf_probs[i, 0],
-                #               clf_probs_cal[i, 1] - clf_probs[i, 1],
-                #               color=colors[self.labels_test[i]], head_width=1e-2)
-                #
-                # plt.show()
-                # sys.exit()
 
         if isinstance(self.output_model, str):
 
