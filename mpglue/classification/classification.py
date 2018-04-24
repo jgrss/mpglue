@@ -3407,10 +3407,11 @@ class VotingClassifier(object):
         weights (Optional[list, 1d array-like): The estimator weights.
     """
 
-    def __init__(self, estimators, weights=None):
+    def __init__(self, estimators, weights=None, class_list=None):
 
         self.estimators = estimators
         self.weights = weights
+
         self.is_prefit_model = True
 
         if isinstance(self.weights, list):
@@ -3424,8 +3425,12 @@ class VotingClassifier(object):
             logger.error('  The length of the weights must match the length of the estimators.')
             raise ArrayShapeError
 
-        self.classes_ = self.estimators[0][1].classes_
-        self.n_classes_ = self.estimators[0][1].n_classes_
+        self.classes_ = class_list
+
+        if isinstance(self.classes_, np.ndarray) or isinstance(self.classes_, list):
+            self.n_classes_ = len(self.classes_)
+        else:
+            self.n_classes_ = 0
 
     def predict(self, X):
 
@@ -4174,7 +4179,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             #                                        weights=vote_weights)
 
             self.model = VotingClassifier(estimators=classifier_list,
-                                          weights=vote_weights)
+                                          weights=vote_weights,
+                                          class_list=self.classes)
 
             # Reset the original classifier info.
             self.classifier_info = copy(classifier_info)
