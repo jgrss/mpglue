@@ -1200,6 +1200,9 @@ class Samples(object):
             sample_size (int): The number of samples to take.
         """
 
+        import pdb
+        pdb.set_trace()
+
         # DataFrame that contains the current class.
         df_sub = self.df.query('response == {CK}'.format(CK=class_key))
 
@@ -3413,42 +3416,30 @@ class VotingClassifier(object):
         self.weights = weights
         self.is_prefit_model = True
 
+        if isinstance(self.weights, list):
+            self.weights = np.array(self.weights, dtype='float32')
+
+        if self.weights is None:
+            self.weights = np.ones(len(self.estimators), dtype='float32')
+
+        if len(self.weights) != len(self.estimators):
+
+            logger.error('  The length of the weights must match the length of the estimators.')
+            raise ArrayShapeError
+
     def predict(self, X):
         return np.argmax(self.predict_proba(X), axis=1)
 
-    def _collect_probas(self, X):
+    def predict_proba(self, X):
 
-        """
-        Collect results from clf.predict_proba calls
-        """
+        clf = self.estimators[0][1]
 
-        return np.asarray([clf.predict_proba(X) for clf_name, clf in self.estimators])
+        X_probas = clf.predict_proba(X) * self.weights[0]
 
-    def _predict_proba(self, X):
+        for clf_idx in range(1, len(self.estimators)):
+            X_probas += clf.predict_proba(X) * self.weights[clf_idx]
 
-        """
-        Predict class probabilities for X in 'soft' voting
-        """
-
-        return np.average(self._collect_probas(X), axis=0, weights=self.weights)
-
-    @property
-    def predict_proba(self):
-
-        """
-        Compute probabilities of possible outcomes for samples in X.
-
-        Args:
-            X: {array-like, sparse matrix}, shape = [n_samples, n_features]
-                Training vectors, where n_samples is the number of samples and
-                n_features is the number of features.
-
-        Returns:
-            avg: array-like, shape = [n_samples, n_classes]
-                Weighted average probability for each class per sample.
-        """
-
-        return self._predict_proba
+        return X_probas / self.weights.sum()
 
 
 class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples, Visualization):
@@ -3501,6 +3492,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         out_stats=None,
                         stats_from_image=False,
                         calibrate_proba=False,
+                        calibrate_test=None,
+                        calibrate_labels=None,
+                        calibrate_weights=None,
                         be_quiet=False,
                         compress_model=False,
                         view_calibration=None,
@@ -3532,6 +3526,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 is False.
             calibrate_proba (Optional[bool]): Whether to calibrate posterior probabilities with a sigmoid
                 calibration. Default is False.
+            calibrate_test (Optional[2d array-like]): An array of test samples to use for model calibration. If None,
+                self.p_vars_test and self.labels_test are used.
+            calibrate_labels (Optional[1d array-like)]: An array of test labels to use for model calibration.
+                The shape must match `calibrate_test` along the y-axis.
+            calibrate_weights (Optional[1d array-like)]: An array of sample weights to use for model calibration.
+                The shape must match `calibrate_test` along the y-axis.
             be_quiet (Optional[bool]): Whether to be quiet and do not print to screen. Default is False.
             compress_model (Optional[bool]): Whether to compress the model. Default is False.
             view_calibration (Optional[int]): View the calibrated probabilities of class `view_calibration`.
@@ -3586,6 +3586,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.input_image = input_image
         self.classifier_info = classifier_info
         self.calibrate_proba = calibrate_proba
+        self.calibrate_test = calibrate_test
+        self.calibrate_labels = calibrate_labels
+        self.calibrate_weights = calibrate_weights
         self.class_weight = class_weight
         self.be_quiet = be_quiet
         self.compress_model = compress_model
@@ -4011,18 +4014,18 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 supports_weights = True if 'sample_weight' in argi.args else False
 
-                # logger.info('  Fitting a {MODEL} model ...'.format(MODEL=classifier))
-                #
-                # if supports_weights:
-                #
-                #     voting_sub_model.fit(self.p_vars,
-                #                          self.labels,
-                #                          sample_weight=self.sample_weight)
-                #
-                # else:
-                #
-                #     voting_sub_model.fit(self.p_vars,
-                #                          self.labels)
+                logger.info('  Fitting a {MODEL} model ...'.format(MODEL=classifier))
+
+                if supports_weights:
+
+                    voting_sub_model.fit(self.p_vars,
+                                         self.labels,
+                                         sample_weight=self.sample_weight)
+
+                else:
+
+                    voting_sub_model.fit(self.p_vars,
+                                         self.labels)
 
                 if self.calibrate_proba:
 
@@ -4030,13 +4033,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                         cal_model = calibration.CalibratedClassifierCV(base_estimator=voting_sub_model,
                                                                        method='isotonic',
-                                                                       cv=3)
+                                                                       cv='prefit')
 
                     else:
 
                         cal_model = calibration.CalibratedClassifierCV(base_estimator=voting_sub_model,
                                                                        method='sigmoid',
-                                                                       cv=3)
+                                                                       cv='prefit')
 
                     # # Limit the test size.
                     # samp_thresh = 100000
@@ -4065,9 +4068,19 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     logger.info('  Calibrating a {MODEL} model ...'.format(MODEL=classifier))
 
                     # Calibrate the model on the test data.
-                    cal_model.fit(self.p_vars,
-                                  self.labels,
-                                  sample_weight=self.sample_weight)
+                    if isinstance(self.calibrate_test, np.ndarray):
+
+                        assert self.calibrate_test.shape[0] == len(self.calibrate_labels) == len(self.calibrate_weights)
+
+                        cal_model.fit(self.calibrate_test,
+                                      self.calibrate_labels,
+                                      sample_weight=self.calibrate_weights)
+
+                    else:
+
+                        cal_model.fit(self.p_vars_test,
+                                      self.labels_test,
+                                      sample_weight=self.sample_weight_test)
 
                     if isinstance(self.view_calibration, int):
 
@@ -4512,27 +4525,31 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         if not self.be_quiet:
 
-            if not hasattr(self, 'n_samps'):
-                self.n_samps = self.p_vars.shape[0]
-
-            if not hasattr(self, 'n_feas'):
-                self.n_feas = self.p_vars.shape[1]
-
-            if self.classifier_info['classifier'][0].lower() in 'aeiou':
-                a_or_an = 'an'
-            else:
-                a_or_an = 'a'
-
-            if isinstance(self.classifier_info['classifier'], list):
-
-                logger.info('  Training a voting model with {} ...'.format(','.join(self.classifier_info['classifier'])))
-
+            if hasattr(self.model, 'is_prefit_model'):
+                logger.info('  The model has already been trained as a voting model.')
             else:
 
-                logger.info('  Training {} {} model with {:,d} samples and {:,d} variables ...'.format(a_or_an,
-                                                                                                       self.classifier_info['classifier'],
-                                                                                                       self.n_samps,
-                                                                                                       self.n_feas))
+                if not hasattr(self, 'n_samps'):
+                    self.n_samps = self.p_vars.shape[0]
+
+                if not hasattr(self, 'n_feas'):
+                    self.n_feas = self.p_vars.shape[1]
+
+                if self.classifier_info['classifier'][0].lower() in 'aeiou':
+                    a_or_an = 'an'
+                else:
+                    a_or_an = 'a'
+
+                if isinstance(self.classifier_info['classifier'], list):
+
+                    logger.info('  Training a voting model with {} ...'.format(','.join(self.classifier_info['classifier'])))
+
+                else:
+
+                    logger.info('  Training {} {} model with {:,d} samples and {:,d} variables ...'.format(a_or_an,
+                                                                                                           self.classifier_info['classifier'],
+                                                                                                           self.n_samps,
+                                                                                                           self.n_feas))
 
         # OpenCV tree-based models
         if self.classifier_info['classifier'] in ['CART', 'CVRF', 'CVEX_RF']:
@@ -4609,13 +4626,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     if self.n_samps >= 1000:
 
-                        self.model = calibration.CalibratedClassifierCV(base_estimator=self.model,
+                        self.model = calibration.CalibratedClassifierCV(base_estimator=copy(self.model),
                                                                         method='isotonic',
                                                                         cv='prefit')
 
                     else:
 
-                        self.model = calibration.CalibratedClassifierCV(base_estimator=self.model,
+                        self.model = calibration.CalibratedClassifierCV(base_estimator=copy(self.model),
                                                                         method='sigmoid',
                                                                         cv='prefit')
 
@@ -4646,9 +4663,19 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     logger.info('  Calibrating a {MODEL} model ...'.format(MODEL=self.classifier_info['classifier']))
 
                     # Calibrate the model on the test data.
-                    self.model.fit(self.p_vars_test,
-                                   self.labels_test,
-                                   sample_weight=self.sample_weight_test)
+                    if isinstance(self.calibrate_test, np.ndarray):
+
+                        assert self.calibrate_test.shape[0] == len(self.calibrate_labels) == len(self.calibrate_weights)
+
+                        self.model.fit(self.calibrate_test,
+                                       self.calibrate_labels,
+                                       sample_weight=self.calibrate_weights)
+
+                    else:
+
+                        self.model.fit(self.p_vars_test,
+                                       self.labels_test,
+                                       sample_weight=self.sample_weight_test)
 
                     feature_importances_ = None
 
