@@ -3434,6 +3434,9 @@ class VotingClassifier(object):
         X_probas = clf.predict_proba(X) * self.weights[0]
 
         for clf_idx in range(1, len(self.estimators)):
+
+            clf = self.estimators[clf_idx][1]
+
             X_probas += clf.predict_proba(X) * self.weights[clf_idx]
 
         return X_probas / self.weights.sum()
