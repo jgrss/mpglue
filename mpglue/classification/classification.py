@@ -865,7 +865,7 @@ class Samples(object):
                 if stratified:
                     self._stratify(class_key, cl)
                 else:
-                    self._sample_groups(class_key, cl)
+                    self._sample_group(class_key, cl)
 
             self.train_idx = sorted(self.train_idx)
             self.test_idx = sorted(list(set(self.df.index.tolist()).difference(self.train_idx)))
@@ -1192,7 +1192,7 @@ class Samples(object):
                 c = 0
                 gdd += 1
 
-    def _sample_groups(self, class_key, sample_size):
+    def _sample_group(self, class_key, sample_size):
 
         """
         Args:
@@ -4080,26 +4080,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                       sample_weight=self.sample_weight_test)
 
                     if isinstance(self.view_calibration, int):
-
-                        logger.info('  Fitting a {MODEL} model ...'.format(MODEL=classifier))
-
-                        if isinstance(self.sample_weight, np.ndarray):
-
-                            if supports_weights:
-
-                                voting_sub_model.fit(self.p_vars,
-                                                     self.labels,
-                                                     sample_weight=self.sample_weight)
-
-                            else:
-
-                                voting_sub_model.fit(self.p_vars,
-                                                     self.labels)
-
-                        else:
-
-                            voting_sub_model.fit(self.p_vars,
-                                                 self.labels)
 
                         from sklearn.calibration import calibration_curve
 
