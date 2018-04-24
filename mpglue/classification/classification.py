@@ -4110,6 +4110,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                 c='#338A2E',
                                 label='{}, label {:d}, Uncalibrated'.format(classifier, self.view_calibration))
 
+                        ax.set_ylabel('Fraction positive')
+                        ax.set_xlabel('Mean predicted value')
                         plt.tight_layout(pad=0.1)
                         plt.legend()
 
