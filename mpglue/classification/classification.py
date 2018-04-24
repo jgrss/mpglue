@@ -4011,18 +4011,18 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 supports_weights = True if 'sample_weight' in argi.args else False
 
-                logger.info('  Fitting a {MODEL} model ...'.format(MODEL=classifier))
-
-                if supports_weights:
-
-                    voting_sub_model.fit(self.p_vars,
-                                         self.labels,
-                                         sample_weight=self.sample_weight)
-
-                else:
-
-                    voting_sub_model.fit(self.p_vars,
-                                         self.labels)
+                # logger.info('  Fitting a {MODEL} model ...'.format(MODEL=classifier))
+                #
+                # if supports_weights:
+                #
+                #     voting_sub_model.fit(self.p_vars,
+                #                          self.labels,
+                #                          sample_weight=self.sample_weight)
+                #
+                # else:
+                #
+                #     voting_sub_model.fit(self.p_vars,
+                #                          self.labels)
 
                 if self.calibrate_proba:
 
@@ -4030,13 +4030,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                         cal_model = calibration.CalibratedClassifierCV(base_estimator=voting_sub_model,
                                                                        method='isotonic',
-                                                                       cv='prefit')
+                                                                       cv=3)
 
                     else:
 
                         cal_model = calibration.CalibratedClassifierCV(base_estimator=voting_sub_model,
                                                                        method='sigmoid',
-                                                                       cv='prefit')
+                                                                       cv=3)
 
                     # # Limit the test size.
                     # samp_thresh = 100000
@@ -4065,9 +4065,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     logger.info('  Calibrating a {MODEL} model ...'.format(MODEL=classifier))
 
                     # Calibrate the model on the test data.
-                    cal_model.fit(self.p_vars_test,
-                                  self.labels_test,
-                                  sample_weight=self.sample_weight_test)
+                    cal_model.fit(self.p_vars,
+                                  self.labels,
+                                  sample_weight=self.sample_weight)
 
                     if isinstance(self.view_calibration, int):
 
@@ -4662,6 +4662,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     self.calibrated = True
 
         if isinstance(self.output_model, str):
+
+            logger.info('  Saving model to file ...')
 
             if 'CV' in self.classifier_info['classifier']:
 
