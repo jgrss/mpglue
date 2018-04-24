@@ -4605,61 +4605,61 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     self.model.fit(self.p_vars,
                                    self.labels)
 
-            if self.calibrate_proba and not hasattr(self.model, 'is_prefit_model'):
+                if self.calibrate_proba:
 
-                if self.n_samps >= 1000:
+                    if self.n_samps >= 1000:
 
-                    self.model = calibration.CalibratedClassifierCV(base_estimator=self.model,
-                                                                    method='isotonic',
-                                                                    cv='prefit')
+                        self.model = calibration.CalibratedClassifierCV(base_estimator=self.model,
+                                                                        method='isotonic',
+                                                                        cv='prefit')
 
-                else:
+                    else:
 
-                    self.model = calibration.CalibratedClassifierCV(base_estimator=self.model,
-                                                                    method='sigmoid',
-                                                                    cv='prefit')
+                        self.model = calibration.CalibratedClassifierCV(base_estimator=self.model,
+                                                                        method='sigmoid',
+                                                                        cv='prefit')
 
-                # # Limit the test size.
-                # samp_thresh = 100000
-                # if self.p_vars_test.shape[0] > samp_thresh:
-                #
-                #     pdf = pd.DataFrame(self.p_vars_test)
-                #     pdf['GROUP'] = self.labels_test
-                #
-                #     n_groups = len(pdf.GROUP.unique())
-                #
-                #     group_samps = int(float(samp_thresh) / n_groups)
-                #
-                #     dfg = pdf.groupby('GROUP', group_keys=False).apply(lambda xr_: xr_.sample(min(len(xr_),
-                #                                                                                   group_samps)))
-                #
-                #     idx = dfg.index.values.ravel()
-                #
-                #     p_vars_test_cal = self.p_vars_test[idx]
-                #     labels_test_cal = self.labels_test[idx]
-                #
-                # else:
-                #
-                #     p_vars_test_cal = self.p_vars_test
-                #     labels_test_cal = self.labels_test
+                    # # Limit the test size.
+                    # samp_thresh = 100000
+                    # if self.p_vars_test.shape[0] > samp_thresh:
+                    #
+                    #     pdf = pd.DataFrame(self.p_vars_test)
+                    #     pdf['GROUP'] = self.labels_test
+                    #
+                    #     n_groups = len(pdf.GROUP.unique())
+                    #
+                    #     group_samps = int(float(samp_thresh) / n_groups)
+                    #
+                    #     dfg = pdf.groupby('GROUP', group_keys=False).apply(lambda xr_: xr_.sample(min(len(xr_),
+                    #                                                                                   group_samps)))
+                    #
+                    #     idx = dfg.index.values.ravel()
+                    #
+                    #     p_vars_test_cal = self.p_vars_test[idx]
+                    #     labels_test_cal = self.labels_test[idx]
+                    #
+                    # else:
+                    #
+                    #     p_vars_test_cal = self.p_vars_test
+                    #     labels_test_cal = self.labels_test
 
-                logger.info('  Calibrating a {MODEL} model ...'.format(MODEL=self.classifier_info['classifier']))
+                    logger.info('  Calibrating a {MODEL} model ...'.format(MODEL=self.classifier_info['classifier']))
 
-                # Calibrate the model on the test data.
-                self.model.fit(self.p_vars_test,
-                               self.labels_test,
-                               sample_weight=self.sample_weight_test)
+                    # Calibrate the model on the test data.
+                    self.model.fit(self.p_vars_test,
+                                   self.labels_test,
+                                   sample_weight=self.sample_weight_test)
 
-                feature_importances_ = None
+                    feature_importances_ = None
 
-                # Keep the feature importances.
-                if hasattr(self.model, 'feature_importances_'):
-                    feature_importances_ = copy(self.model.feature_importances_)
+                    # Keep the feature importances.
+                    if hasattr(self.model, 'feature_importances_'):
+                        feature_importances_ = copy(self.model.feature_importances_)
 
-                if isinstance(feature_importances_, np.ndarray):
-                    self.model.feature_importances_ = feature_importances_
+                    if isinstance(feature_importances_, np.ndarray):
+                        self.model.feature_importances_ = feature_importances_
 
-                self.calibrated = True
+                    self.calibrated = True
 
         if isinstance(self.output_model, str):
 
