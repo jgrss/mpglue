@@ -867,9 +867,6 @@ class Samples(object):
                 else:
                     self._sample_groups(class_key, cl)
 
-            import pdb
-            pdb.set_trace()
-
             self.train_idx = sorted(self.train_idx)
             self.test_idx = sorted(list(set(self.df.index.tolist()).difference(self.train_idx)))
 
