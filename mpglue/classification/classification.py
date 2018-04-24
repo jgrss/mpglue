@@ -3424,10 +3424,37 @@ class VotingClassifier(object):
             logger.error('  The length of the weights must match the length of the estimators.')
             raise ArrayShapeError
 
+        self.classes_ = self.estimators[0][1].classes_
+        self.n_classes_ = self.estimators[0][1].n_classes_
+
     def predict(self, X):
-        return np.argmax(self.predict_proba(X), axis=1)
+
+        """
+        Predicts discrete classes by soft probability averaging
+
+        Args:
+            X (2d array): The predictive variables.
+        """
+
+        # Get predictions as an index of the array position.
+        probabilities_argmax = np.argmax(self.predict_proba(X), axis=1)
+
+        predictions = np.zeros(probabilities_argmax.shape, dtype='uint8')
+
+        # Convert indices to classes.
+        for class_index, real_class in enumerate(self.classes_):
+            predictions[probabilities_argmax == class_index] = real_class
+
+        return predictions
 
     def predict_proba(self, X):
+
+        """
+        Predicts class posterior probabilities by soft probability averaging
+
+        Args:
+            X (2d array): The predictive variables.
+        """
 
         clf = self.estimators[0][1]
 
