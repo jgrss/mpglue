@@ -867,6 +867,9 @@ class Samples(object):
                 else:
                     self._sample_groups(class_key, cl)
 
+            import pdb
+            pdb.set_trace()
+
             self.train_idx = sorted(self.train_idx)
             self.test_idx = sorted(list(set(self.df.index.tolist()).difference(self.train_idx)))
 
@@ -1199,9 +1202,6 @@ class Samples(object):
             class_key (int): The class to sample from.
             sample_size (int): The number of samples to take.
         """
-
-        import pdb
-        pdb.set_trace()
 
         # DataFrame that contains the current class.
         df_sub = self.df.query('response == {CK}'.format(CK=class_key))
