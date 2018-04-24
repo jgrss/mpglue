@@ -12,7 +12,7 @@ and [SpFeas](https://github.com/jgrss/spfeas).
 Current version
 ---
 
-`0.1.10`
+`0.2.0b`
 
 Usage examples
 ---

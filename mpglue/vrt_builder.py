@@ -5,6 +5,10 @@
 Date Created: 4/29/2015
 """
 
+from __future__ import division
+from future.utils import iteritems
+from builtins import int
+
 import os
 import sys
 import fnmatch
@@ -218,7 +222,7 @@ class VRTBuilder(object):
         """
 
         new_dict = OrderedDict()
-        for k, v in self.in_dict.iteritems():
+        for k, v in iteritems(self.in_dict):
             new_dict['{:03d}'.format(int(k))] = v
 
         self.in_dict = OrderedDict(sorted(new_dict.items(), key=lambda tv: tv[0]))
@@ -229,7 +233,7 @@ class VRTBuilder(object):
 
         band_counter = 1
 
-        for bdk, bd in self.band_dict.iteritems():
+        for bdk, bd in iteritems(self.band_dict):
 
             if not be_quiet:
 
@@ -440,7 +444,7 @@ class VRTBuilder(object):
         self.band_dict = dict()
 
         # get first image from each list
-        for k, v in self.in_dict.iteritems():
+        for k, v in iteritems(self.in_dict):
 
             vi_ = v[0]
 

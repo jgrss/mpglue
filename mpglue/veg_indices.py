@@ -5,7 +5,9 @@
 Date Created: 9/24/2011
 """
 
-from __future__ import division
+from __future__ import division, print_function
+from future.utils import iteritems
+from builtins import int
 
 import os
 import sys
@@ -188,7 +190,7 @@ class SensorInfo(object):
 
         sp = ' '
 
-        for w, b in self.expected_band_order.iteritems():
+        for w, b in iteritems(self.expected_band_order):
 
             gap_string = ''
 
@@ -198,7 +200,7 @@ class SensorInfo(object):
 
             logger.info('  {}{}{:d}'.format(w.upper(), gap_string, b))
 
-        print
+        print('')
 
     def list_indice_options(self, sensor):
 
@@ -220,7 +222,7 @@ class SensorInfo(object):
 
         # All of the vegetation index wavelengths must
         #   be in the sensor wavelength.
-        for veg_index, indice_wavelengths in self.wavelength_lists.iteritems():
+        for veg_index, indice_wavelengths in iteritems(self.wavelength_lists):
 
             if set(indice_wavelengths).issubset(sensor_wavelengths):
                 self.sensor_indices.append(veg_index)
@@ -1574,7 +1576,7 @@ class VegIndices(BandHandler):
 
             if self.k > 0:
 
-                print
+                print('')
 
                 d_name, f_name = os.path.split(self.output_image)
                 f_base, f_ext = os.path.splitext(f_name)

@@ -5,6 +5,10 @@
 Date Created: 4/17/2015
 """
 
+from __future__ import division, print_function
+from future.utils import iteritems
+from builtins import int
+
 import os
 import sys
 import time
@@ -874,7 +878,7 @@ class manage_pytables(BaseHandler):
 
         if kwargs:
 
-            for key, value in kwargs.iteritems():
+            for key, value in iteritems(kwargs):
                 self.meta_dict[key] = value
 
         if 'filename' not in self.meta_dict:
@@ -1170,12 +1174,12 @@ class manage_pytables(BaseHandler):
 
         try:
 
-            print 'Removing array {} ...'.format(group2remove)
+            print('Removing array {} ...'.format(group2remove))
 
             self.h5_file.remove_node(group2remove)
 
         except:
-            print '{} does not exist'.format(group2remove)
+            print('{} does not exist'.format(group2remove))
 
     def remove_table_group(self, path2remove, row2remove, sensor2remove, year2remove, date2remove):
 
@@ -1196,7 +1200,7 @@ class manage_pytables(BaseHandler):
         try:
             table = self.h5_file.root.metadata
         except:
-            print 'The table does not have metadata.'
+            print('The table does not have metadata.')
             return
 
         full_list = True
@@ -1211,8 +1215,8 @@ class manage_pytables(BaseHandler):
             #   table is updated.
             if result:
 
-                print 'Removing {} from table...'.format(','.join([str(path2remove), str(row2remove),
-                                                                   sensor2remove, year2remove, date2remove]))
+                print('Removing {} from table...'.format(','.join([str(path2remove), str(row2remove),
+                                                                   sensor2remove, year2remove, date2remove])))
 
                 table.remove_row(result[0])
 
@@ -1258,7 +1262,7 @@ class manage_pytables(BaseHandler):
 
                         pointer = self.table.row
 
-                        for mkey, mvalue in meta_dict_sub.iteritems():
+                        for mkey, mvalue in iteritems(meta_dict_sub):
                             pointer[mkey] = mvalue
 
                         pointer.append()
@@ -1267,7 +1271,7 @@ class manage_pytables(BaseHandler):
 
                     pointer = self.table.row
 
-                    for mkey, mvalue in self.meta_dict.iteritems():
+                    for mkey, mvalue in iteritems(self.meta_dict):
                         pointer[mkey] = mvalue
 
                     pointer.append()
@@ -1326,7 +1330,7 @@ class manage_pytables(BaseHandler):
                                                                                                         int(row)))]
 
         for existing_file in existing_files:
-            print existing_file
+            print(existing_file)
 
     def write2file(self, file_name, out_name, path, row, sensor, year):
 
@@ -1341,7 +1345,7 @@ class manage_pytables(BaseHandler):
         try:
             table = self.h5_file.root.metadata
         except:
-            print 'The table does not have metadata.'
+            print('The table does not have metadata.')
             return
 
         # First get the image information.
@@ -1478,7 +1482,7 @@ def pytables(inputs,
 
                 if kwargs:
 
-                    for k, v in kwargs.iteritems():
+                    for k, v in iteritems(kwargs):
                         info_dict[k] = v
 
                 # Create the metadata

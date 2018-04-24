@@ -5,6 +5,10 @@
 Date Created: 9/24/2011
 """
 
+from __future__ import division, print_function
+from future.utils import iteritems
+from builtins import int
+
 import os
 import sys
 import copy
@@ -33,7 +37,7 @@ from .helpers import random_float, overwrite_file, check_and_create_dir, _iterat
 from .vector_tools import vopen, get_xy_offsets, intersects_boundary
 
 from .errors import EmptyImage, LenError, MissingRequirement, ropenError, ArrayShapeError, ArrayOffsetError, logger
-from .version import __version__
+# from .version import __version__
 from mpglue.veg_indices import BandHandler, VegIndicesEquations
 
 try:
@@ -105,7 +109,7 @@ except ImportWarning:
 
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
-gdal.SetCacheMax(2.**30.)
+gdal.SetCacheMax(int(2.0**30.0))
 
 DRIVER_DICT = {'.bin': 'ENVI',
                '.dat': 'ENVI',
@@ -129,7 +133,7 @@ DRIVER_DICT = {'.bin': 'ENVI',
                '.vrt': 'VRT'}
 
 try:
-    FORMAT_DICT = dict((v, k) for k, v in DRIVER_DICT.iteritems())
+    FORMAT_DICT = dict((v, k) for k, v in iteritems(DRIVER_DICT))
 except:
     # Python 3
     FORMAT_DICT = dict((v, k) for k, v in DRIVER_DICT.items())
@@ -478,7 +482,7 @@ class ReadWrite(object):
 
             self.array = dict()
 
-            for band_name, band_position in bands2open.iteritems():
+            for band_name, band_position in iteritems(bands2open):
 
                 if self.hdf_file:
 
@@ -875,7 +879,7 @@ class DataChecks(object):
 
             iif = ImageInfo()
 
-            for k, v in iinfo.iteritems():
+            for k, v in iteritems(iinfo):
                 setattr(iif, k, v)
 
             iinfo = iif.copy()
@@ -1626,7 +1630,7 @@ class UpdateInfo(object):
 
     def update_info(self, **kwargs):
 
-        for k, v in kwargs.iteritems():
+        for k, v in iteritems(kwargs):
             setattr(self, k, v)
 
 

@@ -29,6 +29,10 @@
 #  DEALINGS IN THE SOFTWARE.
 ###############################################################################
 
+from __future__ import division, print_function
+
+from builtins import int
+
 import os
 import sys
 from osgeo import gdal

@@ -6,6 +6,7 @@ Date Created: 8/8/2012
 """    
 
 from __future__ import division
+from future.utils import iteritems
 
 import os
 import sys
@@ -91,7 +92,7 @@ def raster_calc(output,
 
         temp_dict = copy(kwargs)
 
-        for kw, vw in kwargs.iteritems():
+        for kw, vw in iteritems(kwargs):
 
             if isinstance(vw, str):
 
@@ -114,7 +115,7 @@ def raster_calc(output,
 
         kwargs = temp_dict
 
-    for kw, vw in kwargs.iteritems():
+    for kw, vw in iteritems(kwargs):
 
         if '_band' not in kw:
             band_dict['{}_band'.format(kw)] = 1
@@ -135,7 +136,7 @@ def raster_calc(output,
         if isinstance(vw, int):
             band_dict[kw] = vw
 
-    for key, value in image_dict.iteritems():
+    for key, value in iteritems(image_dict):
         equation = equation.replace(key, 'array_{}'.format(key))
 
     # Check for NumPy functions.
@@ -146,7 +147,7 @@ def raster_calc(output,
             equation = 'np.{}'.format(equation)
             break
 
-    for kw, vw in info_dict.iteritems():
+    for kw, vw in iteritems(info_dict):
 
         o_info = copy(vw)
         break
@@ -207,7 +208,7 @@ def raster_calc(output,
 
             # For each image, get the offset and
             # convert bands in the equation to ndarrays.
-            for key, value in image_dict.iteritems():
+            for key, value in iteritems(image_dict):
 
                 # exec 'x_off, y_off = vector_tools.get_xy_offsets3(overlap_info, i_info_{})'.format(key)
                 __, __, x_off, y_off = vector_tools.get_xy_offsets(image_info=info_dict[key],
@@ -215,8 +216,7 @@ def raster_calc(output,
                                                                    y=overlap_info.top,
                                                                    check_position=False)
 
-                exec 'array_{} = i_info_{}.read(bands2open=band_dict["{}_band"], \
-                i=i+y_off, j=j+x_off, rows=n_rows, cols=n_cols, d_type="float32")'.format(key, key, key)
+                exec 'array_{} = i_info_{}.read(bands2open=band_dict["{}_band"], i=i+y_off, j=j+x_off, rows=n_rows, cols=n_cols, d_type="float32")'.format(key, key, key)
 
             exec 'out_array = {}'.format(equation)
 
@@ -234,7 +234,7 @@ def raster_calc(output,
         pbar.finish()
 
     # Close the input image.
-    for key, value in info_dict.iteritems():
+    for key, value in iteritems(info_dict):
         info_dict[key].close()
 
     # close the output drivers

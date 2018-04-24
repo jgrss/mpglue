@@ -5,16 +5,28 @@
 Date Created: 1/26/2016
 """
 
+from __future__ import print_function
+from future.utils import iteritems
+from builtins import int
+
 import os
 import shutil
 import fnmatch
 import random
 import datetime
 from collections import OrderedDict
-import cPickle as cp
 
 from .progressbar.progressbar import ProgressBar
 from .progressbar import widgets
+
+
+# Pickle
+try:
+    import cPickle as cp
+except:
+    from six.moves import cPickle as cp
+else:
+   import pickle as cp
 
 # NumPy
 try:
@@ -282,7 +294,7 @@ def dataframe2dbf(df, dbf_file, my_specs=None):
 
     db.field_spec = specs
 
-    for i, row in df.T.iteritems():
+    for i, row in iteritems(df.T):
         db.write(row)
 
     db.close()

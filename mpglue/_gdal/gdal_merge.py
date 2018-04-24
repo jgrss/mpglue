@@ -30,6 +30,10 @@
 # building the stack.
 # anssi.pekkarinen@fao.org
 
+from __future__ import division, print_function
+
+from builtins import int
+
 import math
 import sys
 import time

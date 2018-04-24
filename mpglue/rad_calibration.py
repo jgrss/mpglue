@@ -5,9 +5,10 @@
 Date Created: 9/24/2011
 """
 
-from __future__ import division
+from __future__ import division, print_function
+from future.utils import iteritems
+from builtins import int
 
-import sys
 import math
 from copy import copy
 import datetime
@@ -146,7 +147,7 @@ def get_leap_years(start_year=1980, end_year=2050):
     jd_dict = julian_day_dictionary(start_year=start_year, end_year=end_year)
 
     for yyyy in range(start_year, end_year):
-        leap_year_dict[yyyy] = max([int(k.split('-')[1]) for k, v in jd_dict.iteritems() if str(yyyy) in k])
+        leap_year_dict[yyyy] = max([int(k.split('-')[1]) for k, v in iteritems(jd_dict) if str(yyyy) in k])
 
     # leap_year_dict_r = {v: k for k, v in leap_year_dict.items()}
 

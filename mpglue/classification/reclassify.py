@@ -5,7 +5,8 @@
 Date Created: 11/14/2011
 """ 
 
-# Import system modules
+from future.utils import iteritems
+
 import sys
 import time
 import ast
@@ -25,7 +26,7 @@ def reclassify_func(im, recode_dict=None):
     out_img = im[0].copy()
 
     # reclassify image
-    for key, value in sorted(recode_dict.iteritems()):
+    for key, value in sorted(iteritems(recode_dict)):
         out_img[(im[0] == key)] = value
 
     return out_img
@@ -69,7 +70,7 @@ def reclassify(input_image, output_image, recode_dict):
 
         bp.run()
 
-    i_info = None
+    del i_info
 
 
 def _examples():

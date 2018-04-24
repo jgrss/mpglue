@@ -18,8 +18,8 @@ ctypedef np.intp_t DTYPE_intp_t
 # Pymorph
 try:
     from pymorph import sedisk
-except ImportError:
-    raise ImportError('Pymorph must be installed')
+except:
+    pass
 
 
 # Define a function pointer to a metric.

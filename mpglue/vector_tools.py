@@ -5,6 +5,10 @@
 Date Created: 9/24/2011
 """ 
 
+from __future__ import division
+from future.utils import iteritems
+from builtins import int
+
 import os
 import sys
 import shutil
@@ -18,10 +22,13 @@ import atexit
 import tarfile
 
 from .paths import get_main_path
-
-import raster_tools
 from .errors import TransformError, logger
 from .helpers import PickleIt
+
+try:
+    import raster_tools
+except:
+    from . import raster_tools
 
 MAIN_PATH = get_main_path()
 
@@ -666,7 +673,7 @@ def add_polygon(vector_object, xy_pairs=None, field_vals=None, geometry=None):
     # set the fields
     if field_vals:
 
-        for field, val in field_vals.iteritems():
+        for field, val in iteritems(field_vals):
             feature.SetField(field, val)
 
     vector_object.lyr.CreateFeature(feature)
@@ -763,7 +770,7 @@ def dataframe2dbf(df, dbf_file, my_specs=None):
 
     db.field_spec = specs
 
-    for i, row in df.T.iteritems():
+    for i, row in iteritems(df.T):
         db.write(row)
 
     db.close()
@@ -1026,8 +1033,8 @@ class Transform(object):
         >>> from mpglue.vector_tools import Transform
         >>>
         >>> ptr = Transform(740000., 2260000., 102033, 4326)
-        >>> print ptr.x, ptr.y
-        >>> print ptr.x_transform, ptr.y_transform
+        >>> print(ptr.x, ptr.y)
+        >>> print(ptr.x_transform, ptr.y_transform)
     """
 
     def __init__(self, x, y, source_projection, target_projection):
@@ -1185,7 +1192,7 @@ class TransfromEmpty(object):
 
     def update_info(self, **kwargs):
 
-        for k, v in kwargs.iteritems():
+        for k, v in iteritems(kwargs):
             setattr(self, k, v)
 
 
@@ -2453,7 +2460,7 @@ def add_fields(input_vector,
 
             value_found = False
 
-            for key, break_values in field_breaks.iteritems():
+            for key, break_values in iteritems(field_breaks):
 
                 if isinstance(break_values, int) or isinstance(break_values, float):
 

@@ -22,6 +22,8 @@
 
 from __future__ import division
 
+from builtins import int
+
 import datetime
 import math
 

@@ -5,6 +5,10 @@
 Date created: 12/29/2013
 """
 
+from __future__ import division
+from future.utils import iteritems
+from builtins import int
+
 import os
 import sys
 import time
@@ -535,12 +539,12 @@ class ParameterHandler(object):
     def check_parameters(self, cinfo, default_params, trials_set=False):
 
         # Set defaults
-        for k, v in default_params.iteritems():
+        for k, v in iteritems(default_params):
 
             if (k not in cinfo) and (k in self.valid_params):
                 cinfo[k] = v
 
-        for param_key, param_value in cinfo.copy().iteritems():
+        for param_key, param_value in iteritems(cinfo.copy()):
 
             if param_key in self.equal_params:
 
@@ -860,7 +864,7 @@ class Samples(object):
                 for clp in self.df[self.response_label].unique():
                     class_subs[int(clp)] = perc_samp_each
 
-            for class_key, cl in sorted(class_subs.iteritems()):
+            for class_key, cl in sorted(iteritems(class_subs)):
 
                 if stratified:
                     self._stratify(class_key, cl)
@@ -1360,7 +1364,7 @@ class Samples(object):
         temp_labels = self.all_samps[:, -1]
         new_samps = temp_labels.copy()
 
-        for recode_key, cl in sorted(recode_dict.iteritems()):
+        for recode_key, cl in sorted(iteritems(recode_dict)):
             new_samps[temp_labels == recode_key] = cl
 
         self.all_samps[:, -1] = new_samps
@@ -2393,7 +2397,7 @@ class Visualization(object):
             if locate_outliers:
 
                 weights = np.ones(len(self.labels))
-                for c, curr_c_idx in self.class_outliers.iteritems():
+                for c, curr_c_idx in iteritems(self.class_outliers):
 
                     class_idx = np.where(self.labels == c)
 
@@ -6355,7 +6359,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         if not be_quiet:
 
-            logger.info('  Mean score:  %.2f' % np.average([v for k, v in self.fea_rank.iteritems()]))
+            logger.info('  Mean score:  %.2f' % np.average([v for k, v in iteritems(self.fea_rank)]))
 
             logger.info('  ==================')
             logger.info('  Excluded variables')
@@ -6412,7 +6416,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 counter += 1
 
-        for k, v in self.variable_names.iteritems():
+        for k, v in iteritems(self.variable_names):
             logger.info(k, v)
 
     def sub_feas(self, input_image, out_img, band_list=None):

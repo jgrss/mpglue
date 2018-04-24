@@ -20,7 +20,7 @@ except:
 import numpy as np
 
 
-__version__ = '0.1.10'
+__version__ = '0.2.0b'
 
 mappy_name = 'MpGlue'
 maintainer = 'Jordan Graesser'
@@ -41,19 +41,23 @@ required_packages = ['matplotlib>=2.0.0',
                      'joblib>=0.11.0',
                      'BeautifulSoup4>=4.6.0',
                      'decorator>=4.1.1',
-                     'deprecation>=1.0.1']
+                     'deprecation>=1.0.1',
+                     'retrying',
+                     'future',
+                     'six']
 
 if platform.system() != 'Windows':
 
-    for pkg in ['numpy>=1.13',
+    for pkg in ['numpy>=1.14',
                 'scipy>=0.19.0',
                 'scikit-image>=0.13',
                 'tables>=3.4.2',
                 'statsmodels>=0.8.0',
-                'cython>=0.26',
+                'cython>=0.28',
+                'opencv-python>=3.4.0',
                 'scikit-learn>=0.19.0',
-                'pandas>=0.20.0',
-                'pymorph']:
+                'pandas>=0.22.0',
+                'pymorph>=0.96']:
 
         required_packages.append(pkg)
 

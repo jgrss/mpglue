@@ -5,6 +5,10 @@
 Date Created: 7/26/2011
 """
 
+from __future__ import division
+from future.utils import iteritems
+from builtins import int
+
 import sys
 import time
 import argparse
@@ -90,7 +94,7 @@ def focal_statistics(in_image, out_image, band=1, overwrite=False, chunk_size=51
 
     parameters = Parameters()
 
-    for k, v in kwargs.iteritems():
+    for k, v in iteritems(kwargs):
         setattr(parameters, k, v)
 
     i_info = raster_tools.ropen(in_image)

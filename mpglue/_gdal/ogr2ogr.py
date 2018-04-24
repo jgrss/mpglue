@@ -35,6 +35,10 @@
 # Note : this is the most direct port of ogr2ogr.cpp possible
 # It could be made much more Python'ish !
 
+from __future__ import division, print_function
+
+from builtins import int
+
 import sys
 import os
 import stat
