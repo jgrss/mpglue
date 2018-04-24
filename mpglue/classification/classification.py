@@ -882,6 +882,8 @@ class Samples(object):
                 self.train_clear = clear_observations[self.train_idx]
 
             if isinstance(self.sample_weight, np.ndarray):
+
+                self.sample_weight_test = self.sample_weight[self.test_idx]
                 self.sample_weight = self.sample_weight[self.train_idx]
 
         elif ((isinstance(perc_samp, float) and (perc_samp < 1)) or (isinstance(perc_samp, int) and (perc_samp > 0))) \
@@ -3395,6 +3397,60 @@ class ModelOptions(object):
         """
 
 
+class VotingClassifier(object):
+
+    """
+    A voting classifier class to use prefit models instead of re-fitting
+
+    Args:
+        estimators (list of tuples): The fitted estimators.
+        weights (Optional[list, 1d array-like): The estimator weights.
+    """
+
+    def __init__(self, estimators, weights=None):
+
+        self.estimators = estimators
+        self.weights = weights
+        self.is_prefit_model = True
+
+    def predict(self, X):
+        return np.argmax(self.predict_proba(X), axis=1)
+
+    def _collect_probas(self, X):
+
+        """
+        Collect results from clf.predict calls
+        """
+
+        return np.asarray([clf.predict_proba(X) for clf in self.estimators])
+
+    def _predict_proba(self, X):
+
+        """
+        Predict class probabilities for X in 'soft' voting
+        """
+
+        return np.average(self._collect_probas(X), axis=0, weights=self.weights)
+
+    @property
+    def predict_proba(self):
+
+        """
+        Compute probabilities of possible outcomes for samples in X.
+
+        Args:
+            X: {array-like, sparse matrix}, shape = [n_samples, n_features]
+                Training vectors, where n_samples is the number of samples and
+                n_features is the number of features.
+
+        Returns:
+            avg: array-like, shape = [n_samples, n_classes]
+                Weighted average probability for each class per sample.
+        """
+
+        return self._predict_proba
+
+
 class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples, Visualization):
 
     """
@@ -3950,29 +4006,44 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     logger.warning('  The model, {MODEL}, is not supported'.format(MODEL=classifier))
                     continue
 
-                classifier_list.append((classifier,
-                                        voting_sub_model))
+                # Check if the model supports sample weights.
+                argi = inspect.getargspec(voting_sub_model.fit)
+
+                supports_weights = True if 'sample_weight' in argi.args else False
+
+                logger.info('  Fitting a {MODEL} model ...'.format(MODEL=classifier))
+
+                if supports_weights:
+
+                    voting_sub_model.fit(self.p_vars,
+                                         self.labels,
+                                         sample_weight=self.sample_weight)
+
+                else:
+
+                    voting_sub_model.fit(self.p_vars,
+                                         self.labels)
 
                 if self.calibrate_proba:
-
-                    logger.info('  Calibrating a {MODEL} model ...'.format(MODEL=classifier))
 
                     if self.n_samps >= 1000:
 
                         cal_model = calibration.CalibratedClassifierCV(base_estimator=voting_sub_model,
                                                                        method='isotonic',
-                                                                       cv=3)
+                                                                       cv='prefit')
 
                     else:
 
                         cal_model = calibration.CalibratedClassifierCV(base_estimator=voting_sub_model,
                                                                        method='sigmoid',
-                                                                       cv=3)
+                                                                       cv='prefit')
 
-                    # Calibrate the model.
-                    cal_model.fit(self.p_vars,
-                                  self.labels,
-                                  sample_weight=self.sample_weight)
+                    logger.info('  Calibrating a {MODEL} model ...'.format(MODEL=classifier))
+
+                    # Calibrate the model on the test data.
+                    cal_model.fit(self.p_vars_test,
+                                  self.labels_test,
+                                  sample_weight=self.sample_weight_test)
 
                     if isinstance(self.view_calibration, int):
 
@@ -3980,10 +4051,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                         if isinstance(self.sample_weight, np.ndarray):
 
-                            # Check if the model supports sample weights.
-                            argi = inspect.getargspec(voting_sub_model.fit)
-
-                            if 'sample_weight' in argi.args:
+                            if supports_weights:
 
                                 voting_sub_model.fit(self.p_vars,
                                                      self.labels,
@@ -4041,36 +4109,25 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         sys.exit()
 
                     # Update the voting list.
-                    classifier_list[ci] = (classifier, copy(cal_model))
+                    classifier_list.append((classifier,
+                                            copy(cal_model)))
 
                 else:
 
-                    logger.info('  Fitting a {MODEL} model ...'.format(MODEL=classifier))
-
-                    # Check if the model supports sample weights.
-                    argi = inspect.getargspec(voting_sub_model.fit)
-
-                    if 'sample_weight' in argi.args:
-
-                        voting_sub_model.fit(self.p_vars,
-                                             self.labels,
-                                             sample_weight=self.sample_weight)
-
-                    else:
-
-                        voting_sub_model.fit(self.p_vars,
-                                             self.labels)
-
                     # Update the voting list.
-                    classifier_list[ci] = (classifier, copy(voting_sub_model))
+                    classifier_list.append((classifier,
+                                            copy(voting_sub_model)))
 
                 ci += 1
 
             vote_weights = None if 'vote_weights' not in classifier_info else classifier_info['vote_weights']
 
-            self.model = ensemble.VotingClassifier(estimators=classifier_list,
-                                                   voting='soft',
-                                                   weights=vote_weights)
+            # self.model = ensemble.VotingClassifier(estimators=classifier_list,
+            #                                        voting='soft',
+            #                                        weights=vote_weights)
+
+            self.model = VotingClassifier(estimators=classifier_list,
+                                          weights=vote_weights)
 
             # Reset the original classifier info.
             self.classifier_info = copy(classifier_info)
@@ -4425,7 +4482,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
     def _train_model(self):
 
-        """Trains a model and saves to file if prompted"""
+        """
+        Trains a model and saves to file if prompted
+        """
 
         if not self.be_quiet:
 
@@ -4506,16 +4565,21 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         # Scikit-learn models
         else:
 
-            if isinstance(self.sample_weight, np.ndarray):
+            if not hasattr(self.model, 'is_prefit_model'):
 
-                self.model.fit(self.p_vars,
-                               self.labels,
-                               sample_weight=self.sample_weight)
+                # Check if the model supports sample weights.
+                argi = inspect.getargspec(self.model.fit)
 
-            else:
+                if 'sample_weight' in argi.args:
 
-                self.model.fit(self.p_vars,
-                               self.labels)
+                    self.model.fit(self.p_vars,
+                                   self.labels,
+                                   sample_weight=self.sample_weight)
+
+                else:
+
+                    self.model.fit(self.p_vars,
+                                   self.labels)
 
             if self.calibrate_proba:
 
