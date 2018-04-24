@@ -4101,16 +4101,17 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         ax.plot(cal_mean_predicted_value,
                                 cal_fraction_of_positives,
                                 's-',
-                                c='blue',
+                                c='#5F2871',
                                 label='{}, label {:d}, calibrated'.format(classifier, self.view_calibration))
 
                         ax.plot(uncal_mean_predicted_value,
                                 uncal_fraction_of_positives,
                                 's-',
-                                c='red',
+                                c='#338A2E',
                                 label='{}, label {:d}, Uncalibrated'.format(classifier, self.view_calibration))
 
                         plt.tight_layout(pad=0.1)
+                        plt.legend()
 
                         out_fig = os.path.join(self.fig_location,
                                                '{}_{:d}_calibration.png'.format(classifier,
