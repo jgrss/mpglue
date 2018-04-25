@@ -7,7 +7,7 @@ Date created: 12/29/2013
 
 from __future__ import division
 from future.utils import iteritems
-from builtins import int
+from builtins import int, dict
 
 import os
 import sys
@@ -3703,26 +3703,28 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             if self.class_weight == 'inverse':
 
                 # rank self.class_counts from smallest to largest
-                class_counts_ordered = OrderedDict(sorted(class_counts_ordered.items(), key=lambda t: t[1]))
+                class_counts_ordered = OrderedDict(sorted(list(iteritems(class_counts_ordered)), key=lambda t: t[1]))
 
                 # rank class_proportions from largest to smallest
-                class_proportions = OrderedDict(sorted(class_proportions.items(), key=lambda t: t[1], reverse=True))
+                class_proportions = OrderedDict(sorted(list(iteritems(class_proportions)),
+                                                       key=lambda t: t[1],
+                                                       reverse=True))
 
                 # swap the proportions of the largest class counts to the smallest
 
                 self.class_weight = dict()
 
-                for (k1, v1), (k2, v2) in zip(class_counts_ordered.items(), class_proportions.items()):
+                for (k1, v1), (k2, v2) in zip(list(iteritems(class_counts_ordered)), list(iteritems(class_proportions)):
                     self.class_weight[k1] = v2
                     # self.class_weight.append(v2)
 
                 if 'CV' in self.classifier_info['classifier']:
-                    self.class_weight = np.array(self.class_weight.values(), dtype='float32')
+                    self.class_weight = np.array(list(self.class_weight.values()), dtype='float32')
 
             elif self.class_weight == 'percent':
 
                 if 'CV' in self.classifier_info['classifier']:
-                    self.class_weight = np.array(class_proportions.values(), dtype='float32')
+                    self.class_weight = np.array(list(class_proportions.values()), dtype='float32')
                 else:
                     self.class_weight = class_proportions
 
@@ -6513,18 +6515,18 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             >>>                             neighborhood=[4, 8]))
         """
 
-        param_order = classifier_parameters.keys()
+        param_order = list(classifier_parameters)
 
         # Setup the output scores table.
-        df_param_headers = '-'.join(classifier_parameters.keys())
+        df_param_headers = '-'.join(list(classifier_parameters))
         df = pd.DataFrame(columns=[df_param_headers])
-        df[df_param_headers] = list(itertools.product(*classifier_parameters.values()))
+        df[df_param_headers] = list(itertools.product(*list(classifier_parameters.values())))
 
         # Setup the error object.
         emat = error_matrix()
 
         # Iterate over all possible parameter combinations.
-        for param_combo in list(itertools.product(*classifier_parameters.values())):
+        for param_combo in list(itertools.product(*list(classifier_parameters.values()))):
 
             # Set the current parameters.
             current_combo = dict(zip(param_order, param_combo))
@@ -6631,14 +6633,14 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         score_label = metric.upper()
 
-        param_order = classifier_parameters.keys()
+        param_order = list(classifier_parameters)
 
         df_param_headers = '-'.join(param_order)
         df_fold_headers = ('F' + '-F'.join(map(str, range(1, k_folds + 1)))).split('-')
 
         # Setup the output scores table.
         df = pd.DataFrame(columns=df_fold_headers)
-        df[df_param_headers] = list(itertools.product(*classifier_parameters.values()))
+        df[df_param_headers] = list(itertools.product(*list(classifier_parameters.values())))
 
         # Open the weights file.
         lc_weights = file_name.replace('.txt', '_w.txt')
@@ -6662,7 +6664,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 predict_samps.colnames = StrVector(self.headers[:-1])
 
             # Iterate over all possible combinations.
-            for param_combo in list(itertools.product(*classifier_parameters.values())):
+            for param_combo in list(itertools.product(*list(classifier_parameters.values()))):
 
                 # Set the current parameters.
                 current_combo = dict(zip(param_order, param_combo))

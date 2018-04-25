@@ -135,7 +135,7 @@ SENSOR_BAND_DICT = {'ASTER': dict(green=1,
                     'pan-sharp57': dict(midir=1,
                                         farir=2)}
 
-SUPPORTED_SENSORS = SENSOR_BAND_DICT.keys()
+SUPPORTED_SENSORS = list(SENSOR_BAND_DICT)
 
 # The wavelengths needed to compute the index.
 # The wavelengths are loaded in order, so the
@@ -170,7 +170,7 @@ VI_WAVELENGTHS = {'ARVI': ['blue', 'red', 'nir'],
                   'VCI': ['red', 'nir'],
                   'VISMU': ['blue', 'green', 'red']}
 
-SUPPORTED_VIS = VI_WAVELENGTHS.keys()
+SUPPORTED_VIS = list(VI_WAVELENGTHS)
 
 
 def sensor_wavelength_check(sensor2check, wavelengths):

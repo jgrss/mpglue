@@ -112,11 +112,11 @@ class VRTBuilder(object):
                 raise TypeError
 
         # Ensure order by sorting by `OrderedDict` items.
-        self.in_dict = OrderedDict(sorted(in_dict.items()))
+        self.in_dict = OrderedDict(sorted(list(iteritems(in_dict))))
 
         # Use only the first list
         #   for the extent.
-        image_list = self.in_dict[self.in_dict.keys()[0]]
+        image_list = self.in_dict[list(self.in_dict)[0]]
 
         if not isinstance(image_list, list):
 
@@ -225,7 +225,7 @@ class VRTBuilder(object):
         for k, v in iteritems(self.in_dict):
             new_dict['{:03d}'.format(int(k))] = v
 
-        self.in_dict = OrderedDict(sorted(new_dict.items(), key=lambda tv: tv[0]))
+        self.in_dict = OrderedDict(sorted(list(iteritems(new_dict)), key=lambda tv: tv[0]))
 
         self.base_name = base_name
 
@@ -459,7 +459,7 @@ class VRTBuilder(object):
 
             self.band_dict[k] = n_bands
 
-        self.band_dict = OrderedDict(sorted(self.band_dict.items(), key=lambda t: t[0]))
+        self.band_dict = OrderedDict(sorted(list(iteritems(self.band_dict)), key=lambda t: t[0]))
 
 
 def vrt_builder(in_dict,

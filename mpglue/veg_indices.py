@@ -182,7 +182,7 @@ class SensorInfo(object):
     def list_expected_band_order(self, sensor):
 
         # Return the dictionary sorted by values
-        self.expected_band_order = OrderedDict(sorted(self.band_orders[sensor].items(), key=lambda sbo: sbo[1]))
+        self.expected_band_order = OrderedDict(sorted(list(iteritems(self.band_orders[sensor])), key=lambda sbo: sbo[1]))
 
         logger.info('\nExpected band order for {}:\n'.format(sensor))
         logger.info('  WAVELENGTH  Band')
@@ -218,7 +218,7 @@ class SensorInfo(object):
 
         # A list of wavelengths in the
         #   current sensor.
-        sensor_wavelengths = self.band_orders[sensor].keys()
+        sensor_wavelengths = list(self.band_orders[sensor])
 
         # All of the vegetation index wavelengths must
         #   be in the sensor wavelength.

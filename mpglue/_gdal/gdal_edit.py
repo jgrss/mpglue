@@ -286,7 +286,7 @@ def gdal_edit(argv):
     if unsetstats:
         for i in range(ds.RasterCount):
             band = ds.GetRasterBand(i+1)
-            for key in band.GetMetadata().keys():
+            for key in list(band.GetMetadata()):
                 if key.startswith('STATISTICS_'):
                     band.SetMetadataItem(key, None)
 

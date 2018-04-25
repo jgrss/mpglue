@@ -216,9 +216,9 @@ def raster_calc(output,
                                                                    y=overlap_info.top,
                                                                    check_position=False)
 
-                exec 'array_{} = i_info_{}.read(bands2open=band_dict["{}_band"], i=i+y_off, j=j+x_off, rows=n_rows, cols=n_cols, d_type="float32")'.format(key, key, key)
+                exec('array_{KEY} = i_info_{KEY}.read(bands2open=band_dict["{KEY}_band"], i=i+y_off, j=j+x_off, rows=n_rows, cols=n_cols, d_type="float32")'.format(KEY=key))
 
-            exec 'out_array = {}'.format(equation)
+            exec('out_array = {}'.format(equation))
 
             # Set the output no data values.
             out_array[np.isnan(out_array) | np.isinf(out_array)] = out_no_data

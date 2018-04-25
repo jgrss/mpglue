@@ -136,7 +136,7 @@ try:
     FORMAT_DICT = dict((v, k) for k, v in iteritems(DRIVER_DICT))
 except:
     # Python 3
-    FORMAT_DICT = dict((v, k) for k, v in DRIVER_DICT.items())
+    FORMAT_DICT = dict((v, k) for k, v in list(iteritems(DRIVER_DICT)))
 
 STORAGE_DICT = {'byte': 'uint8',
                 'int16': 'int16',
@@ -148,7 +148,7 @@ STORAGE_DICT = {'byte': 'uint8',
                 'float32': 'float32',
                 'float64': 'float64'}
 
-STORAGE_DICT_r = {v: k for k, v in STORAGE_DICT.items()}
+STORAGE_DICT_r = {v: k for k, v in list(iteritems(STORAGE_DICT))}
 
 STORAGE_DICT_GDAL = {'unknown': gdal.GDT_Unknown,
                      'byte': gdal.GDT_Byte,
@@ -1231,7 +1231,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
             # self.hdf_layers = self.datasource.GetSubDatasets()
             self.hdf_layers = self.datasource.GetMetadata('SUBDATASETS')
 
-            self.hdf_key_list = [k for k in self.hdf_layers.keys() if '_NAME' in k]
+            self.hdf_key_list = [k for k in list(self.hdf_layers) if '_NAME' in k]
 
             self.hdf_name_dict = dict()
 
@@ -1246,7 +1246,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
             self.hdf_name_list = [self.hdf_name_dict[k] for k in sorted(self.hdf_name_dict)]
 
-            # self.hdf_name_list = [self.hdf_layers[k] for k in self.hdf_layers.keys() if '_NAME' in k]
+            # self.hdf_name_list = [self.hdf_layers[k] for k in list(self.hdf_layers) if '_NAME' in k]
 
             self.hdf_datasources = [self._open_dataset(hdf_name, True) for hdf_name in self.hdf_name_list]
 
@@ -1861,7 +1861,7 @@ class SentinelParser(object):
 
         safe_dir = os.path.split(metadata)[0]
 
-        self.level = '1C' if 'n1:Level-1C_User_Product' in xml_object.keys() else '2A'
+        self.level = '1C' if 'n1:Level-1C_User_Product' in list(xml_object) else '2A'
 
         base_xml = xml_object['n1:Level-{LEVEL}_User_Product'.format(LEVEL=self.level)]
 
@@ -2249,18 +2249,18 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
                         label = name_dict[i]
 
                     self.hist_dict[i] = dict(value=i,
-                                              name=label,
-                                              count=the_hist[i],
-                                              perc=round(the_hist_pct[i], 4))
+                                             name=label,
+                                             count=the_hist[i],
+                                             perc=round(the_hist_pct[i], 4))
 
                 else:
 
                     self.hist_dict[i] = dict(value=i,
-                                              count=the_hist[i],
-                                              perc=round(the_hist_pct[i], 4))
+                                             count=the_hist[i],
+                                             perc=round(the_hist_pct[i], 4))
 
         # Sort the values, largest to smallest
-        self.hist_dict = OrderedDict(sorted(self.hist_dict.items(),
+        self.hist_dict = OrderedDict(sorted(list(iteritems(self.hist_dict)),
                                             key=lambda item: item[1]['count'],
                                             reverse=True))
 

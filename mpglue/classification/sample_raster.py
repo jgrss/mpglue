@@ -5,7 +5,8 @@
 Date Created: 9/24/2011
 """
 
-from builtins import int
+from future.utils import iteritems
+from builtins import int, dict
 
 import os
 import sys
@@ -407,7 +408,7 @@ class SampleImage(object):
         """
 
         # Convert position items to a list.
-        c_list = self.coords_offsets.items()
+        c_list = list(iteritems(self.coords_offsets))
 
         feature_length = len(self.coords_offsets)
 
@@ -434,7 +435,7 @@ class SampleImage(object):
             labels = np.zeros(feature_length, dtype='float32')
 
             # Convert position items to a list.
-            co_list = self.coords_offsets.items()
+            co_list = list(iteritems(self.coords_offsets))
 
             # Sort by feature index position.
             for vi, values in enumerate(sorted(co_list)):
@@ -569,7 +570,7 @@ class SampleImage(object):
 
         with open(self.n_samps, 'w') as n_sample_writer:
 
-            self.class_sum = sum(self.count_dict.values())
+            self.class_sum = sum(list(self.count_dict.values()))
 
             # Write the number of samples from
             #   the counter array.
