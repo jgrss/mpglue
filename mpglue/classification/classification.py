@@ -3714,9 +3714,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 self.class_weight = dict()
 
-                for (k1, v1), (k2, v2) in zip(list(iteritems(class_counts_ordered)), list(iteritems(class_proportions)):
+                for (k1, v1), (k2, v2) in zip(list(iteritems(class_counts_ordered)), list(iteritems(class_proportions))):
                     self.class_weight[k1] = v2
-                    # self.class_weight.append(v2)
 
                 if 'CV' in self.classifier_info['classifier']:
                     self.class_weight = np.array(list(self.class_weight.values()), dtype='float32')
