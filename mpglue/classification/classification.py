@@ -20,9 +20,6 @@ from copy import copy
 import itertools
 from collections import OrderedDict
 import inspect
-# from operator import itemgetter
-# import pathos.multiprocessing as M
-# import xml.etree.ElementTree as ET
 
 # MpGlue
 from .error_matrix import error_matrix
@@ -34,17 +31,19 @@ from ..errors import logger, ArrayShapeError
 
 MPPATH = get_path()
 
-if sys.version_info[0] != 3:
+try:
+    from ..stats import _lin_interp
+except:
 
-    try:
-        from ..stats import _lin_interp
-    except ImportError:
-        raise ImportError('Could not import _lin_interp')
+    logger.error('Could not import _lin_interp')
+    raise ImportError
 
-    try:
-        from ..stats import _rolling_stats
-    except ImportError:
-        raise ImportError('Could not import _rolling_stats')
+try:
+    from ..stats import _rolling_stats
+except:
+
+    logger.error('Could not import _rolling_stats')
+    raise ImportError
 
 # Pickle
 try:
@@ -57,8 +56,10 @@ else:
 # NumPy
 try:
     import numpy as np
-except ImportError:
-    raise ImportError('NumPy must be installed')
+except:
+
+    logger.error('NumPy must be installed')
+    raise ImportError
 
 # SciPy
 try:
@@ -66,48 +67,34 @@ try:
     from scipy.ndimage.interpolation import zoom
     from scipy.interpolate import interp1d
     from scipy.spatial import distance as sci_dist
-except ImportError:
-    raise ImportError('SciPy must be installed')
+except:
+
+    logger.error('SciPy must be installed')
+    raise ImportError
 
 # GDAL
 try:
     from osgeo import gdal
     from osgeo.gdalconst import *
-except ImportError:
-    raise ImportError('GDAL must be installed')
+except:
+
+    logger.error('GDAL must be installed')
+    raise ImportError
 
 # OpenCV
 try:
    import cv2
-except ImportError:
-   raise ImportError('OpenCV must be installed')
-
-# Pymorph
-try:
-
-    import pymorph
-    pymorph_installed = True
-
 except:
-    pymorph_installed = False
 
-# Pystruct
-try:
-
-    from pystruct.models import ChainCRF, GridCRF
-    import pystruct.learners as ssvm
-
-    pystruct_installed = True
-
-except:
-    pystruct_installed = False
+    logger.error('OpenCV must be installed')
+    raise ImportError
 
 # Scikit-learn
 try:
     from sklearn import ensemble, tree, cross_validation, metrics, manifold, calibration
     from sklearn.externals import joblib
     from sklearn.feature_selection import chi2, VarianceThreshold
-    from sklearn.preprocessing import StandardScaler
+    from sklearn.preprocessing import RobustScaler, StandardScaler
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.linear_model import LogisticRegression
     from sklearn import svm
@@ -120,8 +107,10 @@ try:
     from sklearn.decomposition import PCA as skPCA
     from sklearn.decomposition import IncrementalPCA
     from sklearn.gaussian_process import GaussianProcessClassifier
-except ImportError:
-    raise ImportError('Scikit-learn must be installed')
+except:
+
+    logger.error('Scikit-learn must be installed')
+    raise ImportError
 
 # Matplotlib
 try:
@@ -134,26 +123,64 @@ try:
     from mpl_toolkits.mplot3d import Axes3D
     from matplotlib.colors import ListedColormap
     import matplotlib.ticker as ticker
-except ImportError:
-    raise ImportError('Matplotlib must be installed')
+except:
+
+    logger.warning('Matplotlib must be installed')
+    raise ImportWarning
 
 # pd
 try:
     import pandas as pd
     # import pd.rpy.common as com
-except ImportError:
-    raise ImportError('pd must be installed')
+except:
+
+    logger.error('Pandas must be installed')
+    raise ImportError
 
 # retry
 try:
     from retrying import retry
 except:
-    raise ImportError('retrying must be installed')
+
+    logger.error('retrying must be installed')
+    raise ImportWarning
+
+# Pymorph
+try:
+
+    import pymorph
+
+    PYMORPH_INSTALLED = True
+
+except:
+    PYMORPH_INSTALLED = False
+
+# Pystruct
+try:
+
+    from pystruct.models import ChainCRF, GridCRF
+    import pystruct.learners as ssvm
+
+    PYSTRUCT_INSTALLED = True
+
+except:
+    PYSTRUCT_INSTALLED = False
+
+# LightGBM
+try:
+
+    import lightgbm as gbm
+
+    LIGHTGBM_INSTALLED = True
+
+except:
+    LIGHTGBM_INSTALLED = False
 
 # Rtree
 try:
     import rtree
 except:
+
     # print('Rtree must be installed to use spatial indexing')
     pass
 
@@ -418,7 +445,8 @@ def get_available_models():
             'Logistic', 'NN', 'Gaussian',
             'RF', 'CVGBoost', 'CVRF', 'RFR', 'CVMLP',
             'SVMc', 'SVMnu', 'SVMcR', 'CVSVM', 'CVSVMA', 'CVSVR', 'CVSVRA', 'QDA',
-            'ChainCRF', 'GridCRF']
+            'ChainCRF', 'GridCRF',
+            'LightGBM']
 
 
 class ParameterHandler(object):
@@ -532,6 +560,13 @@ class ParameterHandler(object):
                                  'tol', 'inference_cache',
                                  'inference_method',
                                  'neighborhood']
+
+        elif classifier == 'LightGBM':
+
+            self.valid_params = ['boosting_type', 'num_leaves', 'max_depth', 'learning_rate', 'n_estimators',
+                                 'subsample_for_bin', 'objective', 'class_weight', 'min_split_gain',
+                                 'min_child_weight', 'min_child_samples', 'subsample', 'subsample_freq',
+                                 'colsample_bytree', 'reg_alpha', 'reg_lambda', 'random_state', 'n_jobs', 'silent']
 
         else:
             logger.warning('  The classifier is not supported.')
@@ -1146,11 +1181,12 @@ class Samples(object):
         d_name, f_name = os.path.split(self.file_name)
         f_base, f_ext = os.path.splitext(f_name)
 
-        scaler_file = os.path.join(d_name, '{}_scaler.txt'.format(f_base))
+        # scaler_file = os.path.join(d_name, '{}_scaler.scaler'.format(f_base))
 
-        self.scaler = StandardScaler().fit(self.p_vars)
+        self.scaler = RobustScaler()
+        self.scaler.fit(self.p_vars)
 
-        PickleIt.dump(self.scaler, scaler_file)
+        # PickleIt.dump(self.scaler, scaler_file)
 
         # Save the unscaled samples.
         self.p_vars_original = self.p_vars.copy()
@@ -3397,6 +3433,8 @@ class ModelOptions(object):
               *Pystruct
         GridCRF -- Pairwise Conditional Random Fields on a 2d grid (classification problems)
               *Pystruct
+        LightGBM-- Light Gradient Boosting (classification problems)
+              *LightGBM
 
         """
 
@@ -3785,7 +3823,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             try:
 
                 # self.classifier_info, self.model = self.load(self.input_model)
-                self.classifier_info, self.model, self.sample_info_dict = joblib.load(self.input_model)
+                self.classifier_info, self.model, self.scaler, self.scaled, self.sample_info_dict = joblib.load(self.input_model)
 
             except:
 
@@ -3807,6 +3845,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                          C=1.0,
                          nu=0.5,
                          kernel='rbf',
+                         reg_alpha=0.1,
+                         reg_lambda=0.1,
                          n_jobs=-1)
 
         # Check if model parameters are set,
@@ -3912,7 +3952,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         elif self.classifier_info['classifier'] in ['ChainCRF', 'GridCRF']:
 
-            if not pystruct_installed:
+            if not PYSTRUCT_INSTALLED:
 
                 logger.warning('  Pystruct must be installed to use CRF models.\nEnsure that pystruct and cvxopt are installed.')
                 return
@@ -4040,6 +4080,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 elif classifier == 'SVMnu':
                     voting_sub_model = svm.NuSVC(**self.classifier_info_)
+
+                elif classifier == 'LightGBM':
+                    voting_sub_model = gbm.LGBMClassifier(**self.classifier_info_)
 
                 else:
 
@@ -4204,7 +4247,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 # self.model = cv2.ml.NormalBayesClassifier_create()
 
             elif self.classifier_info['classifier'] == 'CART':
-
                 self.model = cv2.ml.DTrees_create()
 
             elif self.classifier_info['classifier'] in ['CVRF', 'CVRFR']:
@@ -4221,47 +4263,36 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             #     #                                                  self.n_classes]))
 
             elif self.classifier_info['classifier'] in ['CVSVM', 'CVSVMA', 'CVSVMR', 'CVSVMRA']:
-
                 self.model = cv2.ml.SVM_create()
 
             elif self.classifier_info['classifier'] == 'DT':
-
                 self.model = tree.DecisionTreeClassifier(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'DTR':
-
                 self.model = tree.DecisionTreeRegressor(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'EX_DT':
-
                 self.model = tree.ExtraTreeClassifier(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'EX_DTR':
-
                 self.model = tree.ExtraTreeRegressor(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'Logistic':
-
                 self.model = LogisticRegression(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'NN':
-
                 self.model = KNeighborsClassifier(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'RF':
-
                 self.model = ensemble.RandomForestClassifier(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'EX_RF':
-
                 self.model = ensemble.ExtraTreesClassifier(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'RFR':
-
                 self.model = ensemble.RandomForestRegressor(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'EX_RFR':
-
                 self.model = ensemble.ExtraTreesRegressor(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'AB_DT':
@@ -4310,28 +4341,25 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                         **self.classifier_info_base)
 
             elif self.classifier_info['classifier'] == 'GB':
-
                 self.model = ensemble.GradientBoostingClassifier(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'GBR':
-
                 self.model = ensemble.GradientBoostingRegressor(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'SVMc':
-
                 self.model = svm.SVC(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'SVMnu':
-
                 self.model = svm.NuSVC(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'QDA':
-
                 self.model = QDA(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'Gaussian':
-
                 self.model = GaussianProcessClassifier(**self.classifier_info_)
+
+            elif self.classifier_info['classifier'] == 'LightGBM':
+                self.model = gbm.LGBMClassifier(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'ChainCRF':
 
@@ -4728,6 +4756,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     joblib.dump([self.classifier_info,
                                  self.model,
+                                 self.scaler,
+                                 self.scaled,
                                  self.sample_info_dict],
                                 self.output_model,
                                 compress=compress,
@@ -4749,6 +4779,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     joblib.dump([self.classifier_info,
                                  self.model,
+                                 self.scaler,
+                                 self.scaled,
                                  self.sample_info_dict],
                                 self.output_model,
                                 compress=compress,
@@ -4882,7 +4914,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 input_image,
                 output_image,
                 additional_layers=None,
-                scale_data=False,
                 band_check=-1,
                 bands2open=None,
                 ignore_feas=None,
@@ -4919,9 +4950,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             output_image (str): The output image.
             additional_layers (Optional[list]): A list of additional images (layers) that are not part
                 of ``input_image``.
-            scale_data (Optional[bool or str]): Whether to scale (standardize) the data. In this case, a `scaler`
-                object must be present. Otherwise, `scale_data` can be a string pointing to a scaler object to load
-                from file. Default is False.
             band_check (Optional[int]): The band to check for 'no data'. Default is -1, or do not perform check. 
             bands2open (Optional[list]): A list of bands to open, otherwise opens all bands. Default is None.
             ignore_feas (Optional[list]): A list of features (band layers) to ignore. Default is an empty list,
@@ -4996,7 +5024,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.output_image = output_image
         self.additional_layers = additional_layers
         self.ignore_feas = ignore_feas
-        self.scale_data = scale_data
         self.bands2open = bands2open
         self.band_check = band_check
         self.row_block_size = row_block_size
@@ -5271,28 +5298,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 out_raster_object.get_band(1)
                 out_raster_object.fill(0)
 
-        if isinstance(self.scale_data, str):
-
-            if not os.path.isfile(self.scale_data):
-
-                logger.error('  The scaler must be an existing file if given as a string.')
-                raise OSError
-
-            # Load a standardization scaler from file.
-            self.scaler = self.load(self.scale_data)
-
-        else:
-
-            if self.scale_data:
-
-                if not hasattr(self, 'scaler'):
-
-                    logger.error('  The scaler attribute must exist')
-                    raise AttributeError
-
-            else:
-                self.scaler = None
-
         block_rows, block_cols = raster_tools.block_dimensions(rows,
                                                                cols,
                                                                row_block_size=self.row_block_size,
@@ -5465,7 +5470,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             n_samples = rw * cw
 
             # Scale the features.
-            if isinstance(self.scale_data, str) or self.scale_data:
+            if self.scaled:
                 features = self.scaler.transform(features)
 
             if self.use_xy:
