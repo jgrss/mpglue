@@ -115,6 +115,11 @@ class RegisterDriver(object):
         formats = {'.shp': 'ESRI Shapefile',
                    '.mem': 'MEMORY'}
 
+        if file_extension not in formats:
+
+            logger.error('  The file extension should be .shp or .mem.')
+            raise NameError
+
         self.file_format = formats[file_extension]
 
 
