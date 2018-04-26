@@ -117,6 +117,9 @@ class RegisterDriver(object):
 
         if file_extension not in formats:
 
+            import pdb
+            pdb.set_trace()
+
             logger.error('  The file extension should be .shp or .mem.')
             raise NameError
 
