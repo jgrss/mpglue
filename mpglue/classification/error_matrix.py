@@ -238,11 +238,6 @@ class error_matrix(object):
             self.producers_accuracy()
             self.users_accuracy()
 
-            print(self.y.dtype)
-            print(self.X.dtype)
-            print(np.unique(self.y))
-            print(np.unique(self.X))
-
             # Overall accuracy
             self.accuracy = metrics.accuracy_score(self.y, self.X) * 100.0
 

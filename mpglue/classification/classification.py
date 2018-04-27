@@ -5495,10 +5495,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             n_samples = rw * cw
 
-            # Scale the features.
-            if self.scaled:
-                features = self.scaler.transform(features)
-
             if self.use_xy:
 
                 # Create x,y coordinates for the block.
@@ -5512,6 +5508,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             # Reshape the features for CRF models.
             if self.classifier_info['classifier'] == 'ChainCRF':
                 features = self._transform4crf(p_vars2reshape=features)[0]
+            else:
+
+                # Scale the features.
+                if self.scaled:
+                    features = self.scaler.transform(features)
 
             if self.get_probs:
 
