@@ -1178,15 +1178,8 @@ class Samples(object):
 
     def _scale_p_vars(self):
 
-        d_name, f_name = os.path.split(self.file_name)
-        f_base, f_ext = os.path.splitext(f_name)
-
-        # scaler_file = os.path.join(d_name, '{}_scaler.scaler'.format(f_base))
-
         self.scaler = RobustScaler()
         self.scaler.fit(self.p_vars)
-
-        # PickleIt.dump(self.scaler, scaler_file)
 
         # Save the unscaled samples.
         self.p_vars_original = self.p_vars.copy()
@@ -4082,6 +4075,17 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     voting_sub_model = svm.NuSVC(**self.classifier_info_)
 
                 elif classifier == 'LightGBM':
+
+                    if not LIGHTGBM_INSTALLED:
+
+                        logger.error("""\
+
+                        LightGBM must be installed to use the model. Use 
+                        conda install -c conda-forge lightgbm or
+                        pip install lightgbm
+
+                        """)
+
                     voting_sub_model = gbm.LGBMClassifier(**self.classifier_info_)
 
                 else:
@@ -4359,6 +4363,17 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 self.model = GaussianProcessClassifier(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'LightGBM':
+
+                if not LIGHTGBM_INSTALLED:
+
+                    logger.error("""\
+                    
+                    LightGBM must be installed to use the model. Use 
+                    conda install -c conda-forge lightgbm or
+                    pip install lightgbm
+                    
+                    """)
+
                 self.model = gbm.LGBMClassifier(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'ChainCRF':
