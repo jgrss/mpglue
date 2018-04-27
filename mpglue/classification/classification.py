@@ -6150,14 +6150,14 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         else:
 
-            if self.class_subs or (0 < self.perc_samp_each < 1) or ((self.perc_samp_each == 0) and (0 < self.perc_samp < 1)):
+            if isinstance(self.p_vars_test, np.ndarray):
                 test_labs_pred = self.model.predict(self.p_vars_test)
             else:
 
                 # Test the train variables if no test variables exist.
                 test_labs_pred = self.model.predict(self.p_vars)
 
-        if self.class_subs or (0 < self.perc_samp_each < 1) or ((self.perc_samp_each == 0) and (0 < self.perc_samp < 1)):
+        if isinstance(self.p_vars_test, np.ndarray):
 
             if discrete:
                 self.test_array = np.int16(np.c_[test_labs_pred, self.labels_test])
@@ -6175,7 +6175,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             logger.info('  Getting test accuracy ...')
 
         self.emat = error_matrix()
-        self.emat.get_stats(po_array=self.test_array, discrete=discrete)
+
+        self.emat.get_stats(po_array=self.test_array,
+                            discrete=discrete)
 
         if out_acc:
             self.emat.write_stats(out_acc)
