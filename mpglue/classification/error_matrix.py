@@ -233,7 +233,7 @@ class error_matrix(object):
             self.n_samples = self.y.shape[0]
 
             # create the error matrix
-            self.e_matrix = np.zeros((self.n_classes, self.n_classes)).astype(int)
+            self.e_matrix = np.zeros((self.n_classes, self.n_classes), dtype='int')
 
             # add to error matrix
             for predicted, observed in zip(self.X, self.y):
@@ -250,7 +250,7 @@ class error_matrix(object):
             self.users_accuracy()
 
             # overall accuracy
-            self.accuracy = metrics.accuracy_score(self.y, self.X) * 100.
+            self.accuracy = metrics.accuracy_score(self.y, self.X) * 100.0
 
             # statistics report
             self.report = metrics.classification_report(self.y, self.X)
@@ -260,10 +260,12 @@ class error_matrix(object):
 
             # get the weighted f beta score
             try:
+
                 self.f_beta = metrics.fbeta_score(self.y, self.X,
-                                                  beta=.5,
+                                                  beta=0.5,
                                                   labels=self.class_list,
                                                   pos_label=self.class_list[1])
+
             except:
                 self.f_beta = None
 
@@ -363,15 +365,15 @@ class error_matrix(object):
 
         self.area_difference = self.stratified_estimate - self.class_area
 
-        self.standard_errors = []
+        self.standard_errors = list()
 
         for ci in range(e_matrix_float.shape[0]):
 
             a = np.power(self.area_weights, 2)
             b = e_matrix_float[:, ci] / emat_row_sum
-            c = 1. - (e_matrix_float[:, ci] / emat_row_sum)
+            c = 1.0 - (e_matrix_float[:, ci] / emat_row_sum)
 
-            self.standard_errors.append(((a * ((b * c) / (emat_row_sum - 1.))).sum() ** .5) * total_area)
+            self.standard_errors.append(((a * ((b * c) / (emat_row_sum - 1.0))).sum() ** 0.5) * total_area)
 
         # Equation 14
         self.stratified_users = np.diagonal(e_matrix_pr) / prd_weights
@@ -389,9 +391,9 @@ class error_matrix(object):
         producer_sums = self.e_matrix.sum(axis=0)
 
         for pr_j in range(0, self.n_classes):
-            self.producers[pr_j] = (self.e_matrix[pr_j, pr_j] / float(producer_sums[pr_j])) * 100.
+            self.producers[pr_j] = (self.e_matrix[pr_j, pr_j] / float(producer_sums[pr_j])) * 100.0
 
-        self.producers[np.isnan(self.producers) | np.isinf(self.producers)] = 0.
+        self.producers[np.isnan(self.producers) | np.isinf(self.producers)] = 0.0
 
     def users_accuracy(self):
 
@@ -400,9 +402,9 @@ class error_matrix(object):
         user_sums = self.e_matrix.sum(axis=1)
 
         for pr_i in range(0, self.n_classes):
-            self.users[pr_i] = (self.e_matrix[pr_i, pr_i] / float(user_sums[pr_i])) * 100.
+            self.users[pr_i] = (self.e_matrix[pr_i, pr_i] / float(user_sums[pr_i])) * 100.0
 
-        self.users[np.isnan(self.users) | np.isinf(self.users)] = 0.
+        self.users[np.isnan(self.users) | np.isinf(self.users)] = 0.0
 
     def merge_lists(self, list1, list2):
 

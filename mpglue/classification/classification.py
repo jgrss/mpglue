@@ -1019,6 +1019,7 @@ class Samples(object):
         self.sample_info_dict['n_feas'] = self.n_feas
         self.sample_info_dict['n_classes'] = self.n_classes
         self.sample_info_dict['classes'] = self.classes
+        self.sample_info_dict['scaler'] = self.scaler
         self.sample_info_dict['scaled'] = self.scaled
 
     @staticmethod
@@ -1186,6 +1187,9 @@ class Samples(object):
 
         # Scale the data.
         self.p_vars = self.scaler.transform(self.p_vars)
+
+        if isinstance(self.p_vars_test, np.ndarray):
+            self.p_vars_test = self.scaler.transform(self.p_vars_test)
 
         self.scaled = True
 
@@ -3816,7 +3820,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             try:
 
                 # self.classifier_info, self.model = self.load(self.input_model)
-                self.classifier_info, self.model, self.scaler, self.scaled, self.sample_info_dict = joblib.load(self.input_model)
+                self.classifier_info, self.model, self.sample_info_dict = joblib.load(self.input_model)
+
+                self.n_feas = self.sample_info_dict['scaler']
+                self.n_classes = self.sample_info_dict['n_classes']
+                self.classes = self.sample_info_dict['classes']
+                self.scaler = self.sample_info_dict['scaler']
+                self.scaled = self.sample_info_dict['scaled']
 
             except:
 
@@ -4771,8 +4781,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     joblib.dump([self.classifier_info,
                                  self.model,
-                                 self.scaler,
-                                 self.scaled,
                                  self.sample_info_dict],
                                 self.output_model,
                                 compress=compress,
