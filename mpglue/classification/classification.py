@@ -254,7 +254,8 @@ def predict_scikit_probas_static(features,
                                  morphology,
                                  do_not_morph,
                                  plr_matrix,
-                                 plr_window_size):
+                                 plr_window_size,
+                                 d_type):
 
     """
     A function to get posterior probabilities from Scikit-learn models
@@ -270,6 +271,7 @@ def predict_scikit_probas_static(features,
         do_not_morph (int list)
         plr_matrix (2d array)
         plr_window_size (int)
+        d_type (str)
     """
 
     # `probabilities` shaped as [samples x n classes]
@@ -288,7 +290,10 @@ def predict_scikit_probas_static(features,
                                          window_size=plr_window_size,
                                          weights=plr_matrix).argmax(axis=0)
 
-    predictions = np.zeros(probabilities_argmax.shape, dtype='int16')
+    if morphology:
+        predictions = np.zeros(probabilities_argmax.shape, dtype='uint8')
+    else:
+        predictions = np.zeros(probabilities_argmax.shape, dtype=raster_tools.STORAGE_DICT_NUMPY[d_type])
 
     # Convert indices to classes.
     for class_index, real_class in enumerate(class_list):
@@ -335,7 +340,8 @@ def predict_scikit_probas(rw,
                           morphology,
                           do_not_morph,
                           plr_matrix,
-                          plr_window_size):
+                          plr_window_size,
+                          d_type):
 
     """
     A function to get posterior probabilities from Scikit-learn models
@@ -351,6 +357,7 @@ def predict_scikit_probas(rw,
         do_not_morph (int list)
         plr_matrix (2d array)
         plr_window_size (int)
+        d_type (str)
     """
 
     # `probabilities` shaped as [samples x n classes]
@@ -369,7 +376,10 @@ def predict_scikit_probas(rw,
                                          window_size=plr_window_size,
                                          weights=plr_matrix).argmax(axis=0)
 
-    predictions = np.zeros(probabilities_argmax.shape, dtype='int16')
+    if morphology:
+        predictions = np.zeros(probabilities_argmax.shape, dtype='uint8')
+    else:
+        predictions = np.zeros(probabilities_argmax.shape, dtype=raster_tools.STORAGE_DICT_NUMPY[d_type])
 
     # Convert indices to classes.
     for class_index, real_class in enumerate(class_list):
@@ -4887,7 +4897,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                       plr_window_size=5,
                       plr_matrix=None,
                       morphology=False,
-                      do_not_morph=None):
+                      do_not_morph=None,
+                      d_type='byte'):
 
         """
         Makes predictions on an array
@@ -4902,6 +4913,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             morphology (Optional[bool]): Whether to apply image morphology to the predicted classes.
                 Default is False.
             do_not_morph (Optional[int list]): A list of classes not to morph with `morphology=True`. Default is None.
+            d_type (Optional[str]): The output image data type. Default is 'byte'.
+                Choices are ['byte', 'uint16', 'uint32', 'uint64', 'int16', 'int32', 'int64'].
+                *If `morphology=True`, `d_type` is automatically set as 'byte'. For regression models, `d_type` is
+                automatically set as 'float32'.
 
         Returns:
             Predictions as a 2d array
@@ -4909,7 +4924,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         if self.classifier_info['classifier'] in ['C5', 'Cubist']:
 
-            features = ro.r.matrix(array2predict, nrow=array2predict.shape[0],
+            features = ro.r.matrix(array2predict,
+                                   nrow=array2predict.shape[0],
                                    ncol=array2predict.shape[1])
 
             features.colnames = StrVector(self.headers[:-1])
@@ -4931,10 +4947,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                     morphology,
                                                     do_not_morph,
                                                     plr_matrix,
-                                                    plr_window_size)
+                                                    plr_window_size,
+                                                    self.d_type)
 
             else:
-                return self.model.predict(array2predict).reshape(rows, cols)
+                return raster_tools.STORAGE_DICT_NUMPY[d_type](self.model.predict(array2predict).reshape(rows, cols))
 
     def predict(self,
                 input_image,
@@ -4951,9 +4968,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 background_value=0,
                 minimum_observations=0,
                 observation_band=0,
-                scale_factor=1.,
-                row_block_size=1024,
-                col_block_size=1024,
+                scale_factor=1.0,
+                row_block_size=1000,
+                col_block_size=1000,
                 n_jobs=-1,
                 n_jobs_vars=-1,
                 gdal_cache=256,
@@ -4966,6 +4983,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 block_range=None,
                 morphology=False,
                 do_not_morph=None,
+                d_type='byte',
                 **kwargs):
 
         """
@@ -5013,6 +5031,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             morphology (Optional[bool]): Whether to apply image morphology to the predicted classes.
                 Default is False.
             do_not_morph (Optional[int list]): A list of classes not to morph with `morphology=True`. Default is None.
+            d_type (Optional[str]): The output image data type. Default is 'byte'.
+                Choices are ['byte', 'uint16', 'uint32', 'uint64', 'int16', 'int32', 'int64'].
+                *If `morphology=True`, `d_type` is automatically set as 'byte'. For regression models, `d_type` is
+                automatically set as 'float32'.
             kwargs (Optional): Image read options passed to `mpglue.raster_tools.ropen.read`.
             
         Returns:
@@ -5076,6 +5098,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.block_range = block_range
         self.morphology = morphology
         self.do_not_morph = do_not_morph
+        self.d_type = d_type
         self.kwargs = kwargs
 
         if self.n_jobs == -1:
@@ -5171,9 +5194,19 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             if self.classifier_info['classifier'] in ['ABR', 'ABR_EX_DTR', 'BGR', 'Bag_DTR', 'RFR', 'EX_RFR', 'CV_RFR',
                                                       'CVEX_RFR', 'SVR', 'SVRA', 'Cubist', 'DTR']:
+
                 self.o_info.storage = 'float32'
+                self.d_type = 'float32'
+
             else:
-                self.o_info.storage = 'byte'
+
+                if self.morphology:
+
+                    self.o_info.storage = 'byte'
+                    self.d_type = 'byte'
+
+                else:
+                    self.o_info.storage = self.d_type
 
             # Make the predictions
             self._predict()
@@ -5518,7 +5551,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 # Predict class conditional probabilities.
 
-                predicted = self.model.predict_proba(features)
+                predicted = np.float32(self.model.predict_proba(features))
 
                 for cl in range(0, self.n_classes):
 
@@ -5620,7 +5653,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                                             self.morphology,
                                                                             self.do_not_morph,
                                                                             self.plr_matrix,
-                                                                            self.plr_window_size),
+                                                                            self.plr_window_size,
+                                                                            self.d_type),
                                                       j=j-jwo,
                                                       i=i-iwo)
 
@@ -5678,7 +5712,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                             if isinstance(self.do_not_morph, list):
 
-                                predictions = mdl.predict(features).reshape(rw, cw)
+                                predictions = np.uint8(mdl.predict(features).reshape(rw, cw))
 
                                 predictions_copy = predictions[ipadded:ipadded+n_rows,
                                                                jpadded:jpadded+n_cols].copy()
@@ -5704,7 +5738,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                             else:
 
                                 out_raster_object.write_array(
-                                    pymorph.closerec(pymorph.closerec(mdl.predict(features).reshape(rw, cw),
+                                    pymorph.closerec(pymorph.closerec(np.uint8(mdl.predict(features).reshape(rw, cw)),
                                                                       Bdil=pymorph.secross(r=3),
                                                                       Bc=pymorph.secross(r=1)),
                                                      Bdil=pymorph.secross(r=2),
@@ -5715,8 +5749,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                         else:
 
-                            out_raster_object.write_array(mdl.predict(features).reshape(n_rows,
-                                                                                        n_cols),
+                            np_dtype = raster_tools.STORAGE_DICT_NUMPY[self.d_type]
+
+                            out_raster_object.write_array(np_dtype(mdl.predict(features).reshape(n_rows,
+                                                                                                 n_cols)),
                                                           j=j-jwo,
                                                           i=i-iwo)
 
