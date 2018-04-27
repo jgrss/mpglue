@@ -207,10 +207,10 @@ def _do_c5_cubist_predict(c5_cubist_model, classifier_name, predict_samps, rows_
     if classifier_name == 'C5':
 
         if not rows_i:
-            return np.array(C50.predict_C5_0(c5_cubist_model, newdata=predict_samps, type='class'), dtype='uint8')
+            return np.array(C50.predict_C5_0(c5_cubist_model, newdata=predict_samps, type='class'), dtype='int16')
         else:
             return np.array(C50.predict_C5_0(c5_cubist_model, newdata=predict_samps.rx(rows_i, True),
-                                             type='class'), dtype='uint8')
+                                             type='class'), dtype='int64')
 
     elif classifier_name == 'Cubist':
 
@@ -238,7 +238,7 @@ def predict_c5_cubist(input_model, ip):
 
     if ci['classifier'] == 'C5':
         # TODO: type='prob'
-        return np.array(C50.predict_C5_0(m, newdata=predict_samps.rx(rows_i, True), type='class'), dtype='uint8')
+        return np.array(C50.predict_C5_0(m, newdata=predict_samps.rx(rows_i, True), type='class'), dtype='int16')
     else:
         return np.array(Cubist.predict_cubist(m, newdata=predict_samps.rx(rows_i, True)), dtype='float32')
 
@@ -288,7 +288,7 @@ def predict_scikit_probas_static(features,
                                          window_size=plr_window_size,
                                          weights=plr_matrix).argmax(axis=0)
 
-    predictions = np.zeros(probabilities_argmax.shape, dtype='uint8')
+    predictions = np.zeros(probabilities_argmax.shape, dtype='int16')
 
     # Convert indices to classes.
     for class_index, real_class in enumerate(class_list):
@@ -369,7 +369,7 @@ def predict_scikit_probas(rw,
                                          window_size=plr_window_size,
                                          weights=plr_matrix).argmax(axis=0)
 
-    predictions = np.zeros(probabilities_argmax.shape, dtype='uint8')
+    predictions = np.zeros(probabilities_argmax.shape, dtype='int16')
 
     # Convert indices to classes.
     for class_index, real_class in enumerate(class_list):
@@ -722,7 +722,9 @@ class Samples(object):
         """
 
         if not isinstance(class_subs, dict):
-            class_subs = dict()
+            self.class_subs = dict()
+        else:
+            self.class_subs = class_subs
 
         if not isinstance(recode_dict, dict):
             recode_dict = dict()
@@ -886,20 +888,18 @@ class Samples(object):
         # Potential change in array ROW size
         # ----------------------------------
         # Sample a specified number per class.
-        if class_subs or (0 < perc_samp_each < 1):
+        if self.class_subs or (0 < perc_samp_each < 1):
 
             # Create the group strata.
             if stratified:
                 self._create_group_strata()
 
-            if not class_subs and (0 < perc_samp_each < 1):
-
-                class_subs = dict()
+            if not self.class_subs and (0 < perc_samp_each < 1):
 
                 for clp in self.df[self.response_label].unique():
-                    class_subs[int(clp)] = perc_samp_each
+                    self.class_subs[int(clp)] = perc_samp_each
 
-            for class_key, cl in sorted(iteritems(class_subs)):
+            for class_key, cl in sorted(iteritems(self.class_subs)):
 
                 if stratified:
                     self._stratify(class_key, cl)
@@ -988,7 +988,7 @@ class Samples(object):
 
         self.p_vars[np.isnan(self.p_vars) | np.isinf(self.p_vars)] = 0.
 
-        if ((perc_samp < 1) and (perc_samp_each == 0)) or class_subs or (0 < perc_samp_each < 1):
+        if self.class_subs or (0 < perc_samp_each < 1) or ((perc_samp < 1) and (perc_samp_each == 0)):
 
             # Get class labels.
             if labs_type == 'int':
@@ -3483,7 +3483,7 @@ class VotingClassifier(object):
         # Get predictions as an index of the array position.
         probabilities_argmax = np.argmax(self.predict_proba(X), axis=1)
 
-        predictions = np.zeros(probabilities_argmax.shape, dtype='uint8')
+        predictions = np.zeros(probabilities_argmax.shape, dtype='int16')
 
         # Convert indices to classes.
         for class_index, real_class in enumerate(self.classes_):
@@ -4817,13 +4817,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 if isinstance(self.p_vars_test, np.ndarray):
 
-                    try:
+                    # try:
 
-                        self.test_accuracy(out_acc=self.out_acc,
-                                           discrete=self.discrete)
+                    self.test_accuracy(out_acc=self.out_acc,
+                                       discrete=self.discrete)
 
-                    except:
-                        logger.warning('  Could not perform model validation.')
+                    # except:
+                    #     logger.warning('  Could not perform model validation.')
 
     def _transform4crf(self,
                        p_vars2reshape=None,
@@ -6113,24 +6113,24 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         else:
 
-            if (0 < self.perc_samp_each < 1) or ((self.perc_samp_each == 0) and (0 < self.perc_samp < 1)):
+            if self.class_subs or (0 < self.perc_samp_each < 1) or ((self.perc_samp_each == 0) and (0 < self.perc_samp < 1)):
                 test_labs_pred = self.model.predict(self.p_vars_test)
             else:
 
                 # Test the train variables if no test variables exist.
                 test_labs_pred = self.model.predict(self.p_vars)
 
-        if (0 < self.perc_samp_each < 1) or ((self.perc_samp_each == 0) and (0 < self.perc_samp < 1)):
+        if self.class_subs or (0 < self.perc_samp_each < 1) or ((self.perc_samp_each == 0) and (0 < self.perc_samp < 1)):
 
             if discrete:
-                self.test_array = np.uint8(np.c_[test_labs_pred, self.labels_test])
+                self.test_array = np.int16(np.c_[test_labs_pred, self.labels_test])
             else:
                 self.test_array = np.float32(np.c_[test_labs_pred, self.labels_test])
 
         else:
 
             if discrete:
-                self.test_array = np.uint8(np.c_[test_labs_pred, self.labels])
+                self.test_array = np.int16(np.c_[test_labs_pred, self.labels])
             else:
                 self.test_array = np.float32(np.c_[test_labs_pred, self.labels])
 

@@ -159,7 +159,6 @@ class error_matrix(object):
     """
 
     def __init__(self):
-
         self.time_stamp = time.asctime(time.localtime(time.time()))
 
     def get_stats(self,
@@ -202,44 +201,33 @@ class error_matrix(object):
                 hdr_idx = 0
 
             # observed (true)
-            self.y = np.asarray(samples[hdr_idx:, -1].astype(np.float32)).astype(int)
+            self.y = np.int16(np.float32(np.asarray(samples[hdr_idx:, -1]).ravel()))
 
             # predicted
-            self.X = np.asarray(samples[hdr_idx:, -2].astype(np.float32)).astype(int)
+            self.X = np.int16(np.float32(np.asarray(samples[hdr_idx:, -2]).ravel()))
 
             self.n_samps = len(self.y)
 
             if not class_list:
 
-                # get unique class values
-                # class_list1 = reduce(lambda self.X, self.y: self.X + self.y if self.y[0] not in self.X else self.X,
-                #                                             map(lambda self.X: [self.X], self.y))
+                # Get unique class values
                 class_list1 = np.unique(self.X)
                 class_list2 = np.unique(self.y)
-
-                # class_list2 = reduce(lambda self.y, self.X: self.y + self.X if self.X[0] not in self.y else self.y,
-                #                                             map(lambda self.y: [self.y], self.X))
 
                 self.merge_lists(class_list1, class_list2)
 
             else:
                 self.class_list = class_list
 
-            # if 0 in self.class_list:
-            #     self.class_list.remove(0)
-
             self.n_classes = len(self.class_list)
             self.class_list = sorted(self.class_list)
             self.n_samples = self.y.shape[0]
 
-            # create the error matrix
-            self.e_matrix = np.zeros((self.n_classes, self.n_classes), dtype='int')
+            # Create the error matrix
+            self.e_matrix = np.zeros((self.n_classes, self.n_classes), dtype='int16')
 
-            # add to error matrix
+            # Add to error matrix
             for predicted, observed in zip(self.X, self.y):
-
-                # if (predicted == 0) or (observed == 0):
-                #     continue
 
                 self.e_matrix[self.class_list.index(predicted),
                               self.class_list.index(observed)] += 1
@@ -250,13 +238,18 @@ class error_matrix(object):
             self.producers_accuracy()
             self.users_accuracy()
 
-            # overall accuracy
+            print(self.y.dtype)
+            print(self.X.dtype)
+            print(np.unique(self.y))
+            print(np.unique(self.X))
+
+            # Overall accuracy
             self.accuracy = metrics.accuracy_score(self.y, self.X) * 100.0
 
-            # statistics report
+            # Statistics report
             self.report = metrics.classification_report(self.y, self.X)
 
-            # get f scores for each class
+            # Get f scores for each class
             self.f_scores = metrics.f1_score(self.y, self.X, average=None)
 
             # get the weighted f beta score
@@ -313,7 +306,7 @@ class error_matrix(object):
                     observed.append(ei+1)
                     predicted.append(ej+1)
 
-        return np.array(observed).astype(int), np.array(predicted).astype(int)
+        return np.int16(np.array(observed)), np.int16(np.array(predicted))
 
     def sample_bias(self, class_area):
 
@@ -387,6 +380,10 @@ class error_matrix(object):
 
     def producers_accuracy(self):
 
+        """
+        Producer's accuracy
+        """
+
         self.producers = np.zeros(self.n_classes, dtype='float32')
 
         producer_sums = self.e_matrix.sum(axis=0)
@@ -397,6 +394,10 @@ class error_matrix(object):
         self.producers[np.isnan(self.producers) | np.isinf(self.producers)] = 0.0
 
     def users_accuracy(self):
+
+        """
+        User's accuracy
+        """
 
         self.users = np.zeros(self.n_classes, dtype='float32')
 
