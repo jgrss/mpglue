@@ -4802,8 +4802,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     joblib.dump([self.classifier_info,
                                  self.model,
-                                 self.scaler,
-                                 self.scaled,
                                  self.sample_info_dict],
                                 self.output_model,
                                 compress=compress,
@@ -4819,8 +4817,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 if isinstance(self.p_vars_test, np.ndarray):
 
-                    self.test_accuracy(out_acc=self.out_acc,
-                                       discrete=self.discrete)
+                    try:
+
+                        self.test_accuracy(out_acc=self.out_acc,
+                                           discrete=self.discrete)
+
+                    except:
+                        logger.warning('  Could not perform model validation.')
 
     def _transform4crf(self,
                        p_vars2reshape=None,

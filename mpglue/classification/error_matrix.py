@@ -241,7 +241,8 @@ class error_matrix(object):
                 # if (predicted == 0) or (observed == 0):
                 #     continue
 
-                self.e_matrix[self.class_list.index(predicted), self.class_list.index(observed)] += 1
+                self.e_matrix[self.class_list.index(predicted),
+                              self.class_list.index(observed)] += 1
 
         if self.discrete:
 
