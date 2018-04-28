@@ -56,17 +56,17 @@ def earth_sun_distance(julian_day):
         Earth-Sun distance (d) in astronomical units for Day of the Year (DOY)
     """
 
-    return (1. - .01672 * math.cos(math.radians(.9856 * (float(julian_day) - 4.)))) ** 2.
+    return (1.0 - 0.01672 * math.cos(math.radians(0.9856 * (float(julian_day) - 4.0)))) ** 2.0
 
 
-def julian_day_dictionary(start_year=1980, end_year=2020, store='st_jd'):
+def julian_day_dictionary(start_year=1980, end_year=2050, store='st_jd'):
 
     """
     A function to setup standard (continuously increasing) Julian Days
 
     Args:
-        start_year
-        end_year
+        start_year (Optional[int])
+        end_year (Optional[int])
         store (Optional[str]): Choices are ['st_jd', 'date'].
 
     Returns:
@@ -117,10 +117,14 @@ def julian_day_dictionary(start_year=1980, end_year=2020, store='st_jd'):
     return jd_dict
 
 
-def julian_day_dictionary_r(start_year=1980, end_year=2020):
+def julian_day_dictionary_r(start_year=1980, end_year=2050):
 
     """
     A function to get the reverse Julian Data dictionary
+
+    Args:
+        start_year (Optional[int])
+        end_year (Optional[int])
 
     Returns:
         Dictionary of {yyyyddd: 'year-day'}
@@ -128,7 +132,8 @@ def julian_day_dictionary_r(start_year=1980, end_year=2020):
 
     jd_dict_r = OrderedDict()
 
-    jd_dict = julian_day_dictionary(start_year=start_year, end_year=end_year)
+    jd_dict = julian_day_dictionary(start_year=start_year,
+                                    end_year=end_year)
 
     for k, v in viewitems(jd_dict):
         jd_dict_r[v] = k
@@ -139,12 +144,17 @@ def julian_day_dictionary_r(start_year=1980, end_year=2020):
 def get_leap_years(start_year=1980, end_year=2050):
 
     """
-    Gets the number of calendar days by year
+    Gets the number of calendar days by year, either 365 or 366
+
+    Args:
+        start_year (Optional[int])
+        end_year (Optional[int])
     """
 
     leap_year_dict = dict()
 
-    jd_dict = julian_day_dictionary(start_year=start_year, end_year=end_year)
+    jd_dict = julian_day_dictionary(start_year=start_year,
+                                    end_year=end_year)
 
     for yyyy in range(start_year, end_year):
         leap_year_dict[yyyy] = max([int(k.split('-')[1]) for k, v in viewitems(jd_dict) if str(yyyy) in k])
@@ -272,7 +282,7 @@ def julian2date(julian_day, year, jd_dict_date=None):
     Args:
         julian_day (int): The Julian Day.
         year (int): The year.
-        jd_dict_date (Optional[dict]):
+        jd_dict_date (Optional[dict]): A pre-calculated (i.e., from `julian_day_dictionary`) Julian day dictionary.
 
     Returns:
         (month, day) of the Julian Day ``julian_day``
@@ -313,7 +323,18 @@ def scaled_jd2jd(scaled_jds, return_jd=True):
 
     jd_dict_r = julian_day_dictionary_r()
 
-    xd_smooth_labels = [jd_dict_r[int(k)] for k in scaled_jds]
+    xd_smooth_labels = list()
+
+    for k in scaled_jds:
+
+        if int(k) in jd_dict_r:
+            xd_smooth_labels.append(jd_dict_r[int(k)])
+        else:
+
+            if str(k)[4:] == '366':
+                xd_smooth_labels.append(jd_dict_r[int('{YYYY:d}001'.format(YYYY=str(k)[:4]))])
+
+    xd_smooth_labels = [jd_dict_r[int(k)] for k in scaled_jds if int(k) in jd_dict_r]
 
     jd_dict_date = julian_day_dictionary(store='date')
 
