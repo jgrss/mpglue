@@ -332,7 +332,7 @@ def scaled_jd2jd(scaled_jds, return_jd=True):
         else:
 
             if str(k)[4:] == '366':
-                xd_smooth_labels.append(jd_dict_r[int('{YYYY:d}001'.format(YYYY=str(k)[:4]))])
+                xd_smooth_labels.append(jd_dict_r[int('{YYYY:d}001'.format(YYYY=int(str(k)[:4])+1))])
 
     xd_smooth_labels = [jd_dict_r[int(k)] for k in scaled_jds if int(k) in jd_dict_r]
 
