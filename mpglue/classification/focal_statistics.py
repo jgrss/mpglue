@@ -6,7 +6,7 @@ Date Created: 7/26/2011
 """
 
 from __future__ import division
-from future.utils import iteritems
+from future.utils import viewitems
 from builtins import int
 
 import sys
@@ -31,7 +31,9 @@ def do_stat(chunk_array, block_chunk, window_size, chunk_size, statistic, ignore
     ip = block_chunk[3]
     jp = block_chunk[7]
 
-    return moving_window(chunk_array, statistic=statistic, window_size=window_size,
+    return moving_window(chunk_array,
+                         statistic=statistic,
+                         window_size=window_size,
                          ignore_value=ignore_value)[ip:chunk_size, jp:chunk_size]
 
 
@@ -94,7 +96,7 @@ def focal_statistics(in_image, out_image, band=1, overwrite=False, chunk_size=51
 
     parameters = Parameters()
 
-    for k, v in iteritems(kwargs):
+    for k, v in viewitems(kwargs):
         setattr(parameters, k, v)
 
     i_info = raster_tools.ropen(in_image)

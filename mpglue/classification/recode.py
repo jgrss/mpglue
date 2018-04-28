@@ -5,6 +5,8 @@
 Date Created: 7/31/2013
 """
 
+from future.utils import viewitems
+
 import os
 import sys
 import time
@@ -41,11 +43,11 @@ def recode_func(im, recode_dict=None):
     out_img = im[0]
 
     # Iterate over each polygon.
-    for poly_id, reclass_dict in recode_dict.iteritems():
+    for poly_id, reclass_dict in viewitems(recode_dict):
 
         # Iterate over the recode rules and
         #   update the image.
-        for from_key, to_key in reclass_dict.iteritems():
+        for from_key, to_key in viewitems(reclass_dict):
             out_img[(im[1] == poly_id) & (out_img == from_key)] = to_key
 
     return out_img
@@ -161,6 +163,7 @@ def main():
 
     logger.info('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
                 (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
+
 
 if __name__ == '__main__':
     main()

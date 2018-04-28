@@ -6,7 +6,7 @@ Date Created: 8/8/2012
 """    
 
 from __future__ import division
-from future.utils import iteritems
+from future.utils import viewitems
 
 import os
 import sys
@@ -92,7 +92,7 @@ def raster_calc(output,
 
         temp_dict = copy(kwargs)
 
-        for kw, vw in iteritems(kwargs):
+        for kw, vw in viewitems(kwargs):
 
             if isinstance(vw, str):
 
@@ -115,7 +115,7 @@ def raster_calc(output,
 
         kwargs = temp_dict
 
-    for kw, vw in iteritems(kwargs):
+    for kw, vw in viewitems(kwargs):
 
         if '_band' not in kw:
             band_dict['{}_band'.format(kw)] = 1
@@ -136,7 +136,7 @@ def raster_calc(output,
         if isinstance(vw, int):
             band_dict[kw] = vw
 
-    for key, value in iteritems(image_dict):
+    for key, value in viewitems(image_dict):
         equation = equation.replace(key, 'array_{}'.format(key))
 
     # Check for NumPy functions.
@@ -147,7 +147,7 @@ def raster_calc(output,
             equation = 'np.{}'.format(equation)
             break
 
-    for kw, vw in iteritems(info_dict):
+    for kw, vw in viewitems(info_dict):
 
         o_info = copy(vw)
         break
@@ -208,7 +208,7 @@ def raster_calc(output,
 
             # For each image, get the offset and
             # convert bands in the equation to ndarrays.
-            for key, value in iteritems(image_dict):
+            for key, value in viewitems(image_dict):
 
                 # exec 'x_off, y_off = vector_tools.get_xy_offsets3(overlap_info, i_info_{})'.format(key)
                 __, __, x_off, y_off = vector_tools.get_xy_offsets(image_info=info_dict[key],
@@ -234,7 +234,7 @@ def raster_calc(output,
         pbar.finish()
 
     # Close the input image.
-    for key, value in iteritems(info_dict):
+    for key, value in viewitems(info_dict):
         info_dict[key].close()
 
     # close the output drivers

@@ -6,7 +6,7 @@ Date Created: 9/24/2011
 """
 
 from __future__ import division, print_function
-from future.utils import iteritems
+from future.utils import iteritems, viewitems
 from builtins import int
 
 import os
@@ -190,7 +190,7 @@ class SensorInfo(object):
 
         sp = ' '
 
-        for w, b in iteritems(self.expected_band_order):
+        for w, b in viewitems(self.expected_band_order):
 
             gap_string = ''
 
@@ -222,7 +222,7 @@ class SensorInfo(object):
 
         # All of the vegetation index wavelengths must
         #   be in the sensor wavelength.
-        for veg_index, indice_wavelengths in iteritems(self.wavelength_lists):
+        for veg_index, indice_wavelengths in viewitems(self.wavelength_lists):
 
             if set(indice_wavelengths).issubset(sensor_wavelengths):
                 self.sensor_indices.append(veg_index)

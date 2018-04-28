@@ -5,7 +5,7 @@
 Date Created: 11/14/2011
 """ 
 
-from future.utils import iteritems
+from future.utils import viewitems
 
 import sys
 import time
@@ -26,7 +26,7 @@ def reclassify_func(im, recode_dict=None):
     out_img = im[0].copy()
 
     # reclassify image
-    for key, value in sorted(iteritems(recode_dict)):
+    for key, value in sorted(viewitems(recode_dict)):
         out_img[(im[0] == key)] = value
 
     return out_img

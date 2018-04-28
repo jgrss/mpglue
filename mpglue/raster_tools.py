@@ -6,7 +6,7 @@ Date Created: 9/24/2011
 """
 
 from __future__ import division, print_function
-from future.utils import iteritems
+from future.utils import iteritems, viewitems
 from builtins import int
 
 import os
@@ -132,11 +132,8 @@ DRIVER_DICT = {'.bin': 'ENVI',
                '.til': 'TIL',
                '.vrt': 'VRT'}
 
-try:
-    FORMAT_DICT = dict((v, k) for k, v in iteritems(DRIVER_DICT))
-except:
-    # Python 3
-    FORMAT_DICT = dict((v, k) for k, v in list(iteritems(DRIVER_DICT)))
+
+FORMAT_DICT = dict((v, k) for k, v in list(iteritems(DRIVER_DICT)))
 
 STORAGE_DICT = {'byte': 'uint8',
                 'int16': 'int16',
@@ -482,7 +479,7 @@ class ReadWrite(object):
 
             self.array = dict()
 
-            for band_name, band_position in iteritems(bands2open):
+            for band_name, band_position in viewitems(bands2open):
 
                 if self.hdf_file:
 
@@ -879,7 +876,7 @@ class DataChecks(object):
 
             iif = ImageInfo()
 
-            for k, v in iteritems(iinfo):
+            for k, v in viewitems(iinfo):
                 setattr(iif, k, v)
 
             iinfo = iif.copy()
@@ -1630,7 +1627,7 @@ class UpdateInfo(object):
 
     def update_info(self, **kwargs):
 
-        for k, v in iteritems(kwargs):
+        for k, v in viewitems(kwargs):
             setattr(self, k, v)
 
 

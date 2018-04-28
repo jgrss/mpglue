@@ -6,7 +6,7 @@ Date Created: 1/26/2016
 """
 
 from __future__ import print_function
-from future.utils import iteritems
+from future.utils import viewitems
 from builtins import int
 
 import os
@@ -294,7 +294,7 @@ def dataframe2dbf(df, dbf_file, my_specs=None):
 
     db.field_spec = specs
 
-    for i, row in iteritems(df.T):
+    for i, row in viewitems(df.T):
         db.write(row)
 
     db.close()

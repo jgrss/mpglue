@@ -6,7 +6,7 @@ Date Created: 4/17/2015
 """
 
 from __future__ import division, print_function
-from future.utils import iteritems
+from future.utils import viewitems
 from builtins import int
 
 import os
@@ -878,7 +878,7 @@ class manage_pytables(BaseHandler):
 
         if kwargs:
 
-            for key, value in iteritems(kwargs):
+            for key, value in viewitems(kwargs):
                 self.meta_dict[key] = value
 
         if 'filename' not in self.meta_dict:
@@ -1262,7 +1262,7 @@ class manage_pytables(BaseHandler):
 
                         pointer = self.table.row
 
-                        for mkey, mvalue in iteritems(meta_dict_sub):
+                        for mkey, mvalue in viewitems(meta_dict_sub):
                             pointer[mkey] = mvalue
 
                         pointer.append()
@@ -1271,7 +1271,7 @@ class manage_pytables(BaseHandler):
 
                     pointer = self.table.row
 
-                    for mkey, mvalue in iteritems(self.meta_dict):
+                    for mkey, mvalue in viewitems(self.meta_dict):
                         pointer[mkey] = mvalue
 
                     pointer.append()
@@ -1482,7 +1482,7 @@ def pytables(inputs,
 
                 if kwargs:
 
-                    for k, v in iteritems(kwargs):
+                    for k, v in viewitems(kwargs):
                         info_dict[k] = v
 
                 # Create the metadata

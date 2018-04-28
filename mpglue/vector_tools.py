@@ -6,7 +6,7 @@ Date Created: 9/24/2011
 """ 
 
 from __future__ import division
-from future.utils import iteritems
+from future.utils import viewitems
 from builtins import int
 
 import os
@@ -678,7 +678,7 @@ def add_polygon(vector_object, xy_pairs=None, field_vals=None, geometry=None):
     # set the fields
     if field_vals:
 
-        for field, val in iteritems(field_vals):
+        for field, val in viewitems(field_vals):
             feature.SetField(field, val)
 
     vector_object.lyr.CreateFeature(feature)
@@ -775,7 +775,7 @@ def dataframe2dbf(df, dbf_file, my_specs=None):
 
     db.field_spec = specs
 
-    for i, row in iteritems(df.T):
+    for i, row in viewitems(df.T):
         db.write(row)
 
     db.close()
@@ -1197,7 +1197,7 @@ class TransfromEmpty(object):
 
     def update_info(self, **kwargs):
 
-        for k, v in iteritems(kwargs):
+        for k, v in viewitems(kwargs):
             setattr(self, k, v)
 
 
@@ -2465,7 +2465,7 @@ def add_fields(input_vector,
 
             value_found = False
 
-            for key, break_values in iteritems(field_breaks):
+            for key, break_values in viewitems(field_breaks):
 
                 if isinstance(break_values, int) or isinstance(break_values, float):
 
