@@ -118,7 +118,7 @@ def julian_day_dictionary(start_year=1980, end_year=2050, store='st_jd'):
     return jd_dict
 
 
-def julian_day_dictionary_r(start_year=1980, end_year=2050):
+def julian_day_dictionary_r(start_year=1980, end_year=2050, jd_dict=None):
 
     """
     A function to get the reverse Julian Data dictionary
@@ -126,6 +126,7 @@ def julian_day_dictionary_r(start_year=1980, end_year=2050):
     Args:
         start_year (Optional[int])
         end_year (Optional[int])
+        jd_dict (Optional[dict]): A pre-calculated (i.e., from `julian_day_dictionary`) Julian day dictionary.
 
     Returns:
         Dictionary of {yyyyddd: 'year-day'}
@@ -133,8 +134,10 @@ def julian_day_dictionary_r(start_year=1980, end_year=2050):
 
     jd_dict_r = OrderedDict()
 
-    jd_dict = julian_day_dictionary(start_year=start_year,
-                                    end_year=end_year)
+    if not isinstance(jd_dict, dict):
+
+        jd_dict = julian_day_dictionary(start_year=start_year,
+                                        end_year=end_year)
 
     for k, v in viewitems(jd_dict):
         jd_dict_r[v] = k
@@ -150,6 +153,9 @@ def get_leap_years(start_year=1980, end_year=2050):
     Args:
         start_year (Optional[int])
         end_year (Optional[int])
+
+    Returns:
+        Dictionary, with keys --> values as yyyy --> n days
     """
 
     leap_year_dict = dict()
@@ -256,9 +262,9 @@ def date2julian(month, day, year):
     Converts month, day, and year to Julian Day.
 
     Args:
-        month (int): The month.
-        day (int): The day.
-        year (int): The year.
+        month (int or str): The month.
+        day (int or str): The day.
+        year (int or str): The year.
 
     Returns:
         Julian Day
@@ -282,12 +288,12 @@ def julian2date(julian_day, year, jd_dict_date=None):
     Converts Julian day to month and day.
 
     Args:
-        julian_day (int): The Julian Day.
-        year (int): The year.
+        julian_day (int or str): The Julian Day.
+        year (int or str): The year.
         jd_dict_date (Optional[dict]): A pre-calculated (i.e., from `julian_day_dictionary`) Julian day dictionary.
 
     Returns:
-        (month, day) of the Julian Day ``julian_day``
+        (month, day) of the Julian Day `julian_day`.
     """
 
     year = int(year)
@@ -318,9 +324,12 @@ def yyyyddd2months(yyyyddd_list):
 def scaled_jd2jd(scaled_jds, return_jd=True):
 
     """
+    Converts scaled Julian day integers to string yyyy-ddd format.
+
     Args:
-        scaled_jds
-        return_jd (Optional[bool]): Whether to return Julian Days. Otherwise, returns month-day-year format.
+        scaled_jds (int list): The Julian days to convert.
+        return_jd (Optional[bool]): Whether to return Julian Days as 'yyyy-ddd'.
+            Otherwise, returns month-day-year format. Default is True.
     """
 
     jd_dict_r = julian_day_dictionary_r()
@@ -332,6 +341,9 @@ def scaled_jd2jd(scaled_jds, return_jd=True):
         if int(k) in jd_dict_r:
             xd_smooth_labels.append(jd_dict_r[int(k)])
         else:
+
+            # Check to see if the day of year is 366,
+            #   but the year is not a leap year.
 
             yyyy = int(str(k)[:4])
             doy = int(str(k)[4:])
@@ -410,14 +422,14 @@ class Conversions(object):
 
             gain_setting_dict = {'high': 0, 'normal': 1, 'low1': 2, 'low2': 3}
 
-            ucc = np.array([[.676, 1.688, 2.25, .0], \
-                            [.708, 1.415, 1.89, .0], \
-                            [.423, .862, 1.15, .0], \
-                            [.1087, .2174, .2900, .2900], \
-                            [.0348, .0696, .0925, .4090], \
-                            [.0313, .0625, .0830, .3900], \
-                            [.0299, .0597, .0795, .3320], \
-                            [.0209, .0417, .0556, .2450], \
+            ucc = np.array([[.676, 1.688, 2.25, .0],
+                            [.708, 1.415, 1.89, .0],
+                            [.423, .862, 1.15, .0],
+                            [.1087, .2174, .2900, .2900],
+                            [.0348, .0696, .0925, .4090],
+                            [.0313, .0625, .0830, .3900],
+                            [.0299, .0597, .0795, .3320],
+                            [.0209, .0417, .0556, .2450], 
                             [.0159, .0318, .0424, .2650]], dtype='float32')
 
             radiance = np.float32(np.subtract(dn_array, 1.))
