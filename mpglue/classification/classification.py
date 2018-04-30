@@ -576,7 +576,8 @@ class ParameterHandler(object):
             self.valid_params = ['boosting_type', 'num_leaves', 'max_depth', 'learning_rate', 'n_estimators',
                                  'subsample_for_bin', 'objective', 'class_weight', 'min_split_gain',
                                  'min_child_weight', 'min_child_samples', 'subsample', 'subsample_freq',
-                                 'colsample_bytree', 'reg_alpha', 'reg_lambda', 'random_state', 'n_jobs', 'silent']
+                                 'colsample_bytree', 'reg_alpha', 'reg_lambda', 'random_state', 'n_jobs', 'silent',
+                                 'feature_fraction', 'bagging_freq', 'bagging_fraction', 'max_bin', 'num_boost_round']
 
         else:
             logger.warning('  The classifier is not supported.')
@@ -3850,7 +3851,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         if isinstance(self.classifier_info['classifier'], list):
             return
 
-        defaults_ = dict(n_estimators=500,
+        defaults_ = dict(n_estimators=100,
                          trials=10,
                          max_depth=25,
                          min_samples_split=2,
@@ -3858,8 +3859,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                          C=1.0,
                          nu=0.5,
                          kernel='rbf',
-                         reg_alpha=0.1,
-                         reg_lambda=0.1,
                          n_jobs=-1)
 
         # Check if model parameters are set,
