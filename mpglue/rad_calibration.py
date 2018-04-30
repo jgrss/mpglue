@@ -13,6 +13,7 @@ import math
 from copy import copy
 import datetime
 from collections import OrderedDict
+import calendar
 
 # MapPy
 from . import raster_tools
@@ -153,11 +154,12 @@ def get_leap_years(start_year=1980, end_year=2050):
 
     leap_year_dict = dict()
 
-    jd_dict = julian_day_dictionary(start_year=start_year,
-                                    end_year=end_year)
-
     for yyyy in range(start_year, end_year):
-        leap_year_dict[yyyy] = max([int(k.split('-')[1]) for k, v in viewitems(jd_dict) if str(yyyy) in k])
+
+        if calendar.isleap(yyyy):
+            leap_year_dict[yyyy] = 366
+        else:
+            leap_year_dict[yyyy] = 365
 
     return leap_year_dict
 
@@ -331,16 +333,19 @@ def scaled_jd2jd(scaled_jds, return_jd=True):
             xd_smooth_labels.append(jd_dict_r[int(k)])
         else:
 
-            if str(k)[4:] == '366':
-                xd_smooth_labels.append(jd_dict_r[int('{YYYY:d}001'.format(YYYY=int(str(k)[:4])+1))])
+            yyyy = int(str(k)[:4])
+            doy = int(str(k)[4:])
 
-    xd_smooth_labels = [jd_dict_r[int(k)] for k in scaled_jds if int(k) in jd_dict_r]
+            if doy == 366:
 
-    jd_dict_date = julian_day_dictionary(store='date')
+                new_k = int('{:d}001'.format(yyyy+1))
+                xd_smooth_labels.append(jd_dict_r[new_k])
 
     if return_jd:
         return xd_smooth_labels
     else:
+
+        jd_dict_date = julian_day_dictionary(store='date')
 
         return ['{}-{}-{}'.format(julian2date(l.split('-')[1], l.split('-')[0], jd_dict_date=jd_dict_date)[0],
                                   julian2date(l.split('-')[1], l.split('-')[0], jd_dict_date=jd_dict_date)[1],
