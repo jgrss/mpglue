@@ -334,7 +334,7 @@ def scaled_jd2jd(scaled_jds, return_jd=True):
 
     jd_dict_r = julian_day_dictionary_r()
 
-    xd_smooth_labels = list()sen
+    xd_smooth_labels = list()
 
     for k in scaled_jds:
 
