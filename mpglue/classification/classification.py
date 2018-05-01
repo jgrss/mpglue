@@ -930,11 +930,11 @@ class Samples(object):
 
             if isinstance(self.limit_test_size, int):
 
-                random_limit = sorted(np.random.choice(self.test_idx,
-                                                       size=self.limit_test_size,
-                                                       replace=False))
+                if len(self.test_idx) > self.limit_test_size:
 
-                self.test_idx = self.test_idx[random_limit]
+                    self.test_idx = np.array(sorted(np.random.choice(self.test_idx,
+                                                                     size=self.limit_test_size,
+                                                                     replace=False)), dtype='int64')
 
             test_samps = self.all_samps[self.test_idx]
             self.all_samps = self.all_samps[self.train_idx]
