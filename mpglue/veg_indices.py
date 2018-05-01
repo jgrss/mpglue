@@ -195,7 +195,7 @@ class SensorInfo(object):
             gap_string = ''
 
             gap_len = 12 - len(w)
-            for gx in xrange(0, gap_len):
+            for gx in range(0, gap_len):
                 gap_string += sp
 
             logger.info('  {}{}{:d}'.format(w.upper(), gap_string, b))
@@ -1476,11 +1476,11 @@ class VegIndices(BandHandler):
             max_ndvi, min_ndvi = 0., 0.
 
             # Iterate over the image block by block.
-            for self.i in xrange(0, self.rows, block_size_rows):
+            for self.i in range(0, self.rows, block_size_rows):
 
                 self.n_rows = raster_tools.n_rows_cols(self.i, block_size_rows, self.rows)
 
-                for self.j in xrange(0, self.cols, block_size_cols):
+                for self.j in range(0, self.cols, block_size_cols):
 
                     self.n_cols = raster_tools.n_rows_cols(self.j, block_size_cols, self.cols)
 
@@ -1546,11 +1546,11 @@ class VegIndices(BandHandler):
                     logger.info('\nComputing VCI ...')
 
                 # iterative over entire image with row blocks
-                for self.i in xrange(0, self.rows, block_size_rows):
+                for self.i in range(0, self.rows, block_size_rows):
 
                     self.n_rows = raster_tools.n_rows_cols(self.i, block_size_rows, self.rows)
 
-                    for self.j in xrange(0, self.cols, block_size_cols):
+                    for self.j in range(0, self.cols, block_size_cols):
 
                         self.n_cols = raster_tools.n_rows_cols(self.j, block_size_cols, self.cols)
 

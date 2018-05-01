@@ -7,7 +7,7 @@ Date Created: 9/24/2011
 
 from __future__ import division, print_function
 from future.utils import viewitems
-from builtins import int
+from builtins import int, map
 
 import math
 from copy import copy
@@ -334,7 +334,7 @@ def scaled_jd2jd(scaled_jds, return_jd=True):
 
     jd_dict_r = julian_day_dictionary_r()
 
-    xd_smooth_labels = list()
+    xd_smooth_labels = list()sen
 
     for k in scaled_jds:
 
@@ -840,11 +840,11 @@ class CalibrateSensor(Conversions):
 
         row_block_size, col_block_size = raster_tools.block_dimensions(self.i_info.rows, self.i_info.cols)
 
-        for i in xrange(0, self.i_info.rows, row_block_size):
+        for i in range(0, self.i_info.rows, row_block_size):
 
             n_rows = raster_tools.n_rows_cols(i, row_block_size, self.i_info.rows)
 
-            for j in xrange(0, self.i_info.cols, col_block_size):
+            for j in range(0, self.i_info.cols, col_block_size):
 
                 n_cols = raster_tools.n_rows_cols(j, col_block_size, self.i_info.cols)
 
@@ -1140,7 +1140,7 @@ def get_scan_angle(img=None, i_info=None, band2open=1, forward=True):
     rws, cls = img.shape
 
     # get the bottom left corner
-    for cl in xrange(0, cls):
+    for cl in range(0, cls):
 
         # all rows, current column
         clm = img[:, cl]
@@ -1166,7 +1166,7 @@ def get_scan_angle(img=None, i_info=None, band2open=1, forward=True):
     #     sys.exit()
 
     # get the upper right corner
-    for rw in xrange(0, rws):
+    for rw in range(0, rws):
 
         # all columns, current row
         rww = img[rw, :]

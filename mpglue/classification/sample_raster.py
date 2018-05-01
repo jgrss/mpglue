@@ -6,7 +6,7 @@ Date Created: 9/24/2011
 """
 
 from future.utils import iteritems
-from builtins import int, dict
+from builtins import int, dict, map
 
 import os
 import sys
@@ -175,7 +175,7 @@ class SampleImage(object):
 
         ogr_com_sql = '"SELECT * FROM {} WHERE {}'.format(self.f_base_points, self.sql_expression_field)
 
-        for attr in xrange(0, len(self.sql_expression_attr)):
+        for attr in range(0, len(self.sql_expression_attr)):
 
             if attr == 0:
                 ogr_com_sql = '{} = \'{}\''.format(ogr_com_sql, self.sql_expression_attr[attr])
@@ -271,7 +271,7 @@ class SampleImage(object):
 
         try:
             self.class_list = [self.shp_info.lyr.GetFeature(n).GetField(self.class_id)
-                               for n in xrange(0, self.shp_info.n_feas)]
+                               for n in range(0, self.shp_info.n_feas)]
         except:
             raise IOError('\nField <{}> does not exist or there is a feature issue.\n'.format(self.class_id))
 
@@ -333,7 +333,7 @@ class SampleImage(object):
         self.headers = ['Id', 'X', 'Y']
 
         # Then <image name.band position> format.
-        [self.headers.append('{}.{:d}'.format(self.f_base_rst, b)) for b in xrange(1, self.m_info.bands+1)]
+        [self.headers.append('{}.{:d}'.format(self.f_base_rst, b)) for b in range(1, self.m_info.bands+1)]
 
         self.headers.append('response')
 
@@ -365,7 +365,7 @@ class SampleImage(object):
 
         # Iterate over each feature
         #   in the vector file.
-        for n in xrange(0, self.n_feas):
+        for n in range(0, self.n_feas):
 
             # Get the current point.
             self.feature = self.shp_info.lyr.GetFeature(n)
@@ -419,7 +419,7 @@ class SampleImage(object):
                                                                                c_list,
                                                                                self.accuracy,
                                                                                feature_length)
-                                                     for f_bd in xrange(1, self.m_info.bands+1))
+                                                     for f_bd in range(1, self.m_info.bands+1))
 
             value_arr = np.asarray(value_arr).T
 
@@ -471,7 +471,7 @@ class SampleImage(object):
             to_delete = []
 
             # Iterate over each band.
-            for f_bd in xrange(1, self.m_info.bands+1):
+            for f_bd in range(1, self.m_info.bands+1):
 
                 band = self.m_info.datasource.GetRasterBand(f_bd)
 
@@ -519,7 +519,7 @@ class SampleImage(object):
                         neighbor_offsets = [[0, -1], [1, 0], [0, 1], [-1, 0]]
                         """
 
-                        for noff in xrange(1, self.updater):
+                        for noff in range(1, self.updater):
 
                             if (x_off + neighbor_offsets[noff-1][0] >= self.m_info.cols) or \
                                     (y_off + neighbor_offsets[noff-1][1] >= self.m_info.rows):

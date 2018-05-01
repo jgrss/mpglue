@@ -38,7 +38,7 @@ cdef extern from 'numpy/npy_math.h':
 #     cdef int v
 #     cdef DTYPE_float32_t the_sum = 0.
 #
-#     for v in xrange(0, window_size):
+#     for v in range(0, window_size):
 #
 #         the_sum += row_arr[v]
 #
@@ -53,7 +53,7 @@ cdef extern from 'numpy/npy_math.h':
 #         int cl, mx_idx
 #         DTYPE_float32_t mx = 0.
 #
-#     for cl in xrange(0, n_cols):
+#     for cl in range(0, n_cols):
 #
 #         if arr[cl] > mx:
 #
@@ -71,7 +71,7 @@ cdef extern from 'numpy/npy_math.h':
 #         int cl, mn_idx
 #         DTYPE_float32_t mn = 10000.
 #
-#     for cl in xrange(0, n_cols):
+#     for cl in range(0, n_cols):
 #
 #         if arr[cl] < mn:
 #
@@ -288,7 +288,7 @@ cdef tuple _rolling_least_squares(DTYPE_float32_t[:, :] image_array, int window_
 #         unsigned int v
 #         DTYPE_float32_t med_val
 #
-#     for v in xrange(0, window_size):
+#     for v in range(0, window_size):
 #
 #         if (v != mxv) and (v != mnv):
 #
@@ -311,11 +311,11 @@ cdef DTYPE_float32_t[:, :] _rolling_median(DTYPE_float32_t[:, :] arr, int window
         DTYPE_float32_t[:, :] results = np.zeros((rows, cols), dtype='float32')
 
     ## iterate over the array by rows
-    for i in xrange(0, rows):
+    for i in range(0, rows):
 
         the_row = arr[i]
 
-        for j in xrange(0, cols-window_half1):
+        for j in range(0, cols-window_half1):
 
             the_row[j+window_size-window_half2] = sorted(the_row[j:j+window_size])[window_half1]
 

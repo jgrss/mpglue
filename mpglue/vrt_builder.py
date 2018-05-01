@@ -242,7 +242,7 @@ class VRTBuilder(object):
 
             image_list = self.in_dict[bdk]
 
-            for bdi in xrange(start_band, bd+start_band):
+            for bdi in range(start_band, bd+start_band):
 
                 band_found = False
 

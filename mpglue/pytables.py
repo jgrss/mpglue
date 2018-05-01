@@ -617,9 +617,6 @@ class ArrayHandler(object):
                     else:
                         self.h5_file.root.data[i:i+nr, j:j+nc] = array2add
 
-        # for i in xrange(0, array2add.shape[0]):
-        #     self.data_storage.append(array2add[i][None])
-
     def read_array(self,
                    is_3d=False,
                    z=None,

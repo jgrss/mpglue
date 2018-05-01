@@ -7,7 +7,7 @@ Date created: 12/29/2013
 
 from __future__ import division
 from future.utils import iteritems, viewitems
-from builtins import int, dict
+from builtins import int, dict, map
 
 import os
 import sys
@@ -2116,7 +2116,7 @@ class Visualization(object):
         leg_items = []
         leg_names = []
 
-        for n_class in xrange(0, n_classes):
+        for n_class in range(0, n_classes):
 
             if class_list:
 
@@ -2174,7 +2174,7 @@ class Visualization(object):
             pv = self.p_vars[labels]
             # l = self.labels[labels]
 
-            for i in xrange(0, len(x)):
+            for i in range(0, len(x)):
 
                 ax.annotate('%d, %d' % (int(x[i]), int(y[i])), xy=(pv[i, 0], pv[i, 1]), size=6, color='#1C1C1C',
                             xytext=(-10, 10), bbox=dict(boxstyle='round,pad=0.5', fc='white', alpha=.5),
@@ -2229,7 +2229,7 @@ class Visualization(object):
         leg_items = []
         leg_names = []
 
-        for n_class in xrange(0, n_classes):
+        for n_class in range(0, n_classes):
 
             if class_list:
 
@@ -2296,7 +2296,7 @@ class Visualization(object):
             pv = self.p_vars[labels]
             # l = self.labels[labels]
 
-            for i in xrange(0, len(x)):
+            for i in range(0, len(x)):
 
                 ax.annotate('%d, %d' % (int(x[i]), int(y[i])), xy=(pv[i, fea_1-1], pv[i, fea_2-1]), size=6,
                             color='#1C1C1C', xytext=(-10, 10), bbox=dict(boxstyle='round,pad=0.5',
@@ -2517,7 +2517,7 @@ class Visualization(object):
         leg_items = []
         leg_names = []
 
-        for n_class in xrange(0, self.n_classes):
+        for n_class in range(0, self.n_classes):
 
             cl_idx = np.where(self.labels == self.classes[n_class])
 
@@ -2647,7 +2647,7 @@ class Visualization(object):
             df_sm_up = df_sm_u + (1.5 * df_sm_std)
             df_sm_um = df_sm_u - (1.5 * df_sm_std)
 
-            for idx_check in xrange(0, 2):
+            for idx_check in range(0, 2):
 
                 idx = np.where((df_sm[:, idx_check] > df_sm_up) | (df_sm[:, idx_check] < df_sm_um))
 
@@ -2655,7 +2655,7 @@ class Visualization(object):
 
                     df_sm[:, idx_check][idx] = np.median(df_sm[:, :3][idx], axis=1)
 
-            for idx_check in xrange(self.n_feas-1, self.n_feas-3, -1):
+            for idx_check in range(self.n_feas-1, self.n_feas-3, -1):
 
                 idx = np.where((df_sm[:, idx_check] > df_sm_up) | (df_sm[:, idx_check] < df_sm_um))
 
@@ -2679,7 +2679,7 @@ class Visualization(object):
             line_width = 1.5
             alpha = .5
 
-            for r in xrange(0, df_sm.shape[0]):
+            for r in range(0, df_sm.shape[0]):
 
                 if show_raw:
 
@@ -2836,7 +2836,7 @@ class Visualization(object):
         multi_d = np.empty((len(bands2vis), rws, cls)).astype(np.float32)
 
         ctr = 0
-        for n in xrange(len(bands2vis)):
+        for n in range(len(bands2vis)):
 
             multi_d[ctr] = band_arrays[n]
 
@@ -4460,7 +4460,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         xml_string = '<?xml version="1.0" ?>\n<FeatureStatistics>\n{}<Statistic name="mean">\n{}'.format(gap_1, gap_2)
 
                         # gather stats from samples
-                        for fea_pos in xrange(0, self.n_feas):
+                        for fea_pos in range(0, self.n_feas):
 
                             stat_line = '<StatisticVector value="%f" />' % self.p_vars[:, fea_pos].mean()
 
@@ -4473,7 +4473,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         xml_string = '%s</Statistic>\n%s<Statistic name="stddev">\n%s' % (xml_string, gap_1, gap_2)
 
                         # gather stats from samples
-                        for fea_pos in xrange(0, self.n_feas):
+                        for fea_pos in range(0, self.n_feas):
 
                             stat_line = '<StatisticVector value="%f" />' % self.p_vars[:, fea_pos].std()
 
@@ -4652,7 +4652,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             # array to all -1's with ones along the diagonal.
             targets = -1 * np.ones((self.n_samps, self.n_classes), 'float')
 
-            for i in xrange(0, self.n_samps):
+            for i in range(0, self.n_samps):
 
                 lab_idx = sorted(self.classes).index(self.labels[i])
 
@@ -6034,7 +6034,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             feature_arrays = list()
 
-        # for bd in xrange(0, self.i_info.bands):
+        # for bd in range(0, self.i_info.bands):
         for iol in img_obj_list:
 
             if iol[-1]:
@@ -6068,7 +6068,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         # return np.vstack([img_obj_list[bd][0].ReadAsArray(img_obj_list[bd][1]+j, img_obj_list[bd][2]+i,
         #                                                   n_cols, n_rows).astype(np.float32) for bd in
-        #                   xrange(0, self.i_info.bands)]).reshape(self.i_info.bands, n_rows, n_cols)
+        #                   range(0, self.i_info.bands)]).reshape(self.i_info.bands, n_rows, n_cols)
 
     def _create_indices(self, i, j, n_rows, n_cols):
 
@@ -6281,7 +6281,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 indice_counts.append(len(indices))
                 accuracy_scores.append(self.emat.accuracy)
 
-        accuracy_scores_sm = [sum(accuracy_scores[r:r+3]) / 3. for r in xrange(0, len(accuracy_scores)-2)]
+        accuracy_scores_sm = [sum(accuracy_scores[r:r+3]) / 3. for r in range(0, len(accuracy_scores)-2)]
         accuracy_scores_sm.insert(0, sum(accuracy_scores_sm[:2]) / 2.)
         accuracy_scores_sm.append(sum(accuracy_scores_sm[-2:]) / 2.)
 
@@ -7100,11 +7100,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 else:
                     block_size_cls = copy(cols)
 
-                for i in xrange(0, rows, blk_size_rows):
+                for i in range(0, rows, blk_size_rows):
 
                     n_rows = self._num_rows_cols(i, blk_size_rows, rows)
 
-                    for j in xrange(0, cols, block_size_cls):
+                    for j in range(0, cols, block_size_cls):
 
                         n_cols = self._num_rows_cols(j, block_size_cls, cols)
 
@@ -7611,7 +7611,7 @@ class classification_r(classification):
             self.i_info = raster_tools.ropen(input_image)
 
             if self.ignore_feas:
-                bands2open = sorted([bd for bd in xrange(1, self.i_info.bands + 1) if bd not in self.ignore_feas])
+                bands2open = sorted([bd for bd in range(1, self.i_info.bands + 1) if bd not in self.ignore_feas])
             else:
                 bands2open = range(1, self.i_info.bands + 1)
 
@@ -7646,8 +7646,8 @@ class classification_r(classification):
                                                                    col_block_size=self.col_block_size)
 
             n_blocks = 0
-            for i in xrange(0, rows, block_rows):
-                for j in xrange(0, cols, block_cols):
+            for i in range(0, rows, block_rows):
+                for j in range(0, cols, block_cols):
                     n_blocks += 1
 
             n_block = 1
@@ -7689,7 +7689,7 @@ class classification_r(classification):
                     # Get chunks for parallel processing.
                     samp_rows = predict_samps.shape[0]
                     indice_pairs = []
-                    for i_ in xrange(0, samp_rows, self.chunk_size):
+                    for i_ in range(0, samp_rows, self.chunk_size):
                         n_rows_ = self._num_rows_cols(i_, self.chunk_size, samp_rows)
                         indice_pairs.append([i_, n_rows_])
 

@@ -7,7 +7,7 @@ Date Created: 9/24/2011
 
 from __future__ import division, print_function
 from future.utils import iteritems, viewitems
-from builtins import int
+from builtins import int, map
 
 import os
 import sys
@@ -736,11 +736,11 @@ class ReadWrite(object):
 
                     out_rst.get_chunk_size()
 
-                    for i in xrange(0, out_rst.rows, out_rst.chunk_size):
+                    for i in range(0, out_rst.rows, out_rst.chunk_size):
 
                         n_rows = n_rows_cols(i, out_rst.chunk_size, out_rst.rows)
 
-                        for j in xrange(0, out_rst.cols, out_rst.chunk_size):
+                        for j in range(0, out_rst.cols, out_rst.chunk_size):
 
                             n_cols = n_rows_cols(j, out_rst.chunk_size, out_rst.cols)
 
@@ -762,7 +762,7 @@ class ReadWrite(object):
 
                 out_bands = arr_shape[0]
 
-                for n_band in xrange(1, out_bands+1):
+                for n_band in range(1, out_bands+1):
 
                     out_rst.write_array(out_arr[n_band-1], i=y, j=x, band=n_band)
 
@@ -2851,7 +2851,7 @@ def _parallel_blocks(out_image, band_list, ii, jj, y_offset, x_offset,
                               ii+y_offset[imi],
                               jj+x_offset[imi],
                               nn_rows,
-                              nn_cols) for imi in xrange(0, len(image_infos_list))]
+                              nn_cols) for imi in range(0, len(image_infos_list))]
 
     output = block_func(image_arrays, **kwargs)
 
@@ -2965,7 +2965,7 @@ class BlockFunc(object):
             if not self.proc_info:
                 self.proc_info = self.image_infos[0]
 
-            for imi in xrange(0, len(self.image_infos)):
+            for imi in range(0, len(self.image_infos)):
                 if not isinstance(self.image_infos[imi], ropen):
                     if not isinstance(self.image_infos[imi], GetMinExtent):
                         if not isinstance(self.image_infos[imi], ImageInfo):
@@ -3051,8 +3051,8 @@ class BlockFunc(object):
             out_raster = create_raster(self.out_image, self.out_info)
 
         # n_blocks = 0
-        # for i in xrange(0, self.proc_info.rows, self.block_rows):
-        #     for j in xrange(0, self.proc_info.cols, self.block_cols):
+        # for i in range(0, self.proc_info.rows, self.block_rows):
+        #     for j in range(0, self.proc_info.cols, self.block_cols):
         #         n_blocks += 1
         #
         # n_block = 1
@@ -3112,7 +3112,7 @@ class BlockFunc(object):
                                                            rows=n_rows+y_pad_plus,
                                                            cols=n_cols+x_pad_plus,
                                                            d_type=self.d_types[imi])
-                                for imi in xrange(0, len(self.image_infos))]
+                                for imi in range(0, len(self.image_infos))]
 
                 skip_block = False
 
@@ -5225,7 +5225,7 @@ def cumulative_plot_array(image_array, small2large=True, out_fig=None):
             n_area = l.sum()
 
             x = []
-            for i in xrange(1, n_features+1):
+            for i in range(1, n_features+1):
                 x.append((i / n_features) * 100.)
 
             y = [(n / n_area) * 100. for n in l]
@@ -5250,17 +5250,17 @@ def cumulative_plot_array(image_array, small2large=True, out_fig=None):
             cc = np.multiply(c, 100.)
 
             i5 = np.percentile(cc, 50)
-            for i5_index in xrange(0, len(cc)):
+            for i5_index in range(0, len(cc)):
                 if i5+5 > cc[i5_index] > i5-5:
                     break
 
             i75 = np.percentile(cc, 75)
-            for i75_index in xrange(0, len(cc)):
+            for i75_index in range(0, len(cc)):
                 if i75+5 > cc[i75_index] > i75-5:
                     break
 
             i90 = np.percentile(cc, 90)
-            for i90_index in xrange(0, len(cc)):
+            for i90_index in range(0, len(cc)):
                 if i90+50 > cc[i90_index] > i90-50:
                     break
 

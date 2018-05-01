@@ -44,7 +44,7 @@ required_packages = ['matplotlib>=2.0.0',
                      'deprecation>=1.0.1',
                      'retrying',
                      'future',
-                     'six']
+                     'six>=1.11.0']
 
 if platform.system() != 'Windows':
 
@@ -53,11 +53,10 @@ if platform.system() != 'Windows':
                 'scikit-image>=0.13',
                 'tables>=3.4.2',
                 'statsmodels>=0.8.0',
-                'cython>=0.28',
+                'cython>=0.28.0',
                 'opencv-python>=3.4.0',
                 'scikit-learn>=0.19.0',
-                'pandas>=0.22.0',
-                'pymorph>=0.96']:
+                'pandas>=0.22.0']:
 
         required_packages.append(pkg)
 

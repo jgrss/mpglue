@@ -340,7 +340,7 @@ def get_block_chunks(im_rows, im_cols, chunk_size, kernel_size):
 
     chunk = kernel_size + chunk_size + kernel_size
 
-    for i in xrange(0, im_rows, chunk_size-kernel_size):
+    for i in range(0, im_rows, chunk_size-kernel_size):
 
         isub = i - kernel_size
 
@@ -355,7 +355,7 @@ def get_block_chunks(im_rows, im_cols, chunk_size, kernel_size):
 
         n_rows = n_rows_cols(isub, chunk, im_rows)
 
-        for j in xrange(0, im_cols, chunk_size-kernel_size):
+        for j in range(0, im_cols, chunk_size-kernel_size):
 
             jsub = j - kernel_size
 
@@ -424,12 +424,12 @@ def _iteration_parameters(image_rows, image_cols, row_block_size, col_block_size
 
     maximum_blocks = 0
 
-    for i in xrange(0, image_rows, row_block_size-y_overlap):
+    for i in range(0, image_rows, row_block_size-y_overlap):
 
-        for j in xrange(0, image_cols, col_block_size-x_overlap):
+        for j in range(0, image_cols, col_block_size-x_overlap):
 
             if bands > 1:
-                for band in xrange(1, bands+1):
+                for band in range(1, bands+1):
                     maximum_blocks += 1
             else:
                 maximum_blocks += 1
