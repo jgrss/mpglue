@@ -673,8 +673,8 @@ class Samples(object):
 
     def split_samples(self,
                       file_name,
-                      perc_samp=.9,
-                      perc_samp_each=0,
+                      perc_samp=1.0,
+                      perc_samp_each=0.5,
                       scale_data=False,
                       class_subs=None,
                       norm_struct=True,
@@ -686,20 +686,24 @@ class Samples(object):
                       ignore_feas=None,
                       use_xy=False,
                       stratified=False,
-                      spacing=1000.,
+                      spacing=1000.0,
                       x_label='X',
                       y_label='Y',
                       response_label='response',
                       clear_observations=None,
-                      min_observations=10):
+                      min_observations=10,
+                      limit_test_size=None):
 
         """
         Split samples for training and testing.
         
         Args:
             file_name (str or 2d array): Input text file or 2d array with samples and labels.
-            perc_samp (Optional[float]): Percent to sample from all samples. Default is .9. *This parameter
+            perc_samp (Optional[float]): Percent to sample from all samples. Default is .9. This parameter
                 samples from the entire set of samples, regardless of which class they are in.
+
+                *It is currently recommended to use `perc_samp_each` or `class_subs` instead of `perc_samp`.
+
             perc_samp_each (Optional[float]): Percent to sample from each class. Default is 0. *This parameter
                 overrides ``perc_samp`` and forces a percentage of samples from each class.
             scale_data (Optional[bool]): Whether to scale (by standardization) data. Default is False.
@@ -730,6 +734,9 @@ class Samples(object):
                 *The array will be flattened if not 1d.
             min_observations (Optional[int]): The minimum number of observations required in a time series.
                 *Uses `clear_observations`.
+            limit_test_size (Optional[int]): A size to limit test samples to. Default is None.
+                For example, if samples are split 30/70 for train/test and the test set is larger than needed
+                for model validation, limit the test sample pool to [`limit_test_size`, <n feas>].
         """
 
         if not isinstance(class_subs, dict):
@@ -762,6 +769,7 @@ class Samples(object):
         self.sample_weight = sample_weight
         self.min_observations = min_observations
         self.response_label = response_label
+        self.limit_test_size = limit_test_size
 
         self.class_idx = None
         self.clear_idx = None
@@ -917,8 +925,16 @@ class Samples(object):
                 else:
                     self._sample_group(class_key, cl)
 
-            self.train_idx = sorted(self.train_idx)
-            self.test_idx = sorted(list(set(self.df.index.tolist()).difference(self.train_idx)))
+            self.train_idx = np.array(sorted(self.train_idx), dtype='int64')
+            self.test_idx = np.array(sorted(list(set(self.df.index.tolist()).difference(self.train_idx))), dtype='int64')
+
+            if isinstance(self.limit_test_size, int):
+
+                random_limit = sorted(np.random.choice(self.test_idx,
+                                                       size=self.limit_test_size,
+                                                       replace=False))
+
+                self.test_idx = self.test_idx[random_limit]
 
             test_samps = self.all_samps[self.test_idx]
             self.all_samps = self.all_samps[self.train_idx]
@@ -1002,14 +1018,16 @@ class Samples(object):
         if self.class_subs or (0 < perc_samp_each < 1) or ((perc_samp < 1) and (perc_samp_each == 0)):
 
             # Get class labels.
-            if labs_type == 'int':
-                self.labels_test = np.array(test_samps[:, self.label_idx].ravel(), dtype='int64')
-            elif labs_type == 'float':
-                self.labels_test = np.array(test_samps[:, self.label_idx].ravel(), dtype='float32')
+            dtype_ = 'float32' if labs_type == 'float32' else 'int64'
 
             if norm_struct:
+
+                self.labels_test = np.array(test_samps[:, self.label_idx].ravel(), dtype=dtype_)
                 self.p_vars_test = np.float32(test_samps[:, :self.label_idx])
+
             else:
+
+                self.labels_test = np.array(test_samps[:, 1:].ravel(), dtype=dtype_)
                 self.p_vars_test = np.float32(test_samps[:, 1:])
 
             self.p_vars_test[np.isnan(self.p_vars_test) | np.isinf(self.p_vars_test)] = 0.
