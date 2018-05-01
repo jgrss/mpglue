@@ -1224,7 +1224,7 @@ class Samples(object):
 
     def update_class_counts(self):
 
-        self.classes = map(int, list(np.unique(self.labels)))
+        self.classes = list(map(int, list(np.unique(self.labels))))
         self.n_classes = len(self.classes)
 
         self.class_counts = dict()
@@ -1953,7 +1953,7 @@ class EndMembers(object):
 
         if ignore_feas:
 
-            ignore_feas = map(int, ignore_feas)
+            ignore_feas = list(map(int, ignore_feas))
             arr = np.delete(arr, ignore_feas, axis=0)
 
         arr_dims, arr_rows, arr_cols = arr.shape
