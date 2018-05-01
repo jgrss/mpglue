@@ -93,10 +93,13 @@ def julian_day_dictionary(start_year=1980, end_year=2050, store='st_jd'):
         dd_yyyy = ('-{:d},'.format(yyyy).join(map(str, [dt.timetuple().tm_yday
                                                         for dt in date_time])) + '-{:d}'.format(yyyy)).split(',')
 
-        date_list = (map(str, ['{}.{:02d}.{:03d}.{:03d}'.format(dt.timetuple().tm_year,
-                                                                int(dt.timetuple().tm_mon),
-                                                                int(dt.timetuple().tm_mday),
-                                                                int(dt.timetuple().tm_yday)) for dt in date_time]))
+        if store == 'date':
+            
+            date_list = list(map(str, ['{}.{:02d}.{:03d}.{:03d}'.format(dt.timetuple().tm_year,
+                                                                        int(dt.timetuple().tm_mon),
+                                                                        int(dt.timetuple().tm_mday),
+                                                                        int(dt.timetuple().tm_yday)) for dt in
+                                       date_time]))
 
         for date in range(0, len(dd_yyyy)):
 
