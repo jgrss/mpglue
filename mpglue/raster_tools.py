@@ -451,7 +451,7 @@ class ReadWrite(object):
             n_bands = self.array.shape[0]
 
             if not self.xarray_coords:
-                self.xarray_coords = dict(z=('B' + ',B'.join(map(str, range(1, n_bands + 1)))).split(','))
+                self.xarray_coords = dict(z=('B' + ',B'.join(list(map(str, range(1, n_bands+1))))).split(','))
 
             if not self.xarray_dims:
                 self.xarray_dims = ['z', 'y', 'x']
@@ -1329,7 +1329,7 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
         if not levels:
             levels = [2, 4, 8, 16]
         else:
-            levels = map(int, levels)
+            levels = list(map(int, levels))
 
         try:
 

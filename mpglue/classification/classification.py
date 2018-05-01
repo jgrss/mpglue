@@ -787,7 +787,7 @@ class Samples(object):
                 logger.error('  The samples array must be a 2d array.')
                 raise TypeError
 
-            headers = [x_label, y_label] + map(str, range(1, self.file_name.shape[1]-2)) + [self.response_label]
+            headers = [x_label, y_label] + list(map(str, range(1, self.file_name.shape[1]-2))) + [self.response_label]
 
             self.df = pd.DataFrame(self.file_name, columns=headers)
 
@@ -6452,7 +6452,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             logger.info('  ==================')
             logger.info('  Excluded variables')
             logger.info('  ==================')
-            logger.info(','.join(map(str, sorted(self.bad_features))))
+            logger.info(','.join(list(map(str, sorted(self.bad_features)))))
 
         if isinstance(rank_text, str):
 
@@ -6722,7 +6722,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         param_order = list(classifier_parameters)
 
         df_param_headers = '-'.join(param_order)
-        df_fold_headers = ('F' + '-F'.join(map(str, range(1, k_folds + 1)))).split('-')
+        df_fold_headers = ('F' + '-F'.join(list(map(str, range(1, k_folds+1))))).split('-')
 
         # Setup the output scores table.
         df = pd.DataFrame(columns=df_fold_headers)
@@ -7826,7 +7826,7 @@ class classification_r(classification):
             names.write('{}: continuous.\n'.format(hdr))
 
         # write the classes
-        class_str_list = ','.join(map(str, sorted(self.classes)))
+        class_str_list = ','.join(list(map(str, sorted(self.classes))))
         names.write('{}: {}'.format(self.headers[-1], class_str_list))
 
         names.close()
@@ -8160,17 +8160,17 @@ def main():
         elif arg == '-clrm':
             i += 1
             classes2remove = argv[i].split(',')
-            classes2remove = map(int, classes2remove)
+            classes2remove = list(map(int, classes2remove))
 
         elif arg == '-valrm':
             i += 1
             valrm_fea = argv[i].split(',')
-            valrm_fea = map(int, valrm_fea)
+            valrm_fea = list(map(int, valrm_fea))
 
         elif arg == '-ig':
             i += 1
             ignore_feas = argv[i].split(',')
-            ignore_feas = map(int, ignore_feas)
+            ignore_feas = list(map(int, ignore_feas))
 
         elif arg == '-xy':
             i += 1
@@ -8203,12 +8203,12 @@ def main():
         elif arg == '--visualize':
             i += 1
             feature_space = argv[i].split(',')
-            feature_space = map(int, feature_space)
+            feature_space = list(map(int, feature_space))
 
         elif arg == '--decision':
             i += 1
             decision_function = argv[i].split(',')
-            decision_function = map(int, decision_function)
+            decision_function = list(map(int, decision_function))
 
         elif arg == '--optimize':
             i += 1
