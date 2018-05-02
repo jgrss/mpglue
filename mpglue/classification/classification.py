@@ -28,6 +28,7 @@ from .. import raster_tools
 from .. import vector_tools
 from ..helpers import get_path
 from ..errors import logger, ArrayShapeError
+from .ts_features import TimeSeriesFeatures
 
 MPPATH = get_path()
 
@@ -1050,6 +1051,7 @@ class Samples(object):
         self.sample_info_dict['classes'] = self.classes
         self.sample_info_dict['scaler'] = self.scaler
         self.sample_info_dict['scaled'] = self.scaled
+        self.sample_info_dict['use_xy'] = self.use_xy
 
     @staticmethod
     def _stack_samples(counter,
@@ -3557,6 +3559,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         >>> #   into train and test datasets.
         >>> cl.split_samples('/samples.txt')
         >>>
+        >>> # Add features
+        >>> cl.add_features(['mean', 'cv'])
+        >>>
         >>> # Train a Random Forest classification model.
         >>> # *Note that the model is NOT saved to file in
         >>> #   this example. However, the model IS passed
@@ -3585,7 +3590,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         class_weight=None,
                         var_imp=True,
                         rank_method=None,
-                        top_feas=.5,
+                        top_feas=0.5,
                         get_probs=False,
                         input_image=None,
                         in_shapefile=None,
@@ -3598,7 +3603,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         be_quiet=False,
                         compress_model=False,
                         view_calibration=None,
-                        fig_location=None):
+                        fig_location=None,
+                        feature_list=None):
 
         """
         Loads, trains, and saves a predictive model.
@@ -3621,6 +3627,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             get_probs (Optional[bool]): Whether to return class probabilities. Default is False.
             input_image (Optional[str]): An input image for Orfeo models. Default is None.
             in_shapefile (Optional[str]): An input shapefile for Orfeo models. Default is None.
+            out_stats (Optional[str])
             output_stats (Optional[str]): A statistics file for Orfeo models. Default is None.
             stats_from_image (Optional[bool]): Whether to collect statistics from the image for Orfeo models. Default
                 is False.
@@ -3637,6 +3644,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             view_calibration (Optional[int]): View the calibrated probabilities of class `view_calibration`.
                 Default is None.
             fig_location (Optional[str]): The location to save the `view_calibration` figure. Default is None.
+            feature_list (Optional[str list]): A list of features to add to `p_vars`. Default is None.
+                Choices are ['mean', 'cv'].
 
         Examples:
             >>> # create the classifier object
@@ -3695,7 +3704,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.view_calibration = view_calibration
         self.fig_location = fig_location
 
+        self.feature_object = None
+        self._add_features = False
         self.calibrated = False
+        self.feature_list = feature_list
 
         if isinstance(self.view_calibration, int):
 
@@ -3797,10 +3809,39 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         if isinstance(self.input_model, str):
 
-            # Load the classifier parameters and the model.
+            # Load the classifier parameters
+            #   and the model.
             self._load_model()
 
         else:
+
+            if self.feature_list:
+
+                self.feature_object = TimeSeriesFeatures()
+                self.feature_object.add_features(self.feature_list)
+
+                if self.use_xy:
+                    ts_indices = np.array(range(0, features.shape[1]-2), dtype='int64')
+                else:
+                    ts_indices = None
+
+                self.p_vars = self.feature_object.apply_features(self.p_vars,
+                                                                 ts_indices=ts_indices)
+
+                if isinstance(self.p_vars_test, np.ndarray):
+
+                    self.p_vars_test = self.feature_object.apply_features(self.p_vars_test,
+                                                                          ts_indices=ts_indices)
+
+                if isinstance(self.calibrate_test, np.ndarray):
+
+                    self.calibrate_test = self.feature_object.apply_features(self.calibrate_test,
+                                                                             ts_indices=ts_indices)
+
+                self._add_features = True
+
+            self.sample_info_dict['add_features'] = self._add_features
+            self.sample_info_dict['feature_object'] = self.feature_object
 
             # Set the model parameters.
             self._default_parameters()
@@ -3856,6 +3897,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 self.classes = self.sample_info_dict['classes']
                 self.scaler = self.sample_info_dict['scaler']
                 self.scaled = self.sample_info_dict['scaled']
+                self.use_xy = self.sample_info_dict['use_xy']
+                self._add_features = self.sample_info_dict['add_features']
+                self.feature_object = self.sample_info_dict['feature_object']
 
             except:
 
@@ -4977,7 +5021,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 band_check=-1,
                 bands2open=None,
                 ignore_feas=None,
-                use_xy=False,
                 in_stats=None,
                 in_model=None,
                 mask_background=None,
@@ -5015,7 +5058,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             bands2open (Optional[list]): A list of bands to open, otherwise opens all bands. Default is None.
             ignore_feas (Optional[list]): A list of features (band layers) to ignore. Default is an empty list,
                 or use all features.
-            use_xy (Optional[bool]): Whether to use x, y coordinates as predictive variables. Default is False.
             in_stats (Optional[str]): A XML statistics file. Default is None. *Only applicable to Orfeo models.
             in_model (Optional[str]): A model file to load. Default is None. *Only applicable to Orfeo
                 and C5/Cubist models.
@@ -5063,7 +5105,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             >>>
             >>> # You can use x, y coordinates, but note that these must be
             >>> #   supplied to ``predict`` also.
-            >>> cl.split_samples('/samples.txt', perc_samp_each=.7, use_xy=True)
+            >>> cl.split_samples('/samples.txt', perc_samp_each=.7)
             >>>
             >>> # Random Forest with Scikit-learn
             >>> cl.construct_model(classifier_info={'classifier': 'RF', 'trees': 100, 'max_depth': 25})
@@ -5093,7 +5135,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.band_check = band_check
         self.row_block_size = row_block_size
         self.col_block_size = col_block_size
-        self.use_xy = use_xy
         self.mask_background = mask_background
         self.background_band = background_band
         self.background_value = background_value
@@ -5554,6 +5595,17 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 features = np.hstack((features,
                                       self.x_coordinates.ravel()[:, np.newaxis],
                                       self.y_coordinates.ravel()[:, np.newaxis]))
+
+            # Add extra predictive features.
+            if self._add_features:
+
+                if self.use_xy:
+                    ts_indices = np.array(range(0, features.shape[1]-2), dtype='int64')
+                else:
+                    ts_indices = None
+
+                features = self.feature_object.apply_features(features,
+                                                              ts_indices=ts_indices)
 
             # Reshape the features for CRF models.
             if self.classifier_info['classifier'] == 'ChainCRF':
