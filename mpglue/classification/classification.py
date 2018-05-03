@@ -3821,7 +3821,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 self.feature_object.add_features(self.feature_list)
 
                 if self.use_xy:
-                    ts_indices = np.array(range(0, features.shape[1]-2), dtype='int64')
+                    ts_indices = np.array(range(0, self.p_vars.shape[1]-2), dtype='int64')
                 else:
                     ts_indices = None
 
