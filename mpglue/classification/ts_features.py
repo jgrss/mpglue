@@ -197,8 +197,7 @@ def _slopes(X, axis=None, no_data=0):
     # Reshape to [dims x samples].
     X_min, X_max = rolling_stats(X.T,
                                  stat='slope',
-                                 window_size=15,
-                                 is_1d=True)
+                                 window_size=15)
 
     return np.hstack((_nan_reshape(X_min, no_data),
                       _nan_reshape(X_min, no_data)))
