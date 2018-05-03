@@ -5596,6 +5596,15 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                       self.x_coordinates.ravel()[:, np.newaxis],
                                       self.y_coordinates.ravel()[:, np.newaxis]))
 
+            # Reshape the features for CRF models.
+            if self.classifier_info['classifier'] == 'ChainCRF':
+                features = self._transform4crf(p_vars2reshape=features)[0]
+            else:
+
+                # Scale the features.
+                if self.scaled:
+                    features = self.scaler.transform(features)
+
             # Add extra predictive features.
             if self._add_features:
 
@@ -5606,15 +5615,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 features = self.feature_object.apply_features(features,
                                                               ts_indices=ts_indices)
-
-            # Reshape the features for CRF models.
-            if self.classifier_info['classifier'] == 'ChainCRF':
-                features = self._transform4crf(p_vars2reshape=features)[0]
-            else:
-
-                # Scale the features.
-                if self.scaled:
-                    features = self.scaler.transform(features)
 
             if self.get_probs:
 
