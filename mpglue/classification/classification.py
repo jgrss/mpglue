@@ -3825,10 +3825,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 else:
                     ts_indices = None
 
-                logger.info(self.p_vars.shape[1])
-                logger.info(self.p_vars_test.shape[1])
-                logger.info(self.calibrate_test.shape[1])
-                logger.info(ts_indices.shape)
+                # logger.info(self.p_vars.shape[1])
+                # logger.info(self.p_vars_test.shape[1])
+                # logger.info(self.calibrate_test.shape[1])
+                # logger.info(ts_indices.shape)
 
                 self.p_vars = self.feature_object.apply_features(self.p_vars,
                                                                  ts_indices=ts_indices)
