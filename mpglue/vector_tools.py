@@ -1294,6 +1294,7 @@ class RTreeManager(object):
                 bdy_geometry = bdy_feature.GetGeometryRef()
                 en = bdy_geometry.GetEnvelope()
 
+
                 if rtree_installed:
                     self.rtree_index.insert(f, (en[0], en[1], en[2], en[3]))
                 else:
