@@ -637,7 +637,7 @@ class ReadWrite(object):
                      x=0,
                      y=0,
                      out_rst=None,
-                     write2bands=[],
+                     write2bands=None,
                      compress='deflate',
                      tile=False,
                      close_band=True,
