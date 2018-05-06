@@ -1052,7 +1052,6 @@ class Samples(object):
         self.sample_info_dict['scaler'] = self.scaler
         self.sample_info_dict['scaled'] = self.scaled
         self.sample_info_dict['use_xy'] = self.use_xy
-
     @staticmethod
     def _stack_samples(counter,
                        test_stk,
@@ -3844,6 +3843,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                                              ts_indices=ts_indices)
 
                 self._add_features = True
+
+                self.sample_info_dict['n_feas'] = self.p_vars.shape[1]
 
             self.sample_info_dict['add_features'] = self._add_features
             self.sample_info_dict['feature_object'] = self.feature_object
