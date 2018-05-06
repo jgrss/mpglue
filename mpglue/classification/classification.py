@@ -1210,7 +1210,7 @@ class Samples(object):
 
     def _scale_p_vars(self):
 
-        self.scaler = RobustScaler()
+        self.scaler = RobustScaler(quantile_range=(5, 95))
         self.scaler.fit(self.p_vars)
 
         # Save the unscaled samples.
@@ -3897,7 +3897,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 # self.classifier_info, self.model = self.load(self.input_model)
                 self.classifier_info, self.model, self.sample_info_dict = joblib.load(self.input_model)
 
-                self.n_feas = self.sample_info_dict['scaler']
+                self.n_feas = self.sample_info_dict['n_feas']
                 self.n_classes = self.sample_info_dict['n_classes']
                 self.classes = self.sample_info_dict['classes']
                 self.scaler = self.sample_info_dict['scaler']
@@ -4842,6 +4842,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             logger.info('  Saving model to file ...')
 
+            compress = ('zlib', 5) if self.compress_model else 0
+
             if 'CV' in self.classifier_info['classifier']:
 
                 try:
@@ -4849,12 +4851,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     self.model.save(self.output_model)
 
                     # Dump the parameters to a text file.
-
-                    if self.compress_model:
-                        compress = ('zlib', 5)
-                    else:
-                        compress = 0
-
                     joblib.dump([self.classifier_info,
                                  self.model,
                                  self.sample_info_dict],
@@ -4870,11 +4866,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             else:
 
                 try:
-
-                    if self.compress_model:
-                        compress = ('zlib', 5)
-                    else:
-                        compress = 0
 
                     joblib.dump([self.classifier_info,
                                  self.model,
