@@ -1393,8 +1393,8 @@ class manage_pytables(BaseHandler):
         start_doy = rad_calibration.date2julian(start_month, start_day, start_year)
         end_doy = rad_calibration.date2julian(end_month, end_day, end_year)
 
-        start_jd = JD_DICT['{YEAR}-{DOY}'.format(YEAR=start_year, DOY=start_doy)]
-        end_jd = JD_DICT['{YEAR}-{DOY}'.format(YEAR=end_year, DOY=end_doy)]
+        start_jd = JD_DICT['{YEAR}-{DOY:03d}'.format(YEAR=start_year, DOY=start_doy)]
+        end_jd = JD_DICT['{YEAR}-{DOY:03d}'.format(YEAR=end_year, DOY=end_doy)]
 
         for node in self.nodes:
 
@@ -1427,7 +1427,7 @@ class manage_pytables(BaseHandler):
 
                 # Get the node Julian day
                 node_doy = rad_calibration.date2julian(node_month, node_day, node_year)
-                node_jd = JD_DICT['{YEAR}-{DOY}'.format(YEAR=node_year, DOY=node_doy)]
+                node_jd = JD_DICT['{YEAR}-{DOY:03d}'.format(YEAR=node_year, DOY=node_doy)]
 
                 # yyyy_mmdd --> yyyymmdd
                 node_date = file_id_strip[-9:].replace('_' '')
@@ -1456,7 +1456,7 @@ class manage_pytables(BaseHandler):
             path (int or str): The image path.
             row (int or str): The image row.
             sensor (str): The image satellite sensor.
-            date (int or str): The image date (yyyymmdd).
+            date (str): The image date (yyyy-mm-dd).
             attribute (str): The image attribute. Choices are ['bands', 'mask'].
 
         Example:
@@ -1470,7 +1470,7 @@ class manage_pytables(BaseHandler):
             >>>                226,
             >>>                80,
             >>>                'ETM',
-            >>>                '20000110',
+            >>>                '2000-01-10',
             >>>                'bands')
             >>>
             >>> pt.close_hdf()
@@ -1483,11 +1483,7 @@ class manage_pytables(BaseHandler):
             logger.warning('  The table does not have metadata.')
             return
 
-        date = str(date)
-
-        year = date[:4]
-        month = date[4:6]
-        day = date[6:]
+        year, month, day = date.split('-')
 
         utm = self.h5_f_base[:2]
         latitude = self.h5_f_base[2]
