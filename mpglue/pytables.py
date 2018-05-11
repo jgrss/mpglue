@@ -16,8 +16,10 @@ import argparse
 from copy import copy
 from operator import itemgetter
 import psutil
+import multiprocessing as multi
 
 from . import raster_tools, vector_tools, rad_calibration
+from .errors import logger
 
 # NumPy
 try:
@@ -27,12 +29,7 @@ except ImportError:
 
 # PyTables
 try:
-
     import tables
-
-    tables.parameters.MAX_NUMEXPR_THREADS = 8
-    tables.parameters.MAX_BLOSC_THREADS = 8
-
 except ImportError:
     raise ImportError('PyTables must be installed')
 
@@ -40,8 +37,8 @@ except ImportError:
 STORAGE_DICT = raster_tools.STORAGE_DICT
 JD_DICT = rad_calibration.julian_day_dictionary()
 
-tables.parameters.MAX_NUMEXPR_THREADS = 4
-tables.parameters.MAX_BLOSC_THREADS = 4
+tables.parameters.MAX_NUMEXPR_THREADS = multi.cpu_count()
+tables.parameters.MAX_BLOSC_THREADS = multi.cpu_count()
 
 
 class OrderInfo(tables.IsDescription):
@@ -121,7 +118,7 @@ def get_mem():
 
     this_proc = psutil.Process(os.getpid())
 
-    return this_proc.get_memory_info()[0] / 1E6
+    return this_proc.get_memory_info()[0] / 1e6
 
 
 class BaseHandler(SetFilter):
@@ -303,7 +300,7 @@ class BaseHandler(SetFilter):
             A ``rows`` x ``cols`` ndarray.
 
         Examples:
-            >>> from mappy.utilities.landsat.pytables import manage_pytables
+            >>> from mpglue.pytables import manage_pytables
             >>>
             >>> pt = manage_pytables()
             >>> pt.open_hdf_file('/2000_p228.h5', mode='r')
@@ -464,7 +461,7 @@ class ArrayHandler(object):
     A class to handle PyTables Arrays
 
     Examples:
-        >>> from mappy.utilities.pytables import ArrayHandler
+        >>> from mpglue.pytables import ArrayHandler
         >>>
         >>> a = np.random.random((100, 100, 100)).astype(np.float32)
         >>>
@@ -789,6 +786,14 @@ class manage_pytables(BaseHandler):
         self.time_stamp = time.asctime(time.localtime(time.time()))
 
         self.h5_file = None
+        self.hdf_file = None
+        self.title = None
+        self.mode = None
+        self.nodes = None
+
+        self.h5_d_name = None
+        self.h5_f_name = None
+        self.h5_f_base = None
 
     def open_hdf_file(self, hdf_file, title='Landsat', mode='a'):
 
@@ -804,6 +809,13 @@ class manage_pytables(BaseHandler):
             hdf_file (object)
         """
 
+        self.hdf_file = hdf_file
+        self.title = title
+        self.mode = mode
+
+        self.h5_d_name, self.h5_f_name = os.path.split(hdf_file)
+        self.h5_f_base = os.path.splitext(self.h5_f_name)[0]
+
         if hasattr(self.h5_file, 'isopen'):
 
             if not self.h5_file.isopen:
@@ -811,6 +823,14 @@ class manage_pytables(BaseHandler):
 
         else:
             self.h5_file = tables.open_file(hdf_file, mode=mode, title=title)
+
+        self.list_nodes()
+
+    def list_nodes(self):
+
+        """
+        Lists all nodes in the file
+        """
 
         self.nodes = [node._v_pathname for node in self.h5_file.walk_nodes()
                       if hasattr(node, 'title') and ('metadata' not in node._v_pathname)]
@@ -1329,47 +1349,210 @@ class manage_pytables(BaseHandler):
         for existing_file in existing_files:
             print(existing_file)
 
-    def write2file(self, file_name, out_name, path, row, sensor, year):
+    def batch_write2file(self, out_dir, path_list, row_list, sensor_list, start_date, end_date, attribute):
 
         """
+        Writes a series of nodes to file
+
+        Args:
+            out_dir (str): The output directory.
+            path_list (str list): The list of paths.
+            row_list (str list): The list of rows.
+            sensor_list (str list): The list of sensors.
+            start_date (str): The start date (yyyy-mm-dd).
+            end_date (str): The end date (yyyy-mm-dd).
+            attribute (str): The image attribute. Choices are ['bands', 'mask'].
+
         Example:
-            >>> from mappy.utilities.landsat.pytables import manage_pytables
+            >>> from mpglue.pytables import manage_pytables
+            >>>
             >>> pt = manage_pytables()
-            >>> pt.open_hdf_file('/2000_p228.h5', 'Landsat')
-            >>> pt.write2file('p226r80_etm_2000_0110_ndvi.tif', '/out_image.tif', '2000', 226, 80, 'ETM')
+            >>>
+            >>> pt.open_hdf_file('/20HMG.h5', 'Landsat')
+            >>>
+            >>> # Write 4 months of data to file.
+            >>> pt.batch_write2file('/out_dir',
+            >>>                     [228, 230],
+            >>>                     [70, 75],
+            >>>                     ['ETM', 'OLI TIRS'],
+            >>>                     '2010-01-01',
+            >>>                     '2010-05-01',
+            >>>                     'bands')
+            >>>
+            >>> pt.close_hdf()
+        """
+
+        # Get a list of all the nodes.
+        self.list_nodes()
+
+        path_list = [str(path) for path in range(path_list[0], path_list[-1]+1)]
+        row_list = [str(row) for row in range(row_list[0], row_list[-1]+1)]
+        sensor_list = [sensor.lower().replace(' ', '_') for sensor in sensor_list]
+
+        start_year, start_month, start_day = start_date.split('-')
+        end_year, end_month, end_day = end_date.split('-')
+
+        start_doy = rad_calibration.date2julian(start_month, start_day, start_year)
+        end_doy = rad_calibration.date2julian(end_month, end_day, end_year)
+
+        start_jd = JD_DICT['{YEAR}-{DOY}'.format(YEAR=start_year, DOY=start_doy)]
+        end_jd = JD_DICT['{YEAR}-{DOY}'.format(YEAR=end_year, DOY=end_doy)]
+
+        for node in self.nodes:
+
+            # Split the node name.
+            node_names = node.split('/')
+
+            # get the file id.
+            file_id = node_names[5]
+
+            # Filter unwanted attributes.
+            if attribute.lower() in file_id:
+
+                # Remove the attribute from the id.
+                file_id_strip = file_id.replace('_{}'.format(attribute.lower()), '')
+
+                # Get index positions.
+                p_pos = file_id_strip.index('p')
+                r_pos = file_id_strip.index('r')
+                _pos = file_id_strip.index('_')
+
+                # Get node key names.
+                node_path = file_id_strip[p_pos+1:r_pos]
+                node_row = file_id_strip[r_pos+1:_pos]
+                node_sensor = file_id_strip[_pos+1:-10]
+
+                # Get date key names.
+                node_year = file_id_strip[-9:-5]
+                node_month = file_id_strip[-4:-2]
+                node_day = file_id_strip[-2:]
+
+                # Get the node Julian day
+                node_doy = rad_calibration.date2julian(node_month, node_day, node_year)
+                node_jd = JD_DICT['{YEAR}-{DOY}'.format(YEAR=node_year, DOY=node_doy)]
+
+                # yyyy_mmdd --> yyyymmdd
+                node_date = file_id_strip[-9:].replace('_' '')
+
+                # Filter unwanted dates.
+                if start_jd <= node_jd <= end_jd:
+
+                    # Filter the path, row, and sensor.
+                    if (node_path in path_list) and (node_row in row_list) and (node_sensor in sensor_list):
+
+                        # Write the node to file.
+                        self.write2file(os.path.join(out_dir, file_id + '.tif'),
+                                        node_path,
+                                        node_row,
+                                        node_sensor,
+                                        node_date,
+                                        attribute)
+
+    def write2file(self, out_name, path, row, sensor, date, attribute):
+
+        """
+        Writes an h5 node to file
+
+        Args:
+            out_name (str): The output file name.
+            path (int or str): The image path.
+            row (int or str): The image row.
+            sensor (str): The image satellite sensor.
+            date (int or str): The image date (yyyymmdd).
+            attribute (str): The image attribute. Choices are ['bands', 'mask'].
+
+        Example:
+            >>> from mpglue.pytables import manage_pytables
+            >>>
+            >>> pt = manage_pytables()
+            >>>
+            >>> pt.open_hdf_file('/20HMG.h5', 'Landsat')
+            >>>
+            >>> pt.write2file('/p226_r80_etm_2000_0110_evi2.tif',
+            >>>                226,
+            >>>                80,
+            >>>                'ETM',
+            >>>                '20000110',
+            >>>                'bands')
+            >>>
+            >>> pt.close_hdf()
         """
 
         try:
             table = self.h5_file.root.metadata
         except:
-            print('The table does not have metadata.')
+
+            logger.warning('  The table does not have metadata.')
             return
 
-        # First get the image information.
-        result = [(x['filename'], x['rows'], x['columns'], x['bands'], x['projection'], x['cell_size'], \
-                   x['left'], x['top'], x['right'], x['bottom'], x['storage'])
-                  for x in table.where("""(filename == "%s")""" % file_name)][0]
+        date = str(date)
 
-        group_name = '/{}/p{:d}r{:d}/{}/{}'.format(str(year), int(path), int(row), sensor.upper(),
-                                                   result[0].replace('.tif', ''))
+        year = date[:4]
+        month = date[4:6]
+        day = date[6:]
 
-        array2write = self.get_array(group_name, 0, 0, result[1], result[2])
+        utm = self.h5_f_base[:2]
+        latitude = self.h5_f_base[2]
+        grid = self.h5_f_base[3:]
 
-        # Create the output file.
-        # out_rst = raster_tools.create_raster(out_name, None, rows=result[1], cols=result[2], bands=result[3],
-        #                                      projection=result[4], cellY=result[5], cellX=-result[5], left=result[6],
-        #                                      top=result[7])
+        file_id = 'p{PATH}_r{ROW}_{SENSOR}_{YEAR}_{MONTH}{DAY}'.format(PATH=str(path),
+                                                                       ROW=str(row),
+                                                                       SENSOR=sensor.lower().replace(' ', '_'),
+                                                                       YEAR=year,
+                                                                       MONTH=month,
+                                                                       DAY=day)
 
-        with raster_tools.ropen('create', rows=result[1], cols=result[2], bands=result[3], 
-                                projection=result[4], cellY=result[5], cellX=-result[5], 
-                                left=result[6], top=result[7], right=result[8], 
-                                bottom=result[9], storage=result[10]) as o_info:
-    
-            raster_tools.write2raster(array2write, out_name, o_info=o_info, flush_final=True)
-    
-            self.close_hdf()
-        
-        o_info = None
+        # Check if the node is in the file.
+        result = [dict(filename=tb_row['filename'],
+                       rows=tb_row['rows'],
+                       columns=tb_row['columns'],
+                       bands=tb_row['bands'],
+                       projection=tb_row['projection'],
+                       cell_size=tb_row['cell_size'],
+                       left=tb_row['left'],
+                       top=tb_row['top'],
+                       right=tb_row['right'],
+                       bottom=tb_row['bottom'],
+                       storage=tb_row['storage']) for tb_row in table.where("""(Id == "%s")""" % file_id)]
+
+        if not result:
+
+            logger.warning('  The file id was not found.')
+            return
+
+        result = result[0]
+
+        # Setup the group node name.
+        group_name = '/{UTM}/{LAT}/{GRID}/{TITLE}/{ID}_{ATTR}'.format(UTM=utm,
+                                                                      LAT=latitude,
+                                                                      GRID=grid,
+                                                                      TITLE=self.title,
+                                                                      ID=file_id,
+                                                                      ATTR=attribute.lower())
+
+        # Open the array.
+        array2write = self.h5_file.get_node(group_name).read()
+
+        with raster_tools.ropen('create',
+                                rows=result['rows'],
+                                cols=result['columns'],
+                                bands=result['bands'],
+                                projection=result['projection'],
+                                cellY=result['cell_size'],
+                                cellX=-result['cell_size'],
+                                left=result['left'],
+                                top=result['top'],
+                                right=result['right'],
+                                bottom=result['bottom'],
+                                storage=result['storage']) as o_info:
+
+            # Write the array to file.
+            raster_tools.write2raster(array2write,
+                                      out_name,
+                                      o_info=o_info,
+                                      flush_final=True)
+
+        del o_info
 
     def close_hdf(self):
 
@@ -1438,7 +1621,7 @@ def pytables(inputs,
         None, writes to ``hdf_file``.
         
     Examples:
-        >>> from mappy.utilities.landsat import pytables
+        >>> from mpglue.pytables import pytables
         >>>
         >>> # save two images to a HDF file
         >>> pytables(['/p228r78_etm_2000_0716.tif', '/p228r78_etm_2000_0920.tif'],
