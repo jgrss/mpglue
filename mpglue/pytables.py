@@ -1500,8 +1500,6 @@ class manage_pytables(BaseHandler):
                                                                       MONTH=month,
                                                                       DAY=day)
 
-        print(file_id)
-
         # Check if the node is in the file.
         result = [dict(filename=tb_row['filename'],
                        rows=tb_row['rows'],
@@ -1514,8 +1512,6 @@ class manage_pytables(BaseHandler):
                        right=tb_row['right'],
                        bottom=tb_row['bottom'],
                        storage=tb_row['storage']) for tb_row in table.where("""(Id == "%s")""" % file_id)]
-
-        print(result)
 
         if not result:
 
@@ -1534,6 +1530,8 @@ class manage_pytables(BaseHandler):
 
         # Open the array.
         array2write = self.h5_file.get_node(group_name).read()
+
+        logger.info('  Writing to {} ...'.format(out_name))
 
         with raster_tools.ropen('create',
                                 rows=result['rows'],
