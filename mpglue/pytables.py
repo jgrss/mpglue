@@ -20,6 +20,15 @@ import multiprocessing as multi
 
 from . import raster_tools, vector_tools, rad_calibration
 from .errors import logger
+from .utils import SENSOR_BAND_DICT
+
+try:
+
+    from mptime.radiometric.normalization import RelativeSensorNorm, GlobalBRDFNorm
+    MPTIME_INSTALLED = True
+
+except:
+    MPTIME_INSTALLED = False
 
 # NumPy
 try:
@@ -1539,6 +1548,56 @@ class manage_pytables(BaseHandler):
         # Open the array.
         array2write = self.h5_file.get_node(group_name).read()
 
+        # Open the mask
+        sensor_mask = self.h5_file.get_node(group_name.replace('_bands', '_mask')).read()
+
+        if MPTIME_INSTALLED:
+
+            wavelength_list = ['blue', 'green', 'red', 'nir', 'midir', 'farir']
+
+            if sensor.lower() == 'etm':
+
+                relsn = RelativeSensorNorm(scale_factor=10000.0)
+
+                # Band-pass adjustment
+                array2write = relsn.run(wavelength_list,
+                                        np.float32(array2write),
+                                        self.h5_file.get_node(group_name.replace('_bands', '_mask')).read(),
+                                        calibration='surface',
+                                        correction='etm2oli')
+
+            solar_zenith_angle = self.h5_file.get_node(group_name.replace('_bands', '_solar_zenith')).read()
+            solar_azimuth_angle = self.h5_file.get_node(group_name.replace('_bands', '_solar_azimuth')).read()
+            sensor_zenith_angle = self.h5_file.get_node(group_name.replace('_bands', '_sensor_zenith')).read()
+            sensor_azimuth_angle = self.h5_file.get_node(group_name.replace('_bands', '_sensor_azimuth')).read()
+
+            if sensor.lower() == 'oli tirs':
+
+                wv = SENSOR_BAND_DICT['Landsat8']
+                wv_idx = np.array([wv[wv_name]-1 for wv_name in wavelength_list], dtype='int64')
+                array2write = array2write[wv_idx]
+
+            gbn = GlobalBRDFNorm(scale_factor=10000.0)
+
+            # BRDF per-pixel normalization
+            array2write = gbn.normalize(wavelength_list,
+                                        array2write,
+                                        solar_zenith_angle,
+                                        solar_azimuth_angle,
+                                        sensor_zenith_angle,
+                                        sensor_azimuth_angle,
+                                        sensor_mask,
+                                        scale_angles=True)
+
+            result['bands'] = array2write.shape[0]
+
+        # Mask the bands.
+        for bi in range(array2write.shape[0]):
+
+            layer = array2write[bi]
+            layer[sensor_mask != 0] = 0
+            array2write[bi] = layer
+
         logger.info('  Writing to {} ...'.format(out_name))
 
         with raster_tools.ropen('create',
@@ -1561,6 +1620,8 @@ class manage_pytables(BaseHandler):
                                       flush_final=True)
 
         del o_info
+
+        logger.info('  {} was successfully written to file.'.format(out_name))
 
     def close_hdf(self):
 
