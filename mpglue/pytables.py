@@ -833,12 +833,15 @@ class manage_pytables(BaseHandler):
         else:
             self.h5_file = tables.open_file(hdf_file, mode=mode, title=title)
 
-    def list_nodes(self, attribute_filter=None):
+    def list_nodes(self, path_filter=None, row_filter=None, sensor_filter=None, attribute_filter=None):
 
         """
         Lists nodes in the h5 file
 
         Args:
+            path_filter (Optional[str]): A path to filter by. Default is None.
+            row_filter (Optional[str]): A row to filter by. Default is None.
+            sensor_filter (Optional[str]): A sensor to filter by. Default is None. Choices are ['ETM', 'OLI TIRS'].
             attribute_filter (Optional[str]): An attribute to filter by. Default is None.
 
         Attributes:
@@ -851,12 +854,25 @@ class manage_pytables(BaseHandler):
             >>>
             >>> pt.open_hdf_file('/20HMG.h5', 'Landsat')
             >>>
-            >>> pt.list_nodes(attribute_filter='bands')
+            >>> pt.list_nodes(sensor='ETM',
+            >>>               attribute_filter='bands')
+            >>>
             >>> print(pt.nodes)
         """
 
         self.nodes = [node._v_pathname for node in self.h5_file.walk_nodes()
                       if hasattr(node, 'title') and ('metadata' not in node._v_pathname)]
+
+        if isinstance(path_filter, str):
+            self.nodes = [node_name_ for node_name_ in self.nodes if 'p' + path_filter in node_name_]
+
+        if isinstance(row_filter, str):
+            self.nodes = [node_name_ for node_name_ in self.nodes if 'r' + row_filter in node_name_]
+
+        if isinstance(sensor_filter, str):
+
+            sensor_filter = sensor_filter.lower().replace(' ', '_')
+            self.nodes = [node_name_ for node_name_ in self.nodes if sensor_filter in node_name_]
 
         if isinstance(attribute_filter, str):
             self.nodes = [node_name_ for node_name_ in self.nodes if attribute_filter in node_name_]
@@ -1569,6 +1585,8 @@ class manage_pytables(BaseHandler):
 
         # Open the mask
         sensor_mask = self.h5_file.get_node(group_name.replace('_bands', '_mask')).read()
+
+        logger.info(MPTIME_INSTALLED)
 
         if MPTIME_INSTALLED:
 
