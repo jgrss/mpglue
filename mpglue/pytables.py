@@ -833,14 +833,33 @@ class manage_pytables(BaseHandler):
         else:
             self.h5_file = tables.open_file(hdf_file, mode=mode, title=title)
 
-    def list_nodes(self):
+    def list_nodes(self, attribute_filter=None):
 
         """
-        Lists all nodes in the file
+        Lists nodes in the h5 file
+
+        Args:
+            attribute_filter (Optional[str]): An attribute to filter by. Default is None.
+
+        Attributes:
+            nodes (list)
+
+        Example:
+            >>> from mpglue.pytables import manage_pytables
+            >>>
+            >>> pt = manage_pytables()
+            >>>
+            >>> pt.open_hdf_file('/20HMG.h5', 'Landsat')
+            >>>
+            >>> pt.list_nodes(attribute_filter='bands')
+            >>> print(pt.nodes)
         """
 
         self.nodes = [node._v_pathname for node in self.h5_file.walk_nodes()
                       if hasattr(node, 'title') and ('metadata' not in node._v_pathname)]
+
+        if isinstance(attribute_filter, str):
+            self.nodes = [node_name_ for node_name_ in self.nodes if attribute_filter in node_name_]
 
     def set_metadata(self,
                      image_name=None,
@@ -1557,6 +1576,8 @@ class manage_pytables(BaseHandler):
 
             if sensor.lower() == 'etm':
 
+                logger.info('  Applying band-pass to ETM+ ...')
+
                 relsn = RelativeSensorNorm(scale_factor=10000.0)
 
                 # Band-pass adjustment
@@ -1565,6 +1586,8 @@ class manage_pytables(BaseHandler):
                                         self.h5_file.get_node(group_name.replace('_bands', '_mask')).read(),
                                         calibration='surface',
                                         correction='etm2oli')
+
+            logger.info('  Adjusting BRDF ...')
 
             solar_zenith_angle = self.h5_file.get_node(group_name.replace('_bands', '_solar_zenith')).read()
             solar_azimuth_angle = self.h5_file.get_node(group_name.replace('_bands', '_solar_azimuth')).read()
