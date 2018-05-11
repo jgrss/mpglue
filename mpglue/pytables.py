@@ -22,13 +22,13 @@ from . import raster_tools, vector_tools, rad_calibration
 from .errors import logger
 from .utils import SENSOR_BAND_DICT
 
-# try:
+try:
 
-from mptime.radiometric.normalization import RelativeSensorNorm, GlobalBRDFNorm
-MPTIME_INSTALLED = True
+    import mpcal
+    MPCAL_INSTALLED = True
 
-# except:
-#     MPTIME_INSTALLED = False
+except:
+    MPCAL_INSTALLED = False
 
 # NumPy
 try:
@@ -1586,7 +1586,7 @@ class manage_pytables(BaseHandler):
         # Open the mask
         sensor_mask = self.h5_file.get_node(group_name.replace('_bands', '_mask')).read()
 
-        if MPTIME_INSTALLED:
+        if MPCAL_INSTALLED:
 
             wavelength_list = ['blue', 'green', 'red', 'nir', 'midir', 'farir']
 
@@ -1594,7 +1594,7 @@ class manage_pytables(BaseHandler):
 
                 logger.info('  Applying band-pass to ETM+ ...')
 
-                relsn = RelativeSensorNorm(scale_factor=10000.0)
+                relsn = mpcal.RelativeSensorNorm(scale_factor=10000.0)
 
                 # Band-pass adjustment
                 array2write = relsn.run(wavelength_list,
@@ -1616,7 +1616,7 @@ class manage_pytables(BaseHandler):
                 wv_idx = np.array([wv[wv_name]-1 for wv_name in wavelength_list], dtype='int64')
                 array2write = array2write[wv_idx]
 
-            gbn = GlobalBRDFNorm(scale_factor=10000.0)
+            gbn = mpcal.GlobalBRDFNorm(scale_factor=10000.0)
 
             # BRDF per-pixel normalization
             array2write = gbn.normalize(wavelength_list,
