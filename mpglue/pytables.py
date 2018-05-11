@@ -1493,12 +1493,12 @@ class manage_pytables(BaseHandler):
         latitude = self.h5_f_base[2]
         grid = self.h5_f_base[3:]
 
-        file_id = 'p{PATH}_r{ROW}_{SENSOR}_{YEAR}_{MONTH}{DAY}'.format(PATH=str(path),
-                                                                       ROW=str(row),
-                                                                       SENSOR=sensor.lower().replace(' ', '_'),
-                                                                       YEAR=year,
-                                                                       MONTH=month,
-                                                                       DAY=day)
+        file_id = 'p{PATH}r{ROW}_{SENSOR}_{YEAR}_{MONTH}{DAY}'.format(PATH=str(path),
+                                                                      ROW=str(row),
+                                                                      SENSOR=sensor.lower().replace(' ', '_'),
+                                                                      YEAR=year,
+                                                                      MONTH=month,
+                                                                      DAY=day)
 
         print(file_id)
 
