@@ -1429,8 +1429,7 @@ class manage_pytables(BaseHandler):
                 node_doy = rad_calibration.date2julian(node_month, node_day, node_year)
                 node_jd = JD_DICT['{YEAR}-{DOY:03d}'.format(YEAR=node_year, DOY=node_doy)]
 
-                # yyyy_mmdd --> yyyymmdd
-                node_date = file_id_strip[-9:].replace('_', '')
+                node_date = '{YEAR}-{MONTH}-{DAY}'.format(YEAR=node_year, MONTH=node_month, DAY=node_day)
 
                 # Filter unwanted dates.
                 if start_jd <= node_jd <= end_jd:
