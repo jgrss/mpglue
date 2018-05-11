@@ -824,8 +824,6 @@ class manage_pytables(BaseHandler):
         else:
             self.h5_file = tables.open_file(hdf_file, mode=mode, title=title)
 
-        self.list_nodes()
-
     def list_nodes(self):
 
         """
