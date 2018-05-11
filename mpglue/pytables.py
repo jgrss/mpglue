@@ -22,13 +22,13 @@ from . import raster_tools, vector_tools, rad_calibration
 from .errors import logger
 from .utils import SENSOR_BAND_DICT
 
-try:
+# try:
 
-    from mptime.radiometric.normalization import RelativeSensorNorm, GlobalBRDFNorm
-    MPTIME_INSTALLED = True
+from mptime.radiometric.normalization import RelativeSensorNorm, GlobalBRDFNorm
+MPTIME_INSTALLED = True
 
-except:
-    MPTIME_INSTALLED = False
+# except:
+#     MPTIME_INSTALLED = False
 
 # NumPy
 try:
@@ -1585,8 +1585,6 @@ class manage_pytables(BaseHandler):
 
         # Open the mask
         sensor_mask = self.h5_file.get_node(group_name.replace('_bands', '_mask')).read()
-
-        logger.info(MPTIME_INSTALLED)
 
         if MPTIME_INSTALLED:
 
