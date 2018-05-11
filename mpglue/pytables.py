@@ -1430,7 +1430,7 @@ class manage_pytables(BaseHandler):
                 node_jd = JD_DICT['{YEAR}-{DOY:03d}'.format(YEAR=node_year, DOY=node_doy)]
 
                 # yyyy_mmdd --> yyyymmdd
-                node_date = file_id_strip[-9:].replace('_' '')
+                node_date = file_id_strip[-9:].replace('_', '')
 
                 # Filter unwanted dates.
                 if start_jd <= node_jd <= end_jd:
