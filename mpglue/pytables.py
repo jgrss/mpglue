@@ -1445,7 +1445,7 @@ class manage_pytables(BaseHandler):
                                         node_date,
                                         attribute)
 
-    def write2file(self, out_name, path, row, sensor, date, attribute):
+    def write2file(self, out_name, path, row, sensor, date, attribute, overwrite=False):
 
         """
         Writes an h5 node to file
@@ -1457,6 +1457,7 @@ class manage_pytables(BaseHandler):
             sensor (str): The image satellite sensor.
             date (str): The image date (yyyy-mm-dd).
             attribute (str): The image attribute. Choices are ['bands', 'mask'].
+            overwrite (Optional[bool]): Whether to overwrite an existing file. Default is False.
 
         Example:
             >>> from mpglue.pytables import manage_pytables
@@ -1474,6 +1475,18 @@ class manage_pytables(BaseHandler):
             >>>
             >>> pt.close_hdf()
         """
+
+        if os.path.isfile(out_name):
+
+            if overwrite:
+
+                logger.warning('  The file already exists--attempting to remove it.')
+                os.remove(out_name)
+
+            else:
+
+                logger.warning('  The file already exists--skipping it')
+                return
 
         try:
             table = self.h5_file.root.metadata
