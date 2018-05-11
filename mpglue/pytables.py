@@ -1581,10 +1581,10 @@ class manage_pytables(BaseHandler):
                                                                       ATTR=attribute.lower())
 
         # Open the array.
-        array2write = self.h5_file.get_node(group_name).read()
+        array2write = np.float32(self.h5_file.get_node(group_name).read())
 
         # Open the mask
-        sensor_mask = self.h5_file.get_node(group_name.replace('_bands', '_mask')).read()
+        sensor_mask = np.uint8(self.h5_file.get_node(group_name.replace('_bands', '_mask')).read())
 
         if MPCAL_INSTALLED:
 
@@ -1605,10 +1605,10 @@ class manage_pytables(BaseHandler):
 
             logger.info('  Adjusting BRDF ...')
 
-            solar_zenith_angle = self.h5_file.get_node(group_name.replace('_bands', '_solar_zenith')).read()
-            solar_azimuth_angle = self.h5_file.get_node(group_name.replace('_bands', '_solar_azimuth')).read()
-            sensor_zenith_angle = self.h5_file.get_node(group_name.replace('_bands', '_sensor_zenith')).read()
-            sensor_azimuth_angle = self.h5_file.get_node(group_name.replace('_bands', '_sensor_azimuth')).read()
+            solar_zenith_angle = np.float32(self.h5_file.get_node(group_name.replace('_bands', '_solar_zenith')).read())
+            solar_azimuth_angle = np.float32(self.h5_file.get_node(group_name.replace('_bands', '_solar_azimuth')).read())
+            sensor_zenith_angle = np.float32(self.h5_file.get_node(group_name.replace('_bands', '_sensor_zenith')).read())
+            sensor_azimuth_angle = np.float32(self.h5_file.get_node(group_name.replace('_bands', '_sensor_azimuth')).read())
 
             if sensor.lower() == 'oli tirs':
 
