@@ -6,8 +6,8 @@ Date created: 12/29/2013
 """
 
 from __future__ import division
-from future.utils import iteritems, viewitems
-from builtins import int, dict, map, itervalues
+from future.utils import iteritems, viewitems, itervalues
+from builtins import int, dict, map
 
 import os
 import sys

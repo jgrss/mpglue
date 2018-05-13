@@ -5,8 +5,8 @@
 Date Created: 9/24/2011
 """
 
-from future.utils import iteritems
-from builtins import int, dict, itervalues
+from future.utils import iteritems, itervalues
+from builtins import int, dict
 
 import os
 import sys
