@@ -7,7 +7,7 @@ Date created: 12/29/2013
 
 from __future__ import division
 from future.utils import iteritems, viewitems
-from builtins import int, dict, map
+from builtins import int, dict, map, itervalues
 
 import os
 import sys
@@ -768,6 +768,7 @@ class Samples(object):
         self.perc_samp_each = perc_samp_each
         self.classes2remove = classes2remove
         self.sample_weight = sample_weight
+        self.sample_weight_test = None
         self.min_observations = min_observations
         self.response_label = response_label
         self.limit_test_size = limit_test_size
@@ -1052,6 +1053,7 @@ class Samples(object):
         self.sample_info_dict['scaler'] = self.scaler
         self.sample_info_dict['scaled'] = self.scaled
         self.sample_info_dict['use_xy'] = self.use_xy
+
     @staticmethod
     def _stack_samples(counter,
                        test_stk,
@@ -1531,7 +1533,7 @@ class Samples(object):
                  predictors,
                  labels,
                  bands2open=None,
-                 scale_factor=1.,
+                 scale_factor=1.0,
                  n_jobs=1,
                  **kwargs):
 
@@ -1556,143 +1558,134 @@ class Samples(object):
                 logger.error('  The list lengths do not match.')
                 raise AssertionError
 
+        self.sample_info_dict = dict()
+
         n_patches = len(predictors)
 
         self.p_vars = None
         self.labels = None
         bands = None
+        data_array = None
+
+        self.im_rows = None
+        self.im_cols = None
+
+        if 'rows' in kwargs:
+            self.im_rows = kwargs['rows']
+
+        if 'cols' in kwargs:
+            self.im_cols = kwargs['cols']
 
         # Arrange the predictors.
         if isinstance(predictors, list):
 
+            # Get the row and column dimensions.
+            if isinstance(labels, list):
+
+                with raster_tools.ropen(labels[0]) as l_info:
+
+                    self.im_rows = l_info.rows
+                    self.im_cols = l_info.cols
+
+            # Get the standardization scaler.
             if isinstance(predictors[0], str):
 
-                with raster_tools.ropen(predictors[0]) as i_info:
+                for pi, pim in enumerate(predictors):
 
-                    if not isinstance(bands2open, list):
-                        bands2open = range(1, i_info.bands+1)
+                    with raster_tools.ropen(pim) as i_info:
 
-                    bands = len(bands2open)
-                    self.im_rows = i_info.rows
-                    self.im_cols = i_info.cols
+                        if not isinstance(bands2open, list):
+                            bands2open = list(range(1, i_info.bands+1))
 
-                    if scale_factor <= 1:
+                        data_array_ = i_info.read(bands2open=bands2open,
+                                                  predictions=True,
+                                                  **kwargs)
 
-                        if kwargs:
+                        if not isinstance(data_array, np.ndarray):
 
-                            data_array = i_info.read(bands2open=bands2open,
-                                                     predictions=True,
-                                                     **kwargs)
+                            data_array = data_array_.copy()
+
+                            bands = len(bands2open)
+
+                            if not isinstance(self.im_rows, int):
+
+                                self.im_rows = i_info.rows
+                                self.im_cols = i_info.cols
 
                         else:
+                            data_array = np.vstack((data_array, data_array_))
 
-                            data_array = i_info.read(bands2open=bands2open,
-                                                     predictions=True)
+                    del i_info
 
-                        scaler = StandardScaler().fit(data_array)
+                    scaler = RobustScaler(quantile_range=(2, 98)).fit(data_array / scale_factor)
 
-                        del data_array
+                    del data_array
 
-                del i_info
-
-                if 'rows' in kwargs:
-                    self.im_rows = kwargs['rows']
-
-                if 'cols' in kwargs:
-                    self.im_cols = kwargs['cols']
-
+                # Setup the predictors array.
                 self.p_vars = np.zeros((n_patches,
                                         self.im_rows,
                                         self.im_cols,
-                                        bands+1),
+                                        bands+1),           # 1 extra band as a constant
                                        dtype='float32')
 
                 # Add a constant feature.
                 self.p_vars[:, :, :, -1] = 1
 
+                # Load each predictor.
                 for pri, predictor in enumerate(predictors):
 
+                    # Get information from the labels image.
+                    if isinstance(labels, list):
+
+                        with raster_tools.ropen(labels[pri]) as l_info:
+
+                            lab_x = l_info.left
+                            lab_y = l_info.top
+
+                        del l_info
+
+                    else:
+
+                        lab_x = 0
+                        lab_y = 0
+
+                    i = 0
+                    j = 0
+
+                    # Scale and reshape the predictors.
                     if n_jobs not in [0, 1]:
 
-                        if scale_factor > 1:
-
-                            if kwargs:
-
-                                self.p_vars[pri, :, :, :-1] = raster_tools.read(image2open=predictor,
-                                                                                bands2open=bands2open,
-                                                                                predictions=True,
-                                                                                n_jobs=n_jobs,
-                                                                                **kwargs).reshape(self.im_rows,
-                                                                                                  self.im_cols,
-                                                                                                  bands) / scale_factor
-
-                            else:
-
-                                self.p_vars[pri, :, :, :-1] = raster_tools.read(image2open=predictor,
-                                                                                bands2open=bands2open,
-                                                                                predictions=True,
-                                                                                n_jobs=n_jobs).reshape(self.im_rows,
-                                                                                                       self.im_cols,
-                                                                                                       bands) / scale_factor
-
-                        else:
-
-                            if kwargs:
-
-                                self.p_vars[pri, :, :, :-1] = scaler.transform(raster_tools.read(image2open=predictor,
-                                                                                                 bands2open=bands2open,
-                                                                                                 predictions=True,
-                                                                                                 n_jobs=n_jobs,
-                                                                                                 **kwargs)).reshape(self.im_rows,
-                                                                                                                    self.im_cols,
-                                                                                                                    bands)
-
-                            else:
-
-                                self.p_vars[pri, :, :, :-1] = scaler.transform(raster_tools.read(image2open=predictor,
-                                                                                                 bands2open=bands2open,
-                                                                                                 predictions=True,
-                                                                                                 n_jobs=n_jobs)).reshape(self.im_rows,
-                                                                                                                         self.im_cols,
-                                                                                                                         bands)
+                        self.p_vars[pri, :, :, :-1] = scaler.transform(raster_tools.read(image2open=predictor,
+                                                                                         bands2open=bands2open,
+                                                                                         i=i,
+                                                                                         j=j,
+                                                                                         y=lab_y,
+                                                                                         x=lab_x,
+                                                                                         rows=self.im_rows,
+                                                                                         cols=self.im_cols,
+                                                                                         predictions=True,
+                                                                                         n_jobs=n_jobs,
+                                                                                         **kwargs) / scale_factor).reshape(
+                            self.im_rows,
+                            self.im_cols,
+                            bands)
 
                     else:
 
                         with raster_tools.ropen(predictor) as i_info:
 
-                            if scale_factor > 1:
-
-                                if kwargs:
-
-                                    self.p_vars[pri, :, :, :-1] = i_info.read(bands2open=bands2open,
-                                                                              predictions=True,
-                                                                              **kwargs).reshape(self.im_rows,
-                                                                                                self.im_cols,
-                                                                                                bands) / scale_factor
-
-                                else:
-
-                                    self.p_vars[pri, :, :, :-1] = i_info.read(bands2open=bands2open,
-                                                                              predictions=True).reshape(self.im_rows,
-                                                                                                        self.im_cols,
-                                                                                                        bands) / scale_factor
-
-                            else:
-
-                                if kwargs:
-
-                                    self.p_vars[pri, :, :, :-1] = scaler.transform(i_info.read(bands2open=bands2open,
-                                                                                               predictions=True,
-                                                                                               **kwargs)).reshape(self.im_rows,
-                                                                                                                  self.im_cols,
-                                                                                                                  bands)
-
-                                else:
-
-                                    self.p_vars[pri, :, :, :-1] = scaler.transform(i_info.read(bands2open=bands2open,
-                                                                                               predictions=True)).reshape(self.im_rows,
-                                                                                                                          self.im_cols,
-                                                                                                                          bands)
+                            self.p_vars[pri, :, :, :-1] = scaler.transform(i_info.read(bands2open=bands2open,
+                                                                                       i=i,
+                                                                                       j=j,
+                                                                                       y=lab_y,
+                                                                                       x=lab_x,
+                                                                                       rows=self.im_rows,
+                                                                                       cols=self.im_cols,
+                                                                                       predictions=True,
+                                                                                       **kwargs) / scale_factor).reshape(
+                                self.im_rows,
+                                self.im_cols,
+                                bands)
 
                         del i_info
 
@@ -1705,46 +1698,40 @@ class Samples(object):
                     bands = 1
                     self.im_rows, self.im_cols = predictors[0].shape
 
-                self.p_vars = np.zeros((n_patches, self.im_rows, self.im_cols, bands+1), dtype='float32')
+                # Setup the predictors array.
+                self.p_vars = np.zeros((n_patches,
+                                        self.im_rows,
+                                        self.im_cols,
+                                        bands+1), dtype='float32')
 
                 # Add a constant feature.
                 self.p_vars[:, :, :, -1] = 1
 
                 # Setup a scaler for all inputs.
-                if scale_factor <= 1:
-
-                    for pri, predictor in enumerate(predictors):
-
-                        if pri == 0:
-
-                            predictor_stack = predictor.transpose(1, 2, 0).reshape(self.im_rows*self.im_cols,
-                                                                                   bands).copy()
-
-                        else:
-
-                            predictor_stack = np.vstack((predictor_stack,
-                                                         predictor.transpose(1, 2, 0).reshape(self.im_rows*self.im_cols,
-                                                                                              bands)))
-
-                    scaler = StandardScaler().fit(predictor_stack)
-
-                    del predictor_stack
-
                 for pri, predictor in enumerate(predictors):
 
-                    if scale_factor > 1:
+                    if pri == 0:
 
-                        self.p_vars[pri, :, :, :-1] = predictor.transpose(1, 2, 0).reshape(self.im_rows*self.im_cols,
-                                                                                           bands).reshape(self.im_rows,
-                                                                                                          self.im_cols,
-                                                                                                          bands) / scale_factor
+                        data_array = predictor.transpose(1, 2, 0).reshape(self.im_rows*self.im_cols,
+                                                                          bands).copy()
 
                     else:
 
-                        self.p_vars[pri, :, :, :-1] = scaler.transform(predictor.transpose(1, 2, 0).reshape(self.im_rows*self.im_cols,
-                                                                                                            bands)).reshape(self.im_rows,
-                                                                                                                            self.im_cols,
-                                                                                                                            bands)
+                        data_array = np.vstack((data_array,
+                                                predictor.transpose(1, 2, 0).reshape(self.im_rows*self.im_cols,
+                                                                                     bands)))
+
+                scaler = RobustScaler(quantile_range=(2, 98)).fit(data_array / scale_factor)
+
+                del data_array
+
+                for pri, predictor in enumerate(predictors):
+
+                    self.p_vars[pri, :, :, :-1] = scaler.transform(
+                        predictor.transpose(1, 2, 0).reshape(self.im_rows*self.im_cols,
+                                                             bands) / scale_factor).reshape(self.im_rows,
+                                                                                            self.im_cols,
+                                                                                            bands)
 
         else:
             logger.warning('  No variables were shaped for CRF.')
@@ -1754,28 +1741,23 @@ class Samples(object):
 
             if isinstance(labels[0], str):
 
-                with raster_tools.ropen(labels[0]) as i_info:
+                with raster_tools.ropen(labels[0]) as l_info:
 
                     # Create the label array.
-                    self.labels = np.zeros((n_patches, i_info.rows, i_info.cols), dtype='uint8')
+                    self.labels = np.zeros((n_patches, l_info.rows, l_info.cols), dtype='uint8')
 
-                del i_info
+                del l_info
 
                 for li, label in enumerate(labels):
 
-                    with raster_tools.ropen(label) as i_info:
-                        self.labels[li] = i_info.read()
+                    with raster_tools.ropen(label) as l_info:
+                        self.labels[li] = l_info.read()
 
-                    del i_info
+                    del l_info
 
             elif isinstance(labels[0], np.ndarray):
 
                 rows, cols = labels[0].shape
-
-                # self.labels = np.zeros((n_patches, rows, cols), dtype='uint8')
-                #
-                # for li, label in enumerate(labels):
-                #     self.labels[li] = label
 
                 self.labels = np.array(labels, dtype='uint8').reshape(n_patches, rows, cols)
 
@@ -1819,8 +1801,15 @@ class Samples(object):
             for indv_class in self.classes:
                 self.class_counts[indv_class] = (self.labels == indv_class).sum()
 
-        if isinstance(bands, int):
-            self.n_feas = bands
+            self.sample_info_dict['n_classes'] = self.n_classes
+            self.sample_info_dict['classes'] = self.classes
+
+        self.n_feas = self.p_vars.shape[3]
+
+        self.sample_info_dict['n_feas'] = self.n_feas
+        self.sample_info_dict['scaler'] = scaler
+        self.sample_info_dict['scaled'] = True
+        self.sample_info_dict['use_xy'] = False
 
 
 class EndMembers(object):
@@ -3793,12 +3782,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     self.class_weight[k1] = v2
 
                 if 'CV' in self.classifier_info['classifier']:
-                    self.class_weight = np.array(list(self.class_weight.values()), dtype='float32')
+                    self.class_weight = np.array(itervalues(self.class_weight), dtype='float32')
 
             elif self.class_weight == 'percent':
 
                 if 'CV' in self.classifier_info['classifier']:
-                    self.class_weight = np.array(list(class_proportions.values()), dtype='float32')
+                    self.class_weight = np.array(itervalues(class_proportions), dtype='float32')
                 else:
                     self.class_weight = class_proportions
 
@@ -4910,7 +4899,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         p_vars_r = None
         labels_r = None
         p_vars_test_r = None
-        constant = np.array([1.], dtype='float64').reshape(1, 1)
+        constant = np.array([1.0], dtype='float64').reshape(1, 1)
 
         if isinstance(p_vars2reshape, np.ndarray):
 
@@ -6655,13 +6644,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         # Setup the output scores table.
         df_param_headers = '-'.join(list(classifier_parameters))
         df = pd.DataFrame(columns=[df_param_headers])
-        df[df_param_headers] = list(itertools.product(*list(classifier_parameters.values())))
+        df[df_param_headers] = list(itertools.product(*itervalues(classifier_parameters)))
 
         # Setup the error object.
         emat = error_matrix()
 
         # Iterate over all possible parameter combinations.
-        for param_combo in list(itertools.product(*list(classifier_parameters.values()))):
+        for param_combo in list(itertools.product(*itervalues(classifier_parameters))):
 
             # Set the current parameters.
             current_combo = dict(zip(param_order, param_combo))
@@ -6775,7 +6764,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         # Setup the output scores table.
         df = pd.DataFrame(columns=df_fold_headers)
-        df[df_param_headers] = list(itertools.product(*list(classifier_parameters.values())))
+        df[df_param_headers] = list(itertools.product(*itervalues(classifier_parameters)))
 
         # Open the weights file.
         lc_weights = file_name.replace('.txt', '_w.txt')
@@ -6799,7 +6788,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 predict_samps.colnames = StrVector(self.headers[:-1])
 
             # Iterate over all possible combinations.
-            for param_combo in list(itertools.product(*list(classifier_parameters.values()))):
+            for param_combo in list(itertools.product(*itervalues(classifier_parameters))):
 
                 # Set the current parameters.
                 current_combo = dict(zip(param_order, param_combo))

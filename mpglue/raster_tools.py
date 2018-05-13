@@ -2300,9 +2300,19 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
 
         self.pca_components = x_reduced.reshape(cs, rs, n_components).T
 
-    def show(self, show_which='array', band=1, color_map='gist_stern', discrete=False,
-             class_list=[], out_fig=None, dpi=300, clip_percentiles=(2, 98), equalize_hist=False,
-             equalize_adapthist=False, gammas=[], sigmoid=[]):
+    def show(self,
+             show_which='array',
+             band=1,
+             color_map='gist_stern',
+             discrete=False,
+             class_list=None,
+             out_fig=None,
+             dpi=300,
+             clip_percentiles=(2, 98),
+             equalize_hist=False,
+             equalize_adapthist=False,
+             gammas=None,
+             sigmoid=None):
 
         """
         Displays an array
@@ -2414,11 +2424,13 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
                     # ip = ax.imshow(np.dstack((self.array[0], self.array[1], self.array[2])), interpolation='nearest')
 
                 else:
+
                     ip = ax.imshow(self.array[band-1])
                     im_min = np.percentile(self.array[band-1], clip_percentiles[0])
                     im_max = np.percentile(self.array[band-1], clip_percentiles[1])
 
             else:
+
                 ip = ax.imshow(self.array)
                 im_min = np.percentile(self.array, clip_percentiles[0])
                 im_max = np.percentile(self.array, clip_percentiles[1])

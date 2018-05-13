@@ -6,7 +6,7 @@ Date Created: 9/24/2011
 """
 
 from future.utils import iteritems
-from builtins import int, dict, map
+from builtins import int, dict, itervalues
 
 import os
 import sys
@@ -570,14 +570,14 @@ class SampleImage(object):
 
         with open(self.n_samps, 'w') as n_sample_writer:
 
-            self.class_sum = sum(list(self.count_dict.values()))
+            self.class_sum = sum(itervalues(self.count_dict))
 
             # Write the number of samples from
             #   the counter array.
             for nc in self.class_list:
 
                 n_sample_writer.write('Class {:d}: {:,d}\n'.format(int(nc),
-                                                                  int(self.count_dict[nc])))
+                                                                   int(self.count_dict[nc])))
 
             # write the total number of samples
             n_sample_writer.write('Total: {:,d}'.format(self.class_sum))
