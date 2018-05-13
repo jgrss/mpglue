@@ -1634,7 +1634,7 @@ class Samples(object):
 
                     scaler = RobustScaler(quantile_range=(2, 98)).fit(data_array / scale_factor)
 
-                    del data_array
+                    data_array = None
 
                 # Setup the predictors array.
                 self.p_vars = np.zeros((n_patches,
@@ -1736,7 +1736,7 @@ class Samples(object):
 
                 scaler = RobustScaler(quantile_range=(2, 98)).fit(data_array / scale_factor)
 
-                del data_array
+                data_array = None
 
                 for pri, predictor in enumerate(predictors):
 
