@@ -1535,6 +1535,8 @@ class Samples(object):
                  bands2open=None,
                  scale_factor=1.0,
                  n_jobs=1,
+                 train_x=None,
+                 train_y=None,
                  **kwargs):
 
         """
@@ -1547,8 +1549,12 @@ class Samples(object):
             bands2open (Optional[list]): A list of bands to open, otherwise opens all bands.
             labels (list): A list of images to open or a list of arrays. If an `array`, a single image should
                 be given as `rows` x `columns` and must match the length of `predictors`.
-            scale_factor (Optional[float]):
-            n_jobs (Optional[int]):
+            scale_factor (Optional[float]): A scale factor for the predictors. Default is 1.0.
+            n_jobs (Optional[int]): The number of parallel jobs for `read`. Default is 1.
+            train_x (Optional[int list]): A list of left starting coordinates when `labels` is a list of 2d arrays.
+                Default is None.
+            train_y (Optional[int list]): A list of top starting coordinates when `labels` is a list of 2d arrays.
+                Default is None.
         """
 
         if isinstance(predictors, list) and isinstance(labels, list):
@@ -1582,10 +1588,19 @@ class Samples(object):
             # Get the row and column dimensions.
             if isinstance(labels, list):
 
-                with raster_tools.ropen(labels[0]) as l_info:
+                if isinstance(labels[0], str):
 
-                    self.im_rows = l_info.rows
-                    self.im_cols = l_info.cols
+                    with raster_tools.ropen(labels[0]) as l_info:
+
+                        self.im_rows = l_info.rows
+                        self.im_cols = l_info.cols
+
+                elif isinstance(labels[0], np.ndarray):
+                    self.im_rows, self.im_cols = labels[0].shape
+                else:
+
+                    logger.error('  The training labels must be a list of strings or ndarrays.')
+                    raise TypeError
 
             # Get the standardization scaler.
             if isinstance(predictors[0], str):
@@ -1635,7 +1650,7 @@ class Samples(object):
                 for pri, predictor in enumerate(predictors):
 
                     # Get information from the labels image.
-                    if isinstance(labels, list):
+                    if isinstance(labels, list) and isinstance(labels[0], str):
 
                         with raster_tools.ropen(labels[pri]) as l_info:
 
@@ -1644,21 +1659,21 @@ class Samples(object):
 
                         del l_info
 
+                    elif isinstance(train_x, list) and isinstance(train_y, list):
+
+                        lab_x = train_x[pri]
+                        lab_y = train_y[pri]
+
                     else:
 
                         lab_x = 0
                         lab_y = 0
-
-                    i = 0
-                    j = 0
 
                     # Scale and reshape the predictors.
                     if n_jobs not in [0, 1]:
 
                         self.p_vars[pri, :, :, :-1] = scaler.transform(raster_tools.read(image2open=predictor,
                                                                                          bands2open=bands2open,
-                                                                                         i=i,
-                                                                                         j=j,
                                                                                          y=lab_y,
                                                                                          x=lab_x,
                                                                                          rows=self.im_rows,
@@ -1675,8 +1690,6 @@ class Samples(object):
                         with raster_tools.ropen(predictor) as i_info:
 
                             self.p_vars[pri, :, :, :-1] = scaler.transform(i_info.read(bands2open=bands2open,
-                                                                                       i=i,
-                                                                                       j=j,
                                                                                        y=lab_y,
                                                                                        x=lab_x,
                                                                                        rows=self.im_rows,
