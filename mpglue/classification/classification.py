@@ -1577,10 +1577,14 @@ class Samples(object):
         self.im_cols = None
 
         if 'rows' in kwargs:
+
             self.im_rows = kwargs['rows']
+            del kwargs['rows']
 
         if 'cols' in kwargs:
+
             self.im_cols = kwargs['cols']
+            del kwargs['cols']
 
         # Arrange the predictors.
         if isinstance(predictors, list):
@@ -1649,25 +1653,32 @@ class Samples(object):
                 # Load each predictor.
                 for pri, predictor in enumerate(predictors):
 
-                    # Get information from the labels image.
-                    if isinstance(labels, list) and isinstance(labels[0], str):
+                    if ('i' in kwargs) and ('j' in kwargs):
 
-                        with raster_tools.ropen(labels[pri]) as l_info:
-
-                            lab_x = l_info.left
-                            lab_y = l_info.top
-
-                        del l_info
-
-                    elif isinstance(train_x, list) and isinstance(train_y, list):
-
-                        lab_x = train_x[pri]
-                        lab_y = train_y[pri]
+                        lab_y = 0
+                        lab_x = 0
 
                     else:
 
-                        lab_x = 0
-                        lab_y = 0
+                        # Get information from the labels image.
+                        if isinstance(labels, list) and isinstance(labels[0], str):
+
+                            with raster_tools.ropen(labels[pri]) as l_info:
+
+                                lab_x = l_info.left
+                                lab_y = l_info.top
+
+                            del l_info
+
+                        elif isinstance(train_x, list) and isinstance(train_y, list):
+
+                            lab_x = train_x[pri]
+                            lab_y = train_y[pri]
+
+                        else:
+
+                            lab_x = 0
+                            lab_y = 0
 
                     # Scale and reshape the predictors.
                     if n_jobs not in [0, 1]:
