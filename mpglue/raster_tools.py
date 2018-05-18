@@ -3608,7 +3608,9 @@ def warp(input_image,
         >>> resampled_array = warp_info.read()
     """
 
-    if not output_image.endswith('.mem'):
+    if output_image.endswith('.mem'):
+        output_image = '{:f}'.format(abs(np.random.randn(1)[0]))[-5:] + '.mem'
+    else:
         check_and_create_dir(os.path.split(output_image)[0])
 
     if isinstance(out_epsg, int):
@@ -3688,7 +3690,8 @@ def warp(input_image,
         i_info = ImageInfo()
 
         i_info.update_info(datasource=out_ds,
-                           hdf_file=False)
+                           hdf_file=False,
+                           output_image=output_image)
 
         i_info.datasource_info()
 
