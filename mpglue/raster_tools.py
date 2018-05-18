@@ -1133,7 +1133,10 @@ class DatasourceInfo(object):
 
         self.image_envelope = [self.left, self.right, self.bottom, self.top]
 
-        self.extent = dict(left=self.left, right=self.right, bottom=self.bottom, top=self.top)
+        self.extent = dict(left=self.left,
+                           right=self.right,
+                           bottom=self.bottom,
+                           top=self.top)
 
         self.name = self.datasource.GetDriver().ShortName
 
@@ -3638,12 +3641,25 @@ def warp(input_image,
     warp_options = gdal.WarpOptions(**awargs)
 
     try:
-        out_ds = gdal.Warp(output_image, input_image, options=warp_options)
+
+        out_ds = gdal.Warp(output_image,
+                           input_image,
+                           options=warp_options)
+
     except:
 
         if 'outputBounds' in awargs:
 
-            logger.info('  Requested image bounds')
+            logger.info('  Input image extent:')
+
+            with ropen(input_image) as info:
+                logger.info(info.extent)
+
+            del info
+
+            logger.info('')
+
+            logger.info('  Requested image extent (left, bottom, right, top):')
             logger.info(awargs['outputBounds'])
 
         logger.warning('  GDAL returned an exception--check the output file, {}.'.format(output_image))
