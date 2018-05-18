@@ -3592,6 +3592,20 @@ def warp(input_image,
 
     Returns:
         None, writes to `output_image'.
+
+    Examples:
+        >>> from mpglue import raster_tools
+        >>>
+        >>> # Resample a subset of an image in memory
+        >>> warp_info = raster_tools.warp('/input_image.tif',
+        >>>                               'memory_image.mem',
+        >>>                               resample='nearest',
+        >>>                               cell_size=10.0,
+        >>>                               return_datasource=True,
+        >>>                               outputBounds=[<left, bottom, right, top>])
+        >>>
+        >>> # Load the resampled array
+        >>> resampled_array = warp_info.read()
     """
 
     if not output_image.endswith('.mem'):
