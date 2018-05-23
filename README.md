@@ -319,6 +319,11 @@ A more detailed example
 Installation
 ---
 
+#### Dependencies
+
+* Cython
+* NumPy
+
 #### Install the most up-to-date version from source (requires Cython)
  
 1) Clone MpGlue
