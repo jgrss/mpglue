@@ -42,22 +42,26 @@ from mpglue.veg_indices import BandHandler, VegIndicesEquations
 
 try:
     import deprecation
-except ImportError:
-    raise ImportError('deprecation must be installed (pip install deprecation)')
+except:
+
+    logger.error('deprecation must be installed (pip install deprecation)')
+    raise ImportError
 
 # GDAL
 try:
     from osgeo import gdal, osr
     from osgeo.gdalconst import GA_ReadOnly, GA_Update
-except ImportError:
-    logger.error('GDAL Python must be installed')
+except:
+
+    logger.error('  GDAL Python must be installed')
     raise ImportError
 
 # NumPy
 try:
     import numpy as np
-except ImportError:
-    logger.error('NumPy must be installed')
+except:
+
+    logger.error('  NumPy must be installed')
     raise ImportError
 
 # Matplotlib
@@ -78,33 +82,35 @@ try:
     from matplotlib import ticker, colors, colorbar
     import matplotlib.cm as cm
     from mpl_toolkits.axes_grid1 import make_axes_locatable
-except ImportWarning:
-    logger.warning('Matplotlib must be installed for plotting')
+except:
+    logger.warning('  Matplotlib must be installed for plotting')
 
 # Scikit-image
 try:
     from skimage import exposure
-except ImportWarning:
-    logger.warning('Scikit-image must be installed for image color balancing.')
+except:
+    logger.warning('  Scikit-image must be installed for image color balancing.')
 
 # SciPy
 try:
     from scipy.stats import mode as sci_mode
     from scipy.ndimage.measurements import label as lab_img
-except ImportError:
-    raise ImportError('SciPy must be installed')
+except:
+
+    logger.error('  SciPy must be installed')
+    raise ImportError
 
 # Pandas
 try:
     import pandas as pd
-except ImportWarning:
-    logger.warning('Pandas must be installed to parse metadata')
+except:
+    logger.warning('  Pandas must be installed to parse metadata')
 
 # BeautifulSoup4
 try:
     from bs4 import BeautifulSoup
-except ImportWarning:
-    logger.warning('BeautifulSoup4 must be installed to parse metadata')
+except:
+    logger.warning('  BeautifulSoup4 must be installed to parse metadata')
 
 
 gdal.UseExceptions()
