@@ -4600,7 +4600,7 @@ def moving_window(np.ndarray image_array not None,
 
             Choices are ['mean', 'min', 'max', 'median', 'majority', 'percent', 'sum',
                          'link', 'fill-basins', 'fill', 'circles', 'distance'. 'rgb-distance',
-                         'inhibition', 'line-enhance', 'saliency', 'duda', 'suppression', 'edge-direction',
+                         'inhibition', 'line-enhance', 'duda', 'suppression', 'edge-direction',
                          'extend-endpoints', 'remove-min', 'seg-dist', 'plr'].
 
             circles: TODO
@@ -4727,7 +4727,6 @@ def moving_window(np.ndarray image_array not None,
                          'plr',
                          'remove-min',
                          'rgb-distance',
-                         'saliency',
                          'seg-dist',
                          'sum',
                          'suppression']:
