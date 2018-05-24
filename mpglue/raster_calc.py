@@ -7,6 +7,7 @@ Date Created: 8/8/2012
 
 from __future__ import division
 from future.utils import viewitems
+from builtins import dict
 
 import os
 import sys
@@ -33,8 +34,9 @@ def raster_calc(output,
                 overwrite=False,
                 be_quiet=False,
                 out_no_data=0,
-                row_block_size=2048,
-                col_block_size=2048,
+                row_block_size=2000,
+                col_block_size=2000,
+                apply_all_bands=False,
                 **kwargs):
 
     """
@@ -48,8 +50,9 @@ def raster_calc(output,
         overwrite (Optional[bool]): Whether to overwrite an existing IDW image. Default is False.
         be_quiet (Optional[bool]): Whether to be quiet and do not report progress. Default is False.
         out_no_data (Optional[int]): The output no data value. Default is 0.
-        row_block_size (Optional[int]): The row block chunk size. Default is 2048.
-        col_block_size (Optional[int]): The column block chunk size. Default is 2048.
+        row_block_size (Optional[int]): The row block chunk size. Default is 2000.
+        col_block_size (Optional[int]): The column block chunk size. Default is 2000.
+        apply_all_bands (Optional[bool]): Whether to apply the equation to all bands. Default is False.
         **kwargs (str): The rasters to compute. E.g., A='/some_raster1.tif', F='/some_raster2.tif'.
             Band positions default to 1 unless given as [A]_band.
 
@@ -152,9 +155,7 @@ def raster_calc(output,
         o_info = copy(vw)
         break
 
-    o_info.bands = 1
-
-    o_info.storage = out_type
+    n_bands = 1 if not apply_all_bands else o_info.bands
 
     if isinstance(extent, raster_tools.ropen):
 
@@ -182,13 +183,17 @@ def raster_calc(output,
                        top=overlap_info.top,
                        bottom=overlap_info.bottom,
                        rows=overlap_info.rows,
-                       cols=overlap_info.cols)
+                       cols=overlap_info.cols,
+                       storage=out_type,
+                       bands=n_bands)
 
     if overwrite:
         overwrite_file(output)
 
     out_rst = raster_tools.create_raster(output, o_info)
-    out_rst.get_band(1)
+
+    if n_bands == 1:
+        out_rst.get_band(1)
 
     block_rows, block_cols = raster_tools.block_dimensions(o_info.rows, o_info.cols,
                                                            row_block_size=row_block_size,
@@ -218,12 +223,29 @@ def raster_calc(output,
 
                 exec('array_{KEY} = i_info_{KEY}.read(bands2open=band_dict["{KEY}_band"], i=i+y_off, j=j+x_off, rows=n_rows, cols=n_cols, d_type="float32")'.format(KEY=key))
 
-            exec('out_array = {}'.format(equation))
+            if '&&' in equation:
+
+                out_array = np.empty((n_bands, n_rows, n_cols), dtype='float32')
+
+                for eqidx, equation_ in enumerate(equation.split('&&')):
+
+                    if not equation_.startswith('np.'):
+                        equation_ = 'np.' + equation_
+
+                    exec('out_array[{:d}] = {}'.format(eqidx, equation_))
+
+            else:
+                exec('out_array = {}'.format(equation))
 
             # Set the output no data values.
             out_array[np.isnan(out_array) | np.isinf(out_array)] = out_no_data
 
-            out_rst.write_array(out_array, i=i, j=j)
+            if n_bands == 1:
+                out_rst.write_array(out_array, i=i, j=j)
+            else:
+
+                for lidx in range(0, n_bands):
+                    out_rst.write_array(out_array[lidx], i=i, j=j, band=lidx+1)
 
             if not be_quiet:
 
@@ -286,6 +308,8 @@ def main():
     parser.add_argument('-eq', '--equation', dest='equation', help='The equation', default='', type=str)
     parser.add_argument('-ot', '--out_type', dest='out_type', help='The output type', default='byte')
     parser.add_argument('--extent', dest='extent', help='An image with the desired output extent', default=None)
+    parser.add_argument('--apply-all-bands', dest='apply_all_bands',
+                        help='Whether to apply the equation to all bands', action='store_true')
     parser.add_argument('--overwrite', dest='overwrite',
                         help='Whether to overwrite an existing image', action='store_true')
 
@@ -298,15 +322,30 @@ def main():
 
     start_time = time.time()
 
-    raster_calc(args.output, equation=args.equation, out_type=args.out_type,
-                extent=args.extent, overwrite=args.overwrite,
-                A=args.A, B=args.B, C=args.C, D=args.D,
-                E=args.E, F=args.F, G=args.G, A_band=args.A_band,
-                B_band=args.B_band, C_band=args.C_band, D_band=args.D_band,
-                E_band=args.E_band, F_band=args.F_band, G_band=args.G_band)
+    raster_calc(args.output,
+                equation=args.equation,
+                out_type=args.out_type,
+                extent=args.extent,
+                apply_all_bands=args.apply_all_bands,
+                overwrite=args.overwrite,
+                A=args.A,
+                B=args.B,
+                C=args.C,
+                D=args.D,
+                E=args.E,
+                F=args.F,
+                G=args.G,
+                A_band=args.A_band,
+                B_band=args.B_band,
+                C_band=args.C_band,
+                D_band=args.D_band,
+                E_band=args.E_band,
+                F_band=args.F_band,
+                G_band=args.G_band)
 
     logger.info('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
                 (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
+
 
 if __name__ == '__main__':
     main()

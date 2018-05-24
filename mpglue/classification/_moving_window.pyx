@@ -4769,11 +4769,11 @@ def moving_window(np.ndarray image_array not None,
                                 window_size,
                                 diff_thresh)
 
-    elif statistic == 'saliency':
-
-        return saliency_window(np.float32(np.ascontiguousarray(image_array)),
-                               window_size,
-                               l_size)
+    #elif statistic == 'saliency':
+    #
+    #    return saliency_window(np.float32(np.ascontiguousarray(image_array)),
+    #                           window_size,
+    #                           l_size)
 
     elif statistic == 'remove-min':
 
