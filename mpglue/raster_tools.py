@@ -524,7 +524,11 @@ class ReadWrite(object):
                                                                           self.rrows)
 
                     if not isinstance(arr, np.ndarray):
-                        raise TypeError('Band {:d} is not a NumPy array.'.format(band))
+
+                        logger.info(type(arr))
+                        logger.error('  Band {:d} is not a NumPy array.'.format(band))
+
+                        raise TypeError
 
                     self.array.append(arr)
 
@@ -3615,7 +3619,14 @@ def warp(input_image,
     """
 
     if output_image.endswith('.mem'):
-        output_image = '{:f}'.format(abs(np.random.randn(1)[0]))[-5:] + '.mem'
+
+        while True:
+
+            output_image = '{:f}'.format(abs(np.random.randn(1)[0]))[-5:] + '.mem'
+
+            if not os.path.isfile(output_image):
+                break
+
     else:
         check_and_create_dir(os.path.split(output_image)[0])
 
