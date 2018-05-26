@@ -15,10 +15,17 @@ import time
 import argparse
 from copy import copy
 
-# MapPy
-from .errors import logger
-from . import raster_tools, vector_tools
-from .helpers import _iteration_parameters, overwrite_file
+try:
+
+    from .errors import logger
+    from . import raster_tools, vector_tools
+    from .helpers import _iteration_parameters, overwrite_file
+
+except:
+
+    from mpglue.errors import logger
+    from mpglue import raster_tools, vector_tools
+    from mpglue.helpers import _iteration_parameters, overwrite_file
 
 # Numpy
 try:
