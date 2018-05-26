@@ -3558,7 +3558,7 @@ def _merge_dicts(dict1, dict2):
 def warp(input_image,
          output_image,
          out_epsg=None,
-         out_proj4=None,
+         out_proj=None,
          in_epsg=None,
          in_proj4=None,
          resample='nearest',
@@ -3575,7 +3575,7 @@ def warp(input_image,
         input_image (str): The image to warp.
         output_image (str): The output image.
         out_epsg (Optional[int]): The output EPSG projection code.
-        out_proj4 (Optional[str]): The output proj4 projection code.
+        out_proj (Optional[str]): The output proj4 projection code.
         in_epsg (Optional[int]): An input EPSG code. Default is None.
         in_proj4 (Optional[str]): An input projection string. Default is None.
         resample (Optional[str]): The resampling method. Default is 'nearest'.
@@ -3631,9 +3631,13 @@ def warp(input_image,
         check_and_create_dir(os.path.split(output_image)[0])
 
     if isinstance(out_epsg, int):
-        out_epsg = 'EPSG:{:d}'.format(out_epsg)
-    elif isinstance(out_proj4, str):
-        out_epsg = '"{}"'.format(out_proj4)
+        out_projection = 'EPSG:{:d}'.format(out_epsg)
+    elif isinstance(out_proj, str):
+        out_projection = '"{}"'.format(out_proj)
+    else:
+
+        logger.warning('  No projection set for warping')
+        out_projection = None
 
     in_proj = None
 
@@ -3655,7 +3659,7 @@ def warp(input_image,
     if isinstance(d_type, str):
 
         awargs = _merge_dicts(dict(srcSRS=in_proj,
-                                   dstSRS=out_epsg,
+                                   dstSRS=out_projection,
                                    xRes=cell_size[0],
                                    yRes=cell_size[1],
                                    outputType=STORAGE_DICT_GDAL[d_type],
@@ -3665,7 +3669,7 @@ def warp(input_image,
     else:
 
         awargs = _merge_dicts(dict(srcSRS=in_proj,
-                                   dstSRS=out_epsg,
+                                   dstSRS=out_projection,
                                    xRes=cell_size[0],
                                    yRes=cell_size[1],
                                    resampleAlg=RESAMPLE_DICT[resample]),
