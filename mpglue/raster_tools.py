@@ -3560,7 +3560,7 @@ def warp(input_image,
          out_epsg=None,
          out_proj=None,
          in_epsg=None,
-         in_proj4=None,
+         in_proj=None,
          resample='nearest',
          cell_size=0,
          d_type=None,
@@ -3577,7 +3577,7 @@ def warp(input_image,
         out_epsg (Optional[int]): The output EPSG projection code.
         out_proj (Optional[str]): The output proj4 projection code.
         in_epsg (Optional[int]): An input EPSG code. Default is None.
-        in_proj4 (Optional[str]): An input projection string. Default is None.
+        in_proj (Optional[str]): An input projection string. Default is None.
         resample (Optional[str]): The resampling method. Default is 'nearest'.
         cell_size (Optional[float]): The output cell size. Default is 0.
         d_type (Optional[str]): Data type to overwrite `outputType`. Default is None.
@@ -3631,20 +3631,10 @@ def warp(input_image,
         check_and_create_dir(os.path.split(output_image)[0])
 
     if isinstance(out_epsg, int):
-        out_projection = 'EPSG:{:d}'.format(out_epsg)
-    elif isinstance(out_proj, str):
-        out_projection = '"{}"'.format(out_proj)
-    else:
-
-        logger.warning('  No projection set for warping')
-        out_projection = None
-
-    in_proj = None
+        out_proj = 'EPSG:{:d}'.format(out_epsg)
 
     if isinstance(in_epsg, int):
         in_proj = 'EPSG:{:d}'.format(in_epsg)
-    elif isinstance(in_proj4, str):
-        in_proj = in_proj4
 
     if cell_size == 0:
         cell_size = (None, None)
@@ -3659,7 +3649,7 @@ def warp(input_image,
     if isinstance(d_type, str):
 
         awargs = _merge_dicts(dict(srcSRS=in_proj,
-                                   dstSRS=out_projection,
+                                   dstSRS=out_proj,
                                    xRes=cell_size[0],
                                    yRes=cell_size[1],
                                    outputType=STORAGE_DICT_GDAL[d_type],
@@ -3669,7 +3659,7 @@ def warp(input_image,
     else:
 
         awargs = _merge_dicts(dict(srcSRS=in_proj,
-                                   dstSRS=out_projection,
+                                   dstSRS=out_proj,
                                    xRes=cell_size[0],
                                    yRes=cell_size[1],
                                    resampleAlg=RESAMPLE_DICT[resample]),
