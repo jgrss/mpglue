@@ -319,6 +319,8 @@ def main():
                         help='Whether to apply the equation to all bands', action='store_true')
     parser.add_argument('--overwrite', dest='overwrite',
                         help='Whether to overwrite an existing image', action='store_true')
+    parser.add_argument('--be-quiet', dest='be_quiet',
+                        help='Whether to be quiet and do not print to screen', action='store_true')
 
     args = parser.parse_args()
 
@@ -335,6 +337,7 @@ def main():
                 extent=args.extent,
                 apply_all_bands=args.apply_all_bands,
                 overwrite=args.overwrite,
+                be_quiet=args.be_quiet,
                 A=args.A,
                 B=args.B,
                 C=args.C,
