@@ -5092,7 +5092,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             relax_probabilities (Optional[bool]): Whether to relax posterior probabilities. Default is False.
             plr_window_size (Optional[int]): The window size for probabilistic label relaxation. Default is 5.
             plr_matrix (Optional[2d array]): The class compatibility matrix. Default is None.
-            write2blocks (Optional[bool]): Whether to individual blocks, otherwise write to one image.
+            write2blocks (Optional[bool]): Whether to write to individual blocks, otherwise write to one image.
                 Default is False.
                 *In the event of True, each block will be given the name `base image_####base extension`.
             block_range (Optional[list or tuple]): A start and end range for block processing. Default is None,

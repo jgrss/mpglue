@@ -95,6 +95,9 @@ def main():
     parser.add_argument('--cal-proba', dest='calibrate_proba', help='Whether to calibrate posterior probabilities',
                         action='store_true')
     parser.add_argument('--be-quiet', dest='be_quiet', help='Whether to be quiet', action='store_true')
+    parser.add_argument('--get-proba', dest='get_probs',
+                        help='Whether to get posterior probabilities instead of class predictions',
+                        action='store_true')
     parser.add_argument('--jobs', dest='n_jobs', help='The number of parallel jobs for models', default=-1, type=int)
     parser.add_argument('--v-jobs', dest='n_jobs_vars', help='The number of parallel jobs for loading image variables',
                         default=-1, type=int)
@@ -113,6 +116,10 @@ def main():
                         default=0, type=int)
     parser.add_argument('--row-block', dest='row_block_size', help='The row block size', default=1024, type=int)
     parser.add_argument('--col-block', dest='col_block_size', help='The column block size', default=1024, type=int)
+    parser.add_argument('--relax-proba', dest='relax_probabilities',
+                        help='Whether to relax posterior probabilities', action='store_true')
+    parser.add_argument('--write2blocks', dest='write2blocks',
+                        help='Whether to write to individual blocks instead of one image', action='store_true')
 
     args = parser.parse_args()
 
@@ -128,28 +135,49 @@ def main():
 
     clo = Classify()
 
-    clo.split(args.lc_samples, perc_samp=args.perc_samp, perc_samp_each=args.perc_samp_each,
-              scale_data=args.scale_data, class_subs=args.class_subs,
-              labs_type=args.labs_type, recode_dict=args.recode_dict,
-              classes2remove=args.classes2remove, sample_weight=args.sample_weight,
-              ignore_feas=args.ignore_feas, use_xy=args.use_xy, stratified=args.stratified,
-              spacing=args.spacing, x_label=args.x_label, y_label=args.y_label,
+    clo.split(args.lc_samples,
+              perc_samp=args.perc_samp,
+              perc_samp_each=args.perc_samp_each,
+              scale_data=args.scale_data,
+              class_subs=args.class_subs,
+              labs_type=args.labs_type,
+              recode_dict=args.recode_dict,
+              classes2remove=args.classes2remove,
+              sample_weight=args.sample_weight,
+              ignore_feas=args.ignore_feas,
+              use_xy=args.use_xy,
+              stratified=args.stratified,
+              spacing=args.spacing,
+              x_label=args.x_label,
+              y_label=args.y_label,
               response_label=args.response_label)
 
-    clo.construct(input_model=args.input_model, output_model=args.output_model,
+    clo.construct(input_model=args.input_model,
+                  output_model=args.output_model,
                   classifier_info=ast.literal_eval(args.classifier_info),
-                  class_weight=args.class_weight, calibrate_proba=args.calibrate_proba,
-                  be_quiet=args.be_quiet, n_jobs=args.n_jobs)
+                  class_weight=args.class_weight,
+                  calibrate_proba=args.calibrate_proba,
+                  be_quiet=args.be_quiet,
+                  get_probs=args.get_probs)
 
     if isinstance(args.output_image, str):
 
-        clo.predict(args.input_image, args.output_image, scale_data=args.scale_data,
-                    band_check=args.band_check, ignore_feas=args.ignore_feas, use_xy=args.use_xy,
-                    in_model=args.input_model, mask_background=args.mask_background,
-                    background_band=args.background_band, background_value=args.background_value,
-                    minimum_observations=args.minimum_observations, observation_band=args.observation_band,
-                    row_block_size=args.row_block_size, col_block_size=args.col_block_size,
-                    n_jobs=args.n_jobs, n_jobs_vars=args.n_jobs_vars)
+        clo.predict(args.input_image,
+                    args.output_image,
+                    band_check=args.band_check,
+                    ignore_feas=args.ignore_feas,
+                    in_model=args.input_model,
+                    mask_background=args.mask_background,
+                    background_band=args.background_band,
+                    background_value=args.background_value,
+                    minimum_observations=args.minimum_observations,
+                    observation_band=args.observation_band,
+                    row_block_size=args.row_block_size,
+                    col_block_size=args.col_block_size,
+                    relax_probabilities=args.relax_probabilities,
+                    write2blocks=args.write2blocks,
+                    n_jobs=args.n_jobs,
+                    n_jobs_vars=args.n_jobs_vars)
 
     logger.info('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
                 (time.asctime(time.localtime(time.time())), (time.time() - start_time)))
