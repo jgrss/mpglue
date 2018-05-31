@@ -44,10 +44,13 @@ def _examples():
     classify -i /input_image.tif -o output_image.tif -s /samples.txt --classifier-info "{'classifier': 'RF'}"
 
     # Classify an image with a Random Forest classifier, recoding the land cover classes prior to model training
-    classify -i /input_image.tif -o output_image.tif -s /samples.txt --recode-dict --classifier-info "{'classifier': 'RF'}"
+    classify -i /input_image.tif -o output_image.tif -s /samples.txt --recode-dict "{1:2}" --classifier-info "{'classifier': 'RF'}"
+
+    # Classify an image with a SVM classifier, specifying independent sampling per class
+    classify -i /input_image.tif -o output_image.tif -s /samples.txt --class-subs "{1:0.5, 2:0.5, 3:0.7}" --classifier-info "{'classifier': 'SVMc', 'C': 1.0}"
 
     # Classify an image with an AdaBoosted Extremely Random Forest classifier, sampling 70% from each class
-    classify -i /input_image.tif -o output_image.tif -s /samples.txt --perc-samp-each .7 --classifier-info "{'classifier': 'AB_EX_RF'}"
+    classify -i /input_image.tif -o output_image.tif -s /samples.txt --perc-samp-each 0.7 --classifier-info "{'classifier': 'AB_EX_RF'}"
 
     # Control size parameters for memory
     classify -s /samples.txt --output-model /RF_model.txt --classifier-info "{'classifier': 'RF'}" --row-block 256 --col-block 256 --v-jobs 1
@@ -136,6 +139,9 @@ def main():
 
     if isinstance(args.class_subs, str):
         args.class_subs = ast.literal_eval(args.class_subs)
+
+    if isinstance(args.recode_dict, str):
+        args.recode_dict = ast.literal_eval(args.recode_dict)
 
     logger.info('\nStart date & time --- (%s)\n' % time.asctime(time.localtime(time.time())))
 
