@@ -5,14 +5,16 @@
 Date Created: 10/1/2016
 """
 
+from __future__ import print_function
+
 import sys
 import time
 import argparse
 import ast
 
+from ..version import __version__
 from ..errors import logger
 from .classification import classification
-# from classification import classification_r
 
 
 class Classify(object):
@@ -79,7 +81,7 @@ def main():
     parser.add_argument('--ignore_feas', dest='ignore_feas', help='A list of features to ignore', default=[],
                         type=int, nargs='+')
     parser.add_argument('--use-xy', dest='use_xy', help='Whether to use x, y data', action='store_true')
-    parser.add_argument('--stratified', dest='stratified', help='Whether to spatially stratify samples',
+    parser.add_argument('--stratified', dest='stratified', help='Whether to use spatially stratify samples',
                         action='store_true')
     parser.add_argument('--spacing', dest='spacing', help='The stratification sampling', default=1000., type=float)
     parser.add_argument('--x-label', dest='x_label', help='The x column label', default='X')
@@ -120,8 +122,14 @@ def main():
                         help='Whether to relax posterior probabilities', action='store_true')
     parser.add_argument('--write2blocks', dest='write2blocks',
                         help='Whether to write to individual blocks instead of one image', action='store_true')
+    parser.add_argument('--version', dest='version',
+                        help='Whether to print the version', action='store_true')
 
     args = parser.parse_args()
+
+    if args.version:
+        print(__version__)
+        sys.exit()
 
     if args.examples:
         _examples()
