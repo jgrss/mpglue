@@ -2422,7 +2422,7 @@ def add_fields(input_vector,
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                logger.info('  Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
+                logger.info('  Features {:,d}--{:,d} of {:,d} ...'.format(fi, remaining, v_info.n_feas))
 
             geometry = feature.GetGeometryRef()
 
@@ -2452,7 +2452,7 @@ def add_fields(input_vector,
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                logger.info('  Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
+                logger.info('  Features {:,d}--{:,d} of {:,d} ...'.format(fi, remaining, v_info.n_feas))
 
             try:
                 field_value = float(feature.GetField(field_names[0]))
@@ -2512,7 +2512,7 @@ def add_fields(input_vector,
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                logger.info('  Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
+                logger.info('  Features {:,d}--{:,d} of {:,d} ...'.format(fi, remaining, v_info.n_feas))
 
             feature.SetField(field_names[0], fi+1)
 
@@ -2537,7 +2537,7 @@ def add_fields(input_vector,
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                logger.info('  Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
+                logger.info('  Features {:,d}--{:,d} of {:,d} ...'.format(fi, remaining, v_info.n_feas))
 
             feature.SetField(field_names[0], constant)
 
@@ -2562,7 +2562,7 @@ def add_fields(input_vector,
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                logger.info('  Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
+                logger.info('  Features {:,d}--{:,d} of {:,d} ...'.format(fi, remaining, v_info.n_feas))
 
             geometry = feature.GetGeometryRef()
 
@@ -2570,9 +2570,9 @@ def add_fields(input_vector,
 
             # Convert square meters to square kilometers or to hectares
             if area_units == 'km':
-                area *= .000001
+                area *= 0.000001
             elif area_units == 'ha':
-                area *= .0001
+                area *= 0.0001
 
             # float('%.4f' % area)
 
@@ -2631,7 +2631,7 @@ def add_fields(input_vector,
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                logger.info('  Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
+                logger.info('  Features {:,d}--{:,d} of {:,d} ...'.format(fi, remaining, v_info.n_feas))
 
             feature.SetField(field_names[1], class_dictionary[str(feature.GetField(field_names[0]))])
 
@@ -2657,7 +2657,7 @@ def add_fields(input_vector,
                 remaining = (v_info.n_feas - fi) + fi
 
             if fi % 100 == 0:
-                logger.info('  Features {:d}--{:d} of {:d} ...'.format(fi, remaining, v_info.n_feas))
+                logger.info('  Features {:,d}--{:,d} of {:,d} ...'.format(fi, remaining, v_info.n_feas))
 
             feature.SetField(field_names[2],
                              ''.join([str(feature.GetField(field_names[0])), str(feature.GetField(field_names[1]))]))
@@ -2773,7 +2773,8 @@ def main():
                         help='The field name(s) to add', default=['x', 'y'], nargs='+')
     parser.add_argument('-b', '--field-breaks', dest='field_breaks', help='The field breaks', default="{}")
     parser.add_argument('-dv', '--default-value', dest='default_value', help='The default break value', default=None)
-    parser.add_argument('--area_units', dest='area_units', help='The units to use for area calcuation', default='km')
+    parser.add_argument('--area-units', dest='area_units', help='The units to use for area calcuation',
+                        default='km', choices=['ha', 'km'])
     parser.add_argument('--constant', dest='constant', help='A constant value for -m field-constant', default='1')
     parser.add_argument('--expression', dest='expression', help='A query expression', default=None)
     parser.add_argument('--epsg', dest='epsg', help='An EPSG projection code', default=0, type=int)
