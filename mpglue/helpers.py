@@ -16,6 +16,7 @@ import random
 import datetime
 from collections import OrderedDict
 
+from .errors import logger
 from .progressbar.progressbar import ProgressBar
 from .progressbar import widgets
 
@@ -402,8 +403,10 @@ def check_and_create_dir(dir2create):
 
         try:
             os.makedirs(dir2create)
-        except OSError:
-            raise OSError('Could not create the directory {}'.format(dir2create))
+        except:
+
+            logger.error('Could not create the directory, {}'.format(dir2create))
+            raise OSError
 
 
 def _iteration_parameters_1d(rows, marker='*'):

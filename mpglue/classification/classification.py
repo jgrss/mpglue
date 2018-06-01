@@ -3759,6 +3759,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             d_name, f_name = os.path.split(self.output_model)
             f_base, f_ext = os.path.splitext(f_name)
 
+            if not d_name and not os.path.isabs(f_name):
+                d_name = os.path.abspath('.')
+
             self.out_acc = os.path.join(d_name, '{}_acc.txt'.format(f_base))
 
             if os.path.isfile(self.out_acc):
@@ -5192,6 +5195,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         self.dir_name, f_name = os.path.split(self.output_image)
         self.output_image_base, self.output_image_ext = os.path.splitext(f_name)
+
+        if not self.dir_name and not os.path.isabs(f_name):
+            self.dir_name = os.path.abspath('.')
 
         # Delete files
         if os.path.isfile(output_image) and self.overwrite and not self.write2blocks:

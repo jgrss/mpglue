@@ -3036,9 +3036,12 @@ class BlockFunc(object):
 
             self._get_pairs()
 
-            dn, __ = os.path.split(self.out_image)
+            dn, fn = os.path.split(self.out_image)
 
-            check_and_create_dir(os.path.join(dn, 'temp'))
+            if not dn and not os.path.isabs(fn):
+                dn = os.path.join(os.path.abspath('.'), 'temp')
+            else:
+                check_and_create_dir(os.path.join(dn, 'temp'))
 
             driver_pp = gdal_register(self.out_image)
 
@@ -3628,7 +3631,13 @@ def warp(input_image,
                 break
 
     else:
-        check_and_create_dir(os.path.split(output_image)[0])
+
+        d_name, f_name = os.path.split(output_image)
+
+        if not d_name and not os.path.isabs(f_name):
+            d_name = os.path.abspath('.')
+        else:
+            check_and_create_dir(d_name)
 
     if isinstance(out_epsg, int):
         out_proj = 'EPSG:{:d}'.format(out_epsg)
@@ -3744,7 +3753,12 @@ def translate(input_image,
             >>>                        creationOptions=['GDAL_CACHEMAX=256', 'TILED=YES'])
     """
 
-    check_and_create_dir(os.path.split(output_image)[0])
+    d_name, f_name = os.path.split(output_image)
+
+    if not d_name and not os.path.isabs(f_name):
+        d_name = os.path.abspath('.')
+    else:
+        check_and_create_dir(d_name)
 
     if isinstance(d_type, str):
 
@@ -3834,7 +3848,10 @@ class create_raster(CreateDriver, FileManager, UpdateInfo):
             d_name, f_name = os.path.split(out_name)
             f_base, f_ext = os.path.splitext(f_name)
 
-            check_and_create_dir(d_name)
+            if not d_name and not os.path.isabs(f_name):
+                d_name = os.path.abspath('.')
+            else:
+                check_and_create_dir(d_name)
 
         storage_type = STORAGE_DICT_GDAL[o_info.storage.lower()] if 'storage' not in kwargs \
             else STORAGE_DICT_GDAL[kwargs['storage'].lower()]
@@ -4118,7 +4135,10 @@ def write2raster(out_array,
     # Get the output information.
     d_name, f_name = os.path.split(out_name)
 
-    check_and_create_dir(d_name)
+    if not d_name and not os.path.isabs(f_name):
+        d_name = os.path.abspath('.')
+    else:
+        check_and_create_dir(d_name)
 
     array_shape = out_array.shape
 
