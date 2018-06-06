@@ -2354,7 +2354,9 @@ def add_fields(input_vector,
                epsg=None,
                field_breaks=None,
                default_value=None,
-               field_type=None):
+               field_type=None,
+               random_range=None,
+               print_skip=100):
 
     """
     Adds fields to an existing vector
@@ -2371,6 +2373,9 @@ def add_fields(input_vector,
         epsg (Optional[int]): An EPSG code to declare when the .prj file is missing. Default is None.
         field_breaks (Optional[dict]): The field breaks. Default is None.
         default_value (Optional[int, float, or str]): The default break value. Default is None.
+        field_type (Optional[str])
+        random_range (Optional[list or tuple])
+        print_skip (Optional[int])
 
     Returns:
         None, writes to ``input_vector`` in place.
@@ -2378,7 +2383,7 @@ def add_fields(input_vector,
 
     if method in ['field-xy', 'field-area']:
         field_type = 'float'
-    elif method == 'field-id':
+    elif method in ['field-id', 'field-random']:
         field_type = 'int'
     elif method == 'field-merge':
         field_type = 'str'
@@ -2395,8 +2400,8 @@ def add_fields(input_vector,
             else:
                 field_type = 'int'
 
-    __, f_name = os.path.split(input_vector)
-    f_base, __ = os.path.splitext(f_name)
+    f_name = os.path.split(input_vector)[1]
+    f_base = os.path.splitext(f_name)[0]
 
     # First open the vector file.
     v_info = vopen(input_vector, open2read=False, epsg=epsg)
@@ -2416,12 +2421,12 @@ def add_fields(input_vector,
         # Add the centroids to each feature.
         for fi, feature in enumerate(v_info.lyr):
 
-            if (fi + 99) < v_info.n_feas:
-                remaining = fi + 99
+            if (fi + print_skip-1) < v_info.n_feas:
+                remaining = fi + print_skip-1
             else:
                 remaining = (v_info.n_feas - fi) + fi
 
-            if fi % 100 == 0:
+            if fi % print_skip == 0:
                 logger.info('  Features {:,d}--{:,d} of {:,d} ...'.format(fi, remaining, v_info.n_feas))
 
             geometry = feature.GetGeometryRef()
@@ -2446,12 +2451,12 @@ def add_fields(input_vector,
 
         for fi, feature in enumerate(v_info.lyr):
 
-            if (fi + 99) < v_info.n_feas:
-                remaining = fi + 99
+            if (fi + print_skip-1) < v_info.n_feas:
+                remaining = fi + print_skip-1
             else:
                 remaining = (v_info.n_feas - fi) + fi
 
-            if fi % 100 == 0:
+            if fi % print_skip == 0:
                 logger.info('  Features {:,d}--{:,d} of {:,d} ...'.format(fi, remaining, v_info.n_feas))
 
             try:
@@ -2506,15 +2511,44 @@ def add_fields(input_vector,
         # Add the id to each feature.
         for fi, feature in enumerate(v_info.lyr):
 
-            if (fi + 99) < v_info.n_feas:
-                remaining = fi + 99
+            if (fi + print_skip-1) < v_info.n_feas:
+                remaining = fi + print_skip-1
             else:
                 remaining = (v_info.n_feas - fi) + fi
 
-            if fi % 100 == 0:
+            if fi % print_skip == 0:
                 logger.info('  Features {:,d}--{:,d} of {:,d} ...'.format(fi, remaining, v_info.n_feas))
 
             feature.SetField(field_names[0], fi+1)
+
+            v_info.lyr.SetFeature(feature)
+
+            feature.Destroy()
+
+    elif method == 'field-random':
+
+        if len(field_names) != 1:
+            raise ValueError('There should be one {} field name'.format(method))
+
+        if not random_range:
+            raise ValueError('The random range should be given.')
+
+        if field_names[0] not in field_names_:
+            v_info = create_fields(v_info, field_names, [field_type], [None])
+
+        # Add the id to each feature.
+        for fi, feature in enumerate(v_info.lyr):
+
+            if (fi + print_skip-1) < v_info.n_feas:
+                remaining = fi + print_skip-1
+            else:
+                remaining = (v_info.n_feas - fi) + fi
+
+            if fi % print_skip == 0:
+                logger.info('  Features {:,d}--{:,d} of {:,d} ...'.format(fi, remaining, v_info.n_feas))
+
+            feature.SetField(field_names[0],
+                             int(np.random.randint(random_range[0], random_range[1], 1)))
 
             v_info.lyr.SetFeature(feature)
 
@@ -2531,12 +2565,12 @@ def add_fields(input_vector,
         # Add the id to each feature.
         for fi, feature in enumerate(v_info.lyr):
 
-            if (fi + 99) < v_info.n_feas:
-                remaining = fi + 99
+            if (fi + print_skip-1) < v_info.n_feas:
+                remaining = fi + print_skip-1
             else:
                 remaining = (v_info.n_feas - fi) + fi
 
-            if fi % 100 == 0:
+            if fi % print_skip == 0:
                 logger.info('  Features {:,d}--{:,d} of {:,d} ...'.format(fi, remaining, v_info.n_feas))
 
             feature.SetField(field_names[0], constant)
@@ -2556,12 +2590,12 @@ def add_fields(input_vector,
         # Add the id to each feature.
         for fi, feature in enumerate(v_info.lyr):
 
-            if (fi + 99) < v_info.n_feas:
-                remaining = fi + 99
+            if (fi + print_skip-1) < v_info.n_feas:
+                remaining = fi + print_skip-1
             else:
                 remaining = (v_info.n_feas - fi) + fi
 
-            if fi % 100 == 0:
+            if fi % print_skip == 0:
                 logger.info('  Features {:,d}--{:,d} of {:,d} ...'.format(fi, remaining, v_info.n_feas))
 
             geometry = feature.GetGeometryRef()
@@ -2625,12 +2659,12 @@ def add_fields(input_vector,
         # Add the class values.
         for fi, feature in enumerate(v_info.lyr):
 
-            if (fi + 99) < v_info.n_feas:
-                remaining = fi + 99
+            if (fi + print_skip-1) < v_info.n_feas:
+                remaining = fi + print_skip-1
             else:
                 remaining = (v_info.n_feas - fi) + fi
 
-            if fi % 100 == 0:
+            if fi % print_skip == 0:
                 logger.info('  Features {:,d}--{:,d} of {:,d} ...'.format(fi, remaining, v_info.n_feas))
 
             feature.SetField(field_names[1], class_dictionary[str(feature.GetField(field_names[0]))])
@@ -2651,12 +2685,12 @@ def add_fields(input_vector,
         # Merge the two fields.
         for fi, feature in enumerate(v_info.lyr):
 
-            if (fi + 99) < v_info.n_feas:
-                remaining = fi + 99
+            if (fi + print_skip-1) < v_info.n_feas:
+                remaining = fi + print_skip-1
             else:
                 remaining = (v_info.n_feas - fi) + fi
 
-            if fi % 100 == 0:
+            if fi % print_skip == 0:
                 logger.info('  Features {:,d}--{:,d} of {:,d} ...'.format(fi, remaining, v_info.n_feas))
 
             feature.SetField(field_names[2],
@@ -2762,7 +2796,7 @@ def main():
     parser.add_argument('-m', '--method', dest='method', help='The method to run', default=None,
                         choices=['buffer', 'copy2', 'delete', 'fields', 'info', 'merge', 'rename', 'select', 'spatial',
                                  'field-xy', 'field-id', 'field-area', 'field-constant',
-                                 'field-dissolve', 'field-merge', 'field-label', 'field-breaks'])
+                                 'field-dissolve', 'field-merge', 'field-label', 'field-breaks', 'field-random'])
     parser.add_argument('-d', '--distance', dest='distance', help='The buffer distance', default=None, type=float)
     parser.add_argument('-f', '--field', dest='field', help='The field to select', default=None)
     parser.add_argument('-v', '--value', dest='value', help='The field selection value', default=None)
@@ -2773,11 +2807,15 @@ def main():
                         help='The field name(s) to add', default=['x', 'y'], nargs='+')
     parser.add_argument('-b', '--field-breaks', dest='field_breaks', help='The field breaks', default="{}")
     parser.add_argument('-dv', '--default-value', dest='default_value', help='The default break value', default=None)
-    parser.add_argument('--area-units', dest='area_units', help='The units to use for area calcuation',
+    parser.add_argument('--area-units', dest='area_units', help='The units to use for area calculations',
                         default='km', choices=['ha', 'km'])
+    parser.add_argument('--random-range', dest='random_range', help='A min/max range for random numbers',
+                        default=None, nargs='+', type=int)
     parser.add_argument('--constant', dest='constant', help='A constant value for -m field-constant', default='1')
     parser.add_argument('--expression', dest='expression', help='A query expression', default=None)
     parser.add_argument('--epsg', dest='epsg', help='An EPSG projection code', default=0, type=int)
+    parser.add_argument('--print-skip', dest='print_skip', help='A skip factor for feature progress',
+                        default=100, type=int)
 
     args = parser.parse_args()
 
@@ -2844,8 +2882,15 @@ def main():
 
         merge_vectors(args.shps2merge, args.output)
 
-    elif args.method in ['field-xy', 'field-id', 'field-area', 'field-constant',
-                         'field-dissolve', 'field-merge', 'field-label', 'field-breaks']:
+    elif args.method in ['field-xy',
+                         'field-id',
+                         'field-area',
+                         'field-constant',
+                         'field-dissolve',
+                         'field-merge',
+                         'field-label',
+                         'field-breaks',
+                         'field-random']:
 
         add_fields(args.input,
                    output_vector=args.output,
@@ -2855,7 +2900,9 @@ def main():
                    constant=args.constant,
                    epsg=args.epsg,
                    field_breaks=ast.literal_eval(args.field_breaks),
-                   default_value=args.default_value)
+                   default_value=args.default_value,
+                   random_range=args.random_range,
+                   print_skip=args.print_skip)
 
     logger.info('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
                 (time.asctime(time.localtime(time.time())), (time.time()-start_time)))
