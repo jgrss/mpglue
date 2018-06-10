@@ -643,15 +643,19 @@ def add_point(x, y, layer_object, field, value2write):
     feat.Destroy()
 
 
-def add_polygon(vector_object, xy_pairs=None, field_vals=None, geometry=None):
+def add_polygon(vector_object,
+                xy_pairs=None,
+                field_values=None,
+                geometry=None):
 
     """
     Args:
         vector_object (object): Class instance of `create_vector`.
         xy_pairs (Optional[tuple]): List of x, y coordinates that make the feature. Default is None.
-        field_vals (Optional[dict]): A dictionary of field values to write. They should match the order
-            of ``field_defs``. Default is [].
-        geometry (Optional[object]): A polygon geometry object to write (in place of ``xy_pairs``). Default is None.
+        field_values (Optional[dict]): A dictionary of field values to write. They should match the order
+            of ``field_defs``. Default is None.
+        geometry (Optional[object]): A polygon geometry object to write (in place of ``xy_pairs``).
+            Default is None.
 
     Returns:
         None
@@ -676,9 +680,9 @@ def add_polygon(vector_object, xy_pairs=None, field_vals=None, geometry=None):
     feature.SetGeometry(poly)
 
     # set the fields
-    if field_vals:
+    if field_values:
 
-        for field, val in viewitems(field_vals):
+        for field, val in viewitems(field_values):
             feature.SetField(field, val)
 
     vector_object.lyr.CreateFeature(feature)
@@ -1979,7 +1983,7 @@ def spatial_intersection(select_shp, intersect_shp, output_shp, epsg=None):
                             field_values[field] = select_feature.GetField(field)
 
                         # Add the feature.
-                        add_polygon(o_shp, field_vals=field_values, geometry=select_geometry)
+                        add_polygon(o_shp, field_values=field_values, geometry=select_geometry)
 
                         tracker_list.append(m)
 
@@ -2351,6 +2355,8 @@ def add_fields(input_vector,
                method='field-xy',
                area_units='ha',
                buffer_distance=0.0,
+               simplify_geometry=False,
+               simplify_tolerance=1.0,
                constant=1,
                epsg=None,
                field_breaks=None,
@@ -2371,6 +2377,8 @@ def add_fields(input_vector,
         area_units (Optional[str]): The units to use for calculating area. Default is 'ha', or hectares.
             *Assumes the input units are meters. Choices area ['ha', 'km2', 'm2'].
         buffer_distance (Optional[float]): A buffer distance to apply to each feature. Default is 0.
+        simplify_geometry (Optional[bool]): Whether to simplify geometry and write to `output_vector`. Default is False.
+        simplify_tolerance (Optional[float]): The tolerance for geometry `ogr.Simplify`. Default is 1.0.
         constant (Optional[int]): A constant value when ``method`` is equal to field-constant. Default is 1.
         epsg (Optional[int]): An EPSG code to declare when the .prj file is missing. Default is None.
         field_breaks (Optional[dict]): The field breaks. Default is None.
@@ -2599,7 +2607,24 @@ def add_fields(input_vector,
             logger.error('  The area units were not recognized.')
             raise ValueError
 
-        # Add the id to each feature.
+        if simplify_geometry:
+
+            if not isinstance(output_vector, str):
+
+                logger.error('  The output vector must be given to simplify geometry.')
+                raise NameError
+
+            # Get the field names + the Area field.
+            field_names = list_field_names(input_vector,
+                                           be_quiet=True) + field_names
+
+            # Create the new shapefile.
+            o_info = create_vector(output_vector,
+                                   field_names=field_names,
+                                   projection=v_info.projection,
+                                   geom_type='polygon')
+
+        # Iterate over each feature.
         for fi, feature in enumerate(v_info.lyr):
 
             if (fi + print_skip-1) < v_info.n_feas:
@@ -2612,6 +2637,9 @@ def add_fields(input_vector,
 
             # Get the polygon feature geometry.
             geometry = feature.GetGeometryRef()
+
+            if simplify_geometry:
+                geometry = geometry.Simplify(simplify_tolerance)
 
             if buffer_distance > 0:
                 geometry = geometry.Buffer(buffer_distance)
@@ -2631,6 +2659,20 @@ def add_fields(input_vector,
             v_info.lyr.SetFeature(feature)
 
             feature.Destroy()
+
+            if simplify_geometry:
+
+                geometry = geometry.Buffer(-buffer_distance)
+
+                field_values = {field_names[0]: area}
+
+                # Add the feature.
+                add_polygon(o_info,
+                            field_values=field_values,
+                            geometry=geometry)
+
+        if simplify_geometry:
+            o_info.close()
 
     elif method == 'field-dissolve':
 
@@ -2827,6 +2869,10 @@ def main():
                         default='ha', choices=['ha', 'km2', 'm2'])
     parser.add_argument('--buffer-distance', dest='buffer_distance', help='A buffer to apply to each polygon feature',
                         default=0.0, type=float)
+    parser.add_argument('--simplify-geometry', dest='simplify_geometry', help='Whether to simplify geometry',
+                        action='store_true')
+    parser.add_argument('--simplify-tolerance', dest='simplify_tolerance', help='A tolerance level to simplify by',
+                        default=1.0, type=float)
     parser.add_argument('--random-range', dest='random_range', help='A min/max range for random numbers',
                         default=None, nargs='+', type=int)
     parser.add_argument('--constant', dest='constant', help='A constant value for -m field-constant', default='1')
@@ -2916,6 +2962,8 @@ def main():
                    field_names=args.field_names,
                    area_units=args.area_units,
                    buffer_distance=args.buffer_distance,
+                   simplify_geometry=args.simplify_geometry,
+                   simplify_tolerance=args.simplify_tolerance,
                    constant=args.constant,
                    epsg=args.epsg,
                    field_breaks=ast.literal_eval(args.field_breaks),
