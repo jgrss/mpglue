@@ -2645,6 +2645,7 @@ def add_fields(input_vector,
             if boundary_mask:
 
                 if not geometry.Intersects(boundary_mask):
+                    feature.Destroy()
                     continue
 
             if simplify_geometry:
