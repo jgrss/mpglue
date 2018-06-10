@@ -2351,6 +2351,7 @@ def add_fields(input_vector,
                buffer_distance=0.0,
                simplify_geometry=False,
                simplify_tolerance=1.0,
+               boundary_mask=None,
                constant=1,
                epsg=None,
                field_breaks=None,
@@ -2373,6 +2374,7 @@ def add_fields(input_vector,
         buffer_distance (Optional[float]): A buffer distance to apply to each feature. Default is 0.
         simplify_geometry (Optional[bool]): Whether to simplify geometry and write to `output_vector`. Default is False.
         simplify_tolerance (Optional[float]): The tolerance for geometry `ogr.Simplify`. Default is 1.0.
+        boundary_mask (Optional[OGR geometry]): A boundary to use as a mask. Default is None.
         constant (Optional[int]): A constant value when ``method`` is equal to field-constant. Default is 1.
         epsg (Optional[int]): An EPSG code to declare when the .prj file is missing. Default is None.
         field_breaks (Optional[dict]): The field breaks. Default is None.
@@ -2639,6 +2641,11 @@ def add_fields(input_vector,
 
             # Get the polygon feature geometry.
             geometry = feature.GetGeometryRef()
+
+            if boundary_mask:
+
+                if not geometry.Intersects(boundary_mask):
+                    continue
 
             if simplify_geometry:
                 geometry = geometry.Simplify(simplify_tolerance)
