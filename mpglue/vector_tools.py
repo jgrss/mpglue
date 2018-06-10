@@ -2615,7 +2615,12 @@ def add_fields(input_vector,
             df_fields = list_field_names(input_vector,
                                          be_quiet=True)
 
-            field_names = df_fields['Name'].values.tolist() + field_names
+            field_names_in = df_fields['Name'].values.tolist()
+
+            if field_names[0] not in field_names_in:
+                field_names = field_names_in + field_names
+            else:
+                field_names = field_names_in
 
             # Create the new shapefile.
             o_info = create_vector(output_vector,
@@ -2652,13 +2657,6 @@ def add_fields(input_vector,
             elif area_units == 'ha':
                 area *= 0.0001
 
-            # Add the feature area to the vector file.
-            feature.SetField(field_names[0], area)
-
-            v_info.lyr.SetFeature(feature)
-
-            feature.Destroy()
-
             if simplify_geometry:
 
                 geometry = geometry.Buffer(-buffer_distance)
@@ -2669,6 +2667,15 @@ def add_fields(input_vector,
                 add_polygon(o_info,
                             field_values=field_values,
                             geometry=geometry)
+
+            else:
+
+                # Add the feature area to the vector file.
+                feature.SetField(field_names[0], area)
+
+                v_info.lyr.SetFeature(feature)
+
+            feature.Destroy()
 
         if simplify_geometry:
             o_info.close()
