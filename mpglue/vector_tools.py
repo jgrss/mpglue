@@ -21,7 +21,11 @@ import fnmatch
 import atexit
 import tarfile
 
-from . import raster_tools
+try:
+    from . import raster_tools
+except:
+    from mpglue import raster_tools
+    
 from .paths import get_main_path
 from .errors import TransformError, logger
 from .helpers import PickleIt
