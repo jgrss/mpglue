@@ -21,11 +21,7 @@ import fnmatch
 import atexit
 import tarfile
 
-try:
-    from . import raster_tools
-except:
-    from mpglue import raster_tools
-    
+from .raster_tools import ropen
 from .paths import get_main_path
 from .errors import TransformError, logger
 from .helpers import PickleIt
@@ -959,7 +955,7 @@ def xy_within_image(x, y, image_info):
         ``True`` if ``x`` and ``y`` are within ``image_info``, otherwise ``False``.
     """
 
-    if not isinstance(image_info, raster_tools.ropen):
+    if not isinstance(image_info, ropen):
         logger.error('`image_info` must be an instance of `ropen`.')
         raise TypeError
 
@@ -1810,7 +1806,7 @@ def get_xy_offsets(image_info=None,
 
     # The offset is from a vector or
     #   raster information object.
-    elif isinstance(xy_info, vopen) or isinstance(xy_info, raster_tools.ropen):
+    elif isinstance(xy_info, vopen) or isinstance(xy_info, ropen):
 
         x = xy_info.left
         y = xy_info.top
