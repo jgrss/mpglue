@@ -21,14 +21,19 @@ import fnmatch
 import atexit
 import tarfile
 
-from .paths import get_main_path
-from .errors import TransformError, logger
-from .helpers import PickleIt
-
 try:
-    import raster_tools
-except:
+
     from . import raster_tools
+    from .paths import get_main_path
+    from .errors import TransformError, logger
+    from .helpers import PickleIt
+
+except:
+
+    import raster_tools
+    from paths import get_main_path
+    from errors import TransformError, logger
+    from helpers import PickleIt
 
 MAIN_PATH = get_main_path()
 
