@@ -658,31 +658,28 @@ def add_polygon(vector_object,
         None
     """
 
-    poly_geom = ogr.Geometry(ogr.wkbLinearRing)
-
     # Add the points
     if isinstance(xy_pairs, tuple) or isinstance(xy_pairs, list):
+
+        poly_geom = ogr.Geometry(ogr.wkbLinearRing)
 
         for pair in xy_pairs:
             poly_geom.AddPoint(float(pair[0]), float(pair[1]))
 
-        poly = ogr.Geometry(ogr.wkbPolygon)
+        geometry = ogr.Geometry(ogr.wkbPolygon)
 
-        poly.AddGeometry(poly_geom)
-
-    else:
-        poly = geometry
+        geometry.AddGeometry(poly_geom)
 
     feature = ogr.Feature(vector_object.lyr_def)
-    feature.SetGeometry(poly)
+    feature.SetGeometry(geometry)
+
+    vector_object.lyr.CreateFeature(feature)
 
     # set the fields
     if field_values:
 
-        for field, val in viewitems(field_values):
-            feature.SetField(field, val)
-
-    vector_object.lyr.CreateFeature(feature)
+        for field, value in viewitems(field_values):
+            feature.SetField(field, value)
 
     vector_object.lyr.SetFeature(feature)
 
@@ -2611,21 +2608,22 @@ def add_fields(input_vector,
                 logger.error('  The output vector must be given to simplify geometry.')
                 raise NameError
 
-            # Get the field names + the Area field.
-            df_fields = list_field_names(input_vector,
-                                         be_quiet=True)
-
-            field_names_in = df_fields['Name'].values.tolist()
-
-            if field_names[0] not in field_names_in:
-                field_names = field_names_in + field_names
-            else:
-                field_names = field_names_in
+            # # Get the field names + the Area field.
+            # df_fields = list_field_names(input_vector,
+            #                              be_quiet=True)
+            #
+            # field_names_in = df_fields['Name'].values.tolist()
+            #
+            # if field_names[0] not in field_names_in:
+            #     field_names = field_names_in + field_names
+            # else:
+            #     field_names = field_names_in
 
             # Create the new shapefile.
             o_info = create_vector(output_vector,
                                    field_names=field_names,
                                    projection=v_info.projection,
+                                   field_type='float',
                                    geom_type='polygon')
 
         # Iterate over each feature.
@@ -2653,9 +2651,9 @@ def add_fields(input_vector,
 
             # Convert m^2 to km^2 or ha
             if area_units == 'km2':
-                area *= 0.000001
+                area *= 1e-06
             elif area_units == 'ha':
-                area *= 0.0001
+                area *= 1e-04
 
             if simplify_geometry:
 
