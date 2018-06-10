@@ -33,11 +33,18 @@ from collections import OrderedDict
 #     # from ctypes.util import find_library
 #     # ctypes.cdll.LoadLibrary(find_library('c'))
 
-from .helpers import random_float, overwrite_file, check_and_create_dir, _iteration_parameters
-from .vector_tools import vopen, get_xy_offsets, intersects_boundary
+try:
 
-from .errors import EmptyImage, LenError, MissingRequirement, ropenError, ArrayShapeError, ArrayOffsetError, logger
-# from .version import __version__
+    from .helpers import random_float, overwrite_file, check_and_create_dir, _iteration_parameters
+    from .vector_tools import vopen, get_xy_offsets, intersects_boundary
+    from .errors import EmptyImage, LenError, MissingRequirement, ropenError, ArrayShapeError, ArrayOffsetError, logger
+
+except:
+
+    from helpers import random_float, overwrite_file, check_and_create_dir, _iteration_parameters
+    from vector_tools import vopen, get_xy_offsets, intersects_boundary
+    from errors import EmptyImage, LenError, MissingRequirement, ropenError, ArrayShapeError, ArrayOffsetError, logger
+
 from mpglue.veg_indices import BandHandler, VegIndicesEquations
 
 try:
