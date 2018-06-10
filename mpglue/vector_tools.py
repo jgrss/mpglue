@@ -2347,9 +2347,10 @@ def create_fields(v_info, field_names, field_types, field_widths):
 
 def add_fields(input_vector,
                output_vector=None,
-               field_names=['x', 'y'],
+               field_names=None,
                method='field-xy',
-               area_units='km',
+               area_units='ha',
+               buffer_distance=0.0,
                constant=1,
                epsg=None,
                field_breaks=None,
@@ -2367,8 +2368,9 @@ def add_fields(input_vector,
         field_names (Optional[str list]): The field names. Default is ['x', 'y'].
         method (Optional[str]): The method to use. Default is 'field-xy'. Choices are
             ['field-xy', 'field-id', 'field-area', 'field-constant', 'field-dissolve'].
-        area_units (Optional[str]): The units to use for calculating area. Default is 'km', or square km.
-            *Assumes the input units are meters if you use 'km'. Choices area ['ha', 'km'].
+        area_units (Optional[str]): The units to use for calculating area. Default is 'ha', or hectares.
+            *Assumes the input units are meters. Choices area ['ha', 'km2', 'm2'].
+        buffer_distance (Optional[float]): A buffer distance to apply to each feature. Default is 0.
         constant (Optional[int]): A constant value when ``method`` is equal to field-constant. Default is 1.
         epsg (Optional[int]): An EPSG code to declare when the .prj file is missing. Default is None.
         field_breaks (Optional[dict]): The field breaks. Default is None.
@@ -2380,6 +2382,9 @@ def add_fields(input_vector,
     Returns:
         None, writes to ``input_vector`` in place.
     """
+
+    if not field_names:
+        field_names = ['x', 'y']
 
     if method in ['field-xy', 'field-area']:
         field_type = 'float'
@@ -2404,7 +2409,9 @@ def add_fields(input_vector,
     f_base = os.path.splitext(f_name)[0]
 
     # First open the vector file.
-    v_info = vopen(input_vector, open2read=False, epsg=epsg)
+    v_info = vopen(input_vector,
+                   open2read=False,
+                   epsg=epsg)
 
     # Create the new id field.
     field_names_ = [v_info.lyr_def.GetFieldDefn(i).GetName() for i in range(0, v_info.lyr_def.GetFieldCount())]
@@ -2587,6 +2594,11 @@ def add_fields(input_vector,
         if field_names[0] not in field_names_:
             v_info = create_fields(v_info, field_names, [field_type], [None])
 
+        if area_units not in ['ha', 'km2', 'm2']:
+
+            logger.error('  The area units were not recognized.')
+            raise ValueError
+
         # Add the id to each feature.
         for fi, feature in enumerate(v_info.lyr):
 
@@ -2598,18 +2610,22 @@ def add_fields(input_vector,
             if fi % print_skip == 0:
                 logger.info('  Features {:,d}--{:,d} of {:,d} ...'.format(fi, remaining, v_info.n_feas))
 
+            # Get the polygon feature geometry.
             geometry = feature.GetGeometryRef()
 
+            if buffer_distance > 0:
+                geometry = geometry.Buffer(buffer_distance)
+
+            # Get the polygon feature area, in m^2
             area = geometry.GetArea()
 
-            # Convert square meters to square kilometers or to hectares
-            if area_units == 'km':
+            # Convert m^2 to km^2 or ha
+            if area_units == 'km2':
                 area *= 0.000001
             elif area_units == 'ha':
                 area *= 0.0001
 
-            # float('%.4f' % area)
-
+            # Add the feature area to the vector file.
             feature.SetField(field_names[0], area)
 
             v_info.lyr.SetFeature(feature)
@@ -2808,7 +2824,9 @@ def main():
     parser.add_argument('-b', '--field-breaks', dest='field_breaks', help='The field breaks', default="{}")
     parser.add_argument('-dv', '--default-value', dest='default_value', help='The default break value', default=None)
     parser.add_argument('--area-units', dest='area_units', help='The units to use for area calculations',
-                        default='km', choices=['ha', 'km'])
+                        default='ha', choices=['ha', 'km2', 'm2'])
+    parser.add_argument('--buffer-distance', dest='buffer_distance', help='A buffer to apply to each polygon feature',
+                        default=0.0, type=float)
     parser.add_argument('--random-range', dest='random_range', help='A min/max range for random numbers',
                         default=None, nargs='+', type=int)
     parser.add_argument('--constant', dest='constant', help='A constant value for -m field-constant', default='1')
@@ -2897,6 +2915,7 @@ def main():
                    method=args.method,
                    field_names=args.field_names,
                    area_units=args.area_units,
+                   buffer_distance=args.buffer_distance,
                    constant=args.constant,
                    epsg=args.epsg,
                    field_breaks=ast.literal_eval(args.field_breaks),
