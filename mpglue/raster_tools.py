@@ -33,11 +33,10 @@ from collections import OrderedDict
 #     # from ctypes.util import find_library
 #     # ctypes.cdll.LoadLibrary(find_library('c'))
 
+from . import vector_tools
 from .helpers import random_float, overwrite_file, check_and_create_dir, _iteration_parameters
-from .vector_tools import vopen, get_xy_offsets, intersects_boundary
 from .errors import EmptyImage, LenError, MissingRequirement, ropenError, ArrayShapeError, ArrayOffsetError, logger
-
-from mpglue.veg_indices import BandHandler, VegIndicesEquations
+from .veg_indices import veg_indices, VegIndicesEquations
 
 try:
     import deprecation
@@ -332,7 +331,7 @@ class ReadWrite(object):
 
         if compute_index != 'none':
 
-            bh = BandHandler(sensor)
+            bh = veg_indices.BandHandler(sensor)
 
             bh.get_band_order()
 
@@ -361,11 +360,18 @@ class ReadWrite(object):
 
         # Index the image by x, y coordinates (in map units).
         if (abs(y) > 0) and (abs(x) > 0):
-            __, __, self.j, self.i = get_xy_offsets(self, x=x, y=y, check_position=False)
+
+            __, __, self.j, self.i = vector_tools.get_xy_offsets(self,
+                                                                 x=x,
+                                                                 y=y,
+                                                                 check_position=False)
             
         if isinstance(check_x, float) and isinstance(check_y, float):
 
-            __, __, x_offset, y_offset = get_xy_offsets(self, x=check_x, y=check_y, check_position=False)
+            __, __, x_offset, y_offset = vector_tools.get_xy_offsets(self,
+                                                                     x=check_x,
+                                                                     y=check_y,
+                                                                     check_position=False)
 
             self.i += y_offset
             self.j += x_offset
@@ -3121,7 +3127,7 @@ class BlockFunc(object):
                     self.get_block_extent(i, j, n_rows, n_cols)
 
                     # Check if the block intersects the boundary file.
-                    if not intersects_boundary(self.extent_dict, self.boundary_file):
+                    if not vector_tools.intersects_boundary(self.extent_dict, self.boundary_file):
                         continue
 
                 # if not self.be_quiet:
@@ -3168,7 +3174,7 @@ class BlockFunc(object):
                                         storage='byte')
 
                     # Rasterize the vector at the current block.
-                    with vopen(self.mask_file) as v_info:
+                    with vector_tools.vopen(self.mask_file) as v_info:
 
                         gdal.RasterizeLayer(orw.datasource, [1], v_info.lyr, burn_values=[1])
                         block_array = orw.datasource.GetRasterBand(1).ReadAsArray(0, 0, n_cols, n_rows)
@@ -3469,10 +3475,10 @@ def read(image2open=None,
 
     # Index the image by x, y coordinates (in map units).
     if abs(y) > 0:
-        __, __, __, i = get_xy_offsets(i_info, x=x, y=y)
+        __, __, __, i = vector_tools.get_xy_offsets(i_info, x=x, y=y)
 
     if abs(x) > 0:
-        __, __, j, __ = get_xy_offsets(i_info, x=x, y=y)
+        __, __, j, __ = vector_tools.get_xy_offsets(i_info, x=x, y=y)
 
     if (n_jobs in [0, 1]) and not predictions:
 
@@ -4260,7 +4266,7 @@ class GetMinExtent(UpdateInfo):
         if not isinstance(info2, ropen):
             if not isinstance(info2, GetMinExtent):
                 if not isinstance(info2, ImageInfo):
-                    if not isinstance(info2, vopen):
+                    if not isinstance(info2, vector_tools.vopen):
                         raise TypeError('The second info argument must be an instance of ropen, vopen, GetMinExtent, or ImageInfo.')
 
         # Pass the image info properties.
@@ -5510,7 +5516,7 @@ def rasterize_vector(in_vector,
         None, writes to ``out_raster``.
     """
 
-    with vopen(in_vector) as v_info:
+    with vector_tools.vopen(in_vector) as v_info:
 
         if kwargs:
 
