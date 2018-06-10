@@ -2612,8 +2612,10 @@ def add_fields(input_vector,
                 raise NameError
 
             # Get the field names + the Area field.
-            field_names = list_field_names(input_vector,
-                                           be_quiet=True) + field_names
+            df_fields = list_field_names(input_vector,
+                                         be_quiet=True)
+
+            field_names = df_fields['Name'].values.tolist() + field_names
 
             # Create the new shapefile.
             o_info = create_vector(output_vector,
