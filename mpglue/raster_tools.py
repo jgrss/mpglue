@@ -104,6 +104,12 @@ try:
 except:
     logger.warning('  Pandas must be installed to parse metadata')
 
+# OpenCV
+try:
+    import cv2
+except:
+    logger.warning('  OpenCV must be installed to use stat functions.')
+
 # BeautifulSoup4
 try:
     from bs4 import BeautifulSoup
@@ -4514,14 +4520,14 @@ def block_dimensions(image_rows, image_cols, row_block_size=1024, col_block_size
     return row_blocks, col_blocks
 
 
-def stats_func(im, ignore_value=None, stat=None, stats_functions=None,
-               set_below=None, set_above=None, set_common=None, no_data_value=None):
-
-    # OpenCV
-    try:
-        import cv2
-    except ImportError:
-        raise ImportError('OpenCV must be installed to use stat functions.')
+def stats_func(im,
+               ignore_value=None,
+               stat=None,
+               stats_functions=None,
+               set_below=None,
+               set_above=None,
+               set_common=None,
+               no_data_value=None):
 
     im = im[0][:]
 
@@ -4647,6 +4653,24 @@ def pixel_stats(input_image,
         logger.error('{} is not an option.'.format(stat))
         raise NameError
 
+    stats_functions = dict(nanmean=np.nanmean,
+                           nanmedian=np.nanmedian,
+                           nanvar=np.nanvar,
+                           nanstd=np.nanstd,
+                           nanmin=np.nanmin,
+                           nanmax=np.nanmax,
+                           nansum=np.nansum,
+                           median=np.median,
+                           mode=sci_mode)
+
+    params = dict(ignore_value=ignore_value,
+                  stat=stat,
+                  stats_functions=stats_functions,
+                  set_below=set_below,
+                  set_above=set_above,
+                  set_common=set_common,
+                  no_data_value=no_data_value)
+
     with ropen(input_image) as i_info:
 
         info_list = [input_image]
@@ -4671,25 +4695,10 @@ def pixel_stats(input_image,
         o_info.update_info(bands=1,
                            storage=out_storage)
 
-        stats_functions = dict(nanmean=bn.nanmean,
-                               nanmedian=bn.nanmedian,
-                               nanvar=bn.nanvar,
-                               nanstd=bn.nanstd,
-                               nanmin=bn.nanmin,
-                               nanmax=bn.nanmax,
-                               nansum=bn.nansum,
-                               median=np.median,
-                               mode=sci_mode)
-
-        params = dict(ignore_value=ignore_value,
-                      stat=stat,
-                      stats_functions=stats_functions,
-                      set_below=set_below,
-                      set_above=set_above,
-                      set_common=set_common,
-                      no_data_value=no_data_value)
-
-        bp = BlockFunc(stats_func, info_list, output_image, o_info,
+        bp = BlockFunc(stats_func,
+                       info_list,
+                       output_image,
+                       o_info,
                        proc_info=i_info,
                        print_statement='\nGetting pixel stats for {} ...\n'.format(input_image),
                        d_type='float32',
