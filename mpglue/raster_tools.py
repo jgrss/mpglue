@@ -4580,10 +4580,20 @@ def stats_func(im, ignore_value=None, stat=None, stats_functions=None,
     return out_array
 
 
-def pixel_stats(input_image, output_image, stat='mean', bands2process=-1,
-                ignore_value=None, no_data_value=0, set_below=None,
-                set_above=None, set_common=False, be_quiet=False,
-                block_rows=2048, block_cols=2048, out_storage='float32', n_jobs=1):
+def pixel_stats(input_image,
+                output_image,
+                stat='mean',
+                bands2process=-1,
+                ignore_value=None,
+                no_data_value=0,
+                set_below=None,
+                set_above=None,
+                set_common=False,
+                be_quiet=False,
+                block_rows=1000,
+                block_cols=1000,
+                out_storage='float32',
+                n_jobs=1):
 
     """
     Computes statistics on n-dimensions
@@ -4602,20 +4612,25 @@ def pixel_stats(input_image, output_image, stat='mean', bands2process=-1,
         set_common (Optional[bool]): Whether to set threshold values to the common pixel among all bands.
             Default is False.
         be_quiet (Optional[bool]): Whether to be quiet and do not report progress status. Default is False.
+        block_rows (Optional[int]): The number of rows in the block. Default is 1000.
+        block_cols (Optional[int]): The number of columns in the block. Default is 1000.
         out_storage (Optional[str]): The output raster storage. Default is 'float32'.
         n_jobs (Optional[int]): The number of blocks to process in parallel. Default is 1.
 
     Examples:
-        >>> import mpglue as gl
+        >>> from mpglue.raster_tools import pixel_stats
         >>>
         >>> # Coefficient of variation on all dimensions.
-        >>> mp.pixel_stats('/image.tif', '/output.tif', stat='cv')
+        >>> pixel_stats('/image.tif', '/output.tif', stat='cv')
         >>>
         >>> # Calculate the mean of the first 3 bands, ignoring zeros, and
         >>> #   set the output no data pixels as -999.
-        >>> mp.pixel_stats('/image.tif', '/output.tif', stat='mean', 
-        >>>                bands2process=[1, 2, 3], ignore_value=0, 
-        >>>                no_data_value=-999)
+        >>> pixel_stats('/image.tif',
+        >>>             '/output.tif',
+        >>>             stat='mean',
+        >>>             bands2process=[1, 2, 3],
+        >>>             ignore_value=0,
+        >>>             no_data_value=-999)
 
     Returns:
         None, writes to ``output_image``.
@@ -4628,6 +4643,7 @@ def pixel_stats(input_image, output_image, stat='mean', bands2process=-1,
         raise ImportError('Bottleneck must be installed to use pixel stats.')
 
     if stat not in ['min', 'max', 'mean', 'median', 'mode', 'var', 'std', 'cv', 'sum']:
+
         logger.error('{} is not an option.'.format(stat))
         raise NameError
 
@@ -4645,27 +4661,44 @@ def pixel_stats(input_image, output_image, stat='mean', bands2process=-1,
                 bands2process = [bands2process]
 
         if i_info.bands <= 1:
+
             logger.error('The input image only has {:d} band. It should have at least 2.'.format(i_info.bands))
             raise ValueError
 
         # Copy the input information.
         o_info = i_info.copy()
-        o_info.update_info(bands=1, storage=out_storage)
 
-        stats_functions = dict(nanmean=bn.nanmean, nanmedian=bn.nanmedian, nanvar=bn.nanvar,
-                               nanstd=bn.nanstd, nanmin=bn.nanmin, nanmax=bn.nanmax,
-                               nansum=bn.nansum, median=np.median, mode=sci_mode)
+        o_info.update_info(bands=1,
+                           storage=out_storage)
 
-        params = dict(ignore_value=ignore_value, stat=stat,
-                      stats_functions=stats_functions, set_below=set_below,
-                      set_above=set_above, set_common=set_common,
+        stats_functions = dict(nanmean=bn.nanmean,
+                               nanmedian=bn.nanmedian,
+                               nanvar=bn.nanvar,
+                               nanstd=bn.nanstd,
+                               nanmin=bn.nanmin,
+                               nanmax=bn.nanmax,
+                               nansum=bn.nansum,
+                               median=np.median,
+                               mode=sci_mode)
+
+        params = dict(ignore_value=ignore_value,
+                      stat=stat,
+                      stats_functions=stats_functions,
+                      set_below=set_below,
+                      set_above=set_above,
+                      set_common=set_common,
                       no_data_value=no_data_value)
 
         bp = BlockFunc(stats_func, info_list, output_image, o_info,
                        proc_info=i_info,
                        print_statement='\nGetting pixel stats for {} ...\n'.format(input_image),
-                       d_type='float32', be_quiet=be_quiet, band_list=bands2process,
-                       n_jobs=n_jobs, block_rows=block_rows, block_cols=block_cols, **params)
+                       d_type='float32',
+                       be_quiet=be_quiet,
+                       band_list=bands2process,
+                       n_jobs=n_jobs,
+                       block_rows=block_rows,
+                       block_cols=block_cols,
+                       **params)
 
         bp.run()
 
