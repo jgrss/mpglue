@@ -129,6 +129,15 @@ vector-tools
 >>> raster_tools.write2raster(array2write, '/output_image.tif', o_info=o_info)
 ```
 
+#### Band-wise statistics
+
+```python
+>>> from mpglue.raster_tools import pixel_stats
+>>>
+>>> # Calculate the band-wise mean
+>>> pixel_stats('/image.tif', '/output.tif', stat='mean')
+```
+
 #### Vegetation indices:
 
 ```python
@@ -381,6 +390,14 @@ pip install -U MpGlue-<new version>.tar.gz
 
 ```commandline
 pip uninstall mpglue
+```
+
+Testing
+---
+
+```python
+>>> import mpglue as gl
+>>> gl.test()
 ```
 
 Development

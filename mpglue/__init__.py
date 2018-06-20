@@ -11,6 +11,7 @@ from .classification.sample_raster import sample_raster
 from .raster_calc import raster_calc
 from .veg_indices import veg_indices, VegIndicesEquations
 from .vrt_builder import vrt_builder
+from .testing.test import main as test
 
 from .version import __version__
 
@@ -23,4 +24,5 @@ __all__ = ['ropen',
            'raster_calc',
            'veg_indices', 'VegIndicesEquations',
            'vrt_builder',
+           'test',
            '__version__']
