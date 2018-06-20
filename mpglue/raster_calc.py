@@ -269,7 +269,7 @@ def raster_calc(output,
     # close the output drivers
     out_rst.close_all()
 
-    del out_rst
+    out_rst = None
 
     # Cleanup
     for temp_file in temp_files:

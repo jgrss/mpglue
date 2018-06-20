@@ -83,8 +83,6 @@ def _sample_parallel(band_position, image_name, c_list, accuracy, feature_length
 
     # image_info.close()
 
-    del band_object, datasource
-
     band_object = None
     datasource = None
 
@@ -320,7 +318,7 @@ class SampleImage(object):
 
         self.shp_info = None
 
-        del self.m_info
+        self.m_info = None
 
         self.finish()
 

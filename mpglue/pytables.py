@@ -1658,7 +1658,7 @@ class manage_pytables(BaseHandler):
                                       o_info=o_info,
                                       flush_final=True)
 
-        del o_info
+        o_info = None
 
         logger.info('  {} was successfully written to file.'.format(out_name))
 

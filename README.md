@@ -4,7 +4,7 @@ MpGlue
 Current version
 ---
 
-`0.2.0b`
+`0.2.0`
 
 Usage examples
 ---
@@ -311,8 +311,6 @@ A more detailed example
 >>>                                statistic='mean',
 >>>                                window_size=5)
 >>>
->>> del i_info
->>>
 >>> # Compute the percentage of binary pixels.
 >>> with gl.ropen('/input_image.tif') as i_info:
 >>>
@@ -321,8 +319,6 @@ A more detailed example
 >>>     image_percent = moving_window(image_array,
 >>>                                   statistic='percent',
 >>>                                   window_size=25)
->>>
->>> del i_info
 ```
 
 Installation

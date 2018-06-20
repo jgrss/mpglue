@@ -793,7 +793,7 @@ class Samples(object):
 
             self.df = pd.DataFrame(self.file_name, columns=headers)
 
-            del self.file_name
+            self.file_name = None
 
         else:
 
@@ -1634,7 +1634,7 @@ class Samples(object):
                         else:
                             data_array = np.vstack((data_array, data_array_))
 
-                    del i_info
+                    i_info = None
 
                     scaler = RobustScaler(quantile_range=(2, 98)).fit(data_array / scale_factor)
 
@@ -1668,7 +1668,7 @@ class Samples(object):
                                 lab_x = l_info.left
                                 lab_y = l_info.top
 
-                            del l_info
+                            l_info = None
 
                         elif isinstance(train_x, list) and isinstance(train_y, list):
 
@@ -1711,7 +1711,7 @@ class Samples(object):
                                 self.im_cols,
                                 bands)
 
-                        del i_info
+                        i_info = None
 
             elif isinstance(predictors[0], np.ndarray):
 
@@ -1770,14 +1770,14 @@ class Samples(object):
                     # Create the label array.
                     self.labels = np.zeros((n_patches, l_info.rows, l_info.cols), dtype='uint8')
 
-                del l_info
+                l_info = None
 
                 for li, label in enumerate(labels):
 
                     with raster_tools.ropen(label) as l_info:
                         self.labels[li] = l_info.read()
 
-                    del l_info
+                    l_info = None
 
             elif isinstance(labels[0], np.ndarray):
 
@@ -2014,7 +2014,8 @@ class EndMembers(object):
                 a_arr = a_info.read()
                 m_arr = m_info.read()
 
-            del a_info, m_info
+            a_info = None
+            m_info = None
 
             a_arr[m_arr != class2keep] = 0
 
@@ -2028,7 +2029,7 @@ class EndMembers(object):
 
         i_info.close()
 
-        del i_info
+        i_info = None
 
 
 class Visualization(object):

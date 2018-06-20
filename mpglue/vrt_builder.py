@@ -154,7 +154,7 @@ class VRTBuilder(object):
                 self.top = max(i_info.top, self.top)
                 self.bottom = min(i_info.bottom, self.bottom)
 
-            del i_info
+            i_info = None
 
         self.geo_transform[0] = self.left
         self.geo_transform[3] = self.top
@@ -455,7 +455,7 @@ class VRTBuilder(object):
                 with raster_tools.ropen(v[0]) as i_info:
                     n_bands = i_info.bands
 
-                del i_info
+                i_info = None
 
             self.band_dict[k] = n_bands
 

@@ -164,7 +164,7 @@ class vopen(RegisterDriver):
         self.get_info()
 
         # Check open files before closing.
-        atexit.register(self.close)
+        # atexit.register(self.close)
 
     def read(self):
 
@@ -255,6 +255,7 @@ class vopen(RegisterDriver):
     def close(self):
 
         if hasattr(self.shp, 'feature'):
+
             self.shp.feature.Destroy()
             self.shp.feature = None
 
@@ -270,12 +271,14 @@ class vopen(RegisterDriver):
         """Deletes an open file"""
 
         if not self.open2read:
+
             logger.error('The file must be opened in read-only mode.')
             raise IOError
 
         try:
             self.driver.DeleteDataSource(self.file_name)
         except:
+
             logger.error(gdal.GetLastErrorMsg())
             logger.error('{} could not be deleted. Check for a file lock.'.format(self.file_name))
             raise IOError
@@ -303,8 +306,11 @@ class vopen(RegisterDriver):
     def __enter__(self):
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exc_type, exc_value, exc_traceback):
         self.close()
+
+    def __del__(self):
+        self.__exit__(None, None, None)
 
 
 def copy_vector(file_name, output_file):
@@ -345,7 +351,7 @@ def delete_vector(file_name):
         with vopen(file_name) as v_info:
             v_info.delete()
 
-        del v_info
+        v_info = None
 
     # Delete QGIS files.
     d_name, f_name = os.path.split(file_name)
@@ -385,7 +391,9 @@ class CreateDriver(RegisterDriver):
         self.datasource = self.driver.CreateDataSource(out_vector)
 
     def close(self):
+
         self.datasource.Destroy()
+        self.datasource = None
 
 
 class create_vector(CreateDriver):
@@ -869,7 +877,7 @@ def reproject(input_vector, output_vector, in_epsg=None, out_epsg=None, overwrit
     #
     #     cv.close()
     #
-    # del v_info
+    # v_info = None
 
 
 def shp2dataframe(input_shp):
@@ -1109,11 +1117,13 @@ class Transform(object):
     def __enter__(self):
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exc_type, exc_value, exc_traceback):
         self.close()
 
     def close(self):
+
         self.point.Destroy()
+        self.point = None
 
     def __del__(self):
         self.__exit__(None, None, None)
@@ -1298,7 +1308,9 @@ class RTreeManager(object):
                 else:
                     self.rtree_index[f] = (en[0], en[1], en[2], en[3])
 
-        del bdy_info, bdy_feature, bdy_geometry
+        bdy_info = None
+        bdy_feature = None
+        bdy_geometry = None
 
         if do_not_pickle:
 
@@ -1327,7 +1339,9 @@ class RTreeManager(object):
                                                           bottom=en[2]),
                                               utm='1')
 
-            del bdy_info, bdy_feature, bdy_geometry
+            bdy_info = None
+            bdy_feature = None
+            bdy_geometry = None
 
         else:
 
@@ -1408,7 +1422,7 @@ class RTreeManager(object):
                         envelope[2] = min(envelope[2], bdy_envelope[2])
                         envelope[3] = max(envelope[3], bdy_envelope[3])
 
-            del bdy_info
+            bdy_info = None
 
         if not isinstance(envelope, list):
 
@@ -1656,7 +1670,7 @@ def intersects_boundary(meta_dict, boundary_file):
 
             bdy_geometry = bdy_feature.GetGeometryRef()
 
-        del bdy_info
+        bdy_info = None
 
     # Create a polygon object from the coordinates.
     coord_wkt = 'POLYGON (({:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}, {:f} {:f}))'.format(meta_dict['UL'][0],
@@ -2039,9 +2053,9 @@ def select_and_save(file_name,
 
         out_lyr = out_driver_source.datasource.CopyLayer(v_info.lyr, f_base)
 
-        del out_lyr
+        out_lyr = None
 
-    del v_info
+    v_info = None
 
 
 def list_field_names(in_shapefile, be_quiet=False, epsg=None):
@@ -2294,7 +2308,7 @@ def get_field_ids(in_file, field_name):
             field_names.append(feature.GetField(field_name))
             feature.Destroy()
 
-    del v_info
+    v_info = None
 
     return field_names
 

@@ -115,7 +115,7 @@ def _add_points_from_raster(out_shp,
     if not be_quiet:
         pbar.finish()
 
-    del m_info
+    m_info = None
 
     pt_geom.Destroy()
     mpc.close()
@@ -239,7 +239,7 @@ def poly2points(input_polygon,
 
         # subprocess.call(com, shell=True)
 
-    del m_info
+    m_info = None
 
     if not be_quiet:
         logger.info('  Converting {} to points ...'.format(rasterized_polygons))

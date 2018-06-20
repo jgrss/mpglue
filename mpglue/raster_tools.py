@@ -1048,12 +1048,12 @@ class DatasourceInfo(object):
 
             if hasattr(self, 'file_name'):
 
-                logger.error('2) {} appears to be empty.'.format(self.file_name))
+                logger.error('  {} appears to be empty.'.format(self.file_name))
                 raise EmptyImage
 
             else:
 
-                logger.error('2) The datasource appears to be empty.')
+                logger.error('  The datasource appears to be empty.')
                 raise EmptyImage
 
         try:
@@ -1277,7 +1277,8 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
 
         self.datasource_info()
 
-    def _open_dataset(self, image_name, open2read):
+    @staticmethod
+    def _open_dataset(image_name, open2read):
 
         """
         Opens the image dataset.
@@ -2093,10 +2094,10 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
         else:
 
             if not passed:
-                logger.info('\nNo image or metadata file was given.\n')
+                logger.warning('  No image or metadata file was given.')
 
         # Check open files before closing.
-        atexit.register(self.close)
+        # atexit.register(self.close)
 
     def get_metadata(self, metadata, sensor):
 
@@ -2111,7 +2112,9 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
         elif sensor == 'Sentinel2':
             SentinelParser.__init__(self, metadata)
         else:
-            raise NameError('The {} sensor is not an option.'.format(sensor))
+
+            logger.error('The {} sensor is not an option.'.format(sensor))
+            raise NameError
 
     def copy(self):
         return copy.copy(self)
@@ -2518,7 +2521,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
     def __enter__(self):
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exc_type, exc_value, exc_traceback):
         self.close()
 
     def __del__(self):
@@ -2682,7 +2685,8 @@ class PanSharpen(object):
 
             bp.run()
 
-        del m_info, p_info
+        m_info = None
+        p_info = None
 
     def _warp_multi(self):
 
@@ -2692,7 +2696,7 @@ class PanSharpen(object):
             extent = p_info.extent
             cell_size = p_info.cellY
 
-        del p_info
+        p_info = None
 
         self.multi_warped = os.path.join(self.out_dir, '{}_warped.tif'.format(self.f_base))
 
@@ -2769,8 +2773,6 @@ def gdal_close_band(band_object_c):
         logger.error(gdal.GetLastErrorMsg())
         pass
 
-    del band_object_c
-
     band_object_c = None
 
     return band_object_c
@@ -2783,8 +2785,6 @@ def gdal_close_datasource(datasource_d):
     except:
         logger.error(gdal.GetLastErrorMsg())
         pass
-
-    del datasource_d
 
     datasource_d = None
 
@@ -3173,10 +3173,17 @@ class BlockFunc(object):
 
                     self.get_block_extent(i, j, n_rows, n_cols)
 
-                    orw = create_raster('none', None, in_memory=True, rows=n_rows, cols=n_cols,
-                                        bands=1, projection=self.proc_info.projection,
-                                        cellY=self.proc_info.cellY, cellX=self.proc_info.cellX,
-                                        left=self.extent_dict['UL'][0], top=self.extent_dict['UL'][1],
+                    orw = create_raster('none',
+                                        None,
+                                        in_memory=True,
+                                        rows=n_rows,
+                                        cols=n_cols,
+                                        bands=1,
+                                        projection=self.proc_info.projection,
+                                        cellY=self.proc_info.cellY,
+                                        cellX=self.proc_info.cellX,
+                                        left=self.extent_dict['UL'][0],
+                                        top=self.extent_dict['UL'][1],
                                         storage='byte')
 
                     # Rasterize the vector at the current block.
@@ -3191,6 +3198,8 @@ class BlockFunc(object):
                             image_arrays[imib] = image_array
 
                     v_info = None
+
+                    gdal.Unlink('none')
 
                 output = self.func(image_arrays, **self.kwargs)
 
@@ -3558,7 +3567,7 @@ def build_vrt(file_list, output_image, cell_size=0., **kwargs):
 
     out_ds = gdal.BuildVRT(output_image, np.array(file_list), options=vrt_options)
 
-    del out_ds
+    out_ds = None
 
 
 def _merge_dicts(dict1, dict2):
@@ -3702,7 +3711,7 @@ def warp(input_image,
             with ropen(input_image) as info:
                 logger.info(info.extent)
 
-            del info
+            info = None
 
             logger.info('')
 
@@ -3729,7 +3738,11 @@ def warp(input_image,
         return i_info
 
     else:
+
         out_ds = None
+
+        if output_image.endswith('.mem'):
+            gdal.Unlink(output_image)
 
 
 def translate(input_image,
@@ -4248,7 +4261,7 @@ def write2raster(out_array,
     if flush_final or new_file:
         out_rst.close_file()
 
-    del out_rst
+    out_rst = None
 
 
 class GetMinExtent(UpdateInfo):
