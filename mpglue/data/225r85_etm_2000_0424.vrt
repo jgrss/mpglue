@@ -1,0 +1,27 @@
+<VRTDataset rasterXSize="235" rasterYSize="224">
+  <SRS>PROJCS["South_America_Albers_Equal_Area_Conic",GEOGCS["GCS_South_American_1969",DATUM["South_American_Datum_1969",SPHEROID["GRS 1967",6378160,298.2499999999919,AUTHORITY["EPSG","7036"]],AUTHORITY["EPSG","6291"]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Albers_Conic_Equal_Area"],PARAMETER["standard_parallel_1",-5],PARAMETER["standard_parallel_2",-42],PARAMETER["latitude_of_center",-32],PARAMETER["longitude_of_center",-60],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]]]</SRS>
+  <GeoTransform> -4.5314797800451466e+04,  1.0000000000000000e+03,  0.0000000000000000e+00, -3.5329631270178076e+05,  0.0000000000000000e+00, -1.0000000000000000e+03</GeoTransform>
+  <VRTRasterBand dataType="Byte" band="1">
+    <NoDataValue>0</NoDataValue>
+    <ColorInterp>Gray</ColorInterp>
+    <ComplexSource>
+      <SourceFilename relativeToVRT="1">225r85_etm_2000_0424.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SourceProperties RasterXSize="235" RasterYSize="224" DataType="Byte" BlockXSize="235" BlockYSize="5" />
+      <SrcRect xOff="0" yOff="0" xSize="235" ySize="224" />
+      <DstRect xOff="0" yOff="0" xSize="235" ySize="224" />
+      <NODATA>0</NODATA>
+    </ComplexSource>
+  </VRTRasterBand>
+  <VRTRasterBand dataType="Byte" band="2">
+    <NoDataValue>0</NoDataValue>
+    <ComplexSource>
+      <SourceFilename relativeToVRT="1">225r85_etm_2000_0424.tif</SourceFilename>
+      <SourceBand>2</SourceBand>
+      <SourceProperties RasterXSize="235" RasterYSize="224" DataType="Byte" BlockXSize="235" BlockYSize="5" />
+      <SrcRect xOff="0" yOff="0" xSize="235" ySize="224" />
+      <DstRect xOff="0" yOff="0" xSize="235" ySize="224" />
+      <NODATA>0</NODATA>
+    </ComplexSource>
+  </VRTRasterBand>
+</VRTDataset>

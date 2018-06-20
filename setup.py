@@ -73,17 +73,11 @@ def get_packages():
 
 def get_package_data():
 
-    if platform.system() == 'Windows':
-
-        return {'': ['*.md', '*.txt'],
-                'mpglue': ['classification/*.pyx',
-                           'stats/*.pyx']}
-
-    else:
-
-        return {'': ['*.md', '*.txt'],
-                'mpglue': ['classification/*.pyx'
-                           'stats/*.pyx']}
+    return {'': ['*.md', '*.txt'],
+            'mpglue': ['classification/*.pyx',
+                       'data/*.tif',
+                       'data/*.vrt',
+                       'stats/*.pyx']}
 
 
 def get_console_dict():

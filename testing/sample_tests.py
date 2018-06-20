@@ -75,7 +75,6 @@ print(cl.sample_weight)
 
 # df_weights = cl.weight_samples(df_weights, 'WEIGHT == 1', 'WEIGHT != 1')
 # print(df_weights)
-sys.exit()
 
 
 class TestUM(unittest.TestCase):
