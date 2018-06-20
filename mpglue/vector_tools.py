@@ -2663,9 +2663,10 @@ def add_fields(input_vector,
             elif area_units == 'ha':
                 area *= 1e-04
 
-            if simplify_geometry:
-
+            if buffer_distance > 0:
                 geometry = geometry.Buffer(-buffer_distance)
+
+            if simplify_geometry:
 
                 field_values = {field_names[0]: area}
 
