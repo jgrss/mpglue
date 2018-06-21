@@ -4606,16 +4606,20 @@ def stats_func(im,
     if stat in stats_functions:
         out_array = stats_functions[stat](im, axis=0)
     elif stat == 'nancv':
+
         out_array = stats_functions['nanstd'](im, axis=0)
         out_array /= stats_functions['nanmean'](im, axis=0)
+
     elif stat == 'nanmode':
         out_array = sci_mode(im, axis=0, nan_policy='omit')
     elif stat == 'cv':
+
         out_array = im.std(axis=0)
         out_array /= im.mean(axis=0)
+
     elif stat == 'min':
-        out_array = im.max(axis=0)
-    elif stat == 'min':
+        out_array = im.min(axis=0)
+    elif stat == 'max':
         out_array = im.max(axis=0)
     elif stat == 'mean':
         out_array = im.mean(axis=0)
