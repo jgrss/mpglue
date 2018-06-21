@@ -7,7 +7,7 @@ Date Created: 9/24/2011
 
 from __future__ import division, print_function
 from future.utils import iteritems, viewitems
-from builtins import int, map
+from builtins import int, map, zip
 
 import os
 import sys
@@ -643,7 +643,7 @@ class ReadWrite(object):
 
         else:
 
-            logger.error('  The ``bands2open`` parameter must be a dict, list, or int.\n')
+            logger.error('  The `bands2open` parameter must be a dict, list, or int.\n')
             raise TypeError
 
         if self.sort_bands2open and not isinstance(bands2open, dict):
@@ -1445,15 +1445,18 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
         """
 
         if not isinstance(array2write, np.ndarray):
-            logger.error('\nThe array must be an ndarray.\n')
+
+            logger.error('  The array must be an ndarray.')
             raise ValueError
 
         if not isinstance(i, int) or (i < 0):
-            logger.error('\nThe row index must be a positive integer.\n')
+
+            logger.error('  The row index must be a positive integer.')
             raise ValueError
 
         if not isinstance(j, int) or (j < 0):
-            logger.error('\nThe column index must be a positive integer.\n')
+
+            logger.error('  The column index must be a positive integer.')
             raise ValueError
 
         if isinstance(band, int):
@@ -2841,8 +2844,20 @@ def gdal_get_band(datasource_b, band_position):
     return datasource_b.GetRasterBand(band_position)
 
 
-def _parallel_blocks(out_image, band_list, ii, jj, y_offset, x_offset,
-                     nn_rows, nn_cols, left, top, cellY, cellX, projection, **kwargs):
+def _parallel_blocks(out_image,
+                     band_list,
+                     ii,
+                     jj,
+                     y_offset,
+                     x_offset,
+                     nn_rows,
+                     nn_cols,
+                     left,
+                     top,
+                     cellY,
+                     cellX,
+                     projection,
+                     **kwargs):
 
     """
     Args:
@@ -2868,14 +2883,23 @@ def _parallel_blocks(out_image, band_list, ii, jj, y_offset, x_offset,
     d_name_, f_name_ = os.path.split(out_image)
     f_base_, f_ext_ = os.path.splitext(f_name_)
 
-    d_name_ = '{}/temp'.format(d_name_)
+    d_name_ = os.path.join(d_name_, 'temp')
 
     rsn = '{:f}'.format(abs(np.random.randn(1)[0]))[-4:]
 
-    out_image_tile = '{}/{}_{}{}'.format(d_name_, f_base_, rsn, f_ext_)
+    out_image_tile = os.path.join(d_name_, '{}_{}{}'.format(f_base_, rsn, f_ext_))
 
-    datasource = gdal_create(out_image_tile, driver_pp, nn_rows, nn_cols, 1, STORAGE_DICT_GDAL['float32'],
-                             left, top, cellY, cellX, projection)
+    datasource = gdal_create(out_image_tile,
+                             driver_pp,
+                             nn_rows,
+                             nn_cols,
+                             1,
+                             STORAGE_DICT_GDAL['float32'],
+                             left,
+                             top,
+                             cellY,
+                             cellX,
+                             projection)
 
     band_object = gdal_get_band(datasource, 1)
 
@@ -2895,16 +2919,6 @@ def _parallel_blocks(out_image, band_list, ii, jj, y_offset, x_offset,
 
     band_object = gdal_close_band(band_object)
     datasource = gdal_close_datasource(datasource)
-
-    # out_raster.write_array(output)
-    #
-    # out_raster.close_all()
-    #
-    # out_raster = None
-    #
-    # out_info_tile.close()
-    #
-    # out_info_tile = None
 
     return out_image_tile
 
@@ -2944,18 +2958,30 @@ class BlockFunc(object):
         None, writes to ``out_image``.
     """
 
-    def __init__(self, func, image_infos,
-                 out_image, out_info,
-                 band_list=None, proc_info=None,
-                 y_offset=None, x_offset=None,
-                 y_pad=None, x_pad=None,
-                 block_rows=2048, block_cols=2048,
-                 be_quiet=False, d_types=None,
+    def __init__(self,
+                 func,
+                 image_infos,
+                 out_image,
+                 out_info,
+                 band_list=None,
+                 proc_info=None,
+                 y_offset=None,
+                 x_offset=None,
+                 y_pad=None,
+                 x_pad=None,
+                 block_rows=2000,
+                 block_cols=2000,
+                 be_quiet=False,
+                 d_types=None,
                  print_statement=None,
-                 out_attributes=None, write_array=True,
-                 boundary_file=None, mask_file=None,
-                 n_jobs=1, close_files=True,
+                 out_attributes=None,
+                 write_array=True,
+                 boundary_file=None,
+                 mask_file=None,
+                 n_jobs=1,
+                 close_files=True,
                  no_data_values=None,
+                 overwrite=False,
                  **kwargs):
 
         self.func = func
@@ -2994,7 +3020,14 @@ class BlockFunc(object):
             self.x_offset = [0] * len(self.image_infos)
 
         if not isinstance(self.out_image, str) and write_array:
-            raise NameError('The output image was not given.')
+
+            logger.error('  The output image was not given.')
+            raise NameError
+
+        if overwrite:
+
+            if os.path.isfile(self.out_image):
+                os.remove(self.out_image)
 
         if self.n_jobs in [0, 1]:
 
@@ -3002,31 +3035,48 @@ class BlockFunc(object):
                 self.proc_info = self.image_infos[0]
 
             for imi in range(0, len(self.image_infos)):
+
                 if not isinstance(self.image_infos[imi], ropen):
+
                     if not isinstance(self.image_infos[imi], GetMinExtent):
+
                         if not isinstance(self.image_infos[imi], ImageInfo):
-                            raise ropenError('The image info list should be instances of `ropen`, `GetMinExtent`, or `ImageInfo`.')
+
+                            logger.error('  The image info list should be instances of `ropen`, `GetMinExtent`, or `ImageInfo`.')
+                            raise ropenError
 
         if not isinstance(self.band_list, list) and isinstance(self.band_list, int):
             self.band_list = [self.band_list] * len(self.image_infos)
         else:
 
             if self.band_list:
+
                 if len(self.band_list) != len(self.image_infos):
-                    raise LenError('The band list and image info list much be the same length.')
+
+                    logger.error('  The band list and image info list much be the same length.')
+                    raise LenError
+
             else:
                 self.band_list = [1] * len(self.image_infos)
 
         if isinstance(out_image, str):
+
             if not isinstance(self.out_info, ropen):
+
                 if not isinstance(self.out_info, GetMinExtent):
-                    raise ropenError('The output image object is not a `raster_tools` instance.')
+
+                    logger.error('  The output image object is not a `raster_tools` instance.')
+                    raise ropenError
 
         if not isinstance(self.image_infos, list):
-            raise TypeError('The image infos must be given as a list.')
+
+            logger.error('  The image infos must be given as a list.')
+            raise TypeError
 
         if not len(self.y_offset) == len(self.x_offset) == len(self.image_infos):
-            raise LenError('The offset lists and input image info lists must be the same length.')
+
+            logger.error('  The offset lists and input image info lists must be the same length.')
+            raise LenError
 
     def run(self):
 
@@ -3158,11 +3208,12 @@ class BlockFunc(object):
                 # Check for no data values.
                 if isinstance(self.no_data_values, list):
 
-                    for no_data, im_block in itertools.izip(self.no_data_values, image_arrays):
+                    for no_data, im_block in zip(self.no_data_values, image_arrays):
 
                         if isinstance(no_data, int) or isinstance(no_data, float):
 
                             if im_block.max() == no_data:
+
                                 skip_block = True
                                 break
 
@@ -3201,7 +3252,8 @@ class BlockFunc(object):
 
                     gdal.Unlink('none')
 
-                output = self.func(image_arrays, **self.kwargs)
+                output = self.func(image_arrays,
+                                   **self.kwargs)
 
                 if isinstance(output, tuple):
 
@@ -4033,7 +4085,7 @@ class create_raster(CreateDriver, FileManager, UpdateInfo):
                     # out_rst_ = self.driver.Create(out_name, out_cols, out_rows, bands, storage_type, parameters)
 
                     # set the geo-transformation
-                    self.datasource.SetGeoTransform([lefto, cellY, 0., topo, 0., cellX])
+                    self.datasource.SetGeoTransform([lefto, cellY, 0.0, topo, 0.0, cellX])
 
                     # set the projection
                     self.datasource.SetProjection(projection)
@@ -4055,12 +4107,13 @@ class create_raster(CreateDriver, FileManager, UpdateInfo):
                         try:
                             os.remove(out_name)
                         except:
-                            logger.warning('\nCould not delete {}.\nWill attempt to write over the image'.format(out_name))
+                            logger.warning('  Could not delete {}.\nWill attempt to write over the image'.format(out_name))
 
                 else:
 
                     if os.path.isfile(out_name):
-                        logger.warning('\n{} already exists.\nWill not attempt to overwrite.'.format(out_name))
+
+                        logger.warning(' {} already exists.\nWill not attempt to overwrite.'.format(out_name))
                         return
 
             CreateDriver.__init__(self,
@@ -4104,7 +4157,7 @@ class create_raster(CreateDriver, FileManager, UpdateInfo):
     def __enter__(self):
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exc_type, exc_value, exc_traceback):
         self.close_all()
 
 
@@ -4612,6 +4665,7 @@ def pixel_stats(input_image,
                 block_rows=1000,
                 block_cols=1000,
                 out_storage='float32',
+                overwrite=False,
                 n_jobs=1):
 
     """
@@ -4634,6 +4688,7 @@ def pixel_stats(input_image,
         block_rows (Optional[int]): The number of rows in the block. Default is 1000.
         block_cols (Optional[int]): The number of columns in the block. Default is 1000.
         out_storage (Optional[str]): The output raster storage. Default is 'float32'.
+        overwrite (Optional[bool]): Whether to overwrite the output image. Default is False.
         n_jobs (Optional[int]): The number of blocks to process in parallel. Default is 1.
 
     Examples:
@@ -4654,12 +4709,6 @@ def pixel_stats(input_image,
     Returns:
         None, writes to ``output_image``.
     """
-
-    # Bottleneck
-    try:
-        import bottleneck as bn
-    except ImportError:
-        raise ImportError('Bottleneck must be installed to use pixel stats.')
 
     if stat not in ['min', 'max', 'mean', 'median', 'mode', 'var', 'std', 'cv', 'sum']:
 
@@ -4686,14 +4735,14 @@ def pixel_stats(input_image,
 
     with ropen(input_image) as i_info:
 
-        info_list = [input_image]
+        info_list = [i_info]
 
         if isinstance(bands2process, list):
             bands2process = [bands2process]
         elif isinstance(bands2process, int):
 
             if bands2process == -1:
-                bands2process = [range(1, i_info.bands+1)]
+                bands2process = [list(range(1, i_info.bands+1))]
             else:
                 bands2process = [bands2process]
 
@@ -4714,12 +4763,13 @@ def pixel_stats(input_image,
                        o_info,
                        proc_info=i_info,
                        print_statement='\nGetting pixel stats for {} ...\n'.format(input_image),
-                       d_type='float32',
+                       d_types=['float32'],
                        be_quiet=be_quiet,
                        band_list=bands2process,
                        n_jobs=n_jobs,
                        block_rows=block_rows,
                        block_cols=block_cols,
+                       overwrite=overwrite,
                        **params)
 
         bp.run()
