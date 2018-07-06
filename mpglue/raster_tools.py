@@ -143,7 +143,7 @@ DRIVER_DICT = {'.bin': 'ENVI',
                '.vrt': 'VRT'}
 
 
-FORMAT_DICT = dict((v, k) for k, v in list(iteritems(DRIVER_DICT)))
+FORMAT_DICT = dict((v, k) for k, v in iteritems(DRIVER_DICT))
 
 STORAGE_DICT = {'byte': 'uint8',
                 'int16': 'int16',
@@ -155,7 +155,7 @@ STORAGE_DICT = {'byte': 'uint8',
                 'float32': 'float32',
                 'float64': 'float64'}
 
-STORAGE_DICT_r = {v: k for k, v in list(iteritems(STORAGE_DICT))}
+STORAGE_DICT_r = dict((v, k) for k, v in iteritems(STORAGE_DICT))
 
 STORAGE_DICT_GDAL = {'unknown': gdal.GDT_Unknown,
                      'byte': gdal.GDT_Byte,
@@ -185,14 +185,14 @@ RESAMPLE_DICT = dict(average=gdal.GRA_Average,
                      nearest=gdal.GRA_NearestNeighbour,
                      cubic=gdal.GRA_Cubic)
 
-PANSHARPEN_WEIGHTS = dict(oli_tirs=dict(bw=.2,
-                                        gw=1.,
-                                        rw=1.,
-                                        iw=.1),
-                          etm=dict(bw=.1,
-                                   gw=1.,
-                                   rw=1.,
-                                   iw=1.))
+PANSHARPEN_WEIGHTS = dict(oli_tirs=dict(bw=0.2,
+                                        gw=1.0,
+                                        rw=1.0,
+                                        iw=0.1),
+                          etm=dict(bw=0.1,
+                                   gw=1.0,
+                                   rw=1.0,
+                                   iw=1.0))
 
 GOOGLE_CLOUD_SENSORS = dict(oli_tirs='LC08',
                             etm='LE07',
