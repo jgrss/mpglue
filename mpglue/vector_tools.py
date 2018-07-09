@@ -1043,7 +1043,7 @@ class Transform(object):
     Examples:
         >>> from mpglue.vector_tools import Transform
         >>>
-        >>> ptr = Transform(740000., 2260000., 102033, 4326)
+        >>> ptr = Transform(740000.0, 2260000.0, 102033, 4326)
         >>> print(ptr.x, ptr.y)
         >>> print(ptr.x_transform, ptr.y_transform)
     """

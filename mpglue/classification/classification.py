@@ -699,7 +699,8 @@ class Samples(object):
         Split samples for training and testing.
         
         Args:
-            file_name (str or 2d array): Input text file or 2d array with samples and labels.
+            file_name (str or 2d array or DataFrame): Input text file, 2d array, or Pandas DataFrame
+                with samples and labels.
             perc_samp (Optional[float]): Percent to sample from all samples. Default is .9. This parameter
                 samples from the entire set of samples, regardless of which class they are in.
 
@@ -780,7 +781,12 @@ class Samples(object):
 
         # Open the data samples.
         if isinstance(self.file_name, str):
+
             self.df = pd.read_csv(self.file_name, sep=',')
+
+        elif isinstance(self.file_name, pd.DataFrame):
+
+            self.df = self.file_name
 
         elif isinstance(self.file_name, np.ndarray):
 
