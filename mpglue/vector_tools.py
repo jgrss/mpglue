@@ -566,7 +566,7 @@ def merge_vectors(shps2merge, merged_shapefile):
     of_base, of_ext = os.path.splitext(of_name)
 
     if not os.path.isdir(od_name):
-        os.makedirs()
+        os.makedirs(od_name)
 
     associated_files = os.listdir(d_name)
 
