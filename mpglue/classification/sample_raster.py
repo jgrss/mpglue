@@ -459,10 +459,12 @@ class SampleImage(object):
         # Convert position items to a list.
         c_list = list(iteritems(self.coords_offsets))
 
+        # Get the number of sample points.
         feature_length = len(self.coords_offsets)
 
         if self.n_jobs != 0:
 
+            # Sample the image
             value_arr = Parallel(n_jobs=self.n_jobs)(delayed(_sample_parallel)(f_bd,
                                                                                self.image_file,
                                                                                c_list,
@@ -483,37 +485,33 @@ class SampleImage(object):
             # 1d of n length labels array
             labels = np.zeros(feature_length, dtype='float32')
 
-            # Convert position items to a list.
-            co_list = list(iteritems(self.coords_offsets))
-
-            import pdb
-            pdb.set_trace()
-
-            # Transform the coordinate to match the image's coordinates.
-            if isinstance(self.transform_xy_proj, int) or isinstance(self.transform_xy_proj, str):
-                grid_envelope = dict(left=x,
-                                     right=x,
-                                     top=y,
-                                     bottom=y)
-
-                ptr = vector_tools.TransformExtent(grid_envelope,
-                                                   self.m_info.projection,
-                                                   to_epsg=self.transform_xy_proj)
-
-                x = ptr.left
-                y = ptr.top
-
-
-
-
-            # Sort by feature index position.
-            for vi, values in enumerate(sorted(co_list)):
+            # Sort by feature index position and
+            #   get the x, y coordinates.
+            for vi, values in enumerate(sorted(c_list)):
 
                 # values[0] = feature index position
                 # values[1] = list of coordinate data
 
+                x = values[1][0]
+                y = values[1][1]
+
+                # Transform the x,y coordinates.
+                if isinstance(self.transform_xy_proj, int) or isinstance(self.transform_xy_proj, str):
+
+                    grid_envelope = dict(left=x,
+                                         right=x,
+                                         top=y,
+                                         bottom=y)
+
+                    ptr = vector_tools.TransformExtent(grid_envelope,
+                                                       self.m_info.projection,
+                                                       to_epsg=self.transform_xy_proj)
+
+                    x = ptr.left
+                    y = ptr.top
+
                 # Fill index + x & y coordinates
-                xy_coordinates[vi] = [vi, values[1][0], values[1][1]]
+                xy_coordinates[vi] = [vi, x, y]
 
                 # Fill labels
                 labels[vi] = values[1][4]
