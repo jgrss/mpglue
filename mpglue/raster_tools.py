@@ -3603,6 +3603,7 @@ def build_vrt(file_list,
               output_image,
               cell_size=0.0,
               return_datasource=False,
+              overwrite=False,
               **kwargs):
 
     """
@@ -3613,12 +3614,28 @@ def build_vrt(file_list,
         output_image (str): The output image.
         cell_size (Optional[float]): The output cell size. Default is 0.
         return_datasource (Optional[bool]: Whether to return the raster datasource. Default is False.
+        overwrite (Optional[bool]): Whether to overwrite an existing VRT file. Default is False.
         kwargs:
-             resolution=None, outputBounds=None, targetAlignedPixels=None,
-             separate=None, bandList=None, addAlpha=None, resampleAlg=None, outputSRS=None,
-             allowProjectionDifference=None, srcNodata=None, VRTNodata=None, hideNodata=None,
-             callback=None, callback_data=None
+             resolution=None,
+             outputBounds=None,
+             targetAlignedPixels=None,
+             separate=None,
+             bandList=None,
+             addAlpha=None,
+             resampleAlg=None,
+             outputSRS=None,
+             allowProjectionDifference=None,
+             srcNodata=None,
+             VRTNodata=None,
+             hideNodata=None,
+             callback=None,
+             callback_data=None
     """
+
+    if overwrite:
+
+        if os.path.isfile(output_image):
+            os.remove(output_image)
 
     vrt_options = gdal.BuildVRTOptions(xRes=cell_size,
                                        yRes=cell_size,
