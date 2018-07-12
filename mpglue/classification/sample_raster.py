@@ -46,16 +46,12 @@ except ImportError:
 
 def _sample_parallel(band_position, image_name, c_list, accuracy, feature_length):
 
-    datasource = gdal.Open(image_name, GA_ReadOnly)
+    datasource = gdal.Open(image_name,
+                           GA_ReadOnly)
 
     band_object = datasource.GetRasterBand(band_position)
 
-    # image_info = raster_tools.ropen(image_name)
-
-    # print 'Band {:d} of {:d} ...'.format(band_position, image_info.bands)
     logger.info('Band {:d} of {:d} ...'.format(band_position, datasource.RasterCount))
-
-    # image_info.get_band(band_position)
 
     # 1d array to store image values.
     value_list = np.zeros(feature_length, dtype='float32')
@@ -80,8 +76,6 @@ def _sample_parallel(band_position, image_name, c_list, accuracy, feature_length
 
         # Update the list with raster values.
         value_list[vi] = pixel_value
-
-    # image_info.close()
 
     band_object = None
     datasource = None
@@ -119,7 +113,9 @@ class SampleImage(object):
                  use_extent=True,
                  append_name=None,
                  sql_expression_attr=None,
-                 sql_expression_field='Id'):
+                 sql_expression_field='Id',
+                 check_corrupted_bands=True,
+                 verbose=1):
 
         self.points_file = points_file
         self.image_file = image_file
@@ -133,6 +129,12 @@ class SampleImage(object):
         self.append_name = append_name
         self.sql_expression_attr = sql_expression_attr
         self.sql_expression_field = sql_expression_field
+        self.check_corrupted_bands = check_corrupted_bands
+        self.verbose = verbose
+
+        self.count_dict = None
+        self.class_list = None
+        self.n_classes = None
 
         self.d_type = 'uint8' if self.field_type == 'int' else 'float32'
 
@@ -143,20 +145,22 @@ class SampleImage(object):
             raise IOError('\n{} does not exist. It should be a raster image.'.format(self.image_file))
 
         if self.neighbors and (self.n_jobs != 0):
+
             logger.info('Cannot sample neighbors in parallel, so setting ``n_jobs`` to 0.')
             self.n_jobs = 0
 
         self.d_name_points, f_name_points = os.path.split(self.points_file)
-        self.f_base_points, __ = os.path.splitext(f_name_points)
+        self.f_base_points = os.path.splitext(f_name_points)[0]
 
         # Filter by SQL expression.
         if self.sql_expression_attr:
             self.points_file = self.sql()
 
-        __, self.f_name_rst = os.path.split(self.image_file)
-        self.f_base_rst, __ = os.path.splitext(self.f_name_rst)
+        self.f_name_rst = os.path.split(self.image_file)[1]
+        self.f_base_rst = os.path.splitext(self.f_name_rst)[0]
 
         if not self.out_dir:
+
             self.out_dir = copy(self.d_name_points)
             logger.info('\nNo output directory was given. Results will be saved to {}'.format(self.out_dir))
 
@@ -194,24 +198,29 @@ class SampleImage(object):
 
     def setup_names(self):
 
-        """File names and directories"""
+        """
+        Sets the file and directory names
+        """
 
         # self.out_dir = self.out_dir.replace('\\', '/')
 
         # Open the samples.
         self.shp_info = vector_tools.vopen(self.points_file)
 
-        # Convert polygon to points.
         if 'POINT' not in self.shp_info.shp_geom_name:
 
+            # Convert polygon to points.
             self.points_file = self.convert2points()
 
             # Close the polygon shapefile
             self.shp_info.close()
 
-            self.d_name_points, f_name_points = os.path.split(self.points_file)
-            self.f_base_points, __ = os.path.splitext(f_name_points)
+            self.shp_info = None
 
+            self.d_name_points, f_name_points = os.path.split(self.points_file)
+            self.f_base_points = os.path.splitext(f_name_points)[0]
+
+            # Open the samples
             self.shp_info = vector_tools.vopen(self.points_file)
 
         self.n_feas = self.shp_info.n_feas
@@ -247,31 +256,47 @@ class SampleImage(object):
         # create array of zeros for the class counter
         # self.count_arr = np.zeros(len(self.n_classes), dtype='uint8')
         self.count_dict = dict()
+
         for nc in self.class_list:
             self.count_dict[nc] = 0
 
     def convert2points(self):
 
+        """
+        Converts polygons to points
+
+        Returns:
+            Name of converted points file
+        """
+
         out_points = os.path.join(self.d_name_points, '{}_points.shp'.format(self.f_base_points))
 
         if not os.path.isfile(out_points):
 
-            poly2points(self.points_file, out_points, self.image_file,
-                        class_id=self.class_id, field_type=self.field_type, use_extent=self.use_extent)
+            poly2points(self.points_file,
+                        out_points,
+                        self.image_file,
+                        class_id=self.class_id,
+                        field_type=self.field_type,
+                        use_extent=self.use_extent)
 
         return out_points
 
     def get_class_count(self):
 
         """
-        Input class counts
+        Gets the class counts
         """
 
         try:
+
             self.class_list = [self.shp_info.lyr.GetFeature(n).GetField(self.class_id)
                                for n in range(0, self.shp_info.n_feas)]
+
         except:
-            raise IOError('\nField <{}> does not exist or there is a feature issue.\n'.format(self.class_id))
+
+            logger.error('  Field <{}> does not exist or there is a feature issue.\n'.format(self.class_id))
+            raise IOError
 
         if 0 in self.class_list:
             self.zs = True
@@ -282,26 +307,28 @@ class SampleImage(object):
 
         self.n_classes = len(self.class_list)
 
-        # self.n_classes = sorted(reduce(lambda x, y: x + y if y[0] not in x else x, map(lambda x: [x], self.n_classes)))
-
     def sample(self):
 
-        logger.info('  \nSampling {} ...\n'.format(self.f_name_rst))
+        if self.verbose > 0:
+            logger.info('  Sampling {} ...'.format(self.f_name_rst))
 
         # Open the image.
         with raster_tools.ropen(self.image_file) as self.m_info:
 
             # Check if any of the bands are corrupted.
-            self.m_info.check_corrupted_bands()
+            if self.check_corrupted_bands:
 
-            if self.m_info.corrupted_bands:
+                self.m_info.check_corrupted_bands()
 
-                logger.info()
-                logger.info('The following bands appear to be corrupted:')
-                logger.info(', '.join(self.m_info.corrupted_bands))
-                sys.exit()
+                if self.m_info.corrupted_bands:
 
-            self.write_headers()
+                    logger.info()
+                    logger.info('The following bands appear to be corrupted:')
+                    logger.info(', '.join(self.m_info.corrupted_bands))
+
+                    raise ValueError
+
+            headers = self.write_headers()
 
             self.fill_dictionary()
 
@@ -310,9 +337,11 @@ class SampleImage(object):
             if len(self.coords_offsets) == 0:
                 self.finish()
 
+            # Sample each image layer
             value_array = self.sample_image()
 
-            self.write2file(value_array)
+            self.write2file(value_array,
+                            headers)
 
         self.shp_info.close()
 
@@ -328,20 +357,24 @@ class SampleImage(object):
         Writes text headers
         """
 
-        self.headers = ['Id', 'X', 'Y']
+        headers = ['Id', 'X', 'Y']
 
         # Then <image name.band position> format.
-        [self.headers.append('{}.{:d}'.format(self.f_base_rst, b)) for b in range(1, self.m_info.bands+1)]
+        [headers.append('{}.{:d}'.format(self.f_base_rst, b)) for b in range(1, self.m_info.bands+1)]
 
-        self.headers.append('response')
+        headers.append('response')
 
-    def write2file(self, value_array):
+        return headers
+
+    def write2file(self,
+                   value_array,
+                   headers):
 
         """
         Writes samples to file
         """
 
-        df = pd.DataFrame(value_array, columns=self.headers)
+        df = pd.DataFrame(value_array, columns=headers)
         df.to_csv(self.data_file, sep=',', index=False)
 
     def fill_dictionary(self):
@@ -361,32 +394,40 @@ class SampleImage(object):
         else:
             self.updater = 1
 
-        # Iterate over each feature
+        def get_xy(fea):
+
+            """
+            Gets the x, y coordinate of the point
+            """
+
+            geometry = fea.GetGeometryRef()
+
+            # Get X,Y coordinates.
+            return geometry.GetX(), geometry.GetY()
+
+        # Iterate over each point feature
         #   in the vector file.
         for n in range(0, self.n_feas):
 
+            # Get the feature object.
+            feature = self.shp_info.lyr.GetFeature(n)
+
             # Get the current point.
-            self.feature = self.shp_info.lyr.GetFeature(n)
-
-            # Get point geometry.
-            geometry = self.feature.GetGeometryRef()
-
-            # Get X,Y coordinates.
-            x = geometry.GetX()
-            y = geometry.GetY()
+            x, y = get_xy(feature)
 
             # Get the class label.
-            pt_id = self.feature.GetField(self.class_id)
+            pt_id = feature.GetField(self.class_id)
 
             # Check if the sample points fall
-            #   within [current] raster boundary.
+            #   within the [current] raster boundary.
             if vector_tools.xy_within_image(x, y, self.m_info):
 
                 # Get x, y coordinates and offsets.
-                x, y, x_off, y_off = vector_tools.get_xy_offsets(image_info=self.m_info, x=x, y=y)
+                x, y, x_off, y_off = vector_tools.get_xy_offsets(image_info=self.m_info,
+                                                                 x=x,
+                                                                 y=y)
 
                 # Update the counter array with the current label.
-                # self.count_arr[self.n_classes.index(pt_id)] += self.updater
                 self.count_dict[int(pt_id)] += self.updater
 
                 x = float('{:.6f}'.format(x))
@@ -396,8 +437,8 @@ class SampleImage(object):
                 #   and class value to the dictionary.
                 self.coords_offsets[n] = [x, y, x_off, y_off, pt_id]
 
-            self.feature.Destroy()
-            self.feature = None
+            feature.Destroy()
+            feature = None
 
     def sample_image(self):
 
@@ -647,9 +688,9 @@ def sample_raster(points,
                 2 :: One point shapefile    ---> Many raster files
                 3 :: Many point shapefiles  ---> Many raster files
         class_id (Optional[str]): Shapefile field id containing class values. Default is 'Id'.
-        accuracy (Optional[bool]): Whether to compute accuracy from ``image``. Default is False.
-        field_type (Optional[str]): The field type of ``class_id``. Default is 'int'.
-        use_extent (Optional[bool]): Whether to use the extent of ``image``. Default is True.
+        accuracy (Optional[bool]): Whether to compute accuracy from `image`. Default is False.
+        field_type (Optional[str]): The field type of `class_id`. Default is 'int'.
+        use_extent (Optional[bool]): Whether to use the extent of `image` for `poly2points`. Default is True.
         sql_expression_field (Optional[str]): Default is 'Id'.
         sql_expression_attr (Optional[str]): Default is [].
         neighbors (Optional[bool]): Whether to sample neighboring pixels. Default is False.
@@ -669,9 +710,17 @@ def sample_raster(points,
     # 1:1
     if option == 1:
 
-        si = SampleImage(points, image, out_dir, class_id, accuracy=accuracy, n_jobs=n_jobs,
-                         field_type=field_type, use_extent=use_extent, neighbors=neighbors,
-                         sql_expression_attr=sql_expression_attr, sql_expression_field=sql_expression_field)
+        si = SampleImage(points,
+                         image,
+                         out_dir,
+                         class_id,
+                         accuracy=accuracy,
+                         n_jobs=n_jobs,
+                         field_type=field_type,
+                         use_extent=use_extent,
+                         neighbors=neighbors,
+                         sql_expression_attr=sql_expression_attr,
+                         sql_expression_field=sql_expression_field)
 
         si.sample()
 
@@ -680,7 +729,7 @@ def sample_raster(points,
 
         search_ext = ['*.{}'.format(se) for se in search_ext]
 
-        image_list = []
+        image_list = list()
         for se in search_ext:
             [image_list.append(fn) for fn in fnmatch.filter(os.listdir(image), se)]
 
@@ -688,9 +737,17 @@ def sample_raster(points,
 
             im_ = os.path.join(image, im)
 
-            si = SampleImage(points, im_, out_dir, class_id, accuracy=accuracy, n_jobs=n_jobs,
-                             field_type=field_type, use_extent=use_extent, neighbors=neighbors,
-                             sql_expression_attr=sql_expression_attr, sql_expression_field=sql_expression_field)
+            si = SampleImage(points,
+                             im_,
+                             out_dir,
+                             class_id,
+                             accuracy=accuracy,
+                             n_jobs=n_jobs,
+                             field_type=field_type,
+                             use_extent=use_extent,
+                             neighbors=neighbors,
+                             sql_expression_attr=sql_expression_attr,
+                             sql_expression_field=sql_expression_field)
 
             si.sample()
 
@@ -703,9 +760,17 @@ def sample_raster(points,
 
             pt_ = os.path.join(points, pt)
 
-            si = SampleImage(pt_, image, out_dir, class_id, accuracy=accuracy, n_jobs=n_jobs,
-                             field_type=field_type, use_extent=use_extent, neighbors=neighbors,
-                             sql_expression_attr=sql_expression_attr, sql_expression_field=sql_expression_field)
+            si = SampleImage(pt_,
+                             image,
+                             out_dir,
+                             class_id,
+                             accuracy=accuracy,
+                             n_jobs=n_jobs,
+                             field_type=field_type,
+                             use_extent=use_extent,
+                             neighbors=neighbors,
+                             sql_expression_attr=sql_expression_attr,
+                             sql_expression_field=sql_expression_field)
 
             si.sample()
 
