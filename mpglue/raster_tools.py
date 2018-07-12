@@ -3599,7 +3599,11 @@ def read(image2open=None,
             return _read_parallel(image2open, i_info, bands2open, i, j, rrows, ccols, n_jobs, d_type, predictions)
 
 
-def build_vrt(file_list, output_image, cell_size=0.0, return_datasource=False, **kwargs):
+def build_vrt(file_list,
+              output_image,
+              cell_size=0.0,
+              return_datasource=False,
+              **kwargs):
 
     """
     Build a VRT file
@@ -3621,7 +3625,7 @@ def build_vrt(file_list, output_image, cell_size=0.0, return_datasource=False, *
                                        **kwargs)
 
     out_ds = gdal.BuildVRT(output_image,
-                           np.array(file_list),
+                           file_list,
                            options=vrt_options)
 
     if return_datasource:
