@@ -44,7 +44,11 @@ except ImportError:
     raise ImportError('GDAL is not installed')
 
 
-def _sample_parallel(band_position, image_name, c_list, accuracy, feature_length):
+def _sample_parallel(band_position,
+                     image_name,
+                     c_list,
+                     accuracy,
+                     feature_length):
 
     datasource = gdal.Open(image_name,
                            GA_ReadOnly)
@@ -97,8 +101,8 @@ class SampleImage(object):
         n_jobs (Optional[int])
         neighbors (Optional[bool])
         field_type (Optional[str])
-        transform_xy_proj (Optional[int or proj4 str]): A transformation for the x,y coordinates that should match
-            `image_file`. Default is None.
+        transform_xy_proj (Optional[int or proj4 str]): A transformation for the x, y coordinate output.
+            Default is None.
         use_extent (Optional[bool])
         append_name (Optional[str]): A base name to append to the samples file name.
         check_corrupted_bands (Optional[bool]): Whether to perform a corrupted band check. Default is True.
@@ -421,21 +425,6 @@ class SampleImage(object):
             # Get the current point.
             x, y = get_xy(feature)
 
-            # Transform the coordinate to match the image's coordinates.
-            if isinstance(self.transform_xy_proj, int) or isinstance(self.transform_xy_proj, str):
-
-                grid_envelope = dict(left=x,
-                                     right=x,
-                                     top=y,
-                                     bottom=y)
-
-                ptr = vector_tools.TransformExtent(grid_envelope,
-                                                   self.transform_xy_proj,
-                                                   to_epsg=self.m_info.projection)
-
-                x = ptr.left
-                y = ptr.top
-
             # Get the class label.
             pt_id = feature.GetField(self.class_id)
 
@@ -497,6 +486,26 @@ class SampleImage(object):
             # Convert position items to a list.
             co_list = list(iteritems(self.coords_offsets))
 
+            import pdb
+            pdb.set_trace()
+
+            # Transform the coordinate to match the image's coordinates.
+            if isinstance(self.transform_xy_proj, int) or isinstance(self.transform_xy_proj, str):
+                grid_envelope = dict(left=x,
+                                     right=x,
+                                     top=y,
+                                     bottom=y)
+
+                ptr = vector_tools.TransformExtent(grid_envelope,
+                                                   self.m_info.projection,
+                                                   to_epsg=self.transform_xy_proj)
+
+                x = ptr.left
+                y = ptr.top
+
+
+
+
             # Sort by feature index position.
             for vi, values in enumerate(sorted(co_list)):
 
@@ -511,7 +520,11 @@ class SampleImage(object):
 
             # Combine all of the data.
             try:
-                value_arr = np.c_[xy_coordinates, value_arr, labels]
+
+                value_arr = np.c_[xy_coordinates,
+                                  value_arr,
+                                  labels]
+
             except ArrayOffsetError:
                 raise ArrayOffsetError('Check the projections and extents of the datasets.')
 
