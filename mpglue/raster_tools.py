@@ -3599,7 +3599,7 @@ def read(image2open=None,
             return _read_parallel(image2open, i_info, bands2open, i, j, rrows, ccols, n_jobs, d_type, predictions)
 
 
-def build_vrt(file_list, output_image, cell_size=0., **kwargs):
+def build_vrt(file_list, output_image, cell_size=0.0, return_datasource=False, **kwargs):
 
     """
     Build a VRT file
@@ -3608,6 +3608,7 @@ def build_vrt(file_list, output_image, cell_size=0., **kwargs):
         file_list (str list): A list of files.
         output_image (str): The output image.
         cell_size (Optional[float]): The output cell size. Default is 0.
+        return_datasource (Optional[bool]: Whether to return the raster datasource. Default is False.
         kwargs:
              resolution=None, outputBounds=None, targetAlignedPixels=None,
              separate=None, bandList=None, addAlpha=None, resampleAlg=None, outputSRS=None,
@@ -3615,11 +3616,18 @@ def build_vrt(file_list, output_image, cell_size=0., **kwargs):
              callback=None, callback_data=None
     """
 
-    vrt_options = gdal.BuildVRTOptions(xRes=cell_size, yRes=cell_size, **kwargs)
+    vrt_options = gdal.BuildVRTOptions(xRes=cell_size,
+                                       yRes=cell_size,
+                                       **kwargs)
 
-    out_ds = gdal.BuildVRT(output_image, np.array(file_list), options=vrt_options)
+    out_ds = gdal.BuildVRT(output_image,
+                           np.array(file_list),
+                           options=vrt_options)
 
-    out_ds = None
+    if return_datasource:
+        return out_ds
+    else:
+        out_ds = None
 
 
 def _merge_dicts(dict1, dict2):
