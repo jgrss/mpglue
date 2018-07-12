@@ -97,8 +97,12 @@ class SampleImage(object):
         n_jobs (Optional[int])
         neighbors (Optional[bool])
         field_type (Optional[str])
+        transform_xy_proj (Optional[int or proj4 str]): A transformation for the x,y coordinates that should match
+            `image_file`. Default is None.
         use_extent (Optional[bool])
         append_name (Optional[str]): A base name to append to the samples file name.
+        check_corrupted_bands (Optional[bool]): Whether to perform a corrupted band check. Default is True.
+        verbose (Optional[int]): The level of verbosity for print statements. Default is 1.
     """
 
     def __init__(self,
@@ -110,6 +114,7 @@ class SampleImage(object):
                  n_jobs=0,
                  neighbors=False,
                  field_type='int',
+                 transform_xy_proj=None,
                  use_extent=True,
                  append_name=None,
                  sql_expression_attr=None,
@@ -125,6 +130,7 @@ class SampleImage(object):
         self.n_jobs = n_jobs
         self.neighbors = neighbors
         self.field_type = field_type
+        self.transform_xy_proj = transform_xy_proj
         self.use_extent = use_extent
         self.append_name = append_name
         self.sql_expression_attr = sql_expression_attr
@@ -414,6 +420,21 @@ class SampleImage(object):
 
             # Get the current point.
             x, y = get_xy(feature)
+
+            # Transform the coordinate to match the image's coordinates.
+            if isinstance(self.transform_xy_proj, int) or isinstance(self.transform_xy_proj, str):
+
+                grid_envelope = dict(left=x,
+                                     right=x,
+                                     top=y,
+                                     bottom=y)
+
+                ptr = vector_tools.TransformExtent(grid_envelope,
+                                                   self.transform_xy_proj,
+                                                   to_epsg=self.m_info.projection)
+
+                x = ptr.left
+                y = ptr.top
 
             # Get the class label.
             pt_id = feature.GetField(self.class_id)

@@ -1226,7 +1226,10 @@ class TransformExtent(object):
         bottom
     """
 
-    def __init__(self, grid_envelope, from_epsg, to_epsg=4326):
+    def __init__(self,
+                 grid_envelope,
+                 from_epsg,
+                 to_epsg=4326):
 
         # Envelope
         # left, right, bottom, top
@@ -1239,12 +1242,18 @@ class TransformExtent(object):
         self.from_epsg = from_epsg
         self.to_epsg = to_epsg
 
-        ptr = Transform(grid_envelope['left'], grid_envelope['bottom'], self.from_epsg, self.to_epsg)
+        ptr = Transform(grid_envelope['left'],
+                        grid_envelope['bottom'],
+                        self.from_epsg,
+                        self.to_epsg)
 
         self.left = copy.copy(ptr.x_transform)
         self.bottom = copy.copy(ptr.y_transform)
 
-        ptr = Transform(grid_envelope['right'], grid_envelope['top'], self.from_epsg, self.to_epsg)
+        ptr = Transform(grid_envelope['right'],
+                        grid_envelope['top'],
+                        self.from_epsg,
+                        self.to_epsg)
 
         self.right = copy.copy(ptr.x_transform)
         self.top = copy.copy(ptr.y_transform)
