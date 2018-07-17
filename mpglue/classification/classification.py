@@ -256,6 +256,7 @@ def predict_scikit_probas_static(features,
                                  do_not_morph,
                                  plr_matrix,
                                  plr_window_size,
+                                 plr_iterations,
                                  d_type):
 
     """
@@ -272,6 +273,7 @@ def predict_scikit_probas_static(features,
         do_not_morph (int list)
         plr_matrix (2d array)
         plr_window_size (int)
+        plr_iterations (int)
         d_type (str)
     """
 
@@ -289,7 +291,8 @@ def predict_scikit_probas_static(features,
                                                                  cw),
                                          statistic='plr',
                                          window_size=plr_window_size,
-                                         weights=plr_matrix).argmax(axis=0)
+                                         weights=plr_matrix,
+                                         iterations=plr_iterations).argmax(axis=0)
 
     if morphology:
         predictions = np.zeros(probabilities_argmax.shape, dtype='uint8')
@@ -342,6 +345,7 @@ def predict_scikit_probas(rw,
                           do_not_morph,
                           plr_matrix,
                           plr_window_size,
+                          plr_iterations,
                           d_type):
 
     """
@@ -358,6 +362,7 @@ def predict_scikit_probas(rw,
         do_not_morph (int list)
         plr_matrix (2d array)
         plr_window_size (int)
+        plr_iterations (int)
         d_type (str)
     """
 
@@ -375,7 +380,8 @@ def predict_scikit_probas(rw,
                                                                  cw),
                                          statistic='plr',
                                          window_size=plr_window_size,
-                                         weights=plr_matrix).argmax(axis=0)
+                                         weights=plr_matrix,
+                                         iterations=plr_iterations).argmax(axis=0)
 
     if morphology:
         predictions = np.zeros(probabilities_argmax.shape, dtype='uint8')
@@ -4977,6 +4983,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                       relax_probabilities=False,
                       plr_window_size=5,
                       plr_matrix=None,
+                      plr_iterations=3,
                       morphology=False,
                       do_not_morph=None,
                       d_type='byte'):
@@ -4991,6 +4998,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             relax_probabilities (Optional[bool]): Whether to relax posterior probabilities. Default is False.
             plr_window_size (Optional[int]): The window size for probabilistic label relaxation. Default is 5.
             plr_matrix (Optional[2d array]): The class compatibility matrix. Default is None.
+            plr_iterations (Optional[int]): The probabilistic label relaxation iterations. Default is 3.
             morphology (Optional[bool]): Whether to apply image morphology to the predicted classes.
                 Default is False.
             do_not_morph (Optional[int list]): A list of classes not to morph with `morphology=True`. Default is None.
@@ -5029,6 +5037,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                     do_not_morph,
                                                     plr_matrix,
                                                     plr_window_size,
+                                                    plr_iterations,
                                                     self.d_type)
 
             else:
@@ -5058,6 +5067,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 track_blocks=False,
                 relax_probabilities=False,
                 plr_window_size=5,
+                plr_iterations=3,
                 plr_matrix=None,
                 write2blocks=False,
                 block_range=None,
@@ -5101,6 +5111,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             track_blocks (Optional[bool]): Whether to keep a record of processed blocks. Default is False.
             relax_probabilities (Optional[bool]): Whether to relax posterior probabilities. Default is False.
             plr_window_size (Optional[int]): The window size for probabilistic label relaxation. Default is 5.
+            plr_iterations (Optional[int]): The number of iterations for probabilistic label relaxation. Default is 3.
             plr_matrix (Optional[2d array]): The class compatibility matrix. Default is None.
             write2blocks (Optional[bool]): Whether to write to individual blocks, otherwise write to one image.
                 Default is False.
@@ -5171,6 +5182,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.track_blocks = track_blocks
         self.relax_probabilities = relax_probabilities
         self.plr_window_size = plr_window_size
+        self.plr_iterations = plr_iterations
         self.plr_matrix = plr_matrix
         self.write2blocks = write2blocks
         self.block_range = block_range
@@ -5185,8 +5197,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         if not hasattr(self, 'classifier_info'):
 
             logger.warning("""\
+            
             There is no `classifier_info` object. Be sure to run `construct_model`
             or `construct_r_model` before running `predict`.
+            
             """)
 
             return
@@ -5194,8 +5208,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         if not hasattr(self, 'model'):
 
             logger.warning("""\
+            
             There is no trained `model` object. Be sure to run `construct_model`
             or `construct_r_model` before running `predict`.
+            
             """)
 
             return
@@ -5746,6 +5762,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                                             self.do_not_morph,
                                                                             self.plr_matrix,
                                                                             self.plr_window_size,
+                                                                            self.plr_iterations,
                                                                             self.d_type),
                                                       j=j-jwo,
                                                       i=i-iwo)
