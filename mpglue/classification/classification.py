@@ -4221,8 +4221,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                         """)
 
-                    logger.info(self.classifier_info_base)
-
                     voting_sub_model = imblearn.BalancedBaggingClassifier(**self.classifier_info_base)
 
                 elif classifier == 'GB':
