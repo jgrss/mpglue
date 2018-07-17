@@ -3985,6 +3985,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                          trials=10,
                          max_depth=25,
                          min_samples_split=2,
+                         min_samples_leaf=5,
                          learning_rate=0.1,
                          C=1.0,
                          nu=0.5,
@@ -4015,7 +4016,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         # Create a separate instance for
         #   AdaBoost and Bagging base classifiers.
-        if class_base.startswith('AB_') or class_base.startswith('Bag_'):
+        if class_base.startswith('AB_') or class_base.startswith('Bag_') or (class_base == 'Blag'):
 
             self.classifier_info_base = copy(self.classifier_info)
             self.classifier_info_base['classifier'] = class_base
@@ -4050,11 +4051,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                          self.classifier_info['trees'], .1)
                 else:
                     if 'term_crit' not in self.classifier_info:
-                        self.classifier_info['term_crit'] = (cv2.TERM_CRITERIA_MAX_ITER, self.DEFAULT_TREES, .1)
+                        self.classifier_info['term_crit'] = (cv2.TERM_CRITERIA_MAX_ITER, self.DEFAULT_TREES, 0.1)
 
                 # minimum node samples
                 if 'min_samps' not in self.classifier_info:
-                    self.classifier_info['min_samps'] = int(np.ceil(.01 * self.n_samps))
+                    self.classifier_info['min_samps'] = int(np.ceil(0.01 * self.n_samps))
 
                 # random features
                 if 'rand_vars' not in self.classifier_info:
@@ -4103,13 +4104,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 self.classifier_info_['max_iter'] = 1000
 
             if 'C' not in self.classifier_info_:
-                self.classifier_info_['C'] = .001
+                self.classifier_info_['C'] = 0.001
 
             if 'n_jobs' not in self.classifier_info_:
                 self.classifier_info_['n_jobs'] = -1
 
             if 'tol' not in self.classifier_info_:
-                self.classifier_info_['tol'] = .001
+                self.classifier_info_['tol'] = 0.001
 
             if 'inference_cache' not in self.classifier_info_:
                 self.classifier_info_['inference_cache'] = 0
