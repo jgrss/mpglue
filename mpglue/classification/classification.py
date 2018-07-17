@@ -4221,8 +4221,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                         """)
 
-                    voting_sub_model = imblearn.BalancedBaggingClassifier(base_estimator=tree.DecisionTreeClassifier(**self.classifier_info_),
-                                                                          **self.classifier_info_base)
+                    logger.info(self.classifier_info_base)
+
+                    voting_sub_model = imblearn.BalancedBaggingClassifier(**self.classifier_info_base)
 
                 elif classifier == 'GB':
                     voting_sub_model = ensemble.GradientBoostingClassifier(**self.classifier_info_)
@@ -4521,8 +4522,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     """)
 
-                self.model = imblearn.BalancedBaggingClassifier(base_estimator=tree.DecisionTreeClassifier(**self.classifier_info_),
-                                                                **self.classifier_info_base)
+                self.model = imblearn.BalancedBaggingClassifier(**self.classifier_info_base)
 
             elif self.classifier_info['classifier'] == 'GB':
                 self.model = ensemble.GradientBoostingClassifier(**self.classifier_info_)
