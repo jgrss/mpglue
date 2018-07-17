@@ -3998,7 +3998,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         if 'classifier' not in self.classifier_info:
             self.classifier_info['classifier'] = 'RF'
 
-        if self.classifier_info['classifier'].startswith('AB_') or self.classifier_info['classifier'].startswith('Bag_'):
+        if self.classifier_info['classifier'].startswith('AB_') or \
+                self.classifier_info['classifier'].startswith('Bag_') or \
+                (self.classifier_info['classifier'] == 'Blag'):
 
             class_base = copy(self.classifier_info['classifier'])
 
