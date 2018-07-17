@@ -3436,91 +3436,90 @@ class ModelOptions(object):
 
         ===========================
         Parameter name -- Long name
-              {Classifier defaults}
-              *Scikit-learn parameter names and defaults
+                          *Module
         ===========================
 
         AB_DT -- AdaBoost with CART (classification problems)
-              *Scikit-learn
+                 *Scikit-learn
         AB_EX_DT-- AdaBoost with extremely random trees (classification problems)
-              *Scikit-learn
+                   *Scikit-learn
         AB_RF-- AdaBoost with Random Forest (classification problems)
-              *Scikit-learn
+                *Scikit-learn
         AB_EX_RF-- AdaBoost with Extremely Random Forest (classification problems)
-              *Scikit-learn
+                   *Scikit-learn
         AB_DTR-- AdaBoost with CART (regression problems)
-              *Scikit-learn
+                 *Scikit-learn
         AB_EX_DTR-- AdaBoost with extremely random trees (regression problems)
-              *Scikit-learn
+                    *Scikit-learn
         Bag_DT-- Bagged Decision Trees (classification problems)
-              *Scikit-learn              
+                 *Scikit-learn              
         Bag_DTR-- Bagged Decision Trees (regression problems)
-              *Scikit-learn            
+                  *Scikit-learn            
         Bag_EX_DT-- Bagged Decision Trees with extremely randomized trees (classification problems)
-              *Scikit-learn
+                   *Scikit-learn
         Blag  -- Downsampled bagging (classification problems)
-              *Imbalanced-learn
+                 *Imbalanced-learn
         Bayes -- Naives Bayes (classification problems)
-              *Scikit-learn
+                *Scikit-learn
         DT    -- Decision Trees based on CART algorithm (classification problems)
-              *Scikit-learn
+                 *Scikit-learn
         DTR   -- Decision Trees Regression based on CART algorithm (regression problems)
-              *Scikit-learn
+                 *Scikit-learn
         EX_DT -- Extra Decision Trees based on CART algorithm (classification problems)
-              *Scikit-learn
+                 *Scikit-learn
         EX_DTR-- Extra Decision Trees Regression based on CART algorithm (regression problems)
-              *Scikit-learn
+                 *Scikit-learn
         GB    -- Gradient Boosted Trees (classification problems)
-              *Scikit-learn
+                 *Scikit-learn
         GBR   -- Gradient Boosted Trees (regression problems)
-              *Scikit-learn
+                 *Scikit-learn
         C5    -- C5 decision trees (classification problems)
-              {classifier:C5,trials:10,CF:.25,min_cases:2,winnow:False,no_prune:False,fuzzy:False}
+                 {classifier:C5,trials:10,CF:.25,min_cases:2,winnow:False,no_prune:False,fuzzy:False}
         Cubist-- Cubist regression trees (regression problems)
-              {classifier:Cubist,committees:5,unbiased:False,rules:100,extrapolation:10}
+                 {classifier:Cubist,committees:5,unbiased:False,rules:100,extrapolation:10}
         EX_RF -- Extremely Random Forests (classification problems)
-              *Scikit-learn
+                 *Scikit-learn
         CVEX_RF -- Extremely Random Forests in OpenCV (classification problems)
-              *NOT CURRENTLY SUPPORTED IN OPENCV 3.0*
-              {classifier:CVEX_RF,trees:1000,min_samps:0,rand_vars:sqrt(feas),max_depth:25}
+                   *NOT CURRENTLY SUPPORTED IN OPENCV 3.0*
+                   {classifier:CVEX_RF,trees:1000,min_samps:0,rand_vars:sqrt(feas),max_depth:25}
         EX_RFR-- Extremely Random Forests (regression problems)
-              *Scikit-learn
+                 *Scikit-learn
         Gaussian-- Gaussian Process (classification problems)
-              *Scikit-learn
+                  *Scikit-learn
         Logistic-- Logistic Regression (classification problems)
-              *Scikit-learn
+                   *Scikit-learn
         NN    -- K Nearest Neighbor (classification problems)
-              *Scikit-learn
+                 *Scikit-learn
         RF    -- Random Forests (classification problems)
-              *Scikit-learn
+                 *Scikit-learn
         CVRF  -- Random Forests in OpenCV (classification problems)
-              {classifier:CVRF,trees:1000,min_samps:0,rand_vars:0,max_depth:25,weight_classes:None,truncate:False}
+                 {classifier:CVRF,trees:1000,min_samps:0,rand_vars:0,max_depth:25,weight_classes:None,truncate:False}
         RFR   -- Random Forests (regression problems)
-              *Scikit-learn
+                 *Scikit-learn
         CVMLP -- Feed-forward, artificial neural network, multi-layer perceptrons in OpenCV (classification problems)
-              {classifier:CVMLP}
+                 {classifier:CVMLP}
         SVMc  -- C-support Support Vector Machine (classification problems)
-              {classifier:SVMc,C:1,kernel:'rbf',g:1/n_feas}
+                 {classifier:SVMc,C:1,kernel:'rbf',g:1/n_feas}
         SVMcR -- C-support Support Vector Machine (regression problems)
-              {classifier:SVMcR,C:1,g:1/n_feas}
+                 {classifier:SVMcR,C:1,g:1/n_feas}
         SVMnu -- Nu-support Support Vector Machine (classification problems)
-              {classifier:SVMnu,C:1,kernel:'rbf',g:1/n_feas}
+                 {classifier:SVMnu,C:1,kernel:'rbf',g:1/n_feas}
         CVSVM -- Support Vector Machine in OpenCV (classification problems)
-              {classifier:CVSVM,C:1,g:1.0}
+                 {classifier:CVSVM,C:1,g:1.0}
         CVSVMA-- Support Vector Machine, auto-tuned in OpenCV (classification problems)
-              {classifier:CVSVMA}
+                 {classifier:CVSVMA}
         CVSVMR-- Support Vector Machine in OpenCV (regression problems)
-              {classifier:CVSVMR,C:1,g:1.0}
+                 {classifier:CVSVMR,C:1,g:1.0}
         CVSVMRA-- Support Vector Machine, auto-tuned in OpenCV (regression problems)
-              {classifier:CVSVMRA}
+                  {classifier:CVSVMRA}
         QDA   -- Quadratic Discriminant Analysis (classification problems)
-              *Scikit-learn
+                 *Scikit-learn
         ChainCRF-- Linear-chain Conditional Random Fields (classification problems)
-              *Pystruct
+                   *Pystruct
         GridCRF -- Pairwise Conditional Random Fields on a 2d grid (classification problems)
-              *Pystruct
+                   *Pystruct
         LightGBM-- Light Gradient Boosting (classification problems)
-              *LightGBM
+                   *LightGBM
 
         """
 
