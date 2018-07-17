@@ -20,7 +20,7 @@ except:
 import numpy as np
 
 
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 
 mappy_name = 'MpGlue'
 maintainer = 'Jordan Graesser'

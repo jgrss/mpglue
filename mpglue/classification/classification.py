@@ -177,6 +177,16 @@ try:
 except:
     LIGHTGBM_INSTALLED = False
 
+# Imbalanced-learn
+try:
+
+    from imblearn import ensemble as imblearn
+
+    IMBLEARN_INSTALLED = True
+
+except:
+    IMBLEARN_INSTALLED = False
+
 # Rtree
 try:
     import rtree
@@ -456,7 +466,7 @@ def get_available_models():
 
     return ['AB_DT', 'AB_EX_DT', 'AB_RF', 'AB_EX_RF', 'AB_DTR', 'AB_EX_DTR',
             'AB_RFR', 'AB_EX_RFR',
-            'Bag_DT', 'Bag_EX_DT', 'Bag_DTR', 'Bayes', 'DT', 'DTR',
+            'Bag_DT', 'Bag_EX_DT', 'Bag_DTR', 'Blag', 'Bayes', 'DT', 'DTR',
             'EX_DT', 'EX_DTR', 'GB', 'GBR', 'C5', 'Cubist',
             'EX_RF', 'CVEX_RF', 'EX_RFR',
             'Logistic', 'NN', 'Gaussian',
@@ -473,17 +483,31 @@ class ParameterHandler(object):
         self.equal_params = dict(trees='n_estimators',
                                  min_samps='min_samples_split')
 
-        self.forests = ['RF', 'EX_RF']
-        self.forests_regressed = ['RFR', 'EX_RFR']
+        self.forests = ['RF',
+                        'EX_RF']
 
-        self.bagged = ['Bag_DT', 'Bag_EX_DT', 'Bag_DTR']
+        self.forests_regressed = ['RFR',
+                                  'EX_RFR']
 
-        self.trees = ['DT', 'EX_DT']
-        self.trees_regressed = ['DTR', 'EX_DTR']
+        self.bagged = ['Bag_DT',
+                       'Bag_EX_DT',
+                       'Bag_DTR']
 
-        self.boosted = ['AB_DT', 'AB_EX_DT', 'AB_RF', 'AB_EX_RF']
+        self.imbalanced = ['Blag']
+
+        self.trees = ['DT',
+                      'EX_DT']
+
+        self.trees_regressed = ['DTR',
+                                'EX_DTR']
+
+        self.boosted = ['AB_DT',
+                        'AB_EX_DT',
+                        'AB_RF',
+                        'AB_EX_RF']
 
         self.boosted_g = ['GB']
+
         self.boosted_g_regressed = ['GBR']
 
         if classifier in self.forests:
@@ -504,6 +528,13 @@ class ParameterHandler(object):
 
             self.valid_params = ['base_estimator', 'n_estimators', 'max_samples', 'max_features',
                                  'bootstrap', 'bootstrap_features', 'oob_score', 'warm_start',
+                                 'n_jobs', 'random_state', 'verbose']
+
+        elif classifier in self.imbalanced:
+
+            self.valid_params = ['base_estimator', 'n_estimators', 'max_samples', 'max_features',
+                                 'bootstrap', 'bootstrap_features', 'oob_score', 'warm_start',
+                                 'ratio', 'replacement',
                                  'n_jobs', 'random_state', 'verbose']
 
         elif classifier in self.trees:
@@ -3424,9 +3455,11 @@ class ModelOptions(object):
         Bag_DT-- Bagged Decision Trees (classification problems)
               *Scikit-learn              
         Bag_DTR-- Bagged Decision Trees (regression problems)
-              *Scikit-learn
+              *Scikit-learn            
         Bag_EX_DT-- Bagged Decision Trees with extremely randomized trees (classification problems)
               *Scikit-learn
+        Blag  -- Downsampled bagging (classification problems)
+              *Imbalanced-learn
         Bayes -- Naives Bayes (classification problems)
               *Scikit-learn
         DT    -- Decision Trees based on CART algorithm (classification problems)
@@ -4175,6 +4208,21 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     voting_sub_model = ensemble.BaggingClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
                                                                   **self.classifier_info_base)
 
+                elif classifier == 'Blag':
+
+                    if not IMBLEARN_INSTALLED:
+
+                        logger.error("""\
+
+                        Imbalanced learn must be installed to use the model. Install from
+                        
+                        pip install imbalanced-learn
+
+                        """)
+
+                    voting_sub_model = imblearn.BalancedBaggingClassifier(base_estimator=tree.DecisionTreeClassifier(**self.classifier_info_),
+                                                                          **self.classifier_info_base)
+
                 elif classifier == 'GB':
                     voting_sub_model = ensemble.GradientBoostingClassifier(**self.classifier_info_)
 
@@ -4459,6 +4507,21 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 self.model = ensemble.BaggingClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
                                                         **self.classifier_info_base)
+
+            elif self.classifier_info['classifier'] == 'Blag':
+
+                if not IMBLEARN_INSTALLED:
+
+                    logger.error("""\
+
+                    Imbalanced learn must be installed to use the model. Install from
+
+                    pip install imbalanced-learn
+
+                    """)
+
+                self.model = imblearn.BalancedBaggingClassifier(base_estimator=tree.DecisionTreeClassifier(**self.classifier_info_),
+                                                                **self.classifier_info_base)
 
             elif self.classifier_info['classifier'] == 'GB':
                 self.model = ensemble.GradientBoostingClassifier(**self.classifier_info_)
