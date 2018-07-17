@@ -1733,7 +1733,16 @@ def intersects_boundary(meta_dict, boundary_file):
     # return False
 
 
-def _get_xy_offsets(x, left, right, y, top, bottom, cell_size_x, cell_size_y, round_offset, check):
+def _get_xy_offsets(x,
+                    left,
+                    right,
+                    y,
+                    top,
+                    bottom,
+                    cell_size_x,
+                    cell_size_y,
+                    round_offset,
+                    check):
 
     # Xs (longitudes)
     if check:
@@ -1860,7 +1869,16 @@ def get_xy_offsets(image_info=None,
         cell_y = image_info.cellY
 
     # Compute pixel offsets.
-    x_offset, y_offset = _get_xy_offsets(x, left, right, y, top, bottom, cell_x, cell_y, round_offset, check_position)
+    x_offset, y_offset = _get_xy_offsets(x,
+                                         left,
+                                         right,
+                                         y,
+                                         top,
+                                         bottom,
+                                         cell_x,
+                                         cell_y,
+                                         round_offset,
+                                         check_position)
 
     return x, y, x_offset, y_offset
 
