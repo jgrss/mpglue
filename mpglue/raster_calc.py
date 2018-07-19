@@ -33,6 +33,12 @@ try:
 except ImportError:
     raise ImportError('NumPy must be installed')
 
+# Numexpr
+try:
+    import numexpr as ne
+except ImportError:
+    raise ImportError('Numexpr must be installed')
+
 
 def raster_calc(output,
                 equation=None,
@@ -67,22 +73,29 @@ def raster_calc(output,
         >>> from mpglue.raster_calc import raster_calc
         >>>
         >>> # Multiply image A x image B
-        >>> raster_calc('/output.tif', equation='A * B', 
-        >>>             A='/some_raster1.tif', B='some_raster2.tif')
+        >>> raster_calc('/output.tif',
+        >>>             equation='A * B',
+        >>>             A='/some_raster1.tif',
+        >>>             B='some_raster2.tif')
         >>>
         >>> # Reads as...
         >>> # Where image A equals 1 AND image B is greater than 5,
         >>> #   THEN write image A, OTHERWISE write 0
-        >>> raster_calc('/output.tif', equation='where((A == 1) & (B > 5), A, 0)', 
-        >>>             A='/some_raster1.tif', B='some_raster2.tif')
+        >>> raster_calc('/output.tif',
+        >>>             equation='where((A == 1) & (B > 5), A, 0)',
+        >>>             A='/some_raster1.tif',
+        >>>             B='some_raster2.tif')
         >>>
         >>> # Use different bands from the same image. The letter given for the
         >>> #   image must be the same for the band, followed by _band.
         >>> # E.g., for raster 'n', the corresponding band would be 'n_band'. For
         >>> #   raster 'r', the corresponding band would be 'r_band', etc.
-        >>> raster_calc('/output.tif', equation='(n - r) / (n + r)', 
-        >>>             n='/some_raster.tif', n_band=4, 
-        >>>             r='/some_raster.tif', r_band=3)
+        >>> raster_calc('/output.tif',
+        >>>             equation='(n - r) / (n + r)',
+        >>>             n='/some_raster.tif',
+        >>>             n_band=4,
+        >>>             r='/some_raster.tif',
+        >>>             r_band=3)
 
     Returns:
         None, writes to ``output``.
@@ -136,26 +149,21 @@ def raster_calc(output,
 
             exec('i_info_{} = raster_tools.ropen(r"{}")'.format(kw, vw))
             exec('info_dict["{}"] = i_info_{}'.format(kw, kw))
-            # exec('info_dict["{}"] = r"{}"'.format(kw, vw))
             exec('info_list.append(i_info_{})'.format(kw))
-
-            # exec 'i_info_{} = raster_tools.ropen(r"{}")'.format(kw, vw)
-            # exec 'info_dict["{}"] = i_info_{}'.format(kw, kw)
-            # exec 'info_list.append(i_info_{})'.format(kw)
 
         if isinstance(vw, int):
             band_dict[kw] = vw
 
     for key, value in viewitems(image_dict):
-        equation = equation.replace(key, 'array_{}'.format(key))
+        equation = equation.replace(key, 'marrvar_{}'.format(key))
 
     # Check for NumPy functions.
-    for np_func in dir(np):
-
-        if np_func in equation:
-
-            equation = 'np.{}'.format(equation)
-            break
+    # for np_func in dir(np):
+    #
+    #     if 'np.' + np_func in equation:
+    #
+    #         equation = 'np.{}'.format(equation)
+    #         break
 
     for kw, vw in viewitems(info_dict):
 
@@ -223,12 +231,12 @@ def raster_calc(output,
             for key, value in viewitems(image_dict):
 
                 # exec 'x_off, y_off = vector_tools.get_xy_offsets3(overlap_info, i_info_{})'.format(key)
-                __, __, x_off, y_off = vector_tools.get_xy_offsets(image_info=info_dict[key],
-                                                                   x=overlap_info.left,
-                                                                   y=overlap_info.top,
-                                                                   check_position=False)
+                x_off, y_off = vector_tools.get_xy_offsets(image_info=info_dict[key],
+                                                           x=overlap_info.left,
+                                                           y=overlap_info.top,
+                                                           check_position=False)[2:]
 
-                exec('array_{KEY} = i_info_{KEY}.read(bands2open=band_dict["{KEY}_band"], i=i+y_off, j=j+x_off, rows=n_rows, cols=n_cols, d_type="float32")'.format(KEY=key))
+                exec('marrvar_{KEY} = i_info_{KEY}.read(bands2open=band_dict["{KEY}_band"], i=i+y_off, j=j+x_off, rows=n_rows, cols=n_cols, d_type="float32")'.format(KEY=key))
 
             if '&&' in equation:
 
@@ -239,20 +247,28 @@ def raster_calc(output,
                     if not equation_.startswith('np.'):
                         equation_ = 'np.' + equation_
 
-                    exec('out_array[{:d}] = {}'.format(eqidx, equation_))
+                    out_array[eqidx] = ne.evaluate(equation_)
 
             else:
-                exec('out_array = {}'.format(equation))
+                out_array = ne.evaluate(equation)
 
             # Set the output no data values.
             out_array[np.isnan(out_array) | np.isinf(out_array)] = out_no_data
 
             if n_bands == 1:
-                out_rst.write_array(out_array, i=i, j=j)
+
+                out_rst.write_array(out_array,
+                                    i=i,
+                                    j=j)
+
             else:
 
                 for lidx in range(0, n_bands):
-                    out_rst.write_array(out_array[lidx], i=i, j=j, band=lidx+1)
+
+                    out_rst.write_array(out_array[lidx],
+                                        i=i,
+                                        j=j,
+                                        band=lidx+1)
 
             if not be_quiet:
 
@@ -283,10 +299,13 @@ def _examples():
     sys.exit("""\
 
     # Write out class 2 from image A
-    raster_calc.py -A /image.tif -o /output.tif -eq 'where(A==2, 1, 0)'
+    raster_calc.py -A /image.tif -o /output.tif -eq "np.where(A==2, 1, 0)"
 
     # Write the intersection of images A and B as 1s
-    raster_calc.py -A /image_a.tif -B /image_b.tif -o /output.tif -eq 'where((A==1) & (B==1), 1, 0)'
+    raster_calc.py -A /image_a.tif -B /image_b.tif -o /output.tif -eq "np.where((A==1) & (B==1), 1, 0)"
+    
+    # Convert an RGB image to grayscale
+    raster-calc -A rgb.tif -B rgb.tif -C rgb.tif -A_band 1 -B_band 2 -C_band 3 -o grayscale.tif -ot float32 -eq "A*0.2989 + B*0.5870 + C*0.1140"
 
     """)
 
