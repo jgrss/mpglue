@@ -385,7 +385,11 @@ class BaseHandler(SetFilter):
                     if isinstance(self.z, int) or isinstance(self.z, list):
 
                         if self.z == -1:
-                            return self.h5_file.get_node(array_name).read()[:, self.i:self.i+rows, self.j:self.j+cols]
+
+                            return self.h5_file.get_node(array_name).read()[:,
+                                                                            self.i:self.i+rows,
+                                                                            self.j:self.j+cols]
+
                         else:
 
                             return self.h5_file.get_node(array_name).read()[self.z,
