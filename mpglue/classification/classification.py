@@ -5146,7 +5146,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             input_image (str): The input image to classify.
             output_image (str): The output image.
             additional_layers (Optional[list]): A list of additional images (layers) that are not part
-                of ``input_image``.
+                of `input_image`.
             band_check (Optional[int]): The band to check for 'no data'. Default is -1, or do not perform check. 
             bands2open (Optional[list]): A list of bands to open, otherwise opens all bands. Default is None.
             ignore_feas (Optional[list]): A list of features (band layers) to ignore. Default is an empty list,
@@ -5475,6 +5475,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         # Global variables for parallel processing.
         global features, model_pp, predict_samps, indice_pairs, mdl
 
+        features = None
+        model_pp = None
+        predict_samps = None
+        indice_pairs = None
+        mdl = None
+
         # Load the model.
         if isinstance(self.input_model, str):
             mdl = joblib.load(self.input_model)[1]
@@ -5493,7 +5499,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         # Update variables for
         #   sub-image predictions.
-        start_i, start_j, rows, cols, iwo, jwo = self._set_indexing(start_i, start_j, rows, cols, iwo, jwo)
+        start_i, start_j, rows, cols, iwo, jwo = self._set_indexing(start_i,
+                                                                    start_j,
+                                                                    rows,
+                                                                    cols,
+                                                                    iwo,
+                                                                    jwo)
 
         # Determine which bands to open.
         self._set_bands2open()
@@ -5691,12 +5702,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             if self.use_xy:
 
                 # Create x,y coordinates for the block.
-                self._create_indices(iw, jw, rw, cw)
+                x_coordinates, y_coordinates = self._create_indices(iw, jw, rw, cw)
 
                 # Append the x,y coordinates to the features.
                 features = np.hstack((features,
-                                      self.x_coordinates.ravel()[:, np.newaxis],
-                                      self.y_coordinates.ravel()[:, np.newaxis]))
+                                      x_coordinates,
+                                      y_coordinates))
 
             # Reshape the features for CRF models.
             if self.classifier_info['classifier'] == 'ChainCRF':
@@ -5707,7 +5718,15 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 if self.scaled:
                     features = self.scaler.transform(features)
 
-            # Add extra predictive features.
+            if self.additional_layers:
+
+                additional_layers = self._get_additional_layers(iw, jw, rw, cw)
+
+                features = np.hstack((features,
+                                      additional_layers))
+
+            # Add extra predictive
+            #   time series features.
             if self._add_features:
 
                 if self.use_xy:
@@ -6069,7 +6088,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                       block_cols):
 
         if self.relax_probabilities or self.morphology:
-            pad = int(self.plr_window_size / 2.)
+            pad = int(self.plr_window_size / 2.0)
         else:
             pad = 0
 
@@ -6199,9 +6218,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         if self.use_xy:
 
-            self._create_indices(i, j, n_rows, n_cols)
+            x_coordinates, y_coordinates = self._create_indices(i, j, n_rows, n_cols)
 
-            feature_arrays = [self.x_coordinates, self.y_coordinates]
+            feature_arrays = [x_coordinates, y_coordinates]
 
         else:
 
@@ -6243,24 +6262,79 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         #                                                   n_cols, n_rows).astype(np.float32) for bd in
         #                   range(0, self.i_info.bands)]).reshape(self.i_info.bands, n_rows, n_cols)
 
+    def _get_additional_layers(self, i, j, n_rows, n_cols):
+
+        """
+        Gets additional image layers
+
+        Args:
+            i (int)
+            j (int)
+            n_rows (int)
+            n_cols (int)
+        """
+
+        additional_stack = None
+
+        for additional_layer in self.additional_layers:
+
+            with raster_tools.ropen(additional_layer) as a_info:
+
+                if isinstance(additional_stack, np.ndarray):
+
+                    additional_stack_ = a_info.read(bands2open=-1,
+                                                    i=i,
+                                                    j=j,
+                                                    rows=n_rows,
+                                                    cols=n_cols,
+                                                    d_type='float32').ravel()[:, np.newaxis]
+
+                    additional_stack = np.hstack((additional_stack,
+                                                  additional_stack_))
+
+                else:
+
+                    additional_stack = a_info.read(bands2open=-1,
+                                                   i=i,
+                                                   j=j,
+                                                   rows=n_rows,
+                                                   cols=n_cols,
+                                                   d_type='float32').ravel()[:, np.newaxis]
+
+            a_info = None
+
+        return additional_stack
+
     def _create_indices(self, i, j, n_rows, n_cols):
+
+        """
+        Creates x,y coordinate indices
+
+        Args:
+            i (int)
+            j (int)
+            n_rows (int)
+            n_cols (int)
+        """
 
         left = self.i_info.left + (j * self.i_info.cellY)
         top = self.i_info.top - (i * self.i_info.cellY)
 
         # Create the longitudes
-        self.x_coordinates = np.arange(left,
-                                       left + (self.i_info.cellY * n_cols),
-                                       self.i_info.cellY)
+        x_coordinates = np.arange(left,
+                                  left + (self.i_info.cellY * n_cols),
+                                  self.i_info.cellY)
 
-        self.x_coordinates = np.tile(self.x_coordinates, n_rows).reshape(n_rows, n_cols)
+        x_coordinates = np.tile(x_coordinates, n_rows).reshape(n_rows, n_cols)
 
         # Create latitudes
-        self.y_coordinates = np.arange(top,
-                                       top - (self.i_info.cellY * n_rows),
-                                       -self.i_info.cellY).reshape(n_rows, 1)
+        y_coordinates = np.arange(top,
+                                  top - (self.i_info.cellY * n_rows),
+                                  -self.i_info.cellY).reshape(n_rows, 1)
 
-        self.y_coordinates = np.tile(self.y_coordinates, n_cols)
+        y_coordinates = np.tile(y_coordinates, n_cols)
+
+        return x_coordinates.ravel()[:, np.newaxis], y_coordinates.ravel()[:, np.newaxis]
 
     @staticmethod
     def _get_slope(elevation_array, pad=50):
@@ -6269,7 +6343,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         x_grad, y_grad = np.gradient(elevation_array)
 
-        return (np.pi / 2.) - np.arctan(np.sqrt((x_grad * x_grad) + (y_grad * y_grad)))
+        return (np.pi / 2.0) - np.arctan(np.sqrt((x_grad * x_grad) + (y_grad * y_grad)))
 
     def test_accuracy(self, out_acc=None, discrete=True, be_quiet=False):
 
@@ -8185,22 +8259,22 @@ def main():
     out_img_rank = None
     input_model = None
     output_model = None
-    perc_samp = .9
+    perc_samp = 0.9
     perc_samp_each = 0
     scale_data = False
     labs_type = 'int'
-    class_subs = {}
-    recode_dict = {}
-    classes2remove = []
-    valrm_fea = []
-    ignore_feas = []
+    class_subs = dict()
+    recode_dict = dict()
+    classes2remove = list()
+    valrm_fea = list()
+    ignore_feas = list()
     use_xy = False
     outrm = False
     locate_outliers = False
     semi = False
     semi_kernel = 'knn'
-    feature_space = []
-    decision_function = []
+    feature_space = list()
+    decision_function = list()
     header = True
     norm_struct = True
     classifier_info = {'classifier': 'RF'}
@@ -8212,7 +8286,7 @@ def main():
     optimize = False
     rank_txt = None
     get_probs = False
-    additional_layers = []
+    additional_layers = list()
     n_jobs = -1
     band_check = -1
     chunk_size = 8000
