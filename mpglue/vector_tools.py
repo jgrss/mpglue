@@ -78,6 +78,75 @@ gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
 
+def feature_from_geometry(layer, geometry):
+
+    """
+    Creates a feature object from a Shapely geometry object
+
+    Args:
+        layer (object)
+        geometry (Shapely geometry)
+
+    Returns:
+        OGR feature object
+    """
+
+    feature = ogr.Feature(layer.GetLayerDefn())
+    feature.SetGeometryDirectly(ogr.Geometry(wkt=str(geometry)))
+    feature.SetField('Value', 1)
+
+    return feature
+
+
+def set_spatial_reference(projection):
+
+    """
+    Sets the spatial reference object
+
+    Args:
+        projection (str or int)
+
+    Returns:
+        Spatial reference object
+    """
+
+    sp_ref = osr.SpatialReference()
+
+    if isinstance(projection, int):
+        sp_ref.ImportFromEPSG(projection)
+    else:
+
+        if projection.startswith('+proj='):
+            sp_ref.ImportFromProj4(projection)
+        else:
+            sp_ref.ImportFromWkt(projection)
+
+    return sp_ref
+
+
+def create_memory_layer(projection):
+
+    """
+    Creates an in-memory vector layer object
+
+    Args:
+        projection (str or int)
+
+    Returns:
+        Datasource object, Layer object
+    """
+
+    datasource = ogr.GetDriverByName('Memory').CreateDataSource('wrk')
+
+    sp_ref = set_spatial_reference(projection)
+
+    lyr = datasource.CreateLayer('',
+                                 geom_type=ogr.wkbPolygon,
+                                 srs=sp_ref)
+
+    return datasource, lyr
+
+
 class RegisterDriver(object):
 
     """
@@ -130,6 +199,7 @@ class vopen(RegisterDriver):
         open2read (Optional[bool]): Whether to open vector as 'read only' (True) or writeable (False).
             Default is True.
         epsg (Optional[int]): An EPSG code to declare when the .prj file is missing. Default is None.
+        delete (Optional[bool]): Whether to delete the datasource objects. Default is False.
 
     Attributes:
         shp (object)
@@ -148,7 +218,11 @@ class vopen(RegisterDriver):
         bottom (float)
     """
 
-    def __init__(self, file_name, open2read=True, epsg=None):
+    def __init__(self,
+                 file_name,
+                 open2read=True,
+                 epsg=None,
+                 delete=False):
 
         self.file_name = file_name
         self.open2read = open2read
@@ -159,9 +233,11 @@ class vopen(RegisterDriver):
 
         RegisterDriver.__init__(self, self.file_name)
 
-        self.read()
-    
-        self.get_info()
+        if not delete:
+
+            self.read()
+
+            self.get_info()
 
         # Check open files before closing.
         # atexit.register(self.close)
@@ -254,13 +330,15 @@ class vopen(RegisterDriver):
 
     def close(self):
 
-        if hasattr(self.shp, 'feature'):
+        if hasattr(self, 'shp'):
 
-            self.shp.feature.Destroy()
-            self.shp.feature = None
+            if hasattr(self.shp, 'feature'):
 
-        if self.file_open:
-            self.shp.Destroy()
+                self.shp.feature.Destroy()
+                self.shp.feature = None
+
+            if self.file_open:
+                self.shp.Destroy()
 
         self.shp = None
 
@@ -289,7 +367,10 @@ class vopen(RegisterDriver):
 
         """Cleans undeleted files"""
 
-        file_list = fnmatch.filter(os.listdir(self.d_name), '{}*'.format(self.f_name))
+        if self.d_name:
+            file_list = fnmatch.filter(os.listdir(self.d_name), '{}*'.format(self.f_name))
+        else:
+            file_list = fnmatch.filter(os.listdir('.'), '{}*'.format(self.f_name))
 
         if file_list:
 
@@ -348,7 +429,7 @@ def delete_vector(file_name):
 
     if os.path.isfile(file_name):
 
-        with vopen(file_name) as v_info:
+        with vopen(file_name, delete=True) as v_info:
             v_info.delete()
 
         v_info = None
@@ -357,9 +438,17 @@ def delete_vector(file_name):
     d_name, f_name = os.path.split(file_name)
     f_base, f_ext = os.path.splitext(f_name)
 
-    for f in fnmatch.filter(os.listdir(d_name), '{}*.qpj'.format(f_base)):
+    if d_name:
+        file_list = os.listdir(d_name)
+    else:
+        file_list = os.listdir('.')
 
-        qpj_file = os.path.join(d_name, f)
+    for f in fnmatch.filter(file_list, '{}*.qpj'.format(f_base)):
+
+        if d_name:
+            qpj_file = os.path.join(d_name, f)
+        else:
+            qpj_file = f
 
         if os.path.isfile(qpj_file):
             os.remove(qpj_file)
@@ -440,36 +529,28 @@ class create_vector(CreateDriver):
         elif geom_type == 'polygon':
             geom_type = ogr.wkbPolygon
 
-        if epsg > 0:
+        sp_ref = None
 
-            sp_ref = osr.SpatialReference()
-            sp_ref.ImportFromEPSG(epsg)
-
-            # create the point layer
-            self.lyr = self.datasource.CreateLayer(self.f_base, geom_type=geom_type, srs=sp_ref)
-
-        elif isinstance(projection_from_file, str):
+        if isinstance(projection_from_file, str):
 
             with vopen(projection_from_file) as p_info:
-
-                sp_ref = osr.SpatialReference()
-                sp_ref.ImportFromWkt(p_info.projection)
+                sp_ref = set_spatial_reference(p_info.projection)
 
             p_info = None
 
-            # create the point layer
-            self.lyr = self.datasource.CreateLayer(self.f_base, geom_type=geom_type, srs=sp_ref)
-
-        elif isinstance(projection, str):
-
-            sp_ref = osr.SpatialReference()
-            sp_ref.ImportFromWkt(projection)
-
-            self.lyr = self.datasource.CreateLayer(self.f_base, geom_type=geom_type, srs=sp_ref)
-
         else:
 
-            self.lyr = self.datasource.CreateLayer(self.f_base, geom_type=geom_type)
+            if isinstance(epsg, int):
+                sp_ref = set_spatial_reference(epsg)
+            else:
+
+                if isinstance(projection, str):
+                    sp_ref = set_spatial_reference(projection)
+
+        # Create the layer
+        self.lyr = self.datasource.CreateLayer(self.f_base,
+                                               geom_type=geom_type,
+                                               srs=sp_ref)
 
         self.lyr_def = self.lyr.GetLayerDefn()
 
@@ -506,7 +587,7 @@ def rename_vector(input_file, output_file):
         output_file (str): The renamed file.
 
     Examples:
-        >>> from mappy import vector_tools
+        >>> from mpglue import vector_tools
         >>> vector_tools.rename_vector('/in_vector.shp', '/out_vector.shp')
 
     Returns:
@@ -546,7 +627,7 @@ def merge_vectors(shps2merge, merged_shapefile):
         merged_shapefile (str): The output merged shapefile.
 
     Examples:
-        >>> from mappy import vector_tools
+        >>> from mpglue import vector_tools
         >>> vector_tools.merge_vectors(['/in_shp_01.shp', '/in_shp_02.shp'],
         >>>                            '/merged_file.shp')
 
@@ -955,7 +1036,7 @@ def xy_within_image(x, y, image_info):
     Args:
         x (float): The x coordinate.
         y (float): The y coordinate.
-        image_info (object): Object of ``mappy.ropen``.
+        image_info (object): Object of ``mpglue.ropen``.
 
     Returns:
         ``True`` if ``x`` and ``y`` are within ``image_info``, otherwise ``False``.
@@ -1799,17 +1880,17 @@ def get_xy_offsets(image_info=None,
     Get coordinate offsets
 
     Args:
-        image_info (object): Object of ``mappy.ropen``.
+        image_info (object): Object of ``mpglue.ropen``.
         image_list (Optional[list]): [left, top, right, bottom, cellx, celly]. Default is [].
-        x (Optional[float]): An x coordinate. Default is None.
-        y (Optional[float]): A y coordinate. Default is None.
+        x (Optional[float]): The x coordinate. Default is None.
+        y (Optional[float]): The y coordinate. Default is None.
         feature (Optional[object]): Object of ``ogr.Feature``. Default is None.
-        xy_info (Optional[object]): Object of ``mappy.vopen`` or ``mappy.ropen``. Default is None.
+        xy_info (Optional[object]): Object of ``mpglue.vopen`` or ``mpglue.ropen``. Default is None.
         round_offset (Optional[bool]): Whether to round offsets. Default is False.
         check_position (Optional[bool]): Whether to check if `x` and `y` are within the extent bounds. Default is False.
 
     Examples:
-        >>> from mappy import vector_tools
+        >>> from mpglue import vector_tools
         >>>
         >>> # With an image and x, y coordinates.
         >>> x, y, x_offset, y_offset = vector_tools.get_xy_offsets(image_info=i_info, x=x, y=y)
@@ -2218,7 +2299,7 @@ def convex_hull(in_shp, out_shp):
     Creates a convex hull of a polygon shapefile
 
     Reference:
-        This code was slightly modified to fit into MapPy.
+        This code was slightly modified to fit into MpGlue.
 
         Project:        Geothon (https://github.com/MBoustani/Geothon)
         File:           Conversion_Tools/shp_convex_hull.py
@@ -2352,7 +2433,7 @@ def create_fields(v_info, field_names, field_types, field_widths):
         field_widths (int list): A list of field widths.
 
     Examples:
-        >>> from mappy import vector_tools
+        >>> from mpglue import vector_tools
         >>>
         >>> vector_tools.create_fields(v_info, ['Id'], ['int'], [5])
 

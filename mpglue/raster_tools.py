@@ -217,6 +217,34 @@ SENSOR_DICT = {'landsat_tm': 'tm',
                'lt8': 'oli_tirs'}
 
 
+def create_memory_raster(image_info,
+                         rows,
+                         cols,
+                         left,
+                         top):
+
+    """
+    Creates an in-memory raster object
+
+    Args:
+        image_info (object)
+        rows (int)
+        cols (int)
+        left (float)
+        top (float)
+
+    Returns:
+        Datasource object
+    """
+
+    # Create a raster to rasterize into.
+    target_ds = gdal.GetDriverByName('MEM').Create('', cols, rows, 1, gdal.GDT_Byte)
+    target_ds.SetGeoTransform([left, image_info.cellY, 0.0, top, 0.0, -image_info.cellY])
+    target_ds.SetProjection(image_info.projection)
+
+    return target_ds
+
+
 class ReadWrite(object):
 
     def read(self,
