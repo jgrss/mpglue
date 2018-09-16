@@ -244,13 +244,26 @@ def raster_calc(output,
 
                 for eqidx, equation_ in enumerate(equation.split('&&')):
 
-                    if not equation_.startswith('np.'):
-                        equation_ = 'np.' + equation_
+                    if 'nan_to_num' in equation_:
 
-                    out_array[eqidx] = ne.evaluate(equation_)
+                        if not equation_.startswith('np.'):
+                            equation_ = 'np.' + equation_
+
+                        equation_ = 'out_array[eqidx] = {}'.format(equation_)
+                        exec(equation_)
+
+                    else:
+                        out_array[eqidx] = ne.evaluate(equation_)
 
             else:
-                out_array = ne.evaluate(equation)
+
+                if 'nan_to_num' in equation_:
+
+                    equation_ = 'out_array = {}'.format(equation_)
+                    exec(equation_)
+
+                else:
+                    out_array = ne.evaluate(equation)
 
             # Set the output no data values.
             out_array[np.isnan(out_array) | np.isinf(out_array)] = out_no_data

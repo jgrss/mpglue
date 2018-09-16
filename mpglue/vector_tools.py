@@ -78,6 +78,72 @@ gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
 
+def geometry2array(geometry, image_info, image=None):
+
+    """
+    Converts a polygon geometry to an array
+
+    Args:
+        geometry (object): The polygon geometry.
+        image_info (object): The image information object. The object should have (cellY, projection).
+        image (Optional[str]): An image to subset. Default is None.
+
+    Returns:
+        2d array
+    """
+
+    # Unpack the polygon bounds.
+    left, bottom, right, top = geometry.bounds
+
+    datasource, lyr = create_memory_layer(image_info.projection)
+
+    field_def = ogr.FieldDefn('Value', ogr.OFTInteger)
+    lyr.CreateField(field_def)
+
+    feature = ogr.Feature(lyr.GetLayerDefn())
+    feature.SetGeometryDirectly(ogr.Geometry(wkt=str(geometry)))
+    feature.SetField('Value', 1)
+    lyr.CreateFeature(feature)
+
+    xcount = int((right - left) / image_info.cellY) + 1
+    ycount = int((top - bottom) / image_info.cellY) + 1
+
+    # Create a raster to rasterize into.
+    target_ds = gdal.GetDriverByName('MEM').Create('', xcount, ycount, 1, gdal.GDT_Byte)
+
+    target_ds.SetGeoTransform([left, image_info.cellY, 0.0, top, 0.0, -image_info.cellY])
+    target_ds.SetProjection(image_info.projection)
+
+    # Rasterize
+    gdal.RasterizeLayer(target_ds,
+                        [1],
+                        lyr,
+                        options=['ATTRIBUTE=Value'])
+
+    poly_array = np.uint8(target_ds.GetRasterBand(1).ReadAsArray())
+
+    datasource = None
+    target_ds = None
+
+    if isinstance(image, str):
+
+        with raster_tools.ropen(image) as i_info:
+
+            image_array = i_info.read(bands2open=-1,
+                                      x=left,
+                                      y=top,
+                                      rows=ycount,
+                                      cols=xcount,
+                                      d_type='float32')
+
+        i_info = None
+
+        return poly_array, image_array
+
+    else:
+        return poly_array
+
+
 def feature_from_geometry(layer, geometry):
 
     """
