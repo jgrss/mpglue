@@ -493,7 +493,7 @@ def get_available_models():
             'RF', 'CVGBoost', 'CVRF', 'RFR', 'CVMLP',
             'SVMc', 'SVMnu', 'SVMcR', 'CVSVM', 'CVSVMA', 'CVSVR', 'CVSVRA', 'QDA',
             'ChainCRF', 'GridCRF',
-            'LightGBM', 'tpot', 'garden']
+            'LightGBM', 'Tpot', 'Mondrian']
 
 
 class ParameterHandler(object):
@@ -637,7 +637,11 @@ class ParameterHandler(object):
                                  'colsample_bytree', 'reg_alpha', 'reg_lambda', 'random_state', 'n_jobs', 'silent',
                                  'feature_fraction', 'bagging_freq', 'bagging_fraction', 'max_bin', 'num_boost_round']
 
-        elif classifier in ['tpot', 'garden']:
+        elif classifier == 'Mondrian':
+
+            self.valid_params = ['max_depth', 'min_samples_split', 'random_state']
+
+        elif classifier == 'Tpot':
             self.valid_params = list()
 
         else:
@@ -3545,8 +3549,8 @@ class ModelOptions(object):
                    *LightGBM
         Tpot    -- Tpot pipeline (classification problems)
                    *Tpot
-        garden  -- Mondrian trees (classification problems)
-                   *Sckit-garden
+        Mondrian-- Mondrian trees (classification problems)
+                   *Scikit-garden
                    
         """
 
@@ -4263,17 +4267,17 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     voting_sub_model = TPOTClassifier(generations=5, population_size=50, cv=5, verbosity=0)
 
-                elif classifier == 'garden':
+                elif classifier == 'Mondrian':
 
                     if not SCIKIT_GARDEN:
 
                         logger.error("""\
 
-                        Scikit-garden must be installed to use the model.
+                        Scikit-garden must be installed to use the Mondrian model.
 
                         """)
 
-                    voting_sub_model = MondrianTreeClassifier()
+                    voting_sub_model = MondrianTreeClassifier(**self.classifier_info_)
 
                 elif classifier == 'GB':
                     voting_sub_model = ensemble.GradientBoostingClassifier(**self.classifier_info_)
@@ -4574,7 +4578,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 self.model = imblearn.BalancedBaggingClassifier(**self.classifier_info_base)
 
-            elif self.classifier_info['classifier'] == 'tpot':
+            elif self.classifier_info['classifier'] == 'Tpot':
 
                 if not TPOT_INSTALLED:
 
@@ -4586,17 +4590,17 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 self.model = TPOTClassifier(generations=5, population_size=50, cv=5, verbosity=0)
 
-            elif self.classifier_info['classifier'] == 'garden':
+            elif self.classifier_info['classifier'] == 'Mondrian':
 
                 if not SCIKIT_GARDEN:
 
                     logger.error("""\
 
-                    Scikit-garden must be installed to use the model.
+                    Scikit-garden must be installed to use the Mondrian model.
 
                     """)
 
-                self.model = MondrianTreeClassifier()
+                self.model = MondrianTreeClassifier(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'GB':
                 self.model = ensemble.GradientBoostingClassifier(**self.classifier_info_)
