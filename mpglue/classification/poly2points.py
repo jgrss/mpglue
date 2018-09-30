@@ -89,10 +89,15 @@ def _add_points_from_raster(out_shp,
                             if point_value == no_data_value:
                                 continue
 
-                            if 'float' in block_dtype.name or 'double' in block_dtype.name:
-                                point_value = float('{:.2f}'.format(point_value))
-                            else:
-                                point_value = int(point_value)
+                            try:
+
+                                if 'float' in block_dtype.name or 'double' in block_dtype.name:
+                                    point_value = float('{:.2f}'.format(point_value))
+                                else:
+                                    point_value = int(point_value)
+
+                            except:
+                                continue
 
                             # if int(str(point_value)[str(point_value).find('.')+1]) == 0:
                             #     point_value = int(point_value)
