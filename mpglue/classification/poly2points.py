@@ -75,6 +75,8 @@ def _add_points_from_raster(out_shp,
                                     rows=n_rows,
                                     cols=n_cols)
 
+                block_dtype = block.dtype
+
                 # Create the points.
                 if block.max() != no_data_value:
 
@@ -84,18 +86,23 @@ def _add_points_from_raster(out_shp,
 
                             point_value = block[i2, j2]
 
-                            if int(point_value) == no_data_value:
+                            if point_value == no_data_value:
                                 continue
 
-                            if int(str(point_value)[str(point_value).find('.')+1]) == 0:
-                                point_value = int(point_value)
-                            else:
+                            if 'float' in block_dtype or 'double' in block_dtype:
                                 point_value = float('{:.2f}'.format(point_value))
+                            else:
+                                point_value = int(point_value)
+
+                            # if int(str(point_value)[str(point_value).find('.')+1]) == 0:
+                            #     point_value = int(point_value)
+                            # else:
+                            #     point_value = float('{:.2f}'.format(point_value))
 
                             if point_value != no_data_value:
 
-                                top_shift = (top - (i2 * m_info.cellY)) - (m_info.cellY / 2.)
-                                left_shift = (left + (j2 * m_info.cellY)) + (m_info.cellY / 2.)
+                                top_shift = (top - (i2 * m_info.cellY)) - (m_info.cellY / 2.0)
+                                left_shift = (left + (j2 * m_info.cellY)) + (m_info.cellY / 2.0)
 
                                 # left_shift = left + ((m_info.cellY * skip) - (m_info.cellY / 2.))
                                 # top_shift = top - ((m_info.cellY * skip) - (m_info.cellY / 2.))
@@ -259,6 +266,8 @@ def poly2points(input_polygon,
                                 be_quiet,
                                 block_size_rows,
                                 block_size_cols)
+
+    v_info = None
 
 
 def _examples():

@@ -344,12 +344,13 @@ class vopen(RegisterDriver):
         # get the number of layers in the shapefile
         self.layer_count = self.shp.GetLayerCount()
 
+        self.spatial_reference = osr.SpatialReference()
+
         # get the projection
         if isinstance(self.epsg, int):
 
             try:
 
-                self.spatial_reference = osr.SpatialReference()
                 self.spatial_reference.ImportFromEPSG(self.epsg)
 
             except:
