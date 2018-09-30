@@ -3376,14 +3376,15 @@ class Preprocessing(object):
 
         return new_p_vars, new_labels
 
-    def semi_supervised(self, classifier_info={'classifier': 'RF'}, kernel='knn'):
+    def semi_supervised(self, label_method='propagate', **kwargs):
 
         """
         Predict class values of unlabeled samples
 
         Args:
-            classifier_info (Optional[dict]): The model parameters. Default is {'classifier': 'RF'}.
-            kernel (str): The kernel to use (rbf or knn). Default is 'knn'.
+            label_method (Optional[str]): The semi-supervised label method. Default is 'propagate'. Choices
+                are ['propagate', 'spread'].
+            kwargs (Optional[dict]): Keyword arguments to be passed to the semi-supervised method.
 
         Examples:
             >>> # create the classifier object
@@ -3401,55 +3402,60 @@ class Preprocessing(object):
             >>> cl.semi_supervised()
         """
 
-        self.classifier_info = classifier_info
+        unlabeled_idx = np.where(self.labels == -1)
 
-        # label_spread = label_propagation.LabelSpreading(kernel=kernel, n_neighbors=10, alpha=20, gamma=100,
-        #                                                 max_iter=100, tol=.001)
-        # label_spread.fit(self.p_vars, self.labels)
-        #
-        # self.labels = label_spread.transduction_
+        if label_method == 'propagate':
+            ss_model = label_propagation.LabelSpreading(**kwargs)
+        else:
+            ss_model = label_propagation.LabelSpreading(**kwargs)
+
+        ss_model.fit(self.p_vars, self.labels)
+
+        self.labels[unlabeled_idx] = ss_model.transduction_[unlabeled_idx]
+
+        self.update_class_counts()
 
         # the model parameters
-        self._default_parameters()
-
-        if classifier_info['classifier'] == 'RF':
-
-            label_spread = ensemble.RandomForestClassifier(max_depth=classifier_info['max_depth'],
-                                                           n_estimators=classifier_info['trees'],
-                                                           max_features=classifier_info['rand_vars'],
-                                                           min_samples_split=classifier_info['min_samps'],
-                                                           n_jobs=-1)
-
-        elif classifier_info['classifier'] == 'EX_RF':
-
-            label_spread = ensemble.ExtraTreesClassifier(max_depth=classifier_info['max_depth'],
-                                                         n_estimators=classifier_info['trees'],
-                                                         max_features=classifier_info['rand_vars'],
-                                                         min_samples_split=classifier_info['min_samps'],
-                                                         n_jobs=-1)
-
-        labeled_vars_idx = np.where(self.labels != -1)
-        labeled_vars = self.p_vars[labeled_vars_idx]
-        labels = self.labels[labeled_vars_idx]
-
-        label_spread.fit(labeled_vars, labels)
-
-        # keep the good labels
-        unknown_labels_idx = np.where(self.labels == -1)
-
-        # predict the unlabeled
-        temp_labels = label_spread.predict(self.p_vars)
-
-        # save the predictions of the unknowns
-        self.labels[unknown_labels_idx] = temp_labels[unknown_labels_idx]
-
-        # update the individual class counts
-        self.classes = list(np.delete(self.classes, 0))
-        self.class_counts = {}
-        for indv_class in self.classes:
-            self.class_counts[indv_class] = len(np.where(self.labels == indv_class)[0])
-
-        self.n_classes = len(self.classes)
+        # self._default_parameters()
+        #
+        # if classifier_info['classifier'] == 'RF':
+        #
+        #     label_spread = ensemble.RandomForestClassifier(max_depth=classifier_info['max_depth'],
+        #                                                    n_estimators=classifier_info['trees'],
+        #                                                    max_features=classifier_info['rand_vars'],
+        #                                                    min_samples_split=classifier_info['min_samps'],
+        #                                                    n_jobs=-1)
+        #
+        # elif classifier_info['classifier'] == 'EX_RF':
+        #
+        #     label_spread = ensemble.ExtraTreesClassifier(max_depth=classifier_info['max_depth'],
+        #                                                  n_estimators=classifier_info['trees'],
+        #                                                  max_features=classifier_info['rand_vars'],
+        #                                                  min_samples_split=classifier_info['min_samps'],
+        #                                                  n_jobs=-1)
+        #
+        # labeled_vars_idx = np.where(self.labels != -1)
+        # labeled_vars = self.p_vars[labeled_vars_idx]
+        # labels = self.labels[labeled_vars_idx]
+        #
+        # label_spread.fit(labeled_vars, labels)
+        #
+        # # keep the good labels
+        # unknown_labels_idx = np.where(self.labels == -1)
+        #
+        # # predict the unlabeled
+        # temp_labels = label_spread.predict(self.p_vars)
+        #
+        # # save the predictions of the unknowns
+        # self.labels[unknown_labels_idx] = temp_labels[unknown_labels_idx]
+        #
+        # # update the individual class counts
+        # self.classes = list(np.delete(self.classes, 0))
+        # self.class_counts = {}
+        # for indv_class in self.classes:
+        #     self.class_counts[indv_class] = len(np.where(self.labels == indv_class)[0])
+        #
+        # self.n_classes = len(self.classes)
 
 
 class ModelOptions(object):
