@@ -250,31 +250,68 @@ class TimeSeriesFeatures(object):
         self.ts_funcs = [(feature_name, self._func_dict[feature_name]) for feature_name in feature_list
                          if feature_name in self._func_dict]
 
-    def apply_features(self, X, ts_indices=None, **kwargs):
+    def apply_features(self, X=None, ts_indices=None, append_features=True, **kwargs):
 
         """
         Applies features to an array
 
         Args:
-            X (2d array): The array to add features to.
+            X (Optional[2d array]): The array to add features to.
             ts_indices (Optional[1-d array like]): A list of indices to index the time series. Default is None.
+            append_features (Optional[bool]): Whether to append features to `X`. Default is True.
         """
 
         if not isinstance(self.ts_funcs, list):
             logger.error('  The features must be added with `add_features`.')
 
+        if not append_features:
+            Xnew = None
+
         for ts_func in self.ts_funcs:
 
             if isinstance(ts_indices, np.ndarray) or isinstance(ts_indices, list):
 
-                X = np.hstack((X,
-                               ts_func[1](X[:, ts_indices],
-                                          **kwargs)))
+                if append_features:
+
+                    X = np.hstack((X,
+                                   ts_func[1](X[:, ts_indices],
+                                              **kwargs)))
+
+                else:
+
+                    if isinstance(Xnew, np.ndarray):
+
+                        Xnew = np.hstack((Xnew,
+                                          ts_func[1](X[:, ts_indices],
+                                                     **kwargs)))
+
+                    else:
+
+                        Xnew = ts_func[1](X[:, ts_indices],
+                                          **kwargs)
 
             else:
 
-                X = np.hstack((X,
-                               ts_func[1](X,
-                                          **kwargs)))
+                if append_features:
 
-        return X
+                    X = np.hstack((X,
+                                   ts_func[1](X,
+                                              **kwargs)))
+
+                else:
+
+                    if isinstance(Xnew, np.ndarray):
+
+                        Xnew = np.hstack((Xnew,
+                                          ts_func[1](X,
+                                                     **kwargs)))
+
+                    else:
+
+                        Xnew = ts_func[1](X,
+                                          **kwargs)
+
+        if append_features:
+            return X
+        else:
+            return Xnew

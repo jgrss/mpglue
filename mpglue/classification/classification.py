@@ -3698,7 +3698,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         compress_model=False,
                         view_calibration=None,
                         fig_location=None,
-                        feature_list=None):
+                        feature_list=None,
+                        append_features=False,
+                        ts_indices=None):
 
         """
         Loads, trains, and saves a predictive model.
@@ -3740,6 +3742,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             fig_location (Optional[str]): The location to save the `view_calibration` figure. Default is None.
             feature_list (Optional[str list]): A list of features to add to `p_vars`. Default is None.
                 Choices are ['mean', 'cv'].
+            append_features (Optional[bool]): Whether to append time series features to the existing features.
+                Default is True.
+            ts_indices (Optional[int list]): An index array for time series features. Default is None.
 
         Examples:
             >>> # create the classifier object
@@ -3802,6 +3807,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self._add_features = False
         self.calibrated = False
         self.feature_list = feature_list
+        self.append_features = append_features
+        self.ts_indices = ts_indices
 
         if isinstance(self.view_calibration, int):
 
@@ -3917,28 +3924,31 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 self.feature_object = TimeSeriesFeatures()
                 self.feature_object.add_features(self.feature_list)
 
-                if self.use_xy:
-                    ts_indices = np.array(range(0, self.p_vars.shape[1]-2), dtype='int64')
-                else:
-                    ts_indices = None
+                if not self.ts_indices:
+
+                    if self.use_xy:
+                        self.ts_indices = np.array(range(0, self.p_vars.shape[1]-2), dtype='int64')
 
                 # logger.info(self.p_vars.shape[1])
                 # logger.info(self.p_vars_test.shape[1])
                 # logger.info(self.calibrate_test.shape[1])
                 # logger.info(ts_indices.shape)
 
-                self.p_vars = self.feature_object.apply_features(self.p_vars,
-                                                                 ts_indices=ts_indices)
+                self.p_vars = self.feature_object.apply_features(X=self.p_vars,
+                                                                 ts_indices=self.ts_indices,
+                                                                 append_features=self.append_features)
 
                 if isinstance(self.p_vars_test, np.ndarray):
 
-                    self.p_vars_test = self.feature_object.apply_features(self.p_vars_test,
-                                                                          ts_indices=ts_indices)
+                    self.p_vars_test = self.feature_object.apply_features(X=self.p_vars_test,
+                                                                          ts_indices=self.ts_indices,
+                                                                          append_features=self.append_features)
 
                 if isinstance(self.calibrate_test, np.ndarray):
 
-                    self.calibrate_test = self.feature_object.apply_features(self.calibrate_test,
-                                                                             ts_indices=ts_indices)
+                    self.calibrate_test = self.feature_object.apply_features(X=self.calibrate_test,
+                                                                             ts_indices=self.ts_indices,
+                                                                             append_features=self.append_features)
 
                 self._add_features = True
 
@@ -5814,13 +5824,14 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             #   time series features.
             if self._add_features:
 
-                if self.use_xy:
-                    ts_indices = np.array(range(0, features.shape[1]-2), dtype='int64')
-                else:
-                    ts_indices = None
+                if not self.ts_indices:
 
-                features = self.feature_object.apply_features(features,
-                                                              ts_indices=ts_indices)
+                    if self.use_xy:
+                        self.ts_indices = np.array(range(0, features.shape[1]-2), dtype='int64')
+
+                features = self.feature_object.apply_features(X=features,
+                                                              ts_indices=self.ts_indices,
+                                                              append_features=self.append_features)
 
             if self.get_probs:
 
