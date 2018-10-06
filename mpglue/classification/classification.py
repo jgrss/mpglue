@@ -5666,9 +5666,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             out_raster_object = self._set_output_object()
 
-            if self.predict_probs:
-                out_bands = [out_raster_object.get_band(bd) for bd in range(1, self.o_info.bands+1)]
-            else:
+            if not self.predict_probs:
 
                 out_raster_object.get_band(1)
                 out_raster_object.fill(0)
@@ -5745,9 +5743,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 out_raster_object = self._set_output_object()
 
-                if self.predict_probs:
-                    out_bands = [out_raster_object.datasource.GetRasterBand(bd) for bd in range(1, self.o_info.bands+1)]
-                else:
+                if not self.predict_probs:
 
                     out_raster_object.get_band(1)
                     out_raster_object.fill(0)
@@ -5780,19 +5776,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     # Close the block file.
                     if self.write2blocks:
 
-                        if self.predict_probs:
-
-                            for cl in range(0, self.n_classes):
-
-                                out_bands[cl].GetStatistics(0, 1)
-                                out_bands[cl].FlushCache()
-
-                            out_bands = None
-
-                        else:
-
-                            out_raster_object.close_all()
-                            out_raster_object = None
+                        out_raster_object.close_all()
+                        out_raster_object = None
 
                     continue
 
@@ -5981,11 +5966,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                           self.predict_probs,
                                                           self.d_type)
 
-                        for cl in range(0, self.n_classes):
+                        for cl in range(1, self.n_classes+1):
 
-                            out_bands[cl].WriteArray(predicted[cl],
-                                                     j=j-jwo,
-                                                     i=i-iwo)
+                            out_raster_object.write_array(predicted[cl],
+                                                          j=j-jwo,
+                                                          i=i-iwo,
+                                                          band=cl)
 
                     else:
 
@@ -6109,19 +6095,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             # Close the block file.
             if self.write2blocks:
 
-                if self.predict_probs:
-
-                    for cl in range(0, self.n_classes):
-
-                        out_bands[cl].GetStatistics(0, 1)
-                        out_bands[cl].FlushCache()
-
-                    out_bands = None
-
-                else:
-
-                    out_raster_object.close_all()
-                    out_raster_object = None
+                out_raster_object.close_all()
+                out_raster_object = None
 
             if self.track_blocks and not self.write2blocks:
 
@@ -6136,19 +6111,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         # Close the file.
         if not self.write2blocks:
 
-            if self.predict_probs:
-
-                for cl in range(0, self.n_classes):
-
-                    out_bands[cl].GetStatistics(0, 1)
-                    out_bands[cl].FlushCache()
-
-                out_bands = None
-
-            else:
-
-                out_raster_object.close_all()
-                out_raster_object = None
+            out_raster_object.close_all()
+            out_raster_object = None
 
         if isinstance(self.mask_background, str) or isinstance(self.mask_background, np.ndarray):
             self._mask_background()
