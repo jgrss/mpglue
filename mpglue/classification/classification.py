@@ -5966,7 +5966,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                           self.predict_probs,
                                                           self.d_type)
 
-                        for cl in range(1, self.n_classes+1):
+                        for cl in range(0, self.n_classes):
 
                             out_raster_object.write_array(predicted[cl],
                                                           j=j-jwo,
