@@ -5968,10 +5968,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                         for cl in range(0, self.n_classes):
 
+                            out_raster_object.get_band(cl)
+
                             out_raster_object.write_array(predicted[cl],
                                                           j=j-jwo,
-                                                          i=i-iwo,
-                                                          band=cl)
+                                                          i=i-iwo)
+                            
+                            out_raster_object.close_band()
 
                     else:
 
