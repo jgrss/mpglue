@@ -5814,6 +5814,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                             logger.error('  The number of predictive layers does not match the number of model estimators.')
                             raise AssertionError
 
+            import pdb
+            pdb.set_trace()
+
             # Get all the bands for the tile. The shape
             #   of the features is ([rows x columns] x features).
             features = raster_tools.read(image2open=self.input_image,
