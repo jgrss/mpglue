@@ -6187,7 +6187,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         """Creates the raster object to write to"""
 
-        if isinstance(self.mask_background, str) or isinstance(self.mask_background, np.ndarray):
+        if self.predict_probs or \
+                isinstance(self.mask_background, str) or \
+                isinstance(self.mask_background, np.ndarray):
 
             return raster_tools.create_raster(self.out_image_temp,
                                               self.o_info,
