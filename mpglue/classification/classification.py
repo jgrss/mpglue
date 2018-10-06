@@ -414,7 +414,7 @@ def predict_scikit_probas(rw,
         return moving_window(probabilities.T.reshape(n_classes,
                                                      rw,
                                                      cw),
-                             statistic='plr',
+                             statistic='plr',predict_scikit_probas
                              window_size=plr_window_size,
                              weights=plr_matrix,
                              iterations=plr_iterations)[:, ipadded:ipadded+n_rows, jpadded:jpadded+n_cols]
@@ -5813,9 +5813,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                             logger.error('  The number of predictive layers does not match the number of model estimators.')
                             raise AssertionError
-
-            import pdb
-            pdb.set_trace()
 
             # Get all the bands for the tile. The shape
             #   of the features is ([rows x columns] x features).
