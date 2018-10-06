@@ -376,6 +376,7 @@ def predict_scikit_probas(rw,
                           plr_matrix,
                           plr_window_size,
                           plr_iterations,
+                          predict_probs,
                           d_type):
 
     """
@@ -393,6 +394,7 @@ def predict_scikit_probas(rw,
         plr_matrix (2d array)
         plr_window_size (int)
         plr_iterations (int)
+        predict_probs (bool)
         d_type (str)
     """
 
@@ -405,13 +407,27 @@ def predict_scikit_probas(rw,
     n_classes = probabilities.shape[1]
 
     # Reshape and run PLR
-    probabilities_argmax = moving_window(probabilities.T.reshape(n_classes,
-                                                                 rw,
-                                                                 cw),
-                                         statistic='plr',
-                                         window_size=plr_window_size,
-                                         weights=plr_matrix,
-                                         iterations=plr_iterations).argmax(axis=0)
+    if predict_probs:
+
+        # Predict class conditional probabilities.
+
+        return moving_window(probabilities.T.reshape(n_classes,
+                                                     rw,
+                                                     cw),
+                             statistic='plr',
+                             window_size=plr_window_size,
+                             weights=plr_matrix,
+                             iterations=plr_iterations)[:, ipadded:ipadded+n_rows, jpadded:jpadded+n_cols]
+
+    else:
+
+        probabilities_argmax = moving_window(probabilities.T.reshape(n_classes,
+                                                                     rw,
+                                                                     cw),
+                                             statistic='plr',
+                                             window_size=plr_window_size,
+                                             weights=plr_matrix,
+                                             iterations=plr_iterations).argmax(axis=0)
 
     if morphology:
         predictions = np.zeros(probabilities_argmax.shape, dtype='uint8')
@@ -3376,7 +3392,12 @@ class Preprocessing(object):
 
         return new_p_vars, new_labels
 
-    def semi_supervised(self, label_method='propagate', **kwargs):
+    def semi_supervised(self,
+                        label_method='propagate',
+                        var_array=None,
+                        lab_array=None,
+                        sub_idx=None,
+                        **kwargs):
 
         """
         Predict class values of unlabeled samples
@@ -3384,6 +3405,9 @@ class Preprocessing(object):
         Args:
             label_method (Optional[str]): The semi-supervised label method. Default is 'propagate'. Choices
                 are ['propagate', 'spread'].
+            var_array (Optional[2d array]): An array to replace `self.p_vars`. Default is None.
+            lab_array (Optional[1d array]): An array to replace `self.labels`. Default is None.
+            sub_idx (Optional[1d array-like]): A list or array of indices to subset by. Default is None.
             kwargs (Optional[dict]): Keyword arguments to be passed to the semi-supervised method.
 
         Examples:
@@ -3402,18 +3426,39 @@ class Preprocessing(object):
             >>> cl.semi_supervised()
         """
 
-        unlabeled_idx = np.where(self.labels == -1)
+        if isinstance(sub_idx, np.ndarray) or isinstance(sub_idx, list):
+
+            if isinstance(var_array, np.ndarray):
+
+                var_array = var_array[np.array(sorted(sub_idx), dtype='int64')]
+                lab_array = lab_array[np.array(sorted(sub_idx), dtype='int64')]
+
+            else:
+
+                var_array = self.p_vars[np.array(sorted(sub_idx), dtype='int64')]
+                lab_array = self.labels[np.array(sorted(sub_idx), dtype='int64')]
+
+        else:
+
+            if not isinstance(var_array, np.ndarray):
+
+                var_array = self.p_vars
+                lab_array = self.labels
+
+        unlabeled_idx = np.where(lab_array == -1)
 
         if label_method == 'propagate':
             ss_model = label_propagation.LabelSpreading(**kwargs)
         else:
             ss_model = label_propagation.LabelSpreading(**kwargs)
 
-        ss_model.fit(self.p_vars, self.labels)
+        ss_model.fit(var_array, lab_array)
 
-        self.labels[unlabeled_idx] = ss_model.transduction_[unlabeled_idx]
+        lab_array[unlabeled_idx] = ss_model.transduction_[unlabeled_idx]
 
-        self.update_class_counts()
+        return lab_array
+
+        # self.update_class_counts()
 
         # the model parameters
         # self._default_parameters()
@@ -5223,6 +5268,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 gdal_cache=256,
                 overwrite=False,
                 track_blocks=False,
+                predict_probs=False,
                 relax_probabilities=False,
                 plr_window_size=5,
                 plr_iterations=3,
@@ -5267,6 +5313,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             gdal_cache (Optional[int]). The GDAL cache (MB). Default is 256.
             overwrite (Optional[bool]): Whether to overwrite an existing `output_image`. Default is False.
             track_blocks (Optional[bool]): Whether to keep a record of processed blocks. Default is False.
+            predict_probs (Optional[bool]): Whether to write class probabilities to file in place of hard decisions.
+                Default is False.
             relax_probabilities (Optional[bool]): Whether to relax posterior probabilities. Default is False.
             plr_window_size (Optional[int]): The window size for probabilistic label relaxation. Default is 5.
             plr_iterations (Optional[int]): The number of iterations for probabilistic label relaxation. Default is 3.
@@ -5338,6 +5386,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         self.chunk_size = (self.row_block_size * self.col_block_size) / 100
         self.overwrite = overwrite
         self.track_blocks = track_blocks
+        self.predict_probs = predict_probs
         self.relax_probabilities = relax_probabilities
         self.plr_window_size = plr_window_size
         self.plr_iterations = plr_iterations
@@ -5434,8 +5483,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             # Output image information.
             self.o_info = self.i_info.copy()
 
-            # Set the number of output bands.
-            if self.get_probs:
+            # OUTPUT BANDS
+            if self.predict_probs:
 
                 if not hasattr(self.model, 'predict_proba'):
 
@@ -5447,8 +5496,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             else:
                 self.o_info.bands = 1
 
-            if self.classifier_info['classifier'] in ['ABR', 'ABR_EX_DTR', 'BGR', 'Bag_DTR', 'RFR', 'EX_RFR', 'CV_RFR',
-                                                      'CVEX_RFR', 'SVR', 'SVRA', 'Cubist', 'DTR']:
+            # OUTPUT DATA TYPE
+            if self.predict_probs or self.classifier_info['classifier'] in ['ABR', 'ABR_EX_DTR', 'BGR', 'Bag_DTR',
+                                                                            'RFR', 'EX_RFR', 'CV_RFR', 'CVEX_RFR',
+                                                                            'SVR', 'SVRA', 'Cubist', 'DTR']:
 
                 self.o_info.storage = 'float32'
                 self.d_type = 'float32'
@@ -5592,8 +5643,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         iwo = 0
         jwo = 0
 
-        # Update variables for
-        #   sub-image predictions.
+        # Update variables for sub-image predictions.
         start_i, start_j, rows, cols, iwo, jwo = self._set_indexing(start_i,
                                                                     start_j,
                                                                     rows,
@@ -5616,7 +5666,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             out_raster_object = self._set_output_object()
 
-            if self.get_probs:
+            if self.predict_probs:
                 out_bands = [out_raster_object.get_band(bd) for bd in range(1, self.o_info.bands+1)]
             else:
 
@@ -5665,7 +5715,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         n_block += 1
                         continue
 
-                    # End the process.
                     if n_block > self.block_range[1]:
                         break
 
@@ -5696,8 +5745,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 out_raster_object = self._set_output_object()
 
-                if self.get_probs:
-                    out_bands = [out_raster_object.get_band(bd) for bd in range(1, self.o_info.bands+1)]
+                if self.predict_probs:
+                    out_bands = [out_raster_object.datasource.GetRasterBand(bd) for bd in range(1, self.o_info.bands+1)]
                 else:
 
                     out_raster_object.get_band(1)
@@ -5731,19 +5780,19 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     # Close the block file.
                     if self.write2blocks:
 
-                        if self.get_probs:
+                        if self.predict_probs:
 
                             for cl in range(0, self.n_classes):
 
                                 out_bands[cl].GetStatistics(0, 1)
                                 out_bands[cl].FlushCache()
 
-                            del out_bands
+                            out_bands = None
 
                         else:
 
                             out_raster_object.close_all()
-                            del out_raster_object
+                            out_raster_object = None
 
                     continue
 
@@ -5833,101 +5882,112 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                               ts_indices=self.ts_indices,
                                                               append_features=self.append_features)
 
-            if self.get_probs:
+            if 'CV' in self.classifier_info['classifier']:
 
-                # Predict class conditional probabilities.
+                if self.classifier_info['classifier'] == 'CVMLP':
 
-                predicted = np.float32(self.model.predict_proba(features))
+                    self.model.predict(features, predicted)
 
-                for cl in range(0, self.n_classes):
+                    predicted = np.argmax(predicted, axis=1)
 
-                    out_bands[cl].WriteArray(predicted[:, cl].reshape(n_rows, n_cols),
-                                             j=j-jwo,
-                                             i=i-iwo)
+                else:
 
-            else:
+                    # Setup the global array to write to. This avoids
+                    #   passing it to the joblib workers.
+                    # predicted = np.empty((n_samples, 1), dtype='uint8')
 
-                if 'CV' in self.classifier_info['classifier']:
+                    predicted = joblib.Parallel(n_jobs=self.n_jobs,
+                                                max_nbytes=None)(joblib.delayed(predict_cv)(chunk,
+                                                                                            self.chunk_size,
+                                                                                            self.file_name,
+                                                                                            self.perc_samp,
+                                                                                            self.classes2remove,
+                                                                                            self.ignore_feas,
+                                                                                            self.use_xy,
+                                                                                            self.classifier_info,
+                                                                                            self.weight_classes)
+                                                                 for chunk in range(0, n_samples, self.chunk_size))
 
-                    if self.classifier_info['classifier'] == 'CVMLP':
+                # transpose and reshape the predicted labels to (rows x columns)
+                out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
+                                                                                                               n_cols),
+                                              j=j-jwo,
+                                              i=i-iwo)
 
-                        self.model.predict(features, predicted)
+            elif self.classifier_info['classifier'] in ['C5', 'Cubist']:
 
-                        predicted = np.argmax(predicted, axis=1)
+                # Load the predictor variables.
+                # predict_samps = pandas2ri.py2ri(pd.DataFrame(features))
 
-                    else:
+                predict_samps = ro.r.matrix(features, nrow=n_samples, ncol=len(self.bands2open))
+                predict_samps.colnames = StrVector(self.headers[:-1])
 
-                        # Setup the global array to write to. This avoids
-                        #   passing it to the joblib workers.
-                        # predicted = np.empty((n_samples, 1), dtype='uint8')
+                # Get chunks for parallel processing.
+                indice_pairs = list()
+                for i_ in range(1, n_samples+1, self.chunk_size):
 
-                        predicted = joblib.Parallel(n_jobs=self.n_jobs,
-                                                    max_nbytes=None)(joblib.delayed(predict_cv)(chunk,
-                                                                                                self.chunk_size,
-                                                                                                self.file_name,
-                                                                                                self.perc_samp,
-                                                                                                self.classes2remove,
-                                                                                                self.ignore_feas,
-                                                                                                self.use_xy,
-                                                                                                self.classifier_info,
-                                                                                                self.weight_classes)
-                                                                     for chunk in range(0, n_samples, self.chunk_size))
+                    n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
+                    indice_pairs.append([i_, n_rows_])
 
-                    # transpose and reshape the predicted labels to (rows x columns)
+                indice_pairs[-1][1] += 1
+
+                # Make the predictions and convert to a NumPy array.
+                if isinstance(self.input_model, str):
+
+                    predicted = joblib.Parallel(n_jobs=self.n_jobs,
+                                                max_nbytes=None)(joblib.delayed(predict_c5_cubist)(self.input_model,
+                                                                                                   ip)
+                                                                 for ip in indice_pairs)
+
+                    # Write the predictions to file.
                     out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
                                                                                                                    n_cols),
                                                   j=j-jwo,
                                                   i=i-iwo)
 
-                elif self.classifier_info['classifier'] in ['C5', 'Cubist']:
-
-                    # Load the predictor variables.
-                    # predict_samps = pandas2ri.py2ri(pd.DataFrame(features))
-
-                    predict_samps = ro.r.matrix(features, nrow=n_samples, ncol=len(self.bands2open))
-                    predict_samps.colnames = StrVector(self.headers[:-1])
-
-                    # Get chunks for parallel processing.
-                    indice_pairs = list()
-                    for i_ in range(1, n_samples+1, self.chunk_size):
-
-                        n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
-                        indice_pairs.append([i_, n_rows_])
-
-                    indice_pairs[-1][1] += 1
-
-                    # Make the predictions and convert to a NumPy array.
-                    if isinstance(self.input_model, str):
-
-                        predicted = joblib.Parallel(n_jobs=self.n_jobs,
-                                                    max_nbytes=None)(joblib.delayed(predict_c5_cubist)(self.input_model,
-                                                                                                       ip)
-                                                                     for ip in indice_pairs)
-
-                        # Write the predictions to file.
-                        out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
-                                                                                                                       n_cols),
-                                                      j=j-jwo,
-                                                      i=i-iwo)
-
-                    else:
-
-                        out_raster_object.write_array(_do_c5_cubist_predict(self.model,
-                                                                            self.classifier_info['classifier'],
-                                                                            predict_samps).reshape(n_rows,
-                                                                                                   n_cols),
-                                                      j=j-jwo,
-                                                      i=i-iwo)
-
                 else:
 
-                    # Scikit-learn models
+                    out_raster_object.write_array(_do_c5_cubist_predict(self.model,
+                                                                        self.classifier_info['classifier'],
+                                                                        predict_samps).reshape(n_rows,
+                                                                                               n_cols),
+                                                  j=j-jwo,
+                                                  i=i-iwo)
 
-                    if self.relax_probabilities:
+            else:
 
-                        # --------------------------------------
-                        # Posterior probability label relaxation
-                        # --------------------------------------
+                # SCIKIT-LEARN MODELS
+
+                if self.predict_probs or self.relax_probabilities:
+
+                    # --------------------------------------
+                    # Posterior probability label relaxation
+                    # --------------------------------------
+
+                    if self.predict_probs:
+
+                        # Predict class conditional probabilities.
+                        predicted = predict_scikit_probas(rw,
+                                                          cw,
+                                                          ipadded,
+                                                          jpadded,
+                                                          n_rows,
+                                                          n_cols,
+                                                          self.morphology,
+                                                          self.do_not_morph,
+                                                          self.plr_matrix,
+                                                          self.plr_window_size,
+                                                          self.plr_iterations,
+                                                          self.predict_probs,
+                                                          self.d_type)
+
+                        for cl in range(0, self.n_classes):
+
+                            out_bands[cl].WriteArray(predicted[cl],
+                                                     j=j-jwo,
+                                                     i=i-iwo)
+
+                    else:
 
                         # Write the predictions to file.
                         out_raster_object.write_array(predict_scikit_probas(rw,
@@ -5941,126 +6001,127 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                                             self.plr_matrix,
                                                                             self.plr_window_size,
                                                                             self.plr_iterations,
+                                                                            self.predict_probs,
                                                                             self.d_type),
                                                       j=j-jwo,
                                                       i=i-iwo)
 
-                    else:
+                else:
 
-                        # Get chunks for parallel processing.
-                        # indice_pairs = list()
-                        #
-                        # for i_ in range(0, n_samples, self.chunk_size):
-                        #
-                        #     n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
-                        #     indice_pairs.append([i_, n_rows_])
-                        #
-                        # if (self.n_jobs != 0) and (self.n_jobs != 1):
-                        #
-                        #     # Make the predictions and convert to a NumPy array.
-                        #     if isinstance(self.input_model, str):
-                        #
-                        #         if platform.system() == 'Windows':
-                        #
-                        #             predicted = joblib.Parallel(n_jobs=self.n_jobs,
-                        #                                         max_nbytes=None)(joblib.delayed(predict_scikit_win)(features[ip[0]:ip[0]+ip[1]],
-                        #                                                                                             self.input_model)
-                        #                                                          for ip in indice_pairs)
-                        #
-                        #         else:
-                        #
-                        #             mdl = self.load(self.input_model)[1]
-                        #
-                        #             pool = multi.Pool(processes=self.n_jobs)
-                        #
-                        #             predicted = pool.map(predict_scikit, range(0, len(indice_pairs)))
-                        #
-                        #             pool.close()
-                        #             del pool
-                        #
-                        #     else:
-                        #
-                        #         mdl = self.model
-                        #         predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
-                        #
-                        # else:
+                    # Get chunks for parallel processing.
+                    # indice_pairs = list()
+                    #
+                    # for i_ in range(0, n_samples, self.chunk_size):
+                    #
+                    #     n_rows_ = self._num_rows_cols(i_, self.chunk_size, n_samples)
+                    #     indice_pairs.append([i_, n_rows_])
+                    #
+                    # if (self.n_jobs != 0) and (self.n_jobs != 1):
+                    #
+                    #     # Make the predictions and convert to a NumPy array.
+                    #     if isinstance(self.input_model, str):
+                    #
+                    #         if platform.system() == 'Windows':
+                    #
+                    #             predicted = joblib.Parallel(n_jobs=self.n_jobs,
+                    #                                         max_nbytes=None)(joblib.delayed(predict_scikit_win)(features[ip[0]:ip[0]+ip[1]],
+                    #                                                                                             self.input_model)
+                    #                                                          for ip in indice_pairs)
+                    #
+                    #         else:
+                    #
+                    #             mdl = self.load(self.input_model)[1]
+                    #
+                    #             pool = multi.Pool(processes=self.n_jobs)
+                    #
+                    #             predicted = pool.map(predict_scikit, range(0, len(indice_pairs)))
+                    #
+                    #             pool.close()
+                    #             del pool
+                    #
+                    #     else:
+                    #
+                    #         mdl = self.model
+                    #         predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
+                    #
+                    # else:
 
-                        # Make the predictions and convert to a NumPy array.
-                        # predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
+                    # Make the predictions and convert to a NumPy array.
+                    # predicted = [predict_scikit(ip) for ip in range(0, len(indice_pairs))]
 
-                        # Write the predictions to file.
-                        # out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
-                        #                                                                                                n_cols),
-                        #                               j=j-jwo,
-                        #                               i=i-iwo)
+                    # Write the predictions to file.
+                    # out_raster_object.write_array(np.array(list(itertools.chain.from_iterable(predicted))).reshape(n_rows,
+                    #                                                                                                n_cols),
+                    #                               j=j-jwo,
+                    #                               i=i-iwo)
 
-                        # Write the predictions to file.
-                        if self.morphology:
+                    # Write the predictions to file.
+                    if self.morphology:
 
-                            if isinstance(self.do_not_morph, list):
+                        if isinstance(self.do_not_morph, list):
 
-                                predictions = np.uint8(mdl.predict(features).reshape(rw, cw))
+                            predictions = np.uint8(mdl.predict(features).reshape(rw, cw))
 
-                                predictions_copy = predictions[ipadded:ipadded+n_rows,
-                                                               jpadded:jpadded+n_cols].copy()
+                            predictions_copy = predictions[ipadded:ipadded+n_rows,
+                                                           jpadded:jpadded+n_cols].copy()
 
-                                predictions = pymorph.closerec(pymorph.closerec(predictions,
-                                                                                Bdil=pymorph.secross(r=3),
-                                                                                Bc=pymorph.secross(r=1)),
-                                                               Bdil=pymorph.secross(r=2),
-                                                               Bc=pymorph.secross(r=1))[ipadded:ipadded+n_rows,
-                                                                                        jpadded:jpadded+n_cols]
+                            predictions = pymorph.closerec(pymorph.closerec(predictions,
+                                                                            Bdil=pymorph.secross(r=3),
+                                                                            Bc=pymorph.secross(r=1)),
+                                                           Bdil=pymorph.secross(r=2),
+                                                           Bc=pymorph.secross(r=1))[ipadded:ipadded+n_rows,
+                                                                                    jpadded:jpadded+n_cols]
 
-                                for do_not_morph_value in self.do_not_morph:
-                                    predictions[predictions_copy == do_not_morph_value] = do_not_morph_value
+                            for do_not_morph_value in self.do_not_morph:
+                                predictions[predictions_copy == do_not_morph_value] = do_not_morph_value
 
-                                del predictions_copy
+                            del predictions_copy
 
-                                out_raster_object.write_array(predictions,
-                                                              j=j-jwo,
-                                                              i=i-iwo)
-
-                                del predictions
-
-                            else:
-
-                                out_raster_object.write_array(
-                                    pymorph.closerec(pymorph.closerec(np.uint8(mdl.predict(features).reshape(rw, cw)),
-                                                                      Bdil=pymorph.secross(r=3),
-                                                                      Bc=pymorph.secross(r=1)),
-                                                     Bdil=pymorph.secross(r=2),
-                                                     Bc=pymorph.secross(r=1))[ipadded:ipadded+n_rows,
-                                                                              jpadded:jpadded+n_cols],
-                                    j=j-jwo,
-                                    i=i-iwo)
-
-                        else:
-
-                            np_dtype = raster_tools.STORAGE_DICT_NUMPY[self.d_type]
-
-                            out_raster_object.write_array(np_dtype(mdl.predict(features).reshape(n_rows,
-                                                                                                 n_cols)),
+                            out_raster_object.write_array(predictions,
                                                           j=j-jwo,
                                                           i=i-iwo)
 
-            del features
+                            del predictions
+
+                        else:
+
+                            out_raster_object.write_array(
+                                pymorph.closerec(pymorph.closerec(np.uint8(mdl.predict(features).reshape(rw, cw)),
+                                                                  Bdil=pymorph.secross(r=3),
+                                                                  Bc=pymorph.secross(r=1)),
+                                                 Bdil=pymorph.secross(r=2),
+                                                 Bc=pymorph.secross(r=1))[ipadded:ipadded+n_rows,
+                                                                          jpadded:jpadded+n_cols],
+                                j=j-jwo,
+                                i=i-iwo)
+
+                    else:
+
+                        np_dtype = raster_tools.STORAGE_DICT_NUMPY[self.d_type]
+
+                        out_raster_object.write_array(np_dtype(mdl.predict(features).reshape(n_rows,
+                                                                                             n_cols)),
+                                                      j=j-jwo,
+                                                      i=i-iwo)
+
+            features = None
 
             # Close the block file.
             if self.write2blocks:
 
-                if self.get_probs:
+                if self.predict_probs:
 
                     for cl in range(0, self.n_classes):
 
                         out_bands[cl].GetStatistics(0, 1)
                         out_bands[cl].FlushCache()
 
-                    del out_bands
+                    out_bands = None
 
                 else:
 
                     out_raster_object.close_all()
-                    del out_raster_object
+                    out_raster_object = None
 
             if self.track_blocks and not self.write2blocks:
 
@@ -6075,19 +6136,19 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         # Close the file.
         if not self.write2blocks:
 
-            if self.get_probs:
+            if self.predict_probs:
 
                 for cl in range(0, self.n_classes):
 
                     out_bands[cl].GetStatistics(0, 1)
                     out_bands[cl].FlushCache()
 
-                del out_bands
+                out_bands = None
 
             else:
 
                 out_raster_object.close_all()
-                del out_raster_object
+                out_raster_object = None
 
         if isinstance(self.mask_background, str) or isinstance(self.mask_background, np.ndarray):
             self._mask_background()
