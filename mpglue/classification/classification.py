@@ -6235,6 +6235,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             rww_ = n_rows_ + pad if iw_ == 0 else n_rows_ + (pad * 2)
             rw_ = self._num_rows_cols(iw_, rww_, rows+iwo)
 
+            import pdb
+            pdb.set_trace()
+
             for j_ in range(start_j, cols+jwo, block_cols):
 
                 n_cols_ = self._num_rows_cols(j_, block_cols, cols+jwo)
