@@ -414,7 +414,7 @@ def predict_scikit_probas(rw,
         return moving_window(probabilities.T.reshape(n_classes,
                                                      rw,
                                                      cw),
-                             statistic='plr',predict_scikit_probas
+                             statistic='plr',
                              window_size=plr_window_size,
                              weights=plr_matrix,
                              iterations=plr_iterations)[:, ipadded:ipadded+n_rows, jpadded:jpadded+n_cols]
