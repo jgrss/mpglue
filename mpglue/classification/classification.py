@@ -5949,8 +5949,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     # Posterior probability label relaxation
                     # --------------------------------------
 
-                    import pdb
-                    pdb.set_trace()
+                    if i > 0:
+                        import pdb
+                        pdb.set_trace()
 
                     if self.predict_probs:
 
