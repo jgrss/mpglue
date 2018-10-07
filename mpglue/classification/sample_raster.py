@@ -72,16 +72,18 @@ def _sample_parallel(band_position,
         #                                  cols=1,
         #                                  d_type='float32')[0, 0]
         try:
-
-            pixel_value = float(band_object.ReadAsArray(values[1][2], values[1][3], 1, 1)[0, 0])
-
-            if not accuracy:
-                pixel_value = float(('{:.4f}'.format(pixel_value)))
-            else:
-                pixel_value = int(pixel_value)
-
+            pixel_value = band_object.ReadAsArray(values[1][2], values[1][3], 1, 1)[0, 0]
         except:
+
+            band_object = None
+            datasource = None
+
             return None
+
+        if not accuracy:
+            pixel_value = round(float(pixel_value), 4)
+        else:
+            pixel_value = int(pixel_value)
 
         # Update the list with raster values.
         value_list[vi] = pixel_value
@@ -477,10 +479,8 @@ class SampleImage(object):
                                                                                feature_length)
                                                      for f_bd in range(1, self.m_info.bands+1))
 
-            import pdb
-            pdb.set_trace()
-
-            value_arr = np.asarray(value_arr).T
+            value_arr = np.array([array_value for array_value in value_arr
+                                  if isinstance(array_value, np.ndarray)], dtype='float32').T
 
             # The order is the same as the point labels
             #   because we iterate over the sorted (by
