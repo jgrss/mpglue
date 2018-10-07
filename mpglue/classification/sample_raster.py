@@ -74,11 +74,7 @@ def _sample_parallel(band_position,
         try:
             pixel_value = band_object.ReadAsArray(values[1][2], values[1][3], 1, 1)[0, 0]
         except:
-
-            band_object = None
-            datasource = None
-
-            return None
+            pixel_value = -999.0
 
         if not accuracy:
             pixel_value = round(float(pixel_value), 4)
@@ -478,6 +474,9 @@ class SampleImage(object):
                                                                                self.accuracy,
                                                                                feature_length)
                                                      for f_bd in range(1, self.m_info.bands+1))
+
+            import pdb
+            pdb.set_trace()
 
             value_arr = np.array([array_value for array_value in value_arr
                                   if isinstance(array_value, np.ndarray)], dtype='float32').T
