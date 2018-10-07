@@ -87,22 +87,22 @@ class VRTBuilder(object):
             # Store as a dictionary.
             if separate:
 
-                in_dict = dict(zip(['{:03d}'.format(ci) for ci in range(1, len(image_search_list)+1)],
+                in_dict = dict(zip(['{:05d}'.format(ci) for ci in range(1, len(image_search_list)+1)],
                                    [[im] for im in image_search_list]))
 
             else:
-                in_dict = {'001': image_search_list}
+                in_dict = {'00001': image_search_list}
 
         elif isinstance(in_dict, list):
 
             # Store as a dictionary.
             if separate:
                 
-                in_dict = dict(zip(['{:03d}'.format(ci) for ci in range(1, len(in_dict)+1)],
+                in_dict = dict(zip(['{:05d}'.format(ci) for ci in range(1, len(in_dict)+1)],
                                    [[im] for im in in_dict]))
 
             else:
-                in_dict = {'001': in_dict}
+                in_dict = {'00001': in_dict}
 
         else:
 
@@ -223,7 +223,7 @@ class VRTBuilder(object):
 
         new_dict = OrderedDict()
         for k, v in viewitems(self.in_dict):
-            new_dict['{:03d}'.format(int(k))] = v
+            new_dict['{:05d}'.format(int(k))] = v
 
         self.in_dict = OrderedDict(sorted(list(iteritems(new_dict)), key=lambda tv: tv[0]))
 
@@ -237,7 +237,7 @@ class VRTBuilder(object):
 
             if not be_quiet:
 
-                sys.stdout.write('\rBuilding list {} of {:03d} ...'.format(bdk, len(self.band_dict)))
+                sys.stdout.write('\rBuilding list {} of {:05d} ...'.format(bdk, len(self.band_dict)))
                 sys.stdout.flush()
 
             image_list = self.in_dict[bdk]
@@ -289,7 +289,7 @@ class VRTBuilder(object):
                     #   the correct extent.
                     if subset:
 
-                        if bdk != '001':
+                        if bdk != '00001':
 
                             image, sub_directory = self._subset(i_info, image)
 
@@ -605,7 +605,7 @@ def main():
 
     start_time = time.time()
 
-    vrt_builder({'001': args.inputs}, args.output,
+    vrt_builder({'00001': args.inputs}, args.output,
                 bands2include=args.bands2include, force_type=args.force_type,
                 subset=args.subset, base_name=args.base_name)
 
