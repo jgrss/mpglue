@@ -71,12 +71,17 @@ def _sample_parallel(band_position,
         #                                  rows=1,
         #                                  cols=1,
         #                                  d_type='float32')[0, 0]
-        pixel_value = float(band_object.ReadAsArray(values[1][2], values[1][3], 1, 1)[0, 0])
+        try:
 
-        if not accuracy:
-            pixel_value = float(('{:.4f}'.format(pixel_value)))
-        else:
-            pixel_value = int(pixel_value)
+            pixel_value = float(band_object.ReadAsArray(values[1][2], values[1][3], 1, 1)[0, 0])
+
+            if not accuracy:
+                pixel_value = float(('{:.4f}'.format(pixel_value)))
+            else:
+                pixel_value = int(pixel_value)
+
+        except:
+            return None
 
         # Update the list with raster values.
         value_list[vi] = pixel_value
@@ -471,6 +476,9 @@ class SampleImage(object):
                                                                                self.accuracy,
                                                                                feature_length)
                                                      for f_bd in range(1, self.m_info.bands+1))
+
+            import pdb
+            pdb.set_trace()
 
             value_arr = np.asarray(value_arr).T
 
