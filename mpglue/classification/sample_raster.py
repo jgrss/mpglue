@@ -475,11 +475,11 @@ class SampleImage(object):
                                                                                feature_length)
                                                      for f_bd in range(1, self.m_info.bands+1))
 
-            import pdb
-            pdb.set_trace()
+            # Transpose the data to [samples x image layers].
+            value_arr = np.array(value_arr, dtype='float32').T
 
-            value_arr = np.array([array_value for array_value in value_arr
-                                  if isinstance(array_value, np.ndarray)], dtype='float32').T
+            # Check for coordinates with no data.
+            idx = np.where(value_arr.mean(axis=1) != -999)[0]
 
             # The order is the same as the point labels
             #   because we iterate over the sorted (by
@@ -523,9 +523,17 @@ class SampleImage(object):
                 # Fill labels
                 labels[vi] = values[1][4]
 
-            # Combine all of the data.
+            if np.any(idx):
+
+                # Remove coordinates with no data.
+                value_arr = value_arr[idx]
+                xy_coordinates = xy_coordinates[idx]
+                labels = labels[idx]
+
             try:
 
+                # Combine all the x,y coordinates,
+                #   data, and sample value.
                 value_arr = np.c_[xy_coordinates,
                                   value_arr,
                                   labels]
