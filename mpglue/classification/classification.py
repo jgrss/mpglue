@@ -3448,7 +3448,7 @@ class Preprocessing(object):
         unlabeled_idx = np.where(lab_array == -1)
 
         if label_method == 'propagate':
-            ss_model = label_propagation.LabelSpreading(**kwargs)
+            ss_model = label_propagation.LabelPropagation(**kwargs)
         else:
             ss_model = label_propagation.LabelSpreading(**kwargs)
 
