@@ -200,7 +200,7 @@ except:
 # Scikit-garden
 try:
 
-    from skgarden import MondrianTreeClassifier
+    import skgarden
 
     SCIKIT_GARDEN = True
 
@@ -655,7 +655,7 @@ class ParameterHandler(object):
 
         elif classifier == 'Mondrian':
 
-            self.valid_params = ['max_depth', 'min_samples_split', 'random_state']
+            self.valid_params = ['n_estimators', 'max_depth', 'min_samples_split', 'random_state']
 
         elif classifier == 'Tpot':
             self.valid_params = list()
@@ -3600,7 +3600,7 @@ class ModelOptions(object):
                    *LightGBM
         Tpot    -- Tpot pipeline (classification problems)
                    *Tpot
-        Mondrian-- Mondrian trees (classification problems)
+        Mondrian-- Mondrian forests (classification problems)
                    *Scikit-garden
                    
         """
@@ -4338,7 +4338,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                         """)
 
-                    voting_sub_model = MondrianTreeClassifier(**self.classifier_info_)
+                    voting_sub_model = skgarden.MondrianForestClassifier(**self.classifier_info_)
 
                 elif classifier == 'GB':
                     voting_sub_model = ensemble.GradientBoostingClassifier(**self.classifier_info_)
@@ -4661,7 +4661,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     """)
 
-                self.model = MondrianTreeClassifier(**self.classifier_info_)
+                self.model = skgarden.MondrianForestClassifier(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'GB':
                 self.model = ensemble.GradientBoostingClassifier(**self.classifier_info_)
