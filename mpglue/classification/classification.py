@@ -373,6 +373,7 @@ def predict_scikit_probas(rw,
                           n_cols,
                           morphology,
                           do_not_morph,
+                          relax_probabilities,
                           plr_matrix,
                           plr_window_size,
                           plr_iterations,
@@ -391,6 +392,7 @@ def predict_scikit_probas(rw,
         n_cols (int)
         morphology (bool)
         do_not_morph (int list)
+        relax_probabilities (bool)
         plr_matrix (2d array)
         plr_window_size (int)
         plr_iterations (int)
@@ -411,13 +413,21 @@ def predict_scikit_probas(rw,
 
         # Predict class conditional probabilities.
 
-        return moving_window(probabilities.T.reshape(n_classes,
-                                                     rw,
-                                                     cw),
-                             statistic='plr',
-                             window_size=plr_window_size,
-                             weights=plr_matrix,
-                             iterations=plr_iterations)[:, ipadded:ipadded+n_rows, jpadded:jpadded+n_cols]
+        if relax_probabilities:
+
+            return moving_window(probabilities.T.reshape(n_classes,
+                                                         rw,
+                                                         cw),
+                                 statistic='plr',
+                                 window_size=plr_window_size,
+                                 weights=plr_matrix,
+                                 iterations=plr_iterations)[:, ipadded:ipadded+n_rows, jpadded:jpadded+n_cols]
+
+        else:
+
+            return probabilities.T.reshape(n_classes,
+                                           rw,
+                                           cw)
 
     else:
 
@@ -655,7 +665,7 @@ class ParameterHandler(object):
 
         elif classifier == 'Mondrian':
 
-            self.valid_params = ['n_estimators', 'max_depth', 'min_samples_split', 'random_state']
+            self.valid_params = ['n_estimators', 'max_depth', 'min_samples_split', 'random_state', 'n_jobs']
 
         elif classifier == 'Tpot':
             self.valid_params = list()
@@ -5960,6 +5970,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                           n_cols,
                                                           self.morphology,
                                                           self.do_not_morph,
+                                                          self.relax_probabilities,
                                                           self.plr_matrix,
                                                           self.plr_window_size,
                                                           self.plr_iterations,
@@ -5987,6 +5998,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                                             n_cols,
                                                                             self.morphology,
                                                                             self.do_not_morph,
+                                                                            self.relax_probabilities,
                                                                             self.plr_matrix,
                                                                             self.plr_window_size,
                                                                             self.plr_iterations,
