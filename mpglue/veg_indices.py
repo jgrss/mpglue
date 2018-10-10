@@ -115,6 +115,8 @@ class SensorInfo(object):
                      '((array02 / scale_factor) + (array01 / scale_factor))',
              'NDBAI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
                       '((array02 / scale_factor) + (array01 / scale_factor))',
+             'NBR': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                     '((array02 / scale_factor) + (array01 / scale_factor))',
              'NDII': '(array03 - array02 + array01) / (array03 + array02 + array01)',
              'NDVI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
                      '((array02 / scale_factor) + (array01 / scale_factor))',
@@ -151,23 +153,24 @@ class SensorInfo(object):
         #   used if the output storage type is not
         #   equal to 'float32'.
         self.data_ranges = {'ARVI': (),
-                            'CBI': (-1., 1.),
-                            'CIRE': (-1., 1.),
-                            'EVI': (0., 1.),
-                            'EVI2': (0., 1.),
+                            'CBI': (-1.0, 1.0),
+                            'CIRE': (-1.0, 1.0),
+                            'EVI': (0., 1.0),
+                            'EVI2': (0., 1.0),
                             'IPVI': (),
                             'MSAVI': (),
-                            'GNDVI': (-1., 1.),
-                            'MNDWI': (-1., 1.),
-                            'NDSI': (-1., 1.),
-                            'NDBAI': (-1., 1.),
-                            'NDII': (-1., 1.),
-                            'NDVI': (-1., 1.),
-                            'RENDVI': (-1., 1.),
-                            'NDWI': (-1., 1.),
-                            'PNDVI': (-1., 1.),
-                            'RBVI': (-1., 1.),
-                            'GBVI': (-1., 1.),
+                            'GNDVI': (-1.0, 1.0),
+                            'MNDWI': (-1.0, 1.0),
+                            'NDSI': (-1.0, 1.0),
+                            'NDBAI': (-1.0, 1.0),
+                            'NBR': (-1.0, 1.0),
+                            'NDII': (-1.0, 1.0),
+                            'NDVI': (-1.0, 1.0),
+                            'RENDVI': (-1.0, 1.0),
+                            'NDWI': (-1.0, 1.0),
+                            'PNDVI': (-1.0, 1.0),
+                            'RBVI': (-1.0, 1.0),
+                            'GBVI': (-1.0, 1.0),
                             'ONDVI': (),
                             'SATVI': (),
                             'SAVI': (),
@@ -175,9 +178,9 @@ class SensorInfo(object):
                             'SVI': (),
                             'TNDVI': (),
                             'TVI': (),
-                            'YNDVI': (-1., 1.),
+                            'YNDVI': (-1.0, 1.0),
                             'VCI': (),
-                            'VISMU': (0., 1.)}
+                            'VISMU': (0., 1.0)}
 
     def list_expected_band_order(self, sensor):
 
@@ -339,6 +342,7 @@ class VegIndicesEquations(SensorInfo):
                             'MSAVI': self.MSAVI,
                             'NDSI': self.NDSI,
                             'NDBAI': self.NDBAI,
+                            'NBR': self.NBR,
                             'NDVI': self.NDVI,
                             'RENDVI': self.RENDVI,
                             'ONDVI': self.ONDVI,
@@ -822,6 +826,35 @@ class VegIndicesEquations(SensorInfo):
             ndbai = self.rescale_range(ndbai, in_range=(-1., 1.))
 
         return ndbai
+
+    def NBR(self):
+
+        """
+        Normalised Burn Ratio (NBR)
+
+        Equation:
+            NBR = (NIR - FarIR) / (NIR + FarIR)
+        """
+
+        try:
+            farir = self.image_array[0]
+            nir = self.image_array[1]
+        except:
+            raise ValueError('\nThe input array should have {:d} dimensions.\n'.format(self.n_bands))
+
+        nbr = self.main_index(farir, nir)
+
+        nbr[(nbr < -1.)] = -1.
+        nbr[(nbr > 1.)] = 1.
+
+        nbr[(nbr == 0) | (nir == 0)] = self.no_data
+
+        nbr[np.isinf(nbr) | np.isnan(nbr)] = self.no_data
+
+        if self.out_type > 1:
+            nbr = self.rescale_range(nbr, in_range=(-1.0, 1.0))
+
+        return nbr
 
     def NDVI(self):
 
