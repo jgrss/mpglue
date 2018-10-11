@@ -415,19 +415,20 @@ def predict_scikit_probas(rw,
 
         if relax_probabilities:
 
-            return moving_window(probabilities.T.reshape(n_classes,
-                                                         rw,
-                                                         cw),
-                                 statistic='plr',
-                                 window_size=plr_window_size,
-                                 weights=plr_matrix,
-                                 iterations=plr_iterations)[:, ipadded:ipadded+n_rows, jpadded:jpadded+n_cols]
+            return np.uint16(moving_window(probabilities.T.reshape(n_classes,
+                                                                   rw,
+                                                                   cw),
+                                           statistic='plr',
+                                           window_size=plr_window_size,
+                                           weights=plr_matrix,
+                                           iterations=plr_iterations)[:, ipadded:ipadded + n_rows,
+                                                                      jpadded:jpadded + n_cols] * 10000.0)
 
         else:
 
-            return probabilities.T.reshape(n_classes,
-                                           rw,
-                                           cw)
+            return np.uint16(probabilities.T.reshape(n_classes,
+                                                     rw,
+                                                     cw) * 10000.0)
 
     else:
 
@@ -5511,7 +5512,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                                             'RFR', 'EX_RFR', 'CV_RFR', 'CVEX_RFR',
                                                                             'SVR', 'SVRA', 'Cubist', 'DTR']:
 
-                self.o_info.storage = 'float32'
+                self.o_info.storage = 'uint16'
                 self.d_type = 'float32'
 
             else:
