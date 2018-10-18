@@ -203,6 +203,17 @@ def _slopes(X, axis=None, no_data=0):
                       _nan_reshape(X_min, no_data)))
 
 
+def _max_diff(X, axis=1, no_data=0):
+
+    """
+    Computes the maximum difference
+    """
+
+    X_ = np.abs(np.diff(X, n=2, axis=axis)).max(axis=axis)
+
+    return _nan_reshape(X_, no_data)
+
+
 class TimeSeriesFeatures(object):
 
     def __init__(self):

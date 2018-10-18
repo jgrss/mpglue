@@ -176,6 +176,8 @@ class BaseHandler(SetFilter):
         # Set the atom filter
         self.set_filter(array_storage, **kwargs)
 
+        chunk_shape = (512, 512) if len(image_shape) == 2 else (1, 512, 512)
+
         if array_type == 'a':
 
             self.h5_file.create_array(self.node_name,
@@ -192,7 +194,8 @@ class BaseHandler(SetFilter):
                                                atom=self.atom,
                                                shape=image_shape,
                                                filters=self.filters,
-                                               title=self.name_dict['attribute'])
+                                               title=self.name_dict['attribute'],
+                                               chunkshape=chunk_shape)
 
         elif array_type == 'e':
 
@@ -553,6 +556,8 @@ class ArrayHandler(object):
         #                            title=self.name_dict['attribute'],
         #                            obj=self.image_info.read(bands2open=1))
 
+        chunk_shape = (512, 512) if len(array_shape) == 2 else (1, 512, 512)
+
         if self.array_type == 'c':
 
             if isinstance(self.group_name, str):
@@ -562,7 +567,8 @@ class ArrayHandler(object):
                                                                atom=self.atom,
                                                                shape=array_shape,
                                                                filters=self.filters,
-                                                               title=self.group_title)
+                                                               title=self.group_title,
+                                                               chunkshape=chunk_shape)
 
             else:
 
@@ -571,7 +577,8 @@ class ArrayHandler(object):
                                                                atom=self.atom,
                                                                shape=array_shape,
                                                                filters=self.filters,
-                                                               title=self.group_title)
+                                                               title=self.group_title,
+                                                               chunkshape=chunk_shape)
 
         elif self.array_type == 'e':
 
