@@ -245,6 +245,68 @@ def create_memory_raster(image_info,
     return target_ds
 
 
+def nd_to_rgb(array2reshape):
+
+    """
+    Reshapes an array from nd layout to RGB
+    """
+
+    if len(array2reshape.shape) != 3:
+
+        logger.error('  The array must be 3 dimensions.')
+        raise LenError
+
+    if array2reshape.shape[0] != 3:
+
+        logger.error('  The array must be 3 bands.')
+        raise ArrayShapeError
+
+    return np.ascontiguousarray(array2reshape.transpose(1, 2, 0))
+
+
+def rgb_to_nd(array2reshape):
+
+    """
+    Reshapes an array RGB layout to nd layout
+    """
+
+    if len(array2reshape.shape) != 3:
+
+        logger.error('  The array must be 3 dimensions.')
+        raise LenError
+
+    if array2reshape.shape[2] != 3:
+
+        logger.error('  The array must be 3 bands.')
+        raise ArrayShapeError
+
+    return np.ascontiguousarray(array2reshape.transpose(2, 0, 1))
+
+
+def nd_to_columns(array2reshape, layers, rows, columns):
+
+    """
+    Reshapes an array from nd layout to [samples (rows*columns) x dimensions]
+    """
+
+    if layers == 1:
+        return array2reshape.reshape(rows, columns).transpose(1, 2, 0).reshape(rows*columns, layers)
+    else:
+        return array2reshape.reshape(layers, rows, columns).transpose(1, 2, 0).reshape(rows*columns, layers)
+
+
+def columns_to_nd(array2reshape, layers, rows, columns):
+
+    """
+    Reshapes an array from columns layout to [n layers x rows x columns]
+    """
+
+    if layers == 1:
+        return array2reshape.reshape(columns, rows).T
+    else:
+        return array2reshape.T.reshape(layers, rows, columns)
+
+
 class ReadWrite(object):
 
     def read(self,
@@ -292,7 +354,8 @@ class ReadWrite(object):
             compute_index (Optional[str]): A spectral index to compute. Default is 'none'.
             sensor (Optional[str]): The input sensor type (used with ``compute_index``). Default is 'Landsat'.
             sort_bands2open (Optional[bool]): Whether to sort ``bands2open``. Default is True.
-            predictions (Optional[bool]): Whether to return reshaped array for predictions.
+            predictions (Optional[bool]): Whether to return reshaped array for Scikit-learn formatted
+                predictions (i.e., samples x dimensions).
             y (Optional[float]): A y index coordinate (latitude, in map units). Default is 0.
                 If greater than 0, overrides ``i``.
             x (Optional[float]): A x index coordinate (longitude, in map units). Default is 0.
@@ -450,7 +513,7 @@ class ReadWrite(object):
             self.array_shape = [1, self.rrows, self.ccols]
 
             if predictions:
-                self._reshape2predictions(1)
+                self._norm2predictions(1)
 
         else:
 
@@ -461,7 +524,7 @@ class ReadWrite(object):
             self._open_array(bands2open)
 
             if predictions:
-                self._reshape2predictions(len(bands2open))
+                self._norm2predictions(len(bands2open))
 
         if compute_index != 'none':
 
@@ -575,34 +638,29 @@ class ReadWrite(object):
 
             self.array = self._reshape(self.array, bands2open)
 
-    def predictions2norm(self, dims=1):
-
-        """Reshapes predictions to nd array"""
-
-        if dims == 1:
-            self.array = self.array.reshape(self.ccols, self.rrows).T
-        else:
-            self.array = self.array.T.reshape(dims, self.rrows, self.ccols)
-
-    def _reshape2predictions(self, n_bands):
+    def _predictions2norm(self, n_bands):
 
         """
-        Reshapes an array into predictions (samples X dimensions)
+        Reshapes an array from predictions to nd array
+
+        Args:
+            n_bands (int)
+        """
+
+        self.array = columns_to_nd(self.array, n_bands, self.rrows, self.ccols)
+
+        self.array_shape = [n_bands, self.rrows, self.ccols]
+
+    def _norm2predictions(self, n_bands):
+
+        """
+        Reshapes an array from normal layout to Scikit-learn compatible shape (i.e., samples x dimensions)
         
         Args:
             n_bands (int)
         """
 
-        if n_bands == 1:
-
-            self.array = self.array.reshape(self.rrows,
-                                            self.ccols).transpose(1, 2, 0).reshape(self.rrows*self.ccols, n_bands)
-
-        else:
-
-            self.array = self.array.reshape(n_bands,
-                                            self.rrows,
-                                            self.ccols).transpose(1, 2, 0).reshape(self.rrows*self.ccols, n_bands)
+        self.array = nd_to_columns(self.array, n_bands, self.rrows, self.ccols)
 
         self.array_shape = [1, self.rrows*self.ccols, n_bands]
 
