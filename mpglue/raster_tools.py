@@ -290,7 +290,7 @@ def nd_to_columns(array2reshape, layers, rows, columns):
     """
 
     if layers == 1:
-        return array2reshape.reshape(rows, columns).transpose(1, 2, 0).reshape(rows*columns, layers)
+        return array2reshape.flatten()[:, np.newaxis]
     else:
         return array2reshape.reshape(layers, rows, columns).transpose(1, 2, 0).reshape(rows*columns, layers)
 
