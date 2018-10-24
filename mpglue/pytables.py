@@ -1348,7 +1348,6 @@ class manage_pytables(BaseHandler):
 
             # Commit changes to disk.
             self.table.flush()
-            self.h5_file.flush()
 
             self.table = None
             pointer = None
