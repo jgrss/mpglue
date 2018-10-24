@@ -137,6 +137,7 @@ class BaseHandler(SetFilter):
                   array_storage=None,
                   image_shape=None,
                   array_type='c',
+                  chunk_shape=None,
                   cloud_band_included=False,
                   **kwargs):
 
@@ -148,6 +149,7 @@ class BaseHandler(SetFilter):
             array_storage (Optional[str]):
             image_shape (Optional[tuple]):
             array_type (Optional[str]): Choices are ['a', 'c', 'e'].
+            chunk_shape (Optional[tuple]): The carray chunk shape.
             cloud_band_included (Optional[bool])
             kwargs (Optional): Parameters for the Atom filter.
         """
@@ -175,8 +177,6 @@ class BaseHandler(SetFilter):
 
         # Set the atom filter
         self.set_filter(array_storage, **kwargs)
-
-        chunk_shape = (512, 512) if len(image_shape) == 2 else (1, 512, 512)
 
         if array_type == 'a':
 
@@ -1708,8 +1708,6 @@ def pytables(inputs,
              table_row=None,
              meta_dict=None,
              out_name=None,
-             chunk=False,
-             node_title=None,
              array_type='c',
              grid_infos=None,
              sensor=None,
@@ -1818,10 +1816,12 @@ def pytables(inputs,
 
             pt.add_table()
 
+            chunk_shape = (512, 512) if len(inputs.shape) == 2 else (1, 512, 512)
+
             pt.add_array(image_array=inputs,
-                         chunk=chunk,
-                         node_title=node_title,
                          array_type=array_type,
+                         image_shape=inputs.shape,
+                         chunk_shape=chunk_shape,
                          complib=complib,
                          complevel=complevel,
                          shuffle=shuffle)
