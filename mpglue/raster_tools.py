@@ -3917,6 +3917,7 @@ def translate(input_image,
               cell_size=0,
               d_type=None,
               return_datasource=False,
+              overwrite=False,
               **kwargs):
 
     """
@@ -3926,6 +3927,7 @@ def translate(input_image,
         cell_size (Optional[float]): The output cell size. Default is 0.
         d_type (Optional[str]): Data type to overwrite `outputType`. Default is None.
         return_datasource (Optional[bool]): Whether to return the datasource object. Default is False.
+        overwrite (Optional[bool]): Whether to overwrite `out_vrt`, if it exists. Default is False.
         kwargs:
             format='GTiff', outputType=0, bandList=None, maskBand=None, width=0, height=0,
             widthPct=0.0, heightPct=0.0, xRes=0.0, yRes=0.0, creationOptions=None, srcWin=None,
@@ -3950,6 +3952,11 @@ def translate(input_image,
         d_name = os.path.abspath('.')
     else:
         check_and_create_dir(d_name)
+
+    if overwrite:
+
+        if os.path.isfile(output_image):
+            os.remove(output_image)
 
     if isinstance(d_type, str):
 
