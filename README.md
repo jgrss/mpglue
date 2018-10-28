@@ -188,8 +188,8 @@ vector-tools
 >>> # Initiate the classification object.
 >>> cl = gl.classification()
 >>>
->>> # Load and split land cover samples into test and train.
->>> cl.split_samples('/land_cover_samples.txt', perc_samp=.7)
+>>> # Load and split land cover samples into test (30%) and train (70%).
+>>> cl.split_samples('/land_cover_samples.txt', perc_samp=0.7)
 >>>
 >>> # Train a classification model.
 >>> cl.construct_model(classifier_info={'classifier': 'RF', 'trees': 100})
@@ -207,9 +207,12 @@ A more detailed example
 >>> cl = gl.classification()
 >>>
 >>> # Load and split land cover samples into test and train.
->>> cl.split_samples('/land_cover_samples.txt', perc_samp=.7)
+>>> # Use x,y coordinates as predictors (prepended to existing predictors)
+>>> cl.split_samples('/land_cover_samples.txt', 
+>>>                  use_xy=True,
+>>>                  perc_samp=0.7)
 >>>
->>> # Train a voting classification model and save to file.
+>>> # Train a voting classification model (average of posteriors) and save to file.
 >>> cl.construct_model(classifier_info={'classifier': ['Bayes', 'RF'], 
 >>>                                     'trees': 100},
 >>>                    output_model='classifier.model')
