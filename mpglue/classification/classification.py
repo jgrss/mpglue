@@ -202,10 +202,20 @@ try:
 
     import skgarden
 
-    SCIKIT_GARDEN = True
+    SKGARDEN_INSTALLED = True
 
 except:
-    SCIKIT_GARDEN = False
+    SKGARDEN_INSTALLED = False
+
+# Catboost
+try:
+
+    from catboost import CatBoostClassifier
+
+    CATBOOST_INSTALLED = True
+
+except:
+    CATBOOST_INSTALLED = False
 
 # Rtree
 try:
@@ -520,7 +530,7 @@ def get_available_models():
             'RF', 'CVGBoost', 'CVRF', 'RFR', 'CVMLP',
             'SVMc', 'SVMnu', 'SVMcR', 'CVSVM', 'CVSVMA', 'CVSVR', 'CVSVRA', 'QDA',
             'ChainCRF', 'GridCRF',
-            'LightGBM', 'Tpot', 'Mondrian']
+            'LightGBM', 'Tpot', 'Mondrian', 'Catboost']
 
 
 class ParameterHandler(object):
@@ -663,6 +673,28 @@ class ParameterHandler(object):
                                  'min_child_weight', 'min_child_samples', 'subsample', 'subsample_freq',
                                  'colsample_bytree', 'reg_alpha', 'reg_lambda', 'random_state', 'n_jobs', 'silent',
                                  'feature_fraction', 'bagging_freq', 'bagging_fraction', 'max_bin', 'num_boost_round']
+
+        elif classifier == 'Catboost':
+
+            self.valid_params = ['iterations', 'learning_rate', 'depth', 'l2_leaf_reg', 'model_size_reg',
+                                 'rsm', 'loss_function', 'border_count', 'feature_border_type',
+                                 'fold_permutation_block_size', 'od_pval', 'od_wait', 'od_type',
+                                 'nan_mode', 'counter_calc_method', 'leaf_estimation_iterations',
+                                 'leaf_estimation_method', 'thread_count', 'random_seed',
+                                 'use_best_model', 'best_model_min_trees', 'verbose', 'silent',
+                                 'logging_level', 'metric_period', 'simple_ctr', 'combinations_ctr',
+                                 'per_feature_ctr', 'ctr_leaf_count_limit', 'store_all_simple_ctr',
+                                 'max_ctr_complexity', 'has_time', 'allow_const_label', 'classes_count',
+                                 'class_weights', 'one_hot_max_size', 'random_strength', 'name',
+                                 'ignored_features', 'train_dir', 'custom_metric', 'custom_loss', 'eval_metric',
+                                 'bagging_temperature', 'save_snapshot', 'snapshot_file', 'snapshot_interval',
+                                 'fold_len_multiplier', 'used_ram_limit', 'gpu_ram_part', 'pinned_memory_size',
+                                 'allow_writing_files', 'final_ctr_computation_mode', 'approx_on_full_history',
+                                 'boosting_type', 'task_type', 'device_config', 'devices', 'bootstrap_type',
+                                 'subsample', 'dev_score_calc_obj_block_size', 'max_depth', 'n_estimators',
+                                 'num_trees', 'num_boost_round', 'colsample_bylevel', 'random_state',
+                                 'reg_lambda', 'objective', 'eta', 'max_bin', 'scale_pos_weight', 'metadata',
+                                 'early_stopping_rounds', 'cat_features']
 
         elif classifier == 'Mondrian':
 
@@ -3609,6 +3641,8 @@ class ModelOptions(object):
                    *Pystruct
         LightGBM-- Light Gradient Boosting (classification problems)
                    *LightGBM
+        Catboost-- CatBoost for Gradient Boosting (classification problems)
+                   *Catboost
         Tpot    -- Tpot pipeline (classification problems)
                    *Tpot
         Mondrian-- Mondrian forests (classification problems)
@@ -4341,7 +4375,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 elif classifier == 'Mondrian':
 
-                    if not SCIKIT_GARDEN:
+                    if not SKGARDEN_INSTALLED:
 
                         logger.error("""\
 
@@ -4365,6 +4399,18 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 elif classifier == 'SVMnu':
                     voting_sub_model = svm.NuSVC(**self.classifier_info_)
+
+                elif classifier == 'Catboost':
+
+                    if not CATBOOST_INSTALLED:
+
+                        logger.error("""\
+
+                        Catboost must be installed to use the model.
+                                                
+                        """)
+
+                    voting_sub_model = CatBoostClassifier(**self.classifier_info_)
 
                 elif classifier == 'LightGBM':
 
@@ -4664,7 +4710,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             elif self.classifier_info['classifier'] == 'Mondrian':
 
-                if not SCIKIT_GARDEN:
+                if not SKGARDEN_INSTALLED:
 
                     logger.error("""\
 
@@ -4691,6 +4737,18 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             elif self.classifier_info['classifier'] == 'Gaussian':
                 self.model = GaussianProcessClassifier(**self.classifier_info_)
+
+            elif self.classifier_info['classifier'] == 'Catboost':
+
+                if not CATBOOST_INSTALLED:
+
+                    logger.error("""\
+
+                    Catboost must be installed to use the model.
+
+                    """)
+
+                self.model = CatBoostClassifier(**self.classifier_info_)
 
             elif self.classifier_info['classifier'] == 'LightGBM':
 
