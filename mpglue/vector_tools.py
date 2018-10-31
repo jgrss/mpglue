@@ -245,6 +245,7 @@ class RegisterDriver(object):
         #     raise NameError('\nOnly shapefiles are currently supported.\n')
 
         formats = {'.shp': 'ESRI Shapefile',
+                   '.gpkg': 'GPKG',
                    '.mem': 'MEMORY'}
 
         if file_extension not in formats:
@@ -2537,7 +2538,8 @@ def add_fields(input_vector,
                field_names=None,
                method='field-xy',
                area_units='ha',
-               buffer_distance=0.0,
+               buffer_out=0.0,
+               buffer_in=0.0,
                simplify_geometry=False,
                simplify_tolerance=1.0,
                boundary_mask=None,
@@ -2560,7 +2562,8 @@ def add_fields(input_vector,
             ['field-xy', 'field-id', 'field-area', 'field-constant', 'field-dissolve'].
         area_units (Optional[str]): The units to use for calculating area. Default is 'ha', or hectares.
             *Assumes the input units are meters. Choices area ['ha', 'km2', 'm2'].
-        buffer_distance (Optional[float]): A buffer distance to apply to each feature. Default is 0.
+        buffer_out (Optional[float]): A buffer distance to apply to each feature. Default is 0.
+        buffer_in (Optional[float]): A buffer distance to apply to each feature. Default is 0.
         simplify_geometry (Optional[bool]): Whether to simplify geometry and write to `output_vector`. Default is False.
         simplify_tolerance (Optional[float]): The tolerance for geometry `ogr.Simplify`. Default is 1.0.
         boundary_mask (Optional[OGR geometry]): A boundary to use as a mask. Default is None.
@@ -2840,8 +2843,8 @@ def add_fields(input_vector,
             if simplify_geometry:
                 geometry = geometry.Simplify(simplify_tolerance)
 
-            if buffer_distance > 0:
-                geometry = geometry.Buffer(buffer_distance)
+            if buffer_out > 0:
+                geometry = geometry.Buffer(buffer_out)
 
             # Get the polygon feature area, in m^2
             area = geometry.GetArea()
@@ -2852,8 +2855,8 @@ def add_fields(input_vector,
             elif area_units == 'ha':
                 area *= 1e-04
 
-            if buffer_distance > 0:
-                geometry = geometry.Buffer(-buffer_distance)
+            if buffer_in > 0:
+                geometry = geometry.Buffer(-buffer_in)
 
             if simplify_geometry:
 
@@ -3069,7 +3072,9 @@ def main():
     parser.add_argument('-dv', '--default-value', dest='default_value', help='The default break value', default=None)
     parser.add_argument('--area-units', dest='area_units', help='The units to use for area calculations',
                         default='ha', choices=['ha', 'km2', 'm2'])
-    parser.add_argument('--buffer-distance', dest='buffer_distance', help='A buffer to apply to each polygon feature',
+    parser.add_argument('--buffer-out', dest='buffer_out', help='A buffer to apply to each polygon feature',
+                        default=0.0, type=float)
+    parser.add_argument('--buffer-in', dest='buffer_in', help='A buffer to apply to each polygon feature',
                         default=0.0, type=float)
     parser.add_argument('--simplify-geometry', dest='simplify_geometry', help='Whether to simplify geometry',
                         action='store_true')
@@ -3163,7 +3168,8 @@ def main():
                    method=args.method,
                    field_names=args.field_names,
                    area_units=args.area_units,
-                   buffer_distance=args.buffer_distance,
+                   buffer_out=args.buffer_out,
+                   buffer_in=args.buffer_in,
                    simplify_geometry=args.simplify_geometry,
                    simplify_tolerance=args.simplify_tolerance,
                    constant=args.constant,
