@@ -1646,6 +1646,18 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
                 except:
                     logger.warning('The dataset could not be flushed.')
 
+        if hasattr(self, 'output_image'):
+
+            # Unlink memory images
+            if self.output_image.lower().endswith('.mem'):
+
+                gdal.Unlink(self.output_image)
+
+                try:
+                    os.remove(self.output_image)
+                except:
+                    pass
+
         self.datasource = None
         self.hdf_datasources = None
         self.file_open = False
@@ -3902,6 +3914,8 @@ def warp(input_image,
 
         i_info.datasource_info()
 
+        out_ds = None
+
         return i_info
 
     else:
@@ -5861,10 +5875,22 @@ def rasterize_vector(in_vector,
     orw = None
     v_info = None
 
-    if in_memory and return_array:
-        return i_info.read()
-    elif in_memory and not return_array:
-        return i_info
+    if in_memory:
+
+        mem_array = i_info.read()
+
+        gdal.Unlink(out_raster)
+
+        if return_array:
+
+            i_info.close()
+            i_info = None
+
+            return mem_array
+
+        else:
+            return i_info
+
     else:
         return None
 
