@@ -5936,6 +5936,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                               ts_indices=self.ts_indices,
                                                               append_features=self.append_features)
 
+            features[np.isnan(features) | np.isinf(features)] = 0.0
+
             if 'CV' in self.classifier_info['classifier']:
 
                 if self.classifier_info['classifier'] == 'CVMLP':
