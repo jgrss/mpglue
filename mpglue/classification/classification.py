@@ -5936,7 +5936,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                               ts_indices=self.ts_indices,
                                                               append_features=self.append_features)
 
-            features[np.isnan(features) | np.isinf(features)] = 0.0
+            if np.any(np.isnan(features)) or np.any(np.isinf(features)):
+
+                features = features[~np.isnan(features).any(axis=1)]
+                features = features[~np.isinf(features).any(axis=1)]
 
             if 'CV' in self.classifier_info['classifier']:
 
