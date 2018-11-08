@@ -1718,8 +1718,8 @@ def open_file(hdf_file, **kwargs):
 
     pt = manage_pytables()
     pt.open_hdf_file(hdf_file, **kwargs)
-    yield pt.h5_file
-    pt.h5_file.close_hdf()
+    yield pt
+    pt.close_hdf()
 
 
 def pytables(inputs,
