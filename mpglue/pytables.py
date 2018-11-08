@@ -1515,23 +1515,6 @@ class manage_pytables(BaseHandler):
             overwrite (Optional[bool]): Whether to overwrite an existing file. Default is False.
 
         Example:
-            >>> from mpglue.pytables import manage_pytables
-            >>>
-            >>> pt = manage_pytables()
-            >>>
-            >>> pt.open_hdf_file('20HMG.h5', 'Landsat')
-            >>>
-            >>> pt.to_file('p226_r80_etm_2000_0110.tif',
-            >>>            226,
-            >>>            80,
-            >>>            'ETM',
-            >>>            '2000-01-10',
-            >>>            'bands')
-            >>>
-            >>> pt.close_hdf()
-            >>>
-            >>> # or
-            >>>
             >>> from mpglue import pytables as gltb
             >>>
             >>> with gltb.open_file('20HMG.h5', title='Landsat', mode='r') as pt:
