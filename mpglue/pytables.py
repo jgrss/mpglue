@@ -17,6 +17,7 @@ from copy import copy
 from operator import itemgetter
 import psutil
 import multiprocessing as multi
+from contextlib import contextmanager
 
 from . import raster_tools, vector_tools, rad_calibration
 from .errors import logger
@@ -1499,7 +1500,7 @@ class manage_pytables(BaseHandler):
                                         node_date,
                                         attribute)
 
-    def write2file(self, out_name, path, row, sensor, date, attribute, overwrite=False):
+    def to_file(self, out_name, path, row, sensor, date, attribute, overwrite=False):
 
         """
         Writes an h5 node to file
@@ -1518,16 +1519,29 @@ class manage_pytables(BaseHandler):
             >>>
             >>> pt = manage_pytables()
             >>>
-            >>> pt.open_hdf_file('/20HMG.h5', 'Landsat')
+            >>> pt.open_hdf_file('20HMG.h5', 'Landsat')
             >>>
-            >>> pt.write2file('/p226_r80_etm_2000_0110_evi2.tif',
+            >>> pt.to_file('p226_r80_etm_2000_0110.tif',
+            >>>            226,
+            >>>            80,
+            >>>            'ETM',
+            >>>            '2000-01-10',
+            >>>            'bands')
+            >>>
+            >>> pt.close_hdf()
+            >>>
+            >>> # or
+            >>>
+            >>> from mpglue import pytables as gltb
+            >>>
+            >>> with gltb.open_file('20HMG.h5', title='Landsat', mode='r') as pt:
+            >>>
+            >>>     pt.to_file('p226_r80_etm_2000_0110.tif',
             >>>                226,
             >>>                80,
             >>>                'ETM',
             >>>                '2000-01-10',
             >>>                'bands')
-            >>>
-            >>> pt.close_hdf()
         """
 
         if os.path.isfile(out_name):
@@ -1697,6 +1711,15 @@ class manage_pytables(BaseHandler):
                 self.image_info.close()
 
         self.image_info = None
+
+
+@contextmanager
+def open_file(hdf_file, **kwargs):
+
+    pt = manage_pytables()
+    pt.open_hdf_file(hdf_file, **kwargs)
+    yield pt.h5_file
+    pt.h5_file.close_hdf()
 
 
 def pytables(inputs,
