@@ -6370,8 +6370,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                         b_array = raster_tools.read(i_info=b_info,
                                                     bands2open=self.background_band,
-                                                    i=i,
-                                                    j=j,
+                                                    x=m_info.left+(j*m_info.cell.Y),
+                                                    y=m_info.top-(i*m_info.cellY),
                                                     rows=n_rows,
                                                     cols=n_cols,
                                                     d_type='byte')
