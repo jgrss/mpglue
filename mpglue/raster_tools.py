@@ -122,6 +122,7 @@ gdal.PushErrorHandler('CPLQuietErrorHandler')
 gdal.SetCacheMax(int(2.0**30.0))
 
 DRIVER_DICT = {'.bin': 'ENVI',
+               '.bsq': 'ENVI',
                '.dat': 'ENVI',
                '.ecw': 'ECW',
                '.img': 'HFA',

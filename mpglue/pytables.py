@@ -357,32 +357,33 @@ class BaseHandler(SetFilter):
                     h5_node = self.h5_file.get_node(array_name).read()
 
                     if isinstance(self.i, int) and not isinstance(rows, int):
-
-                        return self.h5_file.get_node(array_name).read()[self.i,
-                               self.index_positions[0]:self.index_positions[-1]]
+                        return self.h5_file.get_node(array_name).read()[self.i, self.index_positions[0]:self.index_positions[-1]]
 
                     elif (isinstance(self.y, float) and not isinstance(rows, int)) or \
                             (isinstance(self.y, list) and isinstance(self.y[0], float) and not isinstance(rows, int)):
 
                         if isinstance(self.x, list):
+
                             self.i_ = [(i_ * self.info_dict['columns_r']) + j_ for i_, j_ in zip(self.i_, self.j_)]
+
                             return np.array([h5_node[i, self.index_positions[0]:self.index_positions[-1]+1]
                                              for i in self.i_], dtype='float32')
+
                         else:
+
                             self.i_ = (self.i_ * self.info_dict['columns_r']) + self.j_
+
                             return h5_node[self.i_, self.index_positions[0]:self.index_positions[-1]+1]
 
                     elif isinstance(self.i, int) and isinstance(rows, int):
 
-                        return self.h5_file.get_node(array_name).read()[self.i:self.i+rows,
-                               self.index_positions[0]:self.index_positions[-1]]
+                        return self.h5_file.get_node(array_name).read()[self.i:self.i+rows, self.index_positions[0]:self.index_positions[-1]]
 
                     elif isinstance(self.y, float) and isinstance(rows, int):
 
                         self.i_ = (self.i_ * self.info_dict['columns_r']) + self.j_
 
-                        return self.h5_file.get_node(array_name).read()[self.i_:self.i_+rows,
-                               self.index_positions[0]:self.index_positions[-1]]
+                        return self.h5_file.get_node(array_name).read()[self.i_:self.i_+rows, self.index_positions[0]:self.index_positions[-1]]
 
                 else:
 

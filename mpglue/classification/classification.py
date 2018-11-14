@@ -92,7 +92,7 @@ except:
 
 # Scikit-learn
 try:
-    from sklearn import ensemble, tree, cross_validation, metrics, manifold, calibration
+    from sklearn import ensemble, tree, metrics, manifold, calibration
     from sklearn.externals import joblib
     from sklearn.feature_selection import chi2, VarianceThreshold
     from sklearn.preprocessing import RobustScaler, StandardScaler
