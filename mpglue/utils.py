@@ -167,6 +167,7 @@ VI_WAVELENGTHS = {'ARVI': ['blue', 'red', 'nir'],
                   'SVI': ['red', 'nir'],
                   'TNDVI': ['red', 'nir'],
                   'TVI': ['green', 'nir'],
+                  'TWVI': ['red', 'nir', 'midir'],
                   'YNDVI': ['yellow', 'nir'],
                   'VCI': ['red', 'nir'],
                   'VISMU': ['blue', 'green', 'red']}

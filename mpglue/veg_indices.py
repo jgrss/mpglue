@@ -144,6 +144,8 @@ class SensorInfo(object):
                       '((array02 / scale_factor) + (array01 / scale_factor))) * .5)',
              'TVI': 'sqrt((((array02 / scale_factor) - (array01 / scale_factor)) / '
                     '((array02 / scale_factor) + (array01 / scale_factor))) + .5)',
+             'TWVI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                     '((array02 / scale_factor) + (array01 / scale_factor))',
              'YNDVI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
                       '((array02 / scale_factor) + (array01 / scale_factor))',
              'VCI': '(((array02 - array01) / (array02 + array01)) - min_ndvi) / (max_ndvi - min_ndvi)',
@@ -179,6 +181,7 @@ class SensorInfo(object):
                             'TNDVI': (),
                             'TVI': (),
                             'YNDVI': (-1.0, 1.0),
+                            'TWVI': (-1, 1),
                             'VCI': (),
                             'VISMU': (0., 1.0)}
 
@@ -290,11 +293,11 @@ class VegIndicesEquations(SensorInfo):
 
         return np.where(array2rescale == self.no_data, self.no_data, array2rescale_)
 
-    def compute(self, index2compute, out_type=1, scale_factor=1., **kwargs):
+    def compute(self, vi_index, out_type=1, scale_factor=1.0, **kwargs):
 
         """
         Args:
-            index2compute (str): The vegetation index to compute.
+            vi_index (str): The vegetation index to compute.
             out_type (Optional[int]): This controls the output scaling. Default is 1, or return 'as is'. Choices
                 are [1, 2, 3].
 
@@ -316,14 +319,47 @@ class VegIndicesEquations(SensorInfo):
             >>> ndvi = vie.compute('NDVI')
         """
 
-        self.index2compute = index2compute
+        self.vi_index = vi_index
         self.out_type = out_type
 
-        self.n_bands = len(self.wavelength_lists[self.index2compute.upper()])
+        self.n_bands = len(self.wavelength_lists[self.vi_index.upper()])
 
         # Use ``numexpr``.
         if self.chunk_size == -1:
 
+            if vi_index.lower() == 'twvi':
+
+                imcopy = self.image_array.copy()
+
+                if kwargs:
+
+                    self.image_array = imcopy[:2]
+
+                    self.vi_index = 'evi2'
+                    evi2 = self.run_index(scale_factor, **kwargs)
+
+                    self.image_array = imcopy[1:]
+
+                    self.vi_index = 'ndsi'
+                    ndsi = self.run_index(scale_factor, **kwargs)
+
+                else:
+
+                    self.image_array = imcopy[:2]
+
+                    self.vi_index = 'evi2'
+                    evi2 = self.run_index(scale_factor)
+
+                    self.image_array = imcopy[1:]
+
+                    self.vi_index = 'ndsi'
+                    ndsi = self.run_index(scale_factor)
+
+                ndsi = rescale_intensity(ndsi, in_range=(-1, 1), out_range=(0, 1))
+
+                self.image_array = np.stack((evi2, ndsi))
+                self.vi_index = 'twvi'
+                
             if kwargs:
                 return self.run_index(scale_factor, **kwargs)
             else:
@@ -356,13 +392,14 @@ class VegIndicesEquations(SensorInfo):
                             'SVI': self.SVI,
                             'TNDVI': self.TNDVI,
                             'TVI': self.TVI,
+                            'TWVI': self.TWVI,
                             'YNDVI': self.YNDVI,
                             'VCI': self.VCI}
 
-            if self.index2compute.upper() not in vi_functions:
-                raise NameError('{} is not a vegetation index option.'.format(self.index2compute))
+            if self.vi_index.upper() not in vi_functions:
+                raise NameError('{} is not a vegetation index option.'.format(self.vi_index))
 
-            vi_function = vi_functions[self.index2compute.upper()]
+            vi_function = vi_functions[self.vi_index.upper()]
 
             if kwargs:
                 return vi_function(kwargs)
@@ -372,10 +409,10 @@ class VegIndicesEquations(SensorInfo):
     def run_index(self, scale_factor, y=1., g=2.5, L=1., min_ndvi=-1, max_ndvi=1, **kwargs):
 
         # EVI defaults
-        if self.index2compute.upper() == 'EVI' and not kwargs:
+        if self.vi_index.upper() == 'EVI' and not kwargs:
             c1 = 6.
             c2 = 7.5
-        elif self.index2compute.upper() == 'EVI2' and not kwargs:
+        elif self.vi_index.upper() == 'EVI2' and not kwargs:
             c1 = 2.4
 
         no_data = self.no_data
@@ -401,19 +438,23 @@ class VegIndicesEquations(SensorInfo):
 
         elif self.n_bands == 3:
 
-            try:
+            if len(self.image_array.shape) == 3:
+
                 array01 = self.image_array[0]
                 array02 = self.image_array[1]
                 array03 = self.image_array[2]
-            except:
-                raise ValueError('\nThe input array should have {:d} dimensions.\n'.format(self.n_bands))
+
+            else:
+
+                logger.error('The input array should have {:d} dimensions.'.format(self.n_bands))
+                raise ValueError
 
             if not isinstance(self.mask_array, np.ndarray):
                 mask_equation = 'where((array01 == in_no_data) | (array02 == in_no_data) | (array03 == in_no_data), no_data, index_array)'
 
-        index_array = ne.evaluate(self.equations[self.index2compute.upper()])
+        index_array = ne.evaluate(self.equations[self.vi_index.upper()])
 
-        d_range = self.data_ranges[self.index2compute.upper()]
+        d_range = self.data_ranges[self.vi_index.upper()]
 
         if d_range:
 
@@ -439,7 +480,7 @@ class VegIndicesEquations(SensorInfo):
             # elif self.out_type == 3:
             #     index_array = np.uint16(index_array * 10000.)
 
-            if self.data_ranges[self.index2compute.upper()]:
+            if self.data_ranges[self.vi_index.upper()]:
 
                 if self.out_type == 2:
                     index_array = np.uint8(self.rescale_range(index_array, in_range=d_range))
