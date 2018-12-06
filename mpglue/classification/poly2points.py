@@ -13,6 +13,7 @@ import os
 import time
 import argparse
 
+from .raster_to_points import raster_to_points
 from ..errors import logger
 from .. import raster_tools
 from .. import vector_tools
@@ -256,23 +257,29 @@ def poly2points(input_polygon,
     if not be_quiet:
         logger.info('  Converting {} to points ...'.format(rasterized_polygons))
 
+    raster_to_points(rasterized_polygons,
+                     output_points,
+                     column=class_id,
+                     no_data_value=no_data_value,
+                     block_size=block_size_rows)
+
     # Get information from the input polygon.
-    with vector_tools.vopen(input_polygon) as v_info:
-
-        # Create the points from
-        #   the rasterized polygon.
-        _add_points_from_raster(output_points,
-                                class_id,
-                                field_type,
-                                rasterized_polygons,
-                                no_data_value,
-                                v_info.projection,
-                                skip_factor,
-                                be_quiet,
-                                block_size_rows,
-                                block_size_cols)
-
-    v_info = None
+    # with vector_tools.vopen(input_polygon) as v_info:
+    #
+    #     # Create the points from
+    #     #   the rasterized polygon.
+    #     _add_points_from_raster(output_points,
+    #                             class_id,
+    #                             field_type,
+    #                             rasterized_polygons,
+    #                             no_data_value,
+    #                             v_info.projection,
+    #                             skip_factor,
+    #                             be_quiet,
+    #                             block_size_rows,
+    #                             block_size_cols)
+    #
+    # v_info = None
 
 
 def _examples():

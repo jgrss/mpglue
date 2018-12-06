@@ -4,7 +4,7 @@ MpGlue
 Current version
 ---
 
-`0.2.7b`
+`0.2.8dev`
 
 Usage examples
 ---
