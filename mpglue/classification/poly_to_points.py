@@ -142,7 +142,7 @@ def _add_points_from_raster(out_shp,
             pass
 
     
-def poly2points(input_polygon,
+def poly_to_points(input_polygon,
                 output_points,
                 target_image,
                 class_id='Id',
@@ -181,9 +181,9 @@ def poly2points(input_polygon,
         block_size_cols (Optional[int]): The processing column block size, in pixels. Default is 1024.
 
     Examples:
-        >>> from mpglue.classification.poly2points import poly2points
+        >>> from mpglue.classification.poly_to_points import poly_to_points
         >>>
-        >>> poly2points('/polygons.shp',
+        >>> poly_to_points('/polygons.shp',
         >>>             '/points.shp',
         >>>             '/target_image.tif')
 
@@ -310,8 +310,12 @@ def main():
 
     start_time = time.time()
 
-    poly2points(args.poly, args.points, args.base_image, args.class_id,
-                cell_size=args.cell_size, field_type=args.field_type)
+    poly_to_points(args.poly,
+                   args.points,
+                   args.base_image,
+                   args.class_id,
+                   cell_size=args.cell_size,
+                   field_type=args.field_type)
 
     logger.info('\nEnd data & time -- (%s)\nTotal processing time -- (%.2gs)\n' %
                 (time.asctime(time.localtime(time.time())), (time.time()-start_time)))

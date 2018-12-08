@@ -7395,7 +7395,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                           'min_samps': min_samps_list,
                           'class_weight': class_weight_list}
 
-        elif classifier_info['classifier'] in ['ABR', 'ABR_EX_DTR']:
+        elif classifier_info['classifier'] in ['abr', 'abr-ex-dtr']:
 
             parameters = {'trees': n_trees_list,
                           'rate': learn_rate_list}
@@ -7437,7 +7437,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                           'max_features': rand_vars_list,
                           'min_samples_split': min_samps_list}
 
-        elif classifier_info['classifier'] == 'SVM':
+        elif classifier_info['classifier'] == 'svmc':
 
             parameters = {'C': c_list,
                           'gamma': gamma_list}

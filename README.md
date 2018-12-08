@@ -191,8 +191,8 @@ vector-tools
 >>> # Load and split land cover samples into test (30%) and train (70%).
 >>> cl.split_samples('/land_cover_samples.txt', perc_samp=0.7)
 >>>
->>> # Train a classification model.
->>> cl.construct_model(classifier_info={'classifier': 'RF', 'trees': 100})
+>>> # Train a Random Forest classification model.
+>>> cl.construct_model(classifier_info={'classifier': 'rf', 'trees': 100})
 >>>
 >>> # Print the error matrix report.
 >>> cl.emat.write_stats('/text_report.txt')
@@ -213,8 +213,7 @@ A more detailed example
 >>>                  perc_samp=0.7)
 >>>
 >>> # Train a voting classification model (average of posteriors) and save to file.
->>> cl.construct_model(classifier_info={'classifier': ['Bayes', 'RF'], 
->>>                                     'trees': 100},
+>>> cl.construct_model(classifier_info={'classifier': ['bayes', 'rf', 'dt'], 'trees': 100},
 >>>                    output_model='classifier.model')
 >>>
 >>> # Load a model from file

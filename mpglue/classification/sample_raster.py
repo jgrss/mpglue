@@ -21,7 +21,7 @@ from .. import raster_tools
 from .. import vector_tools
 from ..helpers import _iteration_parameters_values
 from ..errors import ArrayOffsetError, logger
-from .poly2points import poly2points
+from .poly_to_points import poly_to_points
 from .error_matrix import error_matrix
 
 # NumPy
@@ -286,12 +286,12 @@ class SampleImage(object):
 
         if not os.path.isfile(out_points):
 
-            poly2points(self.points_file,
-                        out_points,
-                        self.image_file,
-                        class_id=self.class_id,
-                        field_type=self.field_type,
-                        use_extent=self.use_extent)
+            poly_to_points(self.points_file,
+                           out_points,
+                           self.image_file,
+                           class_id=self.class_id,
+                           field_type=self.field_type,
+                           use_extent=self.use_extent)
 
         return out_points
 
@@ -737,7 +737,7 @@ def sample_raster(points,
         class_id (Optional[str]): Shapefile field id containing class values. Default is 'Id'.
         accuracy (Optional[bool]): Whether to compute accuracy from `image`. Default is False.
         field_type (Optional[str]): The field type of `class_id`. Default is 'int'.
-        use_extent (Optional[bool]): Whether to use the extent of `image` for `poly2points`. Default is True.
+        use_extent (Optional[bool]): Whether to use the extent of `image` for `poly_to_points`. Default is True.
         sql_expression_field (Optional[str]): Default is 'Id'.
         sql_expression_attr (Optional[str]): Default is [].
         neighbors (Optional[bool]): Whether to sample neighboring pixels. Default is False.
