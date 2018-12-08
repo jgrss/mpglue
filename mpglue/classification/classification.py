@@ -177,6 +177,26 @@ try:
 except:
     LIGHTGBM_INSTALLED = False
 
+# XGBoost
+try:
+
+    from xgboost import XGBClassifier
+
+    XGBOOST_INSTALLED = True
+
+except:
+    XGBOOST_INSTALLED = False
+
+# Catboost
+try:
+
+    from catboost import CatBoostClassifier
+
+    CATBOOST_INSTALLED = True
+
+except:
+    CATBOOST_INSTALLED = False
+
 # Imbalanced-learn
 try:
 
@@ -207,16 +227,6 @@ try:
 except:
     SKGARDEN_INSTALLED = False
 
-# Catboost
-try:
-
-    from catboost import CatBoostClassifier
-
-    CATBOOST_INSTALLED = True
-
-except:
-    CATBOOST_INSTALLED = False
-
 # Rtree
 try:
     import rtree
@@ -245,7 +255,7 @@ def _do_c5_cubist_predict(c5_cubist_model, classifier_name, predict_samps, rows_
         NumPy 1d array of class predictions
     """
 
-    if classifier_name == 'C5':
+    if classifier_name == 'c5':
 
         if not rows_i:
             return np.array(C50.predict_C5_0(c5_cubist_model, newdata=predict_samps, type='class'), dtype='int16')
@@ -253,7 +263,7 @@ def _do_c5_cubist_predict(c5_cubist_model, classifier_name, predict_samps, rows_
             return np.array(C50.predict_C5_0(c5_cubist_model, newdata=predict_samps.rx(rows_i, True),
                                              type='class'), dtype='int64')
 
-    elif classifier_name == 'Cubist':
+    elif classifier_name == 'cubist':
 
         if not rows_i:
             return np.array(Cubist.predict_cubist(c5_cubist_model, newdata=predict_samps), dtype='float32')
@@ -277,7 +287,7 @@ def predict_c5_cubist(input_model, ip):
 
     rows_i = ro.IntVector(range(ip[0], ip[0]+ip[1]))
 
-    if ci['classifier'] == 'C5':
+    if ci['classifier'] == 'c5':
         # TODO: type='prob'
         return np.array(C50.predict_C5_0(m, newdata=predict_samps.rx(rows_i, True), type='class'), dtype='int16')
     else:
@@ -521,16 +531,16 @@ def get_available_models():
 
     """Gets a list of available models"""
 
-    return ['AB_DT', 'AB_EX_DT', 'AB_RF', 'AB_EX_RF', 'AB_DTR', 'AB_EX_DTR',
-            'AB_RFR', 'AB_EX_RFR',
-            'Bag_DT', 'Bag_EX_DT', 'Bag_DTR', 'Blag', 'Bayes', 'DT', 'DTR',
-            'EX_DT', 'EX_DTR', 'GB', 'GBR', 'C5', 'Cubist',
-            'EX_RF', 'CVEX_RF', 'EX_RFR',
-            'Logistic', 'NN', 'Gaussian',
-            'RF', 'CVGBoost', 'CVRF', 'RFR', 'CVMLP',
-            'SVMc', 'SVMnu', 'SVMcR', 'CVSVM', 'CVSVMA', 'CVSVR', 'CVSVRA', 'QDA',
-            'ChainCRF', 'GridCRF',
-            'LightGBM', 'Tpot', 'Mondrian', 'Catboost']
+    return ['ab-dt', 'ab-ex-dt', 'ab-rf', 'ab-ex-rf', 'ab-dtr', 'ab-ex-dtr',
+            'ab-rfr', 'ab-ex-rfr',
+            'bag-dt', 'bag-ex-dt', 'bag-dtr', 'blag', 'bayes', 'dt', 'dtr',
+            'ex-dt', 'ex-dtr', 'gb', 'gbr', 'c5', 'cubist',
+            'ex-rf', 'ex-rfr',
+            'logistic', 'nn', 'gaussian',
+            'rf', 'cvrf', 'rfr', 'cvmlp',
+            'svmc', 'svmnu', 'svmcr', 'cvsvm', 'cvsvma', 'cvsvr', 'cvsvra', 'qda',
+            'chaincrf', 'gridcrf',
+            'lightgbm', 'tpot', 'mondrian', 'catboost', 'xgboost']
 
 
 class ParameterHandler(object):
@@ -540,32 +550,32 @@ class ParameterHandler(object):
         self.equal_params = dict(trees='n_estimators',
                                  min_samps='min_samples_split')
 
-        self.forests = ['RF',
-                        'EX_RF']
+        self.forests = ['rf',
+                        'ex-rf']
 
-        self.forests_regressed = ['RFR',
-                                  'EX_RFR']
+        self.forests_regressed = ['rfr',
+                                  'ex-rfr']
 
-        self.bagged = ['Bag_DT',
-                       'Bag_EX_DT',
-                       'Bag_DTR']
+        self.bagged = ['bag-dt',
+                       'bag-ex-dt',
+                       'bag-dtr']
 
-        self.imbalanced = ['Blag']
+        self.imbalanced = ['blag']
 
-        self.trees = ['DT',
-                      'EX_DT']
+        self.trees = ['dt',
+                      'ex-dt']
 
-        self.trees_regressed = ['DTR',
-                                'EX_DTR']
+        self.trees_regressed = ['dtr',
+                                'ex-dtr']
 
-        self.boosted = ['AB_DT',
-                        'AB_EX_DT',
-                        'AB_RF',
-                        'AB_EX_RF']
+        self.boosted = ['ab-dt',
+                        'ab-ex-dt',
+                        'ab-rf',
+                        'ab-ex-rf']
 
-        self.boosted_g = ['GB']
+        self.boosted_g = ['gb']
 
-        self.boosted_g_regressed = ['GBR']
+        self.boosted_g_regressed = ['gbr']
 
         if classifier in self.forests:
 
@@ -623,50 +633,50 @@ class ParameterHandler(object):
         elif classifier in self.boosted:
             self.valid_params = ['base_estimator', 'n_estimators', 'learning_rate', 'algorithm', 'random_state']
 
-        elif classifier == 'Bayes':
+        elif classifier == 'bayes':
 
             self.valid_params = ['priors']
 
-        elif classifier == 'NN':
+        elif classifier == 'nn':
 
             self.valid_params = ['n_neighbors', 'weights', 'algorithm', 'leaf_size', 'p', 'metric',
                                  'metric_params', 'n_jobs']
 
-        elif classifier == 'Logistic':
+        elif classifier == 'logistic':
 
             self.valid_params = ['penalty', 'dual', 'tol', 'C', 'fit_intercept', 'intercept_scaling',
                                  'class_weight', 'random_state', 'solver', 'max_iter', 'multi_class',
                                  'verbose', 'warm_start', 'n_jobs']
 
-        elif classifier == 'QDA':
+        elif classifier == 'qda':
 
             self.valid_params = ['priors', 'reg_param', 'store_covariance', 'tol', 'store_covariances']
 
-        elif classifier == 'Gaussian':
+        elif classifier == 'gaussian':
 
             self.valid_params = ['kernel', 'optimizer', 'n_restarts_optimizer', 'max_iter_predict',
                                  'warm_start', 'copy_X_train', 'random_state', 'multi_class', 'n_jobs']
 
-        elif classifier == 'SVMc':
+        elif classifier == 'svmc':
 
             self.valid_params = ['C', 'kernel', 'degree', 'gamma', 'coef0', 'shrinking', 'probability',
                                  'tol', 'cache_size', 'class_weight', 'verbose', 'max_iter',
                                  'decision_function_shape', 'random_state']
 
-        elif classifier == 'SVMnu':
+        elif classifier == 'svmnu':
 
             self.valid_params = ['nu', 'kernel', 'degree', 'gamma', 'coef0', 'shrinking', 'probability',
                                  'tol', 'cache_size', 'class_weight', 'verbose', 'max_iter',
                                  'decision_function_shape', 'random_state']
 
-        elif classifier in ['ChainCRF', 'GridCRF']:
+        elif classifier in ['chaincrf', 'gridcrf']:
 
             self.valid_params = ['max_iter', 'C', 'n_jobs', 'show_loss_every',
                                  'tol', 'inference_cache',
                                  'inference_method',
                                  'neighborhood']
 
-        elif classifier == 'LightGBM':
+        elif classifier == 'lightgbm':
 
             self.valid_params = ['boosting_type', 'num_leaves', 'max_depth', 'learning_rate', 'n_estimators',
                                  'subsample_for_bin', 'objective', 'class_weight', 'min_split_gain',
@@ -674,7 +684,7 @@ class ParameterHandler(object):
                                  'colsample_bytree', 'reg_alpha', 'reg_lambda', 'random_state', 'n_jobs', 'silent',
                                  'feature_fraction', 'bagging_freq', 'bagging_fraction', 'max_bin', 'num_boost_round']
 
-        elif classifier == 'Catboost':
+        elif classifier == 'catboost':
 
             self.valid_params = ['iterations', 'learning_rate', 'depth', 'l2_leaf_reg', 'model_size_reg',
                                  'rsm', 'loss_function', 'border_count', 'feature_border_type',
@@ -696,11 +706,18 @@ class ParameterHandler(object):
                                  'reg_lambda', 'objective', 'eta', 'max_bin', 'scale_pos_weight', 'metadata',
                                  'early_stopping_rounds', 'cat_features']
 
-        elif classifier == 'Mondrian':
+        elif classifier == 'xgboost':
 
+            self.valid_params = ['max_depth', 'learning_rate', 'n_estimators', 'silent',
+                                 'objective', 'booster', 'n_jobs', 'nthread', 'gamma',
+                                 'min_child_weight', 'max_delta_step', 'subsample', 'colsample_bytree',
+                                 'colsample_bylevel', 'reg_alpha', 'reg_lambda', 'scale_pos_weight',
+                                 'base_score', 'random_state', 'seed', 'missing']
+
+        elif classifier == 'mondrian':
             self.valid_params = ['n_estimators', 'max_depth', 'min_samples_split', 'random_state', 'n_jobs']
 
-        elif classifier == 'Tpot':
+        elif classifier == 'tpot':
             self.valid_params = list()
 
         else:
@@ -2470,7 +2487,7 @@ class Visualization(object):
 
         plt.close()
 
-    def vis_decision(self, fea_1, fea_2, classifier_info={'classifier': 'RF'}, class2check=1,
+    def vis_decision(self, fea_1, fea_2, classifier_info={'classifier': 'rf'}, class2check=1,
                      compare=1, locate_outliers=False):
 
         """
@@ -2531,18 +2548,18 @@ class Visualization(object):
 
         if compare == 1:
 
-            if 'RF' in classifier_info['classifier']:
+            if 'rf' in classifier_info['classifier']:
 
                 clf1 = RandomForestClassifier(**self.classifier_info_rf)
 
                 clf2 = ExtraTreesClassifier(**self.classifier_info_rf)
 
-            elif classifier_info['classifier'] == 'SVMc':
+            elif classifier_info['classifier'] == 'svmc':
 
                 clf1 = SVC(gamma=classifier_info['gamma'], C=classifier_info['C'])
                 clf2 = SVC(gamma=classifier_info['gamma'], C=C2)
 
-            elif classifier_info['classifier'] == 'Bayes':
+            elif classifier_info['classifier'] == 'bayes':
 
                 clf1 = GaussianNB()
                 clf2 = GaussianNB()
@@ -2703,7 +2720,7 @@ class Visualization(object):
 
         if compare == 1:
 
-            if 'RF' in classifier_info['classifier']:
+            if 'rf' in classifier_info['classifier']:
 
                 ax1.set_xlabel('RF, Max. depth: %d' % classifier_info['max_depth'])
                 ax2.set_xlabel('Extreme RF, Max. depth: %d' % classifier_info['max_depth'])
@@ -3506,7 +3523,7 @@ class Preprocessing(object):
         # the model parameters
         # self._default_parameters()
         #
-        # if classifier_info['classifier'] == 'RF':
+        # if classifier_info['classifier'] == 'rf':
         #
         #     label_spread = ensemble.RandomForestClassifier(max_depth=classifier_info['max_depth'],
         #                                                    n_estimators=classifier_info['trees'],
@@ -3514,7 +3531,7 @@ class Preprocessing(object):
         #                                                    min_samples_split=classifier_info['min_samps'],
         #                                                    n_jobs=-1)
         #
-        # elif classifier_info['classifier'] == 'EX_RF':
+        # elif classifier_info['classifier'] == 'ex-rf':
         #
         #     label_spread = ensemble.ExtraTreesClassifier(max_depth=classifier_info['max_depth'],
         #                                                  n_estimators=classifier_info['trees'],
@@ -3560,94 +3577,92 @@ class ModelOptions(object):
                           *Module
         ===========================
 
-        AB_DT -- AdaBoost with CART (classification problems)
-                 *Scikit-learn
-        AB_EX_DT-- AdaBoost with extremely random trees (classification problems)
-                   *Scikit-learn
-        AB_RF-- AdaBoost with Random Forest (classification problems)
-                *Scikit-learn
-        AB_EX_RF-- AdaBoost with Extremely Random Forest (classification problems)
-                   *Scikit-learn
-        AB_DTR-- AdaBoost with CART (regression problems)
-                 *Scikit-learn
-        AB_EX_DTR-- AdaBoost with extremely random trees (regression problems)
-                    *Scikit-learn
-        Bag_DT-- Bagged Decision Trees (classification problems)
-                 *Scikit-learn              
-        Bag_DTR-- Bagged Decision Trees (regression problems)
-                  *Scikit-learn            
-        Bag_EX_DT-- Bagged Decision Trees with extremely randomized trees (classification problems)
-                   *Scikit-learn
-        Blag  -- Downsampled bagging (classification problems)
-                 *Imbalanced-learn
-        Bayes -- Naives Bayes (classification problems)
-                *Scikit-learn
-        DT    -- Decision Trees based on CART algorithm (classification problems)
-                 *Scikit-learn
-        DTR   -- Decision Trees Regression based on CART algorithm (regression problems)
-                 *Scikit-learn
-        EX_DT -- Extra Decision Trees based on CART algorithm (classification problems)
-                 *Scikit-learn
-        EX_DTR-- Extra Decision Trees Regression based on CART algorithm (regression problems)
-                 *Scikit-learn
-        GB    -- Gradient Boosted Trees (classification problems)
-                 *Scikit-learn
-        GBR   -- Gradient Boosted Trees (regression problems)
-                 *Scikit-learn
-        C5    -- C5 decision trees (classification problems)
-                 {classifier:C5,trials:10,CF:.25,min_cases:2,winnow:False,no_prune:False,fuzzy:False}
-        Cubist-- Cubist regression trees (regression problems)
-                 {classifier:Cubist,committees:5,unbiased:False,rules:100,extrapolation:10}
-        EX_RF -- Extremely Random Forests (classification problems)
-                 *Scikit-learn
-        CVEX_RF -- Extremely Random Forests in OpenCV (classification problems)
-                   *NOT CURRENTLY SUPPORTED IN OPENCV 3.0*
-                   {classifier:CVEX_RF,trees:1000,min_samps:0,rand_vars:sqrt(feas),max_depth:25}
-        EX_RFR-- Extremely Random Forests (regression problems)
-                 *Scikit-learn
-        Gaussian-- Gaussian Process (classification problems)
-                  *Scikit-learn
-        Logistic-- Logistic Regression (classification problems)
-                   *Scikit-learn
-        NN    -- K Nearest Neighbor (classification problems)
-                 *Scikit-learn
-        RF    -- Random Forests (classification problems)
-                 *Scikit-learn
-        CVRF  -- Random Forests in OpenCV (classification problems)
-                 {classifier:CVRF,trees:1000,min_samps:0,rand_vars:0,max_depth:25,weight_classes:None,truncate:False}
-        RFR   -- Random Forests (regression problems)
-                 *Scikit-learn
-        CVMLP -- Feed-forward, artificial neural network, multi-layer perceptrons in OpenCV (classification problems)
-                 {classifier:CVMLP}
-        SVMc  -- C-support Support Vector Machine (classification problems)
-                 {classifier:SVMc,C:1,kernel:'rbf',g:1/n_feas}
-        SVMcR -- C-support Support Vector Machine (regression problems)
-                 {classifier:SVMcR,C:1,g:1/n_feas}
-        SVMnu -- Nu-support Support Vector Machine (classification problems)
-                 {classifier:SVMnu,C:1,kernel:'rbf',g:1/n_feas}
-        CVSVM -- Support Vector Machine in OpenCV (classification problems)
-                 {classifier:CVSVM,C:1,g:1.0}
-        CVSVMA-- Support Vector Machine, auto-tuned in OpenCV (classification problems)
-                 {classifier:CVSVMA}
-        CVSVMR-- Support Vector Machine in OpenCV (regression problems)
-                 {classifier:CVSVMR,C:1,g:1.0}
-        CVSVMRA-- Support Vector Machine, auto-tuned in OpenCV (regression problems)
-                  {classifier:CVSVMRA}
-        QDA   -- Quadratic Discriminant Analysis (classification problems)
-                 *Scikit-learn
-        ChainCRF-- Linear-chain Conditional Random Fields (classification problems)
-                   *Pystruct
-        GridCRF -- Pairwise Conditional Random Fields on a 2d grid (classification problems)
-                   *Pystruct
-        LightGBM-- Light Gradient Boosting (classification problems)
-                   *LightGBM
-        Catboost-- CatBoost for Gradient Boosting (classification problems)
-                   *Catboost
-        Tpot    -- Tpot pipeline (classification problems)
-                   *Tpot
-        Mondrian-- Mondrian forests (classification problems)
-                   *Scikit-garden
-                   
+        ab-dt       -- AdaBoost with CART (classification problems)
+                        *Scikit-learn
+        ab-ex-dt    -- AdaBoost with extremely random trees (classification problems)
+                        *Scikit-learn
+        ab-rf       -- AdaBoost with Random Forest (classification problems)
+                        *Scikit-learn
+        ab-ex-rf    -- AdaBoost with Extremely Random Forest (classification problems)
+                        *Scikit-learn
+        ab-dtr      -- AdaBoost with CART (regression problems)
+                        *Scikit-learn
+        ab-ex-dtr   -- AdaBoost with extremely random trees (regression problems)
+                        *Scikit-learn
+        bag-dt      -- Bagged Decision Trees (classification problems)
+                        *Scikit-learn              
+        bag-dtr     -- Bagged Decision Trees (regression problems)
+                        *Scikit-learn            
+        bag-ex-dt   -- Bagged Decision Trees with extremely randomized trees (classification problems)
+                        *Scikit-learn
+        blag        -- Downsampled bagging (classification problems)
+                        *Imbalanced-learn
+        bayes       -- Naives Bayes (classification problems)
+                        *Scikit-learn
+        dt          -- Decision Trees based on CART algorithm (classification problems)
+                        *Scikit-learn
+        dtr         -- Decision Trees Regression based on CART algorithm (regression problems)
+                        *Scikit-learn
+        ex-dt       -- Extra Decision Trees based on CART algorithm (classification problems)
+                        *Scikit-learn
+        ex-dtr      -- Extra Decision Trees Regression based on CART algorithm (regression problems)
+                        *Scikit-learn                        
+        catboost    -- CatBoost for Gradient Boosting (classification problems)
+                        *Catboost        
+        chaincrf    -- Linear-chain Conditional Random Fields (classification problems)
+                        *Pystruct                        
+        c5          -- C5 decision trees (classification problems)
+                        {classifier:C5,trials:10,CF:.25,min_cases:2,winnow:False,no_prune:False,fuzzy:False}
+        cubist      -- Cubist regression trees (regression problems)
+                        {classifier:Cubist,committees:5,unbiased:False,rules:100,extrapolation:10}
+        cvmlp       -- Feed-forward, artificial neural network, multi-layer perceptrons in OpenCV (classification problems)
+                        {classifier:CVMLP}                        
+        cvrf        -- Random Forests in OpenCV (classification problems)
+                        {classifier:CVRF,trees:1000,min_samps:0,rand_vars:0,max_depth:25,weight_classes:None,truncate:False}                        
+        cvsvm       -- Support Vector Machine in OpenCV (classification problems)
+                        {classifier:CVSVM,C:1,g:1.0}
+        cvsvma      -- Support Vector Machine, auto-tuned in OpenCV (classification problems)
+                        {classifier:CVSVMA}
+        cvsvmr      -- Support Vector Machine in OpenCV (regression problems)
+                        {classifier:CVSVMR,C:1,g:1.0}
+        cvsvmra     -- Support Vector Machine, auto-tuned in OpenCV (regression problems)
+                        {classifier:CVSVMRA}                        
+        ex-rf       -- Extremely Random Forests (classification problems)
+                        *Scikit-learn
+        ex-rfr      -- Extremely Random Forests (regression problems)
+                        *Scikit-learn
+        gaussian    -- Gaussian Process (classification problems)
+                        *Scikit-learn
+        gb          -- Gradient Boosted Trees (classification problems)
+                        *Scikit-learn
+        gbr         -- Gradient Boosted Trees (regression problems)
+                        *Scikit-learn
+        gridcrf     -- Pairwise Conditional Random Fields on a 2d grid (classification problems)
+                        *Pystruct    
+        lightgbm    -- Light Gradient Boosting (classification problems)
+                        *LightGBM
+        logistic    -- Logistic Regression (classification problems)
+                        *Scikit-learn                        
+        mondrian    -- Mondrian forests (classification problems)
+                        *scikit-garden                        
+        nn          -- K Nearest Neighbor (classification problems)
+                        *Scikit-learn
+        qda         -- Quadratic Discriminant Analysis (classification problems)
+                        *Scikit-learn
+        rf          -- Random Forests (classification problems)
+                        *Scikit-learn                        
+        rfr         -- Random Forests (regression problems)
+                        *Scikit-learn
+        svmc        -- C-support Support Vector Machine (classification problems)
+                        {classifier:SVMc,C:1,kernel:'rbf',g:1/n_feas}
+        svmcr       -- C-support Support Vector Machine (regression problems)
+                        {classifier:SVMcR,C:1,g:1/n_feas}
+        svmnu       -- Nu-support Support Vector Machine (classification problems)
+                        {classifier:SVMnu,C:1,kernel:'rbf',g:1/n_feas}
+        tpot        -- Tpot pipeline (classification problems)
+                        *Tpot                                                
+        xgboost     -- XGBoost for Gradient Boosting (classification problems)
+                        *XGBoost                   
         """
 
 
@@ -3753,7 +3768,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         >>> #   after Python cleanup, save the model to file
         >>> #   with the ``output_model`` keyword. See the
         >>> #   ``construct_model`` function more details.
-        >>> cl.construct_model(classifier_info={'classifier': 'RF',
+        >>> cl.construct_model(classifier_info={'classifier': 'rf',
         >>>                                     'trees': 1000,
         >>>                                     'max_depth': 25})
         >>>
@@ -3798,7 +3813,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         Args:
             input_model (Optional[str]): The input model name.
             output_model (Optional[str]): The output model name.
-            classifier_info (Optional[dict]): A dictionary of classifier information. Default is {'classifier': 'RF'}.
+            classifier_info (Optional[dict]): A dictionary of classifier information. Default is {'classifier': 'rf'}.
             class_weight (Optional[bool]): How to weight classes for priors. Default is None. Choices are
                 [None, 'percent', 'inverse'].
                 *Example when class_weight=True:
@@ -3807,7 +3822,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     THEN
                         class_weight = {1: .22, 2: .33, 3: .44}
             var_imp (Optional[bool]): Whether to return feature importance. Default is True.
-            rank_method (Optional[str]): The rank method to use. 'chi2' or 'RF'. Default is None.
+            rank_method (Optional[str]): The rank method to use. 'chi2' or 'rf'. Default is None.
             top_feas (Optional[int or float]): The number or percentage of top ranked features to return.
                 Default is .5, or 50%.
             get_probs (Optional[bool]): Whether to return class probabilities. Default is False.
@@ -3850,7 +3865,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             >>>
             >>> # train a Random Forest model
             >>> cl.construct_model(output_model='/test_model.txt',
-            >>>                    classifier_info={'classifier': 'RF',
+            >>>                    classifier_info={'classifier': 'rf',
             >>>                                     'trees': 1000,
             >>>                                     'max_depth': 25})
             >>>
@@ -4132,11 +4147,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         #   otherwise, set defaults.
 
         if 'classifier' not in self.classifier_info:
-            self.classifier_info['classifier'] = 'RF'
+            self.classifier_info['classifier'] = 'rf'
 
         if self.classifier_info['classifier'].startswith('AB_') or \
                 self.classifier_info['classifier'].startswith('Bag_') or \
-                (self.classifier_info['classifier'] == 'Blag'):
+                (self.classifier_info['classifier'] == 'blag'):
 
             class_base = copy(self.classifier_info['classifier'])
 
@@ -4154,7 +4169,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         # Create a separate instance for
         #   AdaBoost and Bagging base classifiers.
-        if class_base.startswith('AB_') or class_base.startswith('Bag_') or (class_base == 'Blag'):
+        if class_base.startswith('AB_') or class_base.startswith('Bag_') or (class_base == 'blag'):
 
             self.classifier_info_base = copy(self.classifier_info)
             self.classifier_info_base['classifier'] = class_base
@@ -4179,7 +4194,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             self.classifier_info['classifier'] = class_base
 
         # Random Forest in OpenCV
-        if self.classifier_info['classifier'] in ['CVRF', 'CVEX_RF', 'CVRFR', 'CVEX_RFR']:
+        if self.classifier_info['classifier'] in ['cvrf', 'CVEX_RF', 'CVRFR', 'CVEX_RFR']:
 
             if not self.input_model:
 
@@ -4217,7 +4232,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         self.classifier_info['priors'] = np.ones(self.n_classes, dtype='float32')
 
             # MLP
-            elif self.classifier_info['classifier'] == 'CVMLP':
+            elif self.classifier_info['classifier'] == 'cvmlp':
 
                 if not self.input_model:
 
@@ -4231,7 +4246,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                             logger.error('  Cannot infer number of hidden nodes.')
                             raise ValueError
 
-        elif self.classifier_info['classifier'] in ['ChainCRF', 'GridCRF']:
+        elif self.classifier_info['classifier'] in ['chaincrf', 'gridcrf']:
 
             if not PYSTRUCT_INSTALLED:
 
@@ -4296,58 +4311,58 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 self._default_parameters()
 
-                if classifier == 'Bayes':
+                if classifier == 'bayes':
                     voting_sub_model = GaussianNB(**self.classifier_info_)
 
-                elif classifier == 'NN':
+                elif classifier == 'nn':
                     voting_sub_model = KNeighborsClassifier(**self.classifier_info_)
 
-                elif classifier == 'Logistic':
+                elif classifier == 'logistic':
                     voting_sub_model = LogisticRegression(**self.classifier_info_)
 
-                elif classifier == 'RF':
+                elif classifier == 'rf':
                     voting_sub_model = ensemble.RandomForestClassifier(**self.classifier_info_)
 
-                elif classifier == 'EX_RF':
+                elif classifier == 'ex-rf':
                     voting_sub_model = ensemble.ExtraTreesClassifier(**self.classifier_info_)
 
-                elif classifier == 'DT':
+                elif classifier == 'dt':
                     voting_sub_model = tree.DecisionTreeClassifier(**self.classifier_info_)
 
-                elif classifier == 'EX_DT':
+                elif classifier == 'ex-dt':
                     voting_sub_model = tree.ExtraTreeClassifier(**self.classifier_info_)
 
-                elif classifier == 'AB_DT':
+                elif classifier == 'ab-dt':
 
                     voting_sub_model = ensemble.AdaBoostClassifier(base_estimator=tree.DecisionTreeClassifier(**self.classifier_info_),
                                                                    **self.classifier_info_base)
 
-                elif classifier == 'AB_RF':
+                elif classifier == 'ab-rf':
 
                     voting_sub_model = ensemble.AdaBoostClassifier(base_estimator=ensemble.RandomForestClassifier(**self.classifier_info_),
                                                                    **self.classifier_info_base)
 
-                elif classifier == 'AB_EX_RF':
+                elif classifier == 'ab-ex-rf':
 
                     voting_sub_model = ensemble.AdaBoostClassifier(base_estimator=ensemble.ExtraTreesClassifier(**self.classifier_info_),
                                                                    **self.classifier_info_base)
 
-                elif classifier == 'AB_EX_DT':
+                elif classifier == 'ab-ex-dt':
 
                     voting_sub_model = ensemble.AdaBoostClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
                                                                    **self.classifier_info_base)
 
-                elif classifier == 'Bag_DT':
+                elif classifier == 'bag-dt':
 
                     voting_sub_model = ensemble.BaggingClassifier(base_estimator=tree.DecisionTreeClassifier(**self.classifier_info_),
                                                                   **self.classifier_info_base)
 
-                elif classifier == 'Bag_EX_DT':
+                elif classifier == 'bag-ex-dt':
 
                     voting_sub_model = ensemble.BaggingClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
                                                                   **self.classifier_info_base)
 
-                elif classifier == 'Blag':
+                elif classifier == 'blag':
 
                     if not IMBLEARN_INSTALLED:
 
@@ -4373,7 +4388,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     voting_sub_model = TPOTClassifier(generations=5, population_size=50, cv=5, verbosity=0)
 
-                elif classifier == 'Mondrian':
+                elif classifier == 'mondrian':
 
                     if not SKGARDEN_INSTALLED:
 
@@ -4385,22 +4400,22 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     voting_sub_model = skgarden.MondrianForestClassifier(**self.classifier_info_)
 
-                elif classifier == 'GB':
+                elif classifier == 'gb':
                     voting_sub_model = ensemble.GradientBoostingClassifier(**self.classifier_info_)
 
-                elif classifier == 'QDA':
+                elif classifier == 'qda':
                     voting_sub_model = QDA(**self.classifier_info_)
 
-                elif classifier == 'Gaussian':
+                elif classifier == 'gaussian':
                     voting_sub_model = GaussianProcessClassifier(**self.classifier_info_)
 
-                elif classifier == 'SVMc':
+                elif classifier == 'svmc':
                     voting_sub_model = svm.SVC(**self.classifier_info_)
 
-                elif classifier == 'SVMnu':
+                elif classifier == 'svmnu':
                     voting_sub_model = svm.NuSVC(**self.classifier_info_)
 
-                elif classifier == 'Catboost':
+                elif classifier == 'catboost':
 
                     if not CATBOOST_INSTALLED:
 
@@ -4412,7 +4427,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     voting_sub_model = CatBoostClassifier(**self.classifier_info_)
 
-                elif classifier == 'LightGBM':
+                elif classifier == 'lightgbm':
 
                     if not LIGHTGBM_INSTALLED:
 
@@ -4426,13 +4441,25 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     voting_sub_model = gbm.LGBMClassifier(**self.classifier_info_)
 
+                elif classifier == 'xgboost':
+
+                    if not XGBOOST_INSTALLED:
+
+                        logger.error("""\
+
+                        XGBoost must be installed to use the model.
+
+                        """)
+
+                    voting_sub_model = XGBClassifier(**self.classifier_info_)
+
                 else:
 
                     logger.warning('  The model, {MODEL}, is not supported'.format(MODEL=classifier))
                     continue
 
                 # Check if the model supports sample weights.
-                argi = inspect.getargspec(voting_sub_model.fit)
+                argi = inspect.getfullargspec(voting_sub_model.fit)
 
                 supports_weights = True if 'sample_weight' in argi.args else False
 
@@ -4577,12 +4604,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         else:
 
-            if self.classifier_info['classifier'] in ['ABR', 'GBR', 'EX_RFR', 'RFR', 'EX_RFR', 'SVR', 'SVRA']:
+            if self.classifier_info['classifier'] in ['ABR', 'gbr', 'ex-rfr', 'rfr', 'ex-rfr', 'SVR', 'SVRA']:
                 self.discrete = False
             else:
                 self.discrete = True
 
-            if self.classifier_info['classifier'] == 'Bayes':
+            if self.classifier_info['classifier'] == 'bayes':
 
                 self.model = GaussianNB()
 
@@ -4591,12 +4618,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             elif self.classifier_info['classifier'] == 'CART':
                 self.model = cv2.ml.DTrees_create()
 
-            elif self.classifier_info['classifier'] in ['CVRF', 'CVRFR']:
+            elif self.classifier_info['classifier'] in ['cvrf', 'CVRFR']:
 
                 if not self.get_probs:
                     self.model = cv2.ml.RTrees_create()
 
-            # elif self.classifier_info['classifier'] == 'CVMLP':
+            # elif self.classifier_info['classifier'] == 'cvmlp':
             #
             #     if self.input_model:
             #     self.model = cv2.ml.ANN_MLP_create()
@@ -4604,55 +4631,55 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             #     #     self.model = cv2.ml.ANN_MLP_create(np.array([self.n_feas, self.classifier_info['n_hidden'],
             #     #                                                  self.n_classes]))
 
-            elif self.classifier_info['classifier'] in ['CVSVM', 'CVSVMA', 'CVSVMR', 'CVSVMRA']:
+            elif self.classifier_info['classifier'] in ['cvsvm', 'cvsvma', 'CVSVMR', 'CVSVMRA']:
                 self.model = cv2.ml.SVM_create()
 
-            elif self.classifier_info['classifier'] == 'DT':
+            elif self.classifier_info['classifier'] == 'dt':
                 self.model = tree.DecisionTreeClassifier(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'DTR':
+            elif self.classifier_info['classifier'] == 'dtr':
                 self.model = tree.DecisionTreeRegressor(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'EX_DT':
+            elif self.classifier_info['classifier'] == 'ex-dt':
                 self.model = tree.ExtraTreeClassifier(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'EX_DTR':
+            elif self.classifier_info['classifier'] == 'ex-dtr':
                 self.model = tree.ExtraTreeRegressor(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'Logistic':
+            elif self.classifier_info['classifier'] == 'logistic':
                 self.model = LogisticRegression(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'NN':
+            elif self.classifier_info['classifier'] == 'nn':
                 self.model = KNeighborsClassifier(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'RF':
+            elif self.classifier_info['classifier'] == 'rf':
                 self.model = ensemble.RandomForestClassifier(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'EX_RF':
+            elif self.classifier_info['classifier'] == 'ex-rf':
                 self.model = ensemble.ExtraTreesClassifier(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'RFR':
+            elif self.classifier_info['classifier'] == 'rfr':
                 self.model = ensemble.RandomForestRegressor(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'EX_RFR':
+            elif self.classifier_info['classifier'] == 'ex-rfr':
                 self.model = ensemble.ExtraTreesRegressor(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'AB_DT':
+            elif self.classifier_info['classifier'] == 'ab-dt':
 
                 self.model = ensemble.AdaBoostClassifier(base_estimator=tree.DecisionTreeClassifier(**self.classifier_info_),
                                                          **self.classifier_info_base)
 
-            elif self.classifier_info['classifier'] == 'AB_RF':
+            elif self.classifier_info['classifier'] == 'ab-rf':
 
                 self.model = ensemble.AdaBoostClassifier(base_estimator=ensemble.RandomForestClassifier(**self.classifier_info_),
                                                          **self.classifier_info_base)
 
-            elif self.classifier_info['classifier'] == 'AB_EX_RF':
+            elif self.classifier_info['classifier'] == 'ab-ex-rf':
 
                 self.model = ensemble.AdaBoostClassifier(base_estimator=ensemble.ExtraTreesClassifier(**self.classifier_info_),
                                                          **self.classifier_info_base)
 
-            elif self.classifier_info['classifier'] == 'AB_EX_DT':
+            elif self.classifier_info['classifier'] == 'ab-ex-dt':
 
                 self.model = ensemble.AdaBoostClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
                                                          **self.classifier_info_base)
@@ -4667,22 +4694,22 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 self.model = ensemble.AdaBoostRegressor(base_estimator=tree.ExtraTreeRegressor(**self.classifier_info_),
                                                         **self.classifier_info_base)
 
-            elif self.classifier_info['classifier'] == 'Bag_DT':
+            elif self.classifier_info['classifier'] == 'bag-dt':
 
                 self.model = ensemble.BaggingClassifier(base_estimator=tree.DecisionTreeClassifier(**self.classifier_info_),
                                                         **self.classifier_info_base)
 
-            elif self.classifier_info['classifier'] == 'Bag_DTR':
+            elif self.classifier_info['classifier'] == 'bag-dtr':
 
                 self.model = ensemble.BaggingRegressor(base_estimator=tree.DecisionTreeRegressor(**self.classifier_info_),
                                                        **self.classifier_info_base)
 
-            elif self.classifier_info['classifier'] == 'Bag_EX_DT':
+            elif self.classifier_info['classifier'] == 'bag-ex-dt':
 
                 self.model = ensemble.BaggingClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
                                                         **self.classifier_info_base)
 
-            elif self.classifier_info['classifier'] == 'Blag':
+            elif self.classifier_info['classifier'] == 'blag':
 
                 if not IMBLEARN_INSTALLED:
 
@@ -4696,7 +4723,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 self.model = imblearn.BalancedBaggingClassifier(**self.classifier_info_base)
 
-            elif self.classifier_info['classifier'] == 'Tpot':
+            elif self.classifier_info['classifier'] == 'tpot':
 
                 if not TPOT_INSTALLED:
 
@@ -4708,7 +4735,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 self.model = TPOTClassifier(generations=5, population_size=50, cv=5, verbosity=0)
 
-            elif self.classifier_info['classifier'] == 'Mondrian':
+            elif self.classifier_info['classifier'] == 'mondrian':
 
                 if not SKGARDEN_INSTALLED:
 
@@ -4720,25 +4747,25 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 self.model = skgarden.MondrianForestClassifier(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'GB':
+            elif self.classifier_info['classifier'] == 'gb':
                 self.model = ensemble.GradientBoostingClassifier(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'GBR':
+            elif self.classifier_info['classifier'] == 'gbr':
                 self.model = ensemble.GradientBoostingRegressor(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'SVMc':
+            elif self.classifier_info['classifier'] == 'svmc':
                 self.model = svm.SVC(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'SVMnu':
+            elif self.classifier_info['classifier'] == 'svmnu':
                 self.model = svm.NuSVC(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'QDA':
+            elif self.classifier_info['classifier'] == 'qda':
                 self.model = QDA(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'Gaussian':
+            elif self.classifier_info['classifier'] == 'gaussian':
                 self.model = GaussianProcessClassifier(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'Catboost':
+            elif self.classifier_info['classifier'] == 'catboost':
 
                 if not CATBOOST_INSTALLED:
 
@@ -4750,7 +4777,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 self.model = CatBoostClassifier(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'LightGBM':
+            elif self.classifier_info['classifier'] == 'lightgbm':
 
                 if not LIGHTGBM_INSTALLED:
 
@@ -4764,7 +4791,19 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                 self.model = gbm.LGBMClassifier(**self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'ChainCRF':
+            elif self.classifier_info['classifier'] == 'xgboost':
+
+                if not XGBOOST_INSTALLED:
+
+                    logger.error("""\
+
+                    XGBoost must be installed to use the model.
+
+                    """)
+
+                self.model = XGBClassifier(**self.classifier_info_)
+
+            elif self.classifier_info['classifier'] == 'chaincrf':
 
                 if self.classifier_info_['n_jobs'] == 1:
 
@@ -4776,7 +4815,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     self.model = ssvm.OneSlackSSVM(ChainCRF(directed=True),
                                                    **self.classifier_info_)
 
-            elif self.classifier_info['classifier'] == 'GridCRF':
+            elif self.classifier_info['classifier'] == 'gridcrf':
 
                 try:
 
@@ -4904,7 +4943,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         # Set algorithm parameters for OpenCV models.
         #############################################
 
-        if self.classifier_info['classifier'] in ['CART', 'CVRF', 'CVEX_RF']:
+        if self.classifier_info['classifier'] in ['CART', 'cvrf', 'CVEX_RF']:
 
             self.model.setMaxDepth(self.classifier_info['max_depth'])
             self.model.setMinSampleCount(self.classifier_info['min_samps'])
@@ -4917,7 +4956,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             
             self.model.setTruncatePrunedTree(self.classifier_info['truncate'])
 
-        elif self.classifier_info['classifier'] == 'CVMLP':
+        elif self.classifier_info['classifier'] == 'cvmlp':
 
             n_steps = 1000
             max_err = .0001
@@ -4930,7 +4969,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                    bp_dw_scale=step_size,
                                    bp_moment_scale=momentum)
 
-        elif self.classifier_info['classifier'] == 'CVSVM':
+        elif self.classifier_info['classifier'] == 'cvsvm':
 
             self.model.setC(self.classifier_info_svm['C'])
             self.model.setGamma(self.classifier_info_svm['gamma'])
@@ -4942,7 +4981,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             #                        C=self.classifier_info_svm['C'],
             #                        gamma=self.classifier_info_svm['gamma'])
 
-        elif self.classifier_info['classifier'] == 'CVSVMA':
+        elif self.classifier_info['classifier'] == 'cvsvma':
 
             # SVM, parameters optimized
             self.parameters = dict(kernel_type=cv2.ml.SVM_RBF,
@@ -5004,7 +5043,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                                                                            self.n_feas))
 
         # OpenCV tree-based models
-        if self.classifier_info['classifier'] in ['CART', 'CVRF', 'CVEX_RF']:
+        if self.classifier_info['classifier'] in ['CART', 'cvrf', 'CVEX_RF']:
 
             self.model.train(self.p_vars, 0, self.labels)
             # self.model.train(self.p_vars, cv2.CV_ROW_SAMPLE, self.labels, params=self.parameters)
@@ -5015,7 +5054,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             self.model.train(self.p_vars, cv2.CV_ROW_SAMPLE, self.labels,
                              varType=np.zeros(self.n_feas+1, dtype='uint8'), params=self.parameters)
 
-        elif self.classifier_info['classifier'] == 'CVMLP':
+        elif self.classifier_info['classifier'] == 'cvmlp':
 
             # Convert input strings to binary zeros and ones, and set the output
             # array to all -1's with ones along the diagonal.
@@ -5029,7 +5068,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             self.model.train(self.p_vars, targets, None, params=self.parameters)
 
-        elif self.classifier_info['classifier'] in ['CVSVM', 'CVSVMR']:
+        elif self.classifier_info['classifier'] in ['cvsvm', 'CVSVMR']:
 
             if isinstance(self.rank_method, str):
                 self.rank_feas(rank_method=self.rank_method, top_feas=self.top_feas)
@@ -5039,15 +5078,15 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 # self.model.train(self.p_vars, self.labels, params=self.parameters)
                 self.model.train(self.p_vars, 0, self.labels)
 
-        elif self.classifier_info['classifier'] in ['CVSVMA', 'CVSVRA']:
+        elif self.classifier_info['classifier'] in ['cvsvma', 'cvsvra']:
 
             logger.info('  Be patient. Auto tuning can take a while.')
 
             self.model.train_auto(self.p_vars, self.labels, None, None, params=self.parameters, k_fold=10)
 
-        elif self.classifier_info['classifier'] in ['ChainCRF', 'GridCRF']:
+        elif self.classifier_info['classifier'] in ['chaincrf', 'gridcrf']:
 
-            if self.classifier_info['classifier'] == 'ChainCRF':
+            if self.classifier_info['classifier'] == 'chaincrf':
 
                 self.p_vars, self.labels, self.p_vars_test = self._transform4crf(p_vars2reshape=self.p_vars,
                                                                                  labels2reshape=self.labels,
@@ -5061,7 +5100,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             if not hasattr(self.model, 'is_prefit_model'):
 
                 # Check if the model supports sample weights.
-                argi = inspect.getargspec(self.model.fit)
+                argi = inspect.getfullargspec(self.model.fit)
 
                 if 'sample_weight' in argi.args:
 
@@ -5283,7 +5322,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             Predictions as a 2d array
         """
 
-        if self.classifier_info['classifier'] in ['C5', 'Cubist']:
+        if self.classifier_info['classifier'] in ['c5', 'cubist']:
 
             features = ro.r.matrix(array2predict,
                                    nrow=array2predict.shape[0],
@@ -5414,10 +5453,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             >>> cl.split_samples('/samples.txt', perc_samp_each=.7)
             >>>
             >>> # Random Forest with Scikit-learn
-            >>> cl.construct_model(classifier_info={'classifier': 'RF', 'trees': 100, 'max_depth': 25})
+            >>> cl.construct_model(classifier_info={'classifier': 'rf', 'trees': 100, 'max_depth': 25})
             >>>
             >>> # Random Forest with OpenCV
-            >>> cl.construct_model(classifier_info={'classifier': 'CVRF', 'trees': 100,
+            >>> cl.construct_model(classifier_info={'classifier': 'cvrf', 'trees': 100,
             >>>                    'max_depth': 25, 'truncate': True})
             >>>
             >>> # Apply the classification model to map image class labels.
@@ -5525,7 +5564,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                                                          self.output_image))
 
         # Conditional Random Fields
-        if self.classifier_info['classifier'] == 'GridCRF':
+        if self.classifier_info['classifier'] == 'gridcrf':
             self._predict4crf(**self.kwargs)
 
         # Orfeo Toolbox application
@@ -5566,9 +5605,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 self.o_info.bands = 1
 
             # OUTPUT DATA TYPE
-            if self.predict_probs or self.classifier_info['classifier'] in ['ABR', 'ABR_EX_DTR', 'BGR', 'Bag_DTR',
-                                                                            'RFR', 'EX_RFR', 'CV_RFR', 'CVEX_RFR',
-                                                                            'SVR', 'SVRA', 'Cubist', 'DTR']:
+            if self.predict_probs or self.classifier_info['classifier'] in ['ABR', 'ABR_EX_DTR', 'BGR', 'bag-dtr',
+                                                                            'rfr', 'ex-rfr', 'CV_RFR', 'CVEX_RFR',
+                                                                            'SVR', 'SVRA', 'cubist', 'dtr']:
 
                 self.o_info.storage = 'uint16'
                 self.d_type = 'float32'
@@ -5864,7 +5903,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     logger.error('  The number of predictive layers does not match the number of model estimators.')
                     raise AssertionError
 
-            elif (self.classifier_info['classifier'] not in ['C5', 'Cubist', 'QDA', 'ChainCRF']) and \
+            elif (self.classifier_info['classifier'] not in ['c5', 'cubist', 'qda', 'chaincrf']) and \
                     ('CV' not in self.classifier_info['classifier']):
 
                 if hasattr(self.model, 'n_features_'):
@@ -5908,7 +5947,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                       y_coordinates))
 
             # Reshape the features for CRF models.
-            if self.classifier_info['classifier'] == 'ChainCRF':
+            if self.classifier_info['classifier'] == 'chaincrf':
                 features = self._transform4crf(p_vars2reshape=features)[0]
             else:
 
@@ -5940,7 +5979,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             if 'CV' in self.classifier_info['classifier']:
 
-                if self.classifier_info['classifier'] == 'CVMLP':
+                if self.classifier_info['classifier'] == 'cvmlp':
 
                     self.model.predict(features, predicted)
 
@@ -5970,7 +6009,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                               j=j-jwo,
                                               i=i-iwo)
 
-            elif self.classifier_info['classifier'] in ['C5', 'Cubist']:
+            elif self.classifier_info['classifier'] in ['c5', 'cubist']:
 
                 # Load the predictor variables.
                 # predict_samps = pandas2ri.py2ri(pd.DataFrame(features))
@@ -6564,7 +6603,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             >>> print cl.emat.accuracy
         """
 
-        if self.classifier_info['classifier'] == 'CVMLP':
+        if self.classifier_info['classifier'] == 'cvmlp':
 
             test_labs_pred = np.empty((self.p_vars_test_rows, self.n_classes), dtype='uint8')
             self.model.predict(self.p_vars_test, test_labs_pred)
@@ -6577,7 +6616,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             else:
                 __, test_labs_pred = self.model.predict(self.p_vars)
 
-        elif self.classifier_info['classifier'] in ['C5', 'Cubist']:
+        elif self.classifier_info['classifier'] in ['c5', 'cubist']:
 
             if (0 < self.perc_samp_each < 1) or ((self.perc_samp_each == 0) and (0 < self.perc_samp < 1)):
 
@@ -6627,13 +6666,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         if out_acc:
             self.emat.write_stats(out_acc)
 
-    def recursive_elimination(self, method='RF', perc_samp_each=.5):
+    def recursive_elimination(self, method='rf', perc_samp_each=.5):
 
         """
         Recursively eliminates features.
 
         Args:
-            method (Optional[str]): The method to use. Default is 'RF'. Choices are ['RF', 'chi2'].
+            method (Optional[str]): The method to use. Default is 'rf'. Choices are ['rf', 'chi2'].
             perc_samp_each (Optional[float]): The percentage to sample at each iteration. Default is .5. 
 
         Returns:
@@ -6645,7 +6684,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             >>> cl = gl.classification()
             >>>
             >>> cl.split_samples('/samples.txt', perc_samp=1.)
-            >>> cl.construct_model(classifier_info={'classifier': 'RF', 'trees': 500})
+            >>> cl.construct_model(classifier_info={'classifier': 'rf', 'trees': 500})
             >>> cl.recursive_elimination()
         """
 
@@ -6673,7 +6712,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             feas_ranked, p_val = chi2(p_vars, self.labels)
 
-        elif method == 'RF':
+        elif method == 'rf':
 
             if not hasattr(self, 'model'):
                 logger.error('  A RF model must be trained to use RF feature importance.')
@@ -6746,7 +6785,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         Args:
             rank_text (Optional[str]): A text file to write ranked features to. Default is None.
             rank_method (Optional[str]): The method to use for feature ranking. Default is 'chi2' (Chi^2). Choices are 
-                ['chi2', 'RF'].
+                ['chi2', 'rf'].
             top_feas (Optional[float or int]): The percentage or total number of features to reduce to. 
                 Default is 1., or no reduction.
             be_quiet (Optional[bool]): Whether to be quiet and do not print to screen. Default is False.
@@ -6763,7 +6802,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             >>>
             >>> # a RF model must be trained before feature ranking
             >>> cl.construct_model()
-            >>> cl.rank_feas(rank_method='RF', top_feas=.5)
+            >>> cl.rank_feas(rank_method='rf', top_feas=.5)
         """
 
         if isinstance(rank_text, str):
@@ -6801,7 +6840,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             loop_len = len(feas_ranked) + 1
 
-        elif rank_method == 'RF':
+        elif rank_method == 'rf':
 
             if not hasattr(self, 'model'):
                 logger.error('  A RF model must be trained to use RF feature importance.')
@@ -6827,7 +6866,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         if rank_method == 'chi2':
             title = '**********************\n*                    *\n* Chi^2 Feature Rank *\n*                    *\n**********************\n\nRank      Variable      Value\n----      --------      -----'
-        elif rank_method == 'RF':
+        elif rank_method == 'rf':
             title = '************************************\n*                                  *\n* Random Forest Feature Importance *\n*                                  *\n************************************\n\nRank      Variable      Value\n----      --------      -----'
 
         if not be_quiet:
@@ -7046,7 +7085,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             current_combo = dict(zip(param_order, param_combo))
 
             # Add the classifier name to the dictionary.
-            current_combo['classifier'] = 'GridCRF'
+            current_combo['classifier'] = 'gridcrf'
             current_combo['n_jobs'] = -1
 
             # Train the model.
@@ -7111,7 +7150,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             DataFrame with scores.
         """
 
-        regressors = ['Cubist', 'RFR', 'ABR', 'Bag_DTR', 'EX_RFR', 'EX_DTR', 'DTR']
+        regressors = ['cubist', 'rfr', 'ABR', 'bag-dtr', 'ex-rfr', 'ex-dtr', 'dtr']
 
         if metric not in ['accuracy', 'r_squared', 'rmse', 'mae', 'medae', 'mse']:
 
@@ -7128,7 +7167,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             logger.error('  Overall accuracy is the only option with discrete classifiers.')
             raise NameError
 
-        if classifier_name in ['C5', 'Cubist']:
+        if classifier_name in ['c5', 'cubist']:
 
             if 'R_installed' not in globals():
 
@@ -7172,7 +7211,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                use_xy=use_xy, classes2remove=classes2remove, stratified=stratified,
                                spacing=spacing, sample_weight=weights)
 
-            if classifier_name in ['C5', 'Cubist']:
+            if classifier_name in ['c5', 'cubist']:
 
                 predict_samps = ro.r.matrix(self.p_vars, nrow=self.n_samps, ncol=self.n_feas)
                 predict_samps.colnames = StrVector(self.headers[:-1])
@@ -7186,7 +7225,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 # Add the classifier name to the dictionary.
                 current_combo['classifier'] = classifier_name
 
-                if classifier_name in ['C5', 'Cubist']:
+                if classifier_name in ['c5', 'cubist']:
                     self.construct_r_model(classifier_info=current_combo)
                 else:
                     self.construct_model(classifier_info=current_combo,
@@ -7223,7 +7262,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
     def optimize_parameters(self,
                             file_name,
-                            classifier_info={'classifier': 'RF'},
+                            classifier_info={'classifier': 'rf'},
                             n_trees_list=[500, 1000, 1500, 2000],
                             trials_list=[2, 5, 10],
                             max_depth_list=[25, 30, 35, 40, 45, 50],
@@ -7257,7 +7296,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         Args:
             file_name (str): The file name of the samples.
-            classifier_info (Optional[dict]): The model parameters dictionary. Default is {'classifier': 'RF'}.
+            classifier_info (Optional[dict]): The model parameters dictionary. Default is {'classifier': 'rf'}.
             n_trees_list (Optional[int list]): A list of trees. Default is [500, 1000].
             trials_list (Optional[int list]): A list of boosting trials. Default is [5, 10, 20].
             max_depth_list (Optional[int list]): A list of maximum depths. Default is [5, 10, 20, 25, 30, 50].
@@ -7280,7 +7319,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             output_file (Optional[str]):
 
         Returns:
-            `Pandas DataFrame` when classifier_info['classifier'] == 'C5',
+            `Pandas DataFrame` when classifier_info['classifier'] == 'c5',
                 otherwise None, prints results to screen.
 
         Examples:
@@ -7293,13 +7332,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             >>>
             >>> # Find the optimum parameters for an Extremely Randomized Forest.
             >>> cl.optimize_parameters('/samples.txt',
-            >>>                        classifier_info={'classifier': 'EX_RF'},
+            >>>                        classifier_info={'classifier': 'ex-rf'},
             >>>                        use_xy=True)
             >>>
             >>> # Find the optimum parameters for a Random Forest, but assess
             >>> #   only one class (1st class position) of interest.
             >>> cl.optimize_parameters('/samples.txt',
-            >>>                        classifier_info={'classifier': 'RF'},
+            >>>                        classifier_info={'classifier': 'rf'},
             >>>                        use_xy=True, method='f1', f1_class=0)
             >>>
             >>> # Optimizing C5 parameters
@@ -7307,7 +7346,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             >>>
             >>> cl = classification_r()
             >>>
-            >>> df = cl.optimize_parameters('/samples.txt', classifier_info={'classifier': 'C5'},
+            >>> df = cl.optimize_parameters('/samples.txt', classifier_info={'classifier': 'c5'},
             >>>                             trials_list=[2, 5, 10], cf_list=[.25, .5, .75],
             >>>                             min_samps_list=[2, 5, 10], bool_list=[True, False],
             >>>                             k_folds=5, stratified=True, spacing=50000.)
@@ -7315,23 +7354,23 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             >>> print df
         """
 
-        if classifier_info['classifier'] not in ['C5', 'Cubist']:
+        if classifier_info['classifier'] not in ['c5', 'cubist']:
 
             self.split_samples(file_name, perc_samp=1., ignore_feas=ignore_feas,
                                use_xy=use_xy, classes2remove=classes2remove)
 
-            prediction_models = {'RF': ensemble.RandomForestClassifier(n_jobs=-1),
-                                 'RFR': ensemble.RandomForestRegressor(n_jobs=-1),
-                                 'EX_RF': ensemble.ExtraTreesClassifier(n_jobs=-1),
+            prediction_models = {'rf': ensemble.RandomForestClassifier(n_jobs=-1),
+                                 'rfr': ensemble.RandomForestRegressor(n_jobs=-1),
+                                 'ex-rf': ensemble.ExtraTreesClassifier(n_jobs=-1),
                                  'EX_RRF': ensemble.ExtraTreesRegressor(n_jobs=-1),
-                                 'Bag_DT': ensemble.BaggingClassifier(base_estimator=tree.DecisionTreeClassifier(),
+                                 'bag-dt': ensemble.BaggingClassifier(base_estimator=tree.DecisionTreeClassifier(),
                                                                       n_jobs=-1),
-                                 'AB_DT': ensemble.AdaBoostClassifier(base_estimator=tree.DecisionTreeClassifier()),
-                                 'GB': ensemble.GradientBoostingClassifier(),
-                                 'DT': tree.DecisionTreeClassifier(),
+                                 'ab-dt': ensemble.AdaBoostClassifier(base_estimator=tree.DecisionTreeClassifier()),
+                                 'gb': ensemble.GradientBoostingClassifier(),
+                                 'dt': tree.DecisionTreeClassifier(),
                                  'SVM': SVC(kernel='rbf')}
 
-        if classifier_info['classifier'] in ['RF', 'EX_RF']:
+        if classifier_info['classifier'] in ['rf', 'ex-rf']:
 
             parameters = {'criterion': criterion_list,
                           'n_estimators': n_trees_list,
@@ -7340,14 +7379,14 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                           'min_samples_split': min_samps_list,
                           'class_weight': class_weight_list}
 
-        elif classifier_info['classifier'] in ['RFR', 'EX_RFR', 'DTR']:
+        elif classifier_info['classifier'] in ['rfr', 'ex-rfr', 'dtr']:
 
             parameters = {'trees': n_trees_list,
                           'max_depth': max_depth_list,
                           'rand_vars': rand_vars_list,
                           'min_samps': min_samps_list}
 
-        elif classifier_info['classifier'] in ['AB_DT', 'AB_DT', 'AB_EX_DT', 'AB_RF', 'AB_EX_RF']:
+        elif classifier_info['classifier'] in ['ab-dt', 'ab-dt', 'ab-ex-dt', 'ab-rf', 'ab-ex-rf']:
 
             parameters = {'n_estimators': n_trees_list,
                           'trials': trials_list,
@@ -7361,21 +7400,21 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             parameters = {'trees': n_trees_list,
                           'rate': learn_rate_list}
 
-        elif classifier_info['classifier'] == 'Bag_DT':
+        elif classifier_info['classifier'] == 'bag-dt':
 
             parameters = {'n_estimators': n_trees_list,
                           'warm_start': bool_list,
                           'bootstrap': bool_list,                          
                           'bootstrap_features': bool_list}
 
-        elif classifier_info['classifier'] == 'Bag_DTR':
+        elif classifier_info['classifier'] == 'bag-dtr':
 
             parameters = {'trees': n_trees_list,
                           'warm_start': bool_list,
                           'bootstrap': bool_list,
                           'bootstrap_features': bool_list}
 
-        elif classifier_info['classifier'] == 'GB':
+        elif classifier_info['classifier'] == 'gb':
 
             parameters = {'n_estimators': n_trees_list,
                           'max_depth': max_depth_list,
@@ -7383,7 +7422,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                           'min_samples_split': min_samps_list,
                           'learning_rate': learn_rate_list}
 
-        elif classifier_info['classifier'] == 'GBR':
+        elif classifier_info['classifier'] == 'gbr':
 
             parameters = {'trees': n_trees_list,
                           'max_depth': max_depth_list,
@@ -7391,7 +7430,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                           'min_samps': min_samps_list,
                           'learning_rate': learn_rate_list}
 
-        elif classifier_info['classifier'] == 'DT':
+        elif classifier_info['classifier'] == 'dt':
 
             parameters = {'n_estimators': n_trees_list,
                           'max_depth': max_depth_list,
@@ -7403,14 +7442,14 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             parameters = {'C': c_list,
                           'gamma': gamma_list}
 
-        elif classifier_info['classifier'] == 'C5':
+        elif classifier_info['classifier'] == 'c5':
 
             parameters = {'trials': trials_list,
                           'min_cases': min_samps_list,
                           'CF': cf_list,
                           'fuzzy': bool_list}
 
-        elif classifier_info['classifier'] == 'Cubist':
+        elif classifier_info['classifier'] == 'cubist':
 
             parameters = {'committees': committees_list,
                           'rules': rules_list,
@@ -7424,9 +7463,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         logger.info('  Finding the best paramaters for a {} model ...'.format(classifier_info['classifier']))
 
-        core_classifiers = ['C5', 'Cubist', 'RF', 'RFR',
-                            'AB_RF', 'AB_EX_RF', 'AB_DT', 'AB_EX_DT',
-                            'ABR', 'Bag_DTR', 'EX_RF', 'EX_RFR', 'EX_DTR', 'DTR']
+        core_classifiers = ['c5', 'cubist', 'rf', 'rfr',
+                            'ab-rf', 'ab-ex-rf', 'ab-dt', 'ab-ex-dt',
+                            'ABR', 'bag-dtr', 'ex-rf', 'ex-rfr', 'ex-dtr', 'dtr']
 
         if classifier_info['classifier'] in core_classifiers:
 
@@ -7491,7 +7530,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             >>> cl.split_samples('/samples.txt', scale_data=True)
             >>>
             >>> # setup three classifiers
-            >>> classifier_info = {'classifiers': ['RF', 'SVM', 'Bayes'], 'trees': 100, 'C': 1}
+            >>> classifier_info = {'classifiers': ['rf', 'SVM', 'bayes'], 'trees': 100, 'C': 1}
             >>> cl.stack_majority('/in_image.tif', '/out_model.xml', '/out_image.tif',
             >>>                   classifier_info, scale_data=True)
             >>>
@@ -7599,7 +7638,7 @@ class classification_r(classification):
         >>>                  class_subs={2:.9, 5:.1, 8:.9})
         >>>
         >>> # Train a Cubist model.
-        >>> cl.construct_r_model(output_model='/models/cubist_model', classifier_info={'classifier': 'Cubist',
+        >>> cl.construct_r_model(output_model='/models/cubist_model', classifier_info={'classifier': 'cubist',
         >>>                        'committees': 5, 'rules': 100, 'extrap': 10})
         >>>
         >>> # Predict labels with the Cubist model.
@@ -7607,8 +7646,8 @@ class classification_r(classification):
         >>>            input_model='/models/cubist_model', in_samps='/samples.txt')
         >>>
         >>> # Train a C5 model.
-        >>> cl.construct_r_model(output_model='/models/c5_model', classifier_info={'classifier': 'C5',
-        >>>                        'trials': 10, 'C5': .25, 'min': 2})
+        >>> cl.construct_r_model(output_model='/models/c5_model', classifier_info={'classifier': 'c5',
+        >>>                        'trials': 10, 'c5': .25, 'min': 2})
         >>>
         >>> # Predict labels with the C5 model. There is no need
         >>> #   to load a model if the prediction is applied within
@@ -7656,7 +7695,7 @@ class classification_r(classification):
             utils.chooseCRANmirror(ind=1)  # select the first mirror in the list
 
             # R package names
-            package_names = ('Cubist', 'C50', 'raster', 'rgdal')#, 'foreach', 'doSNOW')
+            package_names = ('cubist', 'C50', 'raster', 'rgdal')#, 'foreach', 'doSNOW')
 
             # Selectively install what needs to be install.
             # We are fancy, just because we can.
@@ -7673,7 +7712,7 @@ class classification_r(classification):
             # print('Importing R packages--{} ...'.format(', '.join(package_names)))
 
             # Cubist
-            Cubist = importr('Cubist', suppress_messages=True)
+            Cubist = importr('cubist', suppress_messages=True)
 
             # C50
             C50 = importr('C50', suppress_messages=True)
@@ -7701,7 +7740,7 @@ class classification_r(classification):
 
     def construct_r_model(self, input_model=None, output_model=None, write_summary=False,
                           get_probs=False, cost_array=None, case_weights=None,
-                          classifier_info={'classifier': 'Cubist'}):
+                          classifier_info={'classifier': 'cubist'}):
 
         """
         Trains a Cubist model.
@@ -7725,7 +7764,7 @@ class classification_r(classification):
                     B  [7, 1, 0]]
 
             case_weights (Optional[list or 1d array]): A list of case weights. Default is None.
-            classifier_info (dict): The model parameter dictionary: Default is {'classifier': 'Cubist', 
+            classifier_info (dict): The model parameter dictionary: Default is {'classifier': 'cubist', 
                 'committees': 5, 'rules': 100, 'extrap': 10})
         """
 
@@ -7751,7 +7790,7 @@ class classification_r(classification):
 
         # Check if model parameters are set
         #   otherwise, set defaults.
-        if self.classifier_info['classifier'] == 'Cubist':
+        if self.classifier_info['classifier'] == 'cubist':
 
             # The number of committees.
             if 'committees' not in self.classifier_info:
@@ -7769,7 +7808,7 @@ class classification_r(classification):
             if 'extrapolation' not in self.classifier_info:
                 self.classifier_info['extrapolation'] = 10
 
-        elif self.classifier_info['classifier'] == 'C5':
+        elif self.classifier_info['classifier'] == 'c5':
 
             # The number of boosted trials.
             if 'trials' not in self.classifier_info:
@@ -7825,9 +7864,9 @@ class classification_r(classification):
         samps = ro.r.matrix(self.p_vars, nrow=self.n_samps, ncol=self.n_feas)
         samps.colnames = StrVector(self.headers[:-1])
 
-        if 'Cubist' in self.classifier_info['classifier']:
+        if 'cubist' in self.classifier_info['classifier']:
             labels = ro.FloatVector(self.labels)
-        elif 'C5' in self.classifier_info['classifier']:
+        elif 'c5' in self.classifier_info['classifier']:
             labels = ro.FactorVector(pd.Categorical(self.labels))
 
         if isinstance(case_weights, list) or isinstance(case_weights, np.ndarray):
@@ -7846,7 +7885,7 @@ class classification_r(classification):
         # samps = samps.rx(True, ro.IntVector(tuple(range(3, self.n_feas+3))))
 
         # Train a Cubist model.
-        if 'Cubist' in self.classifier_info['classifier']:
+        if 'cubist' in self.classifier_info['classifier']:
 
             logger.info('  Training a Cubist model with {:d} committees, {:d} rules, {:d}% extrapolation, and {:,d} samples ...'.format(self.classifier_info['committees'],
                                                                                                                                         self.classifier_info['rules'],
@@ -7887,7 +7926,7 @@ class classification_r(classification):
                     with open(os.path.join(self.model_dir, '{}_summary.txt'.format(self.model_base)), 'wb') as out_tree:
                         out_tree.write(str(Cubist.print_summary_cubist(self.model)))
 
-        elif 'C5' in self.classifier_info['classifier']:
+        elif 'c5' in self.classifier_info['classifier']:
 
             logger.info('  Training a C5 model with {:d} trials, {:.2f} CF, {:d} minimum cases, and {:,d} samples ...'.format(self.classifier_info['trials'],
                                                                                                                               self.classifier_info['CF'],
@@ -7951,7 +7990,7 @@ class classification_r(classification):
             input_model (Optional[str]): The full directory and base name of the model to use.
             in_samps (Optional[str]): The image samples used to build the model.
                 *This is necessary to match the header names with Windows.
-            tree_model (str): The decision tree model to use. Default is 'Cubist'. Choices are ['C5' or 'Cubist'].
+            tree_model (str): The decision tree model to use. Default is 'cubist'. Choices are ['c5' or 'cubist'].
         """
 
         global predict_samps
@@ -8015,7 +8054,7 @@ class classification_r(classification):
             # build the icases file
             self._build_icases(in_samps, tree_model)
 
-            if 'C5' in tree_model:
+            if 'c5' in tree_model:
 
                 # write the .names and .data files to text
                 self._build_C5_names(in_samps)
@@ -8031,14 +8070,14 @@ class classification_r(classification):
             os.chdir(self.model_dir)
 
             # execute mapC5
-            if tree_model == 'Cubist':
+            if tree_model == 'cubist':
 
                 com = os.path.join(self.model_dir, 'mapCubist_v202.exe {} {} {}\{}'.format(self.model_base,
                                                                                            out_type,
                                                                                            out_image_dir,
                                                                                            out_image_base))
 
-            elif tree_model == 'C5':
+            elif tree_model == 'c5':
 
                 com = os.path.join(self.model_dir, 'mapC5_v202.exe {} {} {}\{} {}\{}_error'.format(self.model_base,
                                                                                                    out_type,
@@ -8067,7 +8106,7 @@ class classification_r(classification):
             # Set the number of output bands.
             self.o_info.bands = 1
 
-            if self.classifier_info['classifier'] == 'Cubist':
+            if self.classifier_info['classifier'] == 'cubist':
                 self.o_info.storage = 'float32'
             else:
                 self.o_info.storage = 'byte'
@@ -8195,7 +8234,7 @@ class classification_r(classification):
 
         Args:
             in_samps (str): The samples used to train the model.
-            tree_model (str): 'C5' or 'Cubist'
+            tree_model (str): 'c5' or 'cubist'
         """
 
         icases_txt = os.path.join(self.model_dir, '{}.icases'.format(self.model_base))
@@ -8206,9 +8245,9 @@ class classification_r(classification):
 
         icases = open(icases_txt, 'w')
 
-        if 'Cubist' in tree_model:
+        if 'cubist' in tree_model:
             icases.write('{} ignore 1\n'.format(self.headers[-1]))
-        elif 'C5' in tree_model:
+        elif 'c5' in tree_model:
             icases.write('X ignore 1\n')
             icases.write('Y ignore 1\n')
 
@@ -8265,14 +8304,14 @@ class classification_r(classification):
         Copies files needed to run mapC5.
 
         Args:
-            tree_model (str): The decision tree model to use ('C5' or 'Cubist').
+            tree_model (str): The decision tree model to use ('c5' or 'cubist').
         """
 
-        if tree_model == 'Cubist':
+        if tree_model == 'cubist':
 
             mapC5_list = ['gdal13.dll', 'gdal15.dll', 'install.bat', 'mapCubist_v202.exe', 'msvcp71.dll', 'msvcr71.dll']
 
-        elif tree_model == 'C5':
+        elif tree_model == 'c5':
 
             mapC5_list = ['gdal13.dll', 'gdal15.dll', 'install.bat', 'mapC5_v202.exe', 'msvcp71.dll', 'msvcr71.dll']
 
@@ -8290,11 +8329,11 @@ class classification_r(classification):
         Cleans the C5 directories
         """
 
-        if tree_model == 'Cubist':
+        if tree_model == 'cubist':
 
             mapC5_list = ['gdal13.dll', 'gdal15.dll', 'install.bat', 'mapCubist_v202.exe', 'msvcp71.dll', 'msvcr71.dll']
 
-        elif tree_model == 'C5':
+        elif tree_model == 'c5':
 
             mapC5_list = ['gdal13.dll', 'gdal15.dll', 'install.bat', 'mapC5_v202.exe', 'msvcp71.dll', 'msvcr71.dll']
 
@@ -8476,7 +8515,7 @@ def main():
     decision_function = list()
     header = True
     norm_struct = True
-    classifier_info = {'classifier': 'RF'}
+    classifier_info = {'classifier': 'rf'}
     var_imp = True
     rank_method = None
     top_feas = 1.
@@ -8727,9 +8766,9 @@ def main():
     try:
         dummy = classifier_info['classifier']
     except:
-        classifier_info['classifier'] = 'RF'
+        classifier_info['classifier'] = 'rf'
 
-    if 'Cubist' in classifier_info['classifier'] or 'C5' in classifier_info['classifier']:
+    if 'cubist' in classifier_info['classifier'] or 'c5' in classifier_info['classifier']:
 
         # create the C5/Cubist object
         cl = c5_cubist()
@@ -8846,7 +8885,7 @@ def main():
 
             cl.stack_majority(img, output_model, out_img, classifier_info, scale_data, ignore_feas=ignore_feas)
 
-        if input_model or output_model or img or (rank_method == 'RF') or out_acc and not get_majority and \
+        if input_model or output_model or img or (rank_method == 'rf') or out_acc and not get_majority and \
                 (rank_method != 'chi2'):
 
             cl.construct_model(input_model=input_model, output_model=output_model, classifier_info=classifier_info,
