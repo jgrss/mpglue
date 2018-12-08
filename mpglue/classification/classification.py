@@ -4149,14 +4149,14 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         if 'classifier' not in self.classifier_info:
             self.classifier_info['classifier'] = 'rf'
 
-        if self.classifier_info['classifier'].startswith('AB_') or \
-                self.classifier_info['classifier'].startswith('Bag_') or \
+        if self.classifier_info['classifier'].startswith('ab-') or \
+                self.classifier_info['classifier'].startswith('bag-') or \
                 (self.classifier_info['classifier'] == 'blag'):
 
             class_base = copy(self.classifier_info['classifier'])
 
             self.classifier_info['classifier'] = \
-                self.classifier_info['classifier'][self.classifier_info['classifier'].find('_')+1:]
+                self.classifier_info['classifier'][self.classifier_info['classifier'].find('-')+1:]
 
         else:
             class_base = 'none'
@@ -4169,7 +4169,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         # Create a separate instance for
         #   AdaBoost and Bagging base classifiers.
-        if class_base.startswith('AB_') or class_base.startswith('Bag_') or (class_base == 'blag'):
+        if class_base.startswith('ab-') or class_base.startswith('bag-') or (class_base == 'blag'):
 
             self.classifier_info_base = copy(self.classifier_info)
             self.classifier_info_base['classifier'] = class_base
@@ -4194,14 +4194,14 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             self.classifier_info['classifier'] = class_base
 
         # Random Forest in OpenCV
-        if self.classifier_info['classifier'] in ['cvrf', 'CVEX_RF', 'CVRFR', 'CVEX_RFR']:
+        if self.classifier_info['classifier'] == 'cvrf':
 
             if not self.input_model:
 
                 # trees
                 if 'trees' in self.classifier_info:
                     self.classifier_info['term_crit'] = (cv2.TERM_CRITERIA_MAX_ITER,
-                                                         self.classifier_info['trees'], .1)
+                                                         self.classifier_info['trees'], 0.1)
                 else:
                     if 'term_crit' not in self.classifier_info:
                         self.classifier_info['term_crit'] = (cv2.TERM_CRITERIA_MAX_ITER, self.DEFAULT_TREES, 0.1)
@@ -4226,6 +4226,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     self.classifier_info['truncate'] = False
 
                 if 'priors' not in self.classifier_info:
+
                     if isinstance(self.class_weight, np.ndarray):
                         self.classifier_info['priors'] = self.class_weight
                     else:
@@ -4684,12 +4685,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 self.model = ensemble.AdaBoostClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
                                                          **self.classifier_info_base)
 
-            elif self.classifier_info['classifier'] == 'ABR':
+            elif self.classifier_info['classifier'] == 'abr':
 
                 self.model = ensemble.AdaBoostRegressor(base_estimator=tree.DecisionTreeRegressor(**self.classifier_info_),
                                                         **self.classifier_info_base)
 
-            elif self.classifier_info['classifier'] == 'ABR_EX_DTR':
+            elif self.classifier_info['classifier'] == 'abr-ex-dtr':
 
                 self.model = ensemble.AdaBoostRegressor(base_estimator=tree.ExtraTreeRegressor(**self.classifier_info_),
                                                         **self.classifier_info_base)
@@ -5605,9 +5606,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 self.o_info.bands = 1
 
             # OUTPUT DATA TYPE
-            if self.predict_probs or self.classifier_info['classifier'] in ['ABR', 'ABR_EX_DTR', 'BGR', 'bag-dtr',
-                                                                            'rfr', 'ex-rfr', 'CV_RFR', 'CVEX_RFR',
-                                                                            'SVR', 'SVRA', 'cubist', 'dtr']:
+            if self.predict_probs or self.classifier_info['classifier'] in ['abr', 'abr-ex-dtr', 'bgr', 'bag-dtr',
+                                                                            'rfr', 'ex-rfr', 'svr', 'svra',
+                                                                            'cubist', 'dtr']:
 
                 self.o_info.storage = 'uint16'
                 self.d_type = 'float32'
@@ -7150,7 +7151,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             DataFrame with scores.
         """
 
-        regressors = ['cubist', 'rfr', 'ABR', 'bag-dtr', 'ex-rfr', 'ex-dtr', 'dtr']
+        regressors = ['cubist', 'rfr', 'abr', 'bag-dtr', 'ex-rfr', 'ex-dtr', 'dtr']
 
         if metric not in ['accuracy', 'r_squared', 'rmse', 'mae', 'medae', 'mse']:
 
@@ -7362,13 +7363,12 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             prediction_models = {'rf': ensemble.RandomForestClassifier(n_jobs=-1),
                                  'rfr': ensemble.RandomForestRegressor(n_jobs=-1),
                                  'ex-rf': ensemble.ExtraTreesClassifier(n_jobs=-1),
-                                 'EX_RRF': ensemble.ExtraTreesRegressor(n_jobs=-1),
+                                 'ex-rfr': ensemble.ExtraTreesRegressor(n_jobs=-1),
                                  'bag-dt': ensemble.BaggingClassifier(base_estimator=tree.DecisionTreeClassifier(),
                                                                       n_jobs=-1),
                                  'ab-dt': ensemble.AdaBoostClassifier(base_estimator=tree.DecisionTreeClassifier()),
                                  'gb': ensemble.GradientBoostingClassifier(),
-                                 'dt': tree.DecisionTreeClassifier(),
-                                 'SVM': SVC(kernel='rbf')}
+                                 'dt': tree.DecisionTreeClassifier()}
 
         if classifier_info['classifier'] in ['rf', 'ex-rf']:
 
@@ -7465,7 +7465,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         core_classifiers = ['c5', 'cubist', 'rf', 'rfr',
                             'ab-rf', 'ab-ex-rf', 'ab-dt', 'ab-ex-dt',
-                            'ABR', 'bag-dtr', 'ex-rf', 'ex-rfr', 'ex-dtr', 'dtr']
+                            'abr', 'bag-dtr', 'ex-rf', 'ex-rfr', 'ex-dtr', 'dtr']
 
         if classifier_info['classifier'] in core_classifiers:
 
