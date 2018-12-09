@@ -4460,7 +4460,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     continue
 
                 # Check if the model supports sample weights.
-                argi = inspect.getfullargspec(voting_sub_model.fit)
+                try:
+                    argi = inspect.getargspec(voting_sub_model.fit)
+                except:
+                    argi = inspect.getfullargspec(voting_sub_model.fit)
 
                 supports_weights = True if 'sample_weight' in argi.args else False
 
@@ -5101,7 +5104,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             if not hasattr(self.model, 'is_prefit_model'):
 
                 # Check if the model supports sample weights.
-                argi = inspect.getfullargspec(self.model.fit)
+                try:
+                    argi = inspect.getargspec(self.model.fit)
+                except:
+                    argi = inspect.getfullargspec(self.model.fit)
 
                 if 'sample_weight' in argi.args:
 
