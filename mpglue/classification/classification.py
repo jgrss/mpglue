@@ -4434,8 +4434,16 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                         logger.error("""\
 
-                        LightGBM must be installed to use the model. Use 
+                        LightGBM must be installed to use the model.
+                        
+                        # Anaconda
                         conda install -c conda-forge lightgbm or
+                        
+                        # Python 2.x
+                        # cluster: module load cmake
+                        pip install --no-cache-dir --no-binary :all: lightgbm
+                        
+                        # Python 3.x
                         pip install lightgbm
 
                         """)
@@ -4786,11 +4794,19 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 if not LIGHTGBM_INSTALLED:
 
                     logger.error("""\
+
+                    LightGBM must be installed to use the model. 
                     
-                    LightGBM must be installed to use the model. Use 
+                    # Anaconda
                     conda install -c conda-forge lightgbm or
+
+                    # Python 2.x
+                    # cluster: module load cmake
+                    pip install --no-cache-dir --no-binary :all: lightgbm
+
+                    # Python 3.x
                     pip install lightgbm
-                    
+
                     """)
 
                 self.model = gbm.LGBMClassifier(**self.classifier_info_)
