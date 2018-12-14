@@ -498,18 +498,22 @@ class ArrayHandler(object):
                  shuffle=True,
                  dtype='float32',
                  group_name=None,
-                 group_title=None):
+                 group_title=None,
+                 file_mode=None):
 
         self.h5_file = h5_file
         self.array_type = array_type
         self.dtype = dtype
         self.group_name = group_name
         self.group_title = '' if not group_title else group_title
+        self.file_mode = file_mode
 
-        if os.path.isfile(self.h5_file):
-            self.file_mode = 'a'
-        else:
-            self.file_mode = 'w'
+        if not isinstance(self.file_mode, str):
+
+            if os.path.isfile(self.h5_file):
+                self.file_mode = 'a'
+            else:
+                self.file_mode = 'w'
 
         self._set_filter(complib=complib, complevel=complevel, shuffle=shuffle)
 
@@ -786,6 +790,9 @@ class ArrayHandler(object):
         self.filters = tables.Filters(**kwargs)
 
         self.atom = tables.Atom.from_dtype(np.dtype(self.dtype))
+
+    def copy(self):
+        return copy(self)
 
     def close(self):
         self.h5_file.close()
