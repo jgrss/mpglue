@@ -499,7 +499,8 @@ class ArrayHandler(object):
                  dtype='float32',
                  group_name=None,
                  group_title=None,
-                 file_mode=None):
+                 file_mode=None,
+                 get_nodes=True):
 
         self.h5_file = h5_file
         self.array_type = array_type
@@ -507,6 +508,7 @@ class ArrayHandler(object):
         self.group_name = group_name
         self.group_title = '' if not group_title else group_title
         self.file_mode = file_mode
+        self.get_nodes = get_nodes
 
         if not isinstance(self.file_mode, str):
 
@@ -525,13 +527,15 @@ class ArrayHandler(object):
 
     def _open_table(self):
 
-        # Get the nodes
-        self.nodes = [node._v_title for node in self.h5_file.walk_nodes()]
+        if self.get_nodes:
 
-        if 'metadata' in self.nodes:
+            # Get the nodes
+            self.nodes = [node._v_title for node in self.h5_file.walk_nodes()]
 
-            self.h5_table = self.h5_file.root.metadata
-            self.column_names = self.h5_table.colnames
+            if 'metadata' in self.nodes:
+
+                self.h5_table = self.h5_file.root.metadata
+                self.column_names = self.h5_table.colnames
 
     def _open_file(self):
         self.h5_file = tables.open_file(self.h5_file, mode=self.file_mode)
