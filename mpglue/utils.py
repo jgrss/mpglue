@@ -170,7 +170,8 @@ VI_WAVELENGTHS = {'ARVI': ['blue', 'red', 'nir'],
                   'TWVI': ['red', 'nir', 'midir'],
                   'YNDVI': ['yellow', 'nir'],
                   'VCI': ['red', 'nir'],
-                  'VISMU': ['blue', 'green', 'red']}
+                  'VISMU': ['blue', 'green', 'red'],
+                  'WI': ['red', 'midir']}
 
 SUPPORTED_VIS = list(VI_WAVELENGTHS)
 

@@ -149,7 +149,8 @@ class SensorInfo(object):
              'YNDVI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
                       '((array02 / scale_factor) + (array01 / scale_factor))',
              'VCI': '(((array02 - array01) / (array02 + array01)) - min_ndvi) / (max_ndvi - min_ndvi)',
-             'VISMU': '((array01 / scale_factor) + (array02 / scale_factor) + (array03 / scale_factor)) / 3.'}
+             'VISMU': '((array01 / scale_factor) + (array02 / scale_factor) + (array03 / scale_factor)) / 3.',
+             'WI': '(array01 / scale_factor) + (array02 / scale_factor)'}
 
         # The data ranges for scaling, but only
         #   used if the output storage type is not
@@ -183,7 +184,8 @@ class SensorInfo(object):
                             'YNDVI': (-1.0, 1.0),
                             'TWVI': (-1, 1),
                             'VCI': (),
-                            'VISMU': (0., 1.0)}
+                            'VISMU': (0., 1.0),
+                            'WI': (0.0, 1.0)}
 
     def list_expected_band_order(self, sensor):
 
@@ -410,8 +412,10 @@ class VegIndicesEquations(SensorInfo):
 
         # EVI defaults
         if self.vi_index.upper() == 'EVI' and not kwargs:
-            c1 = 6.
+
+            c1 = 6.0
             c2 = 7.5
+
         elif self.vi_index.upper() == 'EVI2' and not kwargs:
             c1 = 2.4
 
@@ -427,32 +431,42 @@ class VegIndicesEquations(SensorInfo):
 
         if self.n_bands == 2:
 
-            try:
-                array01 = self.image_array[0]
-                array02 = self.image_array[1]
-            except:
-                raise ValueError('\nThe input array should have {:d} dimensions.\n'.format(self.n_bands))
+            if self.image_array.shape[0] != 2:
+
+                logger.error('  The input array should have {:d} dimensions.'.format(self.n_bands))
+                raise ValueError
+
+            array01 = self.image_array[0]
+            array02 = self.image_array[1]
 
             if not isinstance(self.mask_array, np.ndarray):
                 mask_equation = 'where((array01 == in_no_data) | (array02 == in_no_data), no_data, index_array)'
 
         elif self.n_bands == 3:
 
-            if len(self.image_array.shape) == 3:
+            if self.image_array.shape[0] != 3:
 
-                array01 = self.image_array[0]
-                array02 = self.image_array[1]
-                array03 = self.image_array[2]
-
-            else:
-
-                logger.error('The input array should have {:d} dimensions.'.format(self.n_bands))
+                logger.error('  The input array should have {:d} dimensions.'.format(self.n_bands))
                 raise ValueError
+
+            array01 = self.image_array[0]
+            array02 = self.image_array[1]
+            array03 = self.image_array[2]
 
             if not isinstance(self.mask_array, np.ndarray):
                 mask_equation = 'where((array01 == in_no_data) | (array02 == in_no_data) | (array03 == in_no_data), no_data, index_array)'
 
+        else:
+
+            logger.error('  The input array needs 2 or 3 bands.')
+            raise ValueError
+
         index_array = ne.evaluate(self.equations[self.vi_index.upper()])
+
+        if self.vi_index.upper() == 'WI':
+
+            wi = np.ones(array01.shape, dtype='float32') - (index_array / 0.5)
+            index_array = np.where(index_array >= 0.5, 0, wi)
 
         d_range = self.data_ranges[self.vi_index.upper()]
 
