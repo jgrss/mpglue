@@ -34,15 +34,23 @@ except:
 # NumPy
 try:
     import numpy as np
-except ImportError:
-    raise ImportError('NumPy must be installed')
+except:
+    logger.error('  NumPy must be installed')
+    raise ImportError
 
 # PyTables
 try:
     import tables
-except ImportError:
-    raise ImportError('PyTables must be installed')
+except:
+    logger.error('  PyTables must be installed')
+    raise ImportError
 
+# OpenCV
+try:
+    import cv2
+except:
+    logger.error('  OpenCV must be installed')
+    raise ImportError
 
 STORAGE_DICT = raster_tools.STORAGE_DICT
 JD_DICT = rad_calibration.julian_day_dictionary()
@@ -1609,6 +1617,18 @@ class manage_pytables(BaseHandler):
 
         # Open the mask
         sensor_mask = np.uint8(self.h5_file.get_node(group_name.replace('_bands', '_mask')).read())
+
+        # clear and water = 0, 1 --> 0
+        # all other = > 1 --> 1
+        sensor_mask = np.where(sensor_mask < 2, 0, 1)
+
+        # Erode the clouds to account for missed pixels in Fmask.
+        sensor_mask = cv2.morphologyEx(np.uint8(sensor_mask),
+                                       cv2.MORPH_DILATE,
+                                       np.array([[0, 1, 0],
+                                                 [1, 1, 1],
+                                                 [0, 1, 0]], dtype='uint8'),
+                                       iterations=2)
 
         if MPCAL_INSTALLED:
 
