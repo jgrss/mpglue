@@ -396,7 +396,8 @@ class VegIndicesEquations(SensorInfo):
                             'TVI': self.TVI,
                             'TWVI': self.TWVI,
                             'YNDVI': self.YNDVI,
-                            'VCI': self.VCI}
+                            'VCI': self.VCI,
+                            'WI': self.WI}
 
             if self.vi_index.upper() not in vi_functions:
                 raise NameError('{} is not a vegetation index option.'.format(self.vi_index))
@@ -464,9 +465,7 @@ class VegIndicesEquations(SensorInfo):
         index_array = ne.evaluate(self.equations[self.vi_index.upper()])
 
         if self.vi_index.upper() == 'WI':
-
-            wi = np.ones(array01.shape, dtype='float32') - (index_array / 0.5)
-            index_array = np.where(index_array >= 0.5, 0, wi)
+            index_array = np.where(index_array > 0.5, 0, 1.0 - (index_array / 0.5))
 
         d_range = self.data_ranges[self.vi_index.upper()]
 
@@ -488,11 +487,6 @@ class VegIndicesEquations(SensorInfo):
             scale_data = False
 
         if scale_data:
-
-            # if self.out_type == 2:
-            #     index_array = np.uint8(index_array * 254.)
-            # elif self.out_type == 3:
-            #     index_array = np.uint16(index_array * 10000.)
 
             if self.data_ranges[self.vi_index.upper()]:
 
@@ -1378,6 +1372,32 @@ class VegIndicesEquations(SensorInfo):
             vci = self.rescale_range(vci)
 
         return vci
+
+    def WI(self):
+
+        """
+        Woody index
+
+        Equation:
+            WI = 1 - ((red + swir1) / 0.5)
+        """
+
+        try:
+            red = self.image_array[0]
+            swir1 = self.image_array[1]
+        except:
+            raise ValueError('\nThe input array should have {:d} dimensions.\n'.format(self.n_bands))
+
+        wi = red + swir1
+        wi = np.where(wi > 0.5, 0, 1.0 - (wi / 0.5))
+
+        wi[(swir1 == 0) | (swir1 == 0)] = self.no_data
+        wi[np.isinf(wi) | np.isnan(wi)] = self.no_data
+
+        if self.out_type > 1:
+            wi = self.rescale_range(wi, in_range=(0, 1))
+
+        return wi
 
     def main_index(self, array01, array02):
 
