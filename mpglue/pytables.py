@@ -55,8 +55,10 @@ except:
 STORAGE_DICT = raster_tools.STORAGE_DICT
 JD_DICT = rad_calibration.julian_day_dictionary()
 
-tables.parameters.MAX_NUMEXPR_THREADS = multi.cpu_count()
-tables.parameters.MAX_BLOSC_THREADS = multi.cpu_count()
+CPUS = multi.cpu_count()
+
+tables.parameters.MAX_NUMEXPR_THREADS = CPUS
+tables.parameters.MAX_BLOSC_THREADS = CPUS
 
 
 class OrderInfo(tables.IsDescription):
@@ -197,6 +199,11 @@ class BaseHandler(SetFilter):
                                       title=self.name_dict['attribute'])
 
         elif array_type == 'c':
+
+            if '{}/{}'.format(self.node_name, self.name_dict['filename']) in self.h5_file:
+
+                self.close_image()
+                return
 
             array = self.h5_file.create_carray(self.node_name,
                                                self.name_dict['filename'],
@@ -1233,27 +1240,19 @@ class manage_pytables(BaseHandler):
         # nodes = [node._v_title for node in self.h5_file.walk_groups()]
 
         # UTM group
-        try:
-            self.h5_file.get_node(self.group_utm)
-        except:
+        if self.group_utm not in self.h5_file:
             self.h5_file.create_group('/', str(self.grid_info['utm']), 'UTM')
 
         # Latitude group
-        try:
-            self.h5_file.get_node(self.group_latitude)
-        except:
+        if self.group_latitude not in self.h5_file:
             self.h5_file.create_group(self.group_utm, self.grid_info['latitude'], 'LATITUDE')
 
         # Grid group
-        try:
-            self.h5_file.get_node(self.group_grid)
-        except:
+        if self.group_grid not in self.h5_file:
             self.h5_file.create_group(self.group_latitude, self.grid_info['grid'], 'GRID')
 
         # Sensor group
-        try:
-            self.h5_file.get_node(self.node_name)
-        except:
+        if self.node_name not in self.h5_file:
             self.h5_file.create_group(self.group_grid, self.sensor, 'SENSOR')
 
     def remove_array_group(self, group2remove):
