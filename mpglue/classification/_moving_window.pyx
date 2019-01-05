@@ -16,7 +16,6 @@ from copy import copy
 
 # from libcpp.map cimport map
 
-# from libc.math cimport cos, atan2
 # from libc.stdlib cimport c_abs
 # from libc.math cimport fabs
 # from cython.parallel import prange, parallel
@@ -48,6 +47,10 @@ ctypedef np.float32_t DTYPE_float32_t
 
 DTYPE_float64 = np.float64
 ctypedef np.float64_t DTYPE_float64_t
+
+
+cdef extern from 'math.h':
+   DTYPE_float32_t sqrt(DTYPE_float32_t a) nogil
 
 
 cdef extern from 'math.h':
@@ -91,7 +94,7 @@ cdef inline unsigned int int_max(unsigned int a, unsigned int b) nogil:
 
 
 cdef inline DTYPE_float32_t _abs(DTYPE_float32_t m) nogil:
-    return m*-1. if m < 0 else m
+    return m*-1.0 if m < 0 else m
 
 
 cdef inline Py_ssize_t _abs_pysize(Py_ssize_t m) nogil:
@@ -110,12 +113,8 @@ cdef inline DTYPE_float32_t _pow(DTYPE_float32_t m, DTYPE_float32_t n) nogil:
     return m**n
 
 
-cdef inline DTYPE_float32_t _sqrt(DTYPE_float32_t m) nogil:
-    return m**.5
-
-
 cdef inline DTYPE_float32_t _spectral_distance(DTYPE_float32_t x1, DTYPE_float32_t x2) nogil:
-    return _pow(x2 - x1, 2.)
+    return _pow(x2 - x1, 2.0)
 
 
 cdef inline DTYPE_float32_t _euclidean_distance(DTYPE_float32_t x1, DTYPE_float32_t x2, DTYPE_float32_t y1, DTYPE_float32_t y2) nogil:
@@ -795,12 +794,12 @@ cdef DTYPE_float32_t _get_std1d(DTYPE_float32_t[:] block_list, int length) nogil
     cdef:
         Py_ssize_t ii
         DTYPE_float32_t block_list_mean = _get_mean1d(block_list, length)
-        DTYPE_float32_t s = _pow(block_list[0] - block_list_mean, 2.)
+        DTYPE_float32_t s = _pow(block_list[0] - block_list_mean, 2.0)
 
     for ii in range(1, length):
-        s += _pow(block_list[ii] - block_list_mean, 2.)
+        s += _pow(block_list[ii] - block_list_mean, 2.0)
 
-    return _sqrt(s / length)
+    return sqrt(s / length)
 
 
 cdef DTYPE_uint8_t _get_argmin1d(DTYPE_float32_t[:] block_list, int length):
@@ -1091,6 +1090,67 @@ cdef DTYPE_float32_t _get_mean(DTYPE_float32_t[:, ::1] block,
         return 0.
     else:
         return su / good_values
+
+
+cdef DTYPE_float32_t _get_std(DTYPE_float32_t[:, ::1] block,
+                              DTYPE_intp_t window_i,
+                              DTYPE_intp_t window_j,
+                              DTYPE_float32_t target_value,
+                              DTYPE_float32_t ignore_value,
+                              DTYPE_float32_t[:, ::1] weights,
+                              unsigned int hw) nogil:
+
+    cdef:
+        Py_ssize_t ii, jj
+        DTYPE_float32_t su = 0.0
+        DTYPE_float32_t stdv = 0.0
+        int good_values = 0
+
+    if target_value != -9999.0:
+        if block[hw, hw] != target_value:
+            return block[hw, hw]
+
+    if ignore_value != -9999.0:
+
+        for ii in range(0, window_i):
+            for jj in range(0, window_j):
+
+                if block[ii, jj] != ignore_value:
+
+                    su += block[ii, jj] * weights[ii, jj]
+                    good_values += 1
+
+    else:
+
+        for ii in range(0, window_i):
+            for jj in range(0, window_j):
+
+                su += block[ii, jj] * weights[ii, jj]
+
+        good_values = window_i * window_j
+
+    if good_values == 0:
+        su = 0.0
+    else:
+        su /= good_values
+
+    if ignore_value != -9999.0:
+
+        for ii in range(0, window_i):
+            for jj in range(0, window_j):
+                if block[ii, jj] != ignore_value:
+                    stdv += _pow(float(block[ii, jj]) - su, 2.0)
+
+    else:
+
+        for ii in range(0, window_i):
+            for jj in range(0, window_j):
+                stdv += _pow(float(block[ii, jj]) - su, 2.0)
+
+    if good_values == 0:
+        return 0.0
+    else:
+        return sqrt(stdv / good_values)
 
 
 cdef DTYPE_float32_t _get_distance(DTYPE_float32_t[:, :, ::1] image_block_,
@@ -2157,7 +2217,7 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] link_window(DTYPE_uint8_t[:, ::1] edge_im
 
         endpoint_row = endpoint_idx[cij]
 
-        half_window = <int>(window_size / 2.)
+        half_window = <int>(window_size / 2.0)
 
         isub = endpoint_row[0] - half_window
         iplus = endpoint_row[0] + half_window
@@ -2169,7 +2229,7 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] link_window(DTYPE_uint8_t[:, ::1] edge_im
 
             sub_counter = 1
 
-            max_iters = <int>(half_window / 2.)
+            max_iters = <int>(half_window / 2.0)
             window_size_adj = window_size
 
             # Try to find a smaller
@@ -2180,7 +2240,7 @@ cdef np.ndarray[DTYPE_uint8_t, ndim=2] link_window(DTYPE_uint8_t[:, ::1] edge_im
                 window_size_adj -= 2
 
                 # Get the new half-window size.
-                half_window = <int>(window_size_adj / 2.)
+                half_window = <int>(window_size_adj / 2.0)
 
                 isub = endpoint_row[0] - half_window
                 iplus = endpoint_row[0] + half_window
@@ -3493,7 +3553,7 @@ cdef DTYPE_float32_t _get_window_var(DTYPE_float32_t[:, ::1] e_block_,
     for ib in range(0, window_size):
 
         for jb in range(0, window_size):
-            i_var += _pow(e_block_[ib, jb] - e_mu, 2.)
+            i_var += _pow(e_block_[ib, jb] - e_mu, 2.0)
 
     return i_var / float(counter)
 
@@ -3513,7 +3573,7 @@ cdef DTYPE_float32_t _get_ones_var(DTYPE_float32_t[:, ::1] w_block_,
         for jb in range(0, window_size):
 
             if w_block_[ib, jb] == 1:
-                i_var += _pow(e_block_[ib, jb] - e_mu, 2.)
+                i_var += _pow(e_block_[ib, jb] - e_mu, 2.0)
 
     return i_var / float(ones_counter)
 
@@ -3624,7 +3684,7 @@ cdef DTYPE_float32_t _egm_morph(DTYPE_float32_t[:, ::1] image_block,
     else:
 
         # non_edge_mean = _get_zeros_mean(image_block, window_size)
-        # return _sqrt(non_edge_mean)
+        # return sqrt(non_edge_mean)
 
         return (bcv / 2.) * -1.
 
@@ -3866,7 +3926,7 @@ cdef DTYPE_float32_t _get_line_straightness(DTYPE_float32_t[:, ::1] rcc_, unsign
 
     # Get the deviation between the original and fitted data.
     for ii in range(0, n):
-        alpha_sum += _abs((y_[ii] - slope*x_[ii] - intercept) / _sqrt(1.0 + _pow(slope, 2.0)))
+        alpha_sum += _abs((y_[ii] - slope*x_[ii] - intercept) / sqrt(1.0 + _pow(slope, 2.0)))
 
     # slope*x + intercept
 
@@ -4488,7 +4548,7 @@ cdef np.ndarray window(DTYPE_float32_t[:, ::1] image_array,
         Py_ssize_t i, j, iters, ic, jc
         unsigned int rows = image_array.shape[0]
         unsigned int cols = image_array.shape[1]
-        unsigned int half_window = <int>(window_size / 2.)
+        unsigned int half_window = <int>(window_size / 2.0)
         unsigned int row_dims = rows - (half_window*2)
         unsigned int col_dims = cols - (half_window*2)
         DTYPE_float32_t[:, ::1] out_array
@@ -4512,6 +4572,8 @@ cdef np.ndarray window(DTYPE_float32_t[:, ::1] image_array,
     #     window_function = &_morph_pass
     elif statistic == 'duda':
         window_function = &_duda_operator
+    elif statistic == 'std':
+        window_function = &_get_std
     else:
         raise ValueError('\n{} is not a supported statistic.\n'.format(statistic))
 
@@ -4728,6 +4790,7 @@ def moving_window(np.ndarray image_array not None,
                          'remove-min',
                          'rgb-distance',
                          'seg-dist',
+                         'std',
                          'sum',
                          'suppression']:
 
