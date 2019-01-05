@@ -142,6 +142,7 @@ SUPPORTED_SENSORS = list(SENSOR_BAND_DICT)
 #   order should match the equations in
 #   ``self.equations``.
 VI_WAVELENGTHS = {'ARVI': ['blue', 'red', 'nir'],
+                  'BRIGHT': ['green', 'red', 'nir', 'midir'],
                   'CBI': ['cblue', 'blue'],
                   'CIRE': ['rededge', 'rededge3'],
                   'EVI': ['blue', 'red', 'nir'],

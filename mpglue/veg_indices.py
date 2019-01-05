@@ -97,6 +97,7 @@ class SensorInfo(object):
                      'y*((array01 / scale_factor) - (array02 / scale_factor)))) / '
                      '((array03 / scale_factor) + ((array02 / scale_factor) - '
                      'y*((array01 / scale_factor) - (array02 / scale_factor))))',
+             'BRIGHT': '((array01 / scale_factor)**2 + (array02 / scale_factor)**2 + (array03 / scale_factor)**2 + (array04 / scale_factor)**2)**0.5',
              'CBI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
                     '((array02 / scale_factor) + (array01 / scale_factor))',
              'CIRE': '((array02 / scale_factor) / (array01 / scale_factor)) - 1.',
@@ -156,6 +157,7 @@ class SensorInfo(object):
         #   used if the output storage type is not
         #   equal to 'float32'.
         self.data_ranges = {'ARVI': (),
+                            'BRIGHT': (0.0, 1.0),
                             'CBI': (-1.0, 1.0),
                             'CIRE': (-1.0, 1.0),
                             'EVI': (0., 1.0),
@@ -370,6 +372,7 @@ class VegIndicesEquations(SensorInfo):
         else:
 
             vi_functions = {'ARVI': self.ARVI,
+                            'BRIGHT': self.BRIGHT,
                             'CBI': self.CBI,
                             'CIre': self.CIre,
                             'EVI': self.EVI,
@@ -538,6 +541,27 @@ class VegIndicesEquations(SensorInfo):
             arvi = self.rescale_range(arvi)
 
         return arvi
+
+    def BRIGHT(self):
+
+        try:
+            green = self.image_array[0]
+            red = self.image_array[1]
+            nir = self.image_array[2]
+            midir = self.image_array[3]
+        except:
+            raise ValueError('\nThe input array should have {:d} dimensions.\n'.format(self.n_bands))
+
+        bright = np.sqrt(green**2 + red**2 + nir**2 + midir**2)
+
+        bright[(green == 0) | (red == 0) | (nir == 0) | (midir == 0)] = self.no_data
+
+        bright[np.isinf(bright) | np.isnan(bright)] = self.no_data
+
+        if self.out_type > 1:
+            bright = self.rescale_range(bright)
+
+        return bright
 
     def CBI(self):
 
