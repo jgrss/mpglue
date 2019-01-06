@@ -1629,56 +1629,63 @@ class manage_pytables(BaseHandler):
                                                  [0, 1, 0]], dtype='uint8'),
                                        iterations=2)
 
-        if MPCAL_INSTALLED:
+        if 'bands' in group_name:
 
-            wavelength_list = ['blue', 'green', 'red', 'nir', 'midir', 'farir']
+            if MPCAL_INSTALLED:
 
-            if sensor.lower() == 'etm':
+                wavelength_list = ['blue', 'green', 'red', 'nir', 'midir', 'farir']
 
-                logger.info('  Applying band-pass to ETM+ ...')
+                if sensor.lower() == 'etm':
 
-                relsn = mpcal.RelativeSensorNorm(scale_factor=10000.0)
+                    logger.info('  Applying band-pass to ETM+ ...')
 
-                # Band-pass adjustment
-                array2write = relsn.run(wavelength_list,
-                                        np.float32(array2write),
-                                        self.h5_file.get_node(group_name.replace('_bands', '_mask')).read(),
-                                        calibration='surface',
-                                        correction='etm2oli')
+                    relsn = mpcal.RelativeSensorNorm(scale_factor=10000.0)
 
-            logger.info('  Adjusting BRDF ...')
+                    # Band-pass adjustment
+                    array2write = relsn.run(wavelength_list,
+                                            np.float32(array2write),
+                                            self.h5_file.get_node(group_name.replace('_bands', '_mask')).read(),
+                                            calibration='surface',
+                                            correction='etm2oli')
 
-            solar_zenith_angle = np.float32(self.h5_file.get_node(group_name.replace('_bands', '_solar_zenith')).read())
-            solar_azimuth_angle = np.float32(self.h5_file.get_node(group_name.replace('_bands', '_solar_azimuth')).read())
-            sensor_zenith_angle = np.float32(self.h5_file.get_node(group_name.replace('_bands', '_sensor_zenith')).read())
-            sensor_azimuth_angle = np.float32(self.h5_file.get_node(group_name.replace('_bands', '_sensor_azimuth')).read())
+                logger.info('  Adjusting BRDF ...')
 
-            if sensor.lower() == 'oli tirs':
+                solar_zenith_angle = np.float32(self.h5_file.get_node(group_name.replace('_bands', '_solar_zenith')).read())
+                solar_azimuth_angle = np.float32(self.h5_file.get_node(group_name.replace('_bands', '_solar_azimuth')).read())
+                sensor_zenith_angle = np.float32(self.h5_file.get_node(group_name.replace('_bands', '_sensor_zenith')).read())
+                sensor_azimuth_angle = np.float32(self.h5_file.get_node(group_name.replace('_bands', '_sensor_azimuth')).read())
 
-                wv = SENSOR_BAND_DICT['Landsat8']
-                wv_idx = np.array([wv[wv_name]-1 for wv_name in wavelength_list], dtype='int64')
-                array2write = array2write[wv_idx]
+                if sensor.lower() == 'oli tirs':
 
-            gbn = mpcal.GlobalBRDFNorm(scale_factor=10000.0)
+                    wv = SENSOR_BAND_DICT['Landsat8']
+                    wv_idx = np.array([wv[wv_name]-1 for wv_name in wavelength_list], dtype='int64')
+                    array2write = array2write[wv_idx]
 
-            # BRDF per-pixel normalization
-            array2write = gbn.normalize(wavelength_list,
-                                        array2write,
-                                        solar_zenith_angle,
-                                        solar_azimuth_angle,
-                                        sensor_zenith_angle,
-                                        sensor_azimuth_angle,
-                                        sensor_mask,
-                                        scale_angles=True)
+                gbn = mpcal.GlobalBRDFNorm(scale_factor=10000.0)
 
-            result['bands'] = array2write.shape[0]
+                # BRDF per-pixel normalization
+                array2write = gbn.normalize(wavelength_list,
+                                            array2write,
+                                            solar_zenith_angle,
+                                            solar_azimuth_angle,
+                                            sensor_zenith_angle,
+                                            sensor_azimuth_angle,
+                                            sensor_mask,
+                                            scale_angles=True)
 
-        # Mask the bands.
-        for bi in range(array2write.shape[0]):
+                result['bands'] = array2write.shape[0]
 
-            layer = array2write[bi]
-            layer[sensor_mask != 0] = 0
-            array2write[bi] = layer
+                # Mask the bands.
+                for bi in range(array2write.shape[0]):
+
+                    layer = array2write[bi]
+                    layer[sensor_mask != 0] = 0
+                    array2write[bi] = layer
+
+        else:
+
+            array2write[sensor_mask != 0] = -32768
+            result['bands'] = 1
 
         logger.info('  Writing to {} ...'.format(out_name))
 
@@ -1717,6 +1724,13 @@ class manage_pytables(BaseHandler):
 
                 if self.h5_file.isopen:
                     self.h5_file.close()
+
+            else:
+
+                try:
+                    self.h5_file.close()
+                except:
+                    pass
 
         self.h5_file = None
 
