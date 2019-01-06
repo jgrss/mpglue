@@ -1686,7 +1686,7 @@ class manage_pytables(BaseHandler):
 
             array2write[sensor_mask != 0] = -32768
             result['bands'] = 1
-            result['storage'] = 'int64'
+            result['storage'] = 'int16'
 
         logger.info('  Writing to {} ...'.format(out_name))
 
