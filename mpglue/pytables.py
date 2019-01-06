@@ -1688,8 +1688,6 @@ class manage_pytables(BaseHandler):
             result['bands'] = 1
             result['storage'] = 'int64'
 
-            print(array2write.max())
-
         logger.info('  Writing to {} ...'.format(out_name))
 
         with raster_tools.ropen('create',
