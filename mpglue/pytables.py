@@ -1524,7 +1524,7 @@ class manage_pytables(BaseHandler):
                                         node_date,
                                         attribute)
 
-    def to_file(self, out_name, path, row, sensor, date, attribute, overwrite=False):
+    def to_file(self, out_name, path, row, sensor, date, attribute, overwrite=False, brdf=True):
 
         """
         Writes an h5 node to file
@@ -1537,6 +1537,7 @@ class manage_pytables(BaseHandler):
             date (str): The image date (yyyy-mm-dd).
             attribute (str): The image attribute. Choices are ['bands', 'mask'].
             overwrite (Optional[bool]): Whether to overwrite an existing file. Default is False.
+            brdf (Optional[bool]): Whether to apply BRDF corection using the c-factor method. Default is True.
 
         Example:
             >>> from mpglue import pytables as gltb
@@ -1615,7 +1616,7 @@ class manage_pytables(BaseHandler):
         array2write = np.float32(self.h5_file.get_node(group_name).read())
 
         # Open the mask
-        sensor_mask = np.uint8(self.h5_file.get_node(group_name.replace('_bands', '_mask')).read())
+        sensor_mask = np.uint8(self.h5_file.get_node(group_name.replace('_{}'.format(attribute.lower()), '_mask')).read())
 
         # clear and water = 0, 1 --> 0
         # all other = > 1 --> 1
@@ -1631,7 +1632,7 @@ class manage_pytables(BaseHandler):
 
         if 'bands' in group_name:
 
-            if MPCAL_INSTALLED:
+            if brdf and MPCAL_INSTALLED:
 
                 wavelength_list = ['blue', 'green', 'red', 'nir', 'midir', 'farir']
 
@@ -1661,6 +1662,12 @@ class manage_pytables(BaseHandler):
                     wv_idx = np.array([wv[wv_name]-1 for wv_name in wavelength_list], dtype='int64')
                     array2write = array2write[wv_idx]
 
+                # Get the center latitude.
+                ptr = vector_tools.Transform(result['left'] + ((result['columns'] / 2.0) * result['cell_size']),
+                                             result['top'] - ((result['rows'] / 2.0) * result['cell_size']),
+                                             result['projection'],
+                                             4326)
+
                 gbn = mpcal.GlobalBRDFNorm(scale_factor=10000.0)
 
                 # BRDF per-pixel normalization
@@ -1670,6 +1677,7 @@ class manage_pytables(BaseHandler):
                                             solar_azimuth_angle,
                                             sensor_zenith_angle,
                                             sensor_azimuth_angle,
+                                            ptr.y_transform,
                                             sensor_mask,
                                             scale_angles=True)
 
