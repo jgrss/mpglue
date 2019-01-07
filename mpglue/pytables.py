@@ -1668,6 +1668,8 @@ class manage_pytables(BaseHandler):
                                              result['projection'],
                                              4326)
 
+                logger.info(ptr.y_transform)
+
                 gbn = mpcal.GlobalBRDFNorm(scale_factor=10000.0)
 
                 # BRDF per-pixel normalization
