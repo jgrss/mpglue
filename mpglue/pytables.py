@@ -1652,7 +1652,7 @@ class manage_pytables(BaseHandler):
                 logger.info('  Adjusting BRDF ...')
 
                 solar_zenith_angle = np.float32(self.h5_file.get_node(group_name.replace('_bands', '_solar_zenith')).read())
-                solar_azimuth_angle = np.float32(self.h5_file.get_node(group_name.replace('_bands', '_solar_azimuth')).read())
+                # solar_azimuth_angle = np.float32(self.h5_file.get_node(group_name.replace('_bands', '_solar_azimuth')).read())
                 sensor_zenith_angle = np.float32(self.h5_file.get_node(group_name.replace('_bands', '_sensor_zenith')).read())
                 sensor_azimuth_angle = np.float32(self.h5_file.get_node(group_name.replace('_bands', '_sensor_azimuth')).read())
 
@@ -1674,7 +1674,7 @@ class manage_pytables(BaseHandler):
                 array2write = gbn.normalize(wavelength_list,
                                             array2write,
                                             solar_zenith_angle,
-                                            solar_azimuth_angle,
+                                            None,
                                             sensor_zenith_angle,
                                             sensor_azimuth_angle,
                                             ptr.y_transform,
