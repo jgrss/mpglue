@@ -1620,7 +1620,8 @@ class manage_pytables(BaseHandler):
 
         # clear and water = 0, 1 --> 0
         # all other = > 1 --> 1
-        sensor_mask = np.where(sensor_mask < 2, 0, 1)
+        fill = np.where(sensor_mask == 255, 1, 0)
+        sensor_mask = np.where(((sensor_mask > 1) & (sensor_mask < 255)), 1, 0)
 
         # Erode the clouds to account for missed pixels in Fmask.
         sensor_mask = cv2.morphologyEx(np.uint8(sensor_mask),
@@ -1629,6 +1630,8 @@ class manage_pytables(BaseHandler):
                                                  [1, 1, 1],
                                                  [0, 1, 0]], dtype='uint8'),
                                        iterations=2)
+
+        sensor_mask[fill == 1] = 1
 
         if 'bands' in group_name:
 
