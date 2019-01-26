@@ -441,8 +441,9 @@ def predict_scikit_probas(rw,
                                            statistic='plr',
                                            window_size=plr_window_size,
                                            weights=plr_matrix,
-                                           iterations=plr_iterations)[:, ipadded:ipadded + n_rows,
-                                                                      jpadded:jpadded + n_cols] * 10000.0)
+                                           iterations=plr_iterations)[:,
+                                                                      ipadded:ipadded+n_rows,
+                                                                      jpadded:jpadded+n_cols] * 10000.0)
 
         else:
 
@@ -6322,15 +6323,20 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         """Creates the raster object to write to"""
 
-        if self.predict_probs or \
-                isinstance(self.mask_background, str) or \
-                isinstance(self.mask_background, np.ndarray):
+        if self.predict_probs:
 
-            return raster_tools.create_raster(self.out_image_temp,
+            return raster_tools.create_raster(self.output_image,
                                               self.o_info,
                                               compress='none',
                                               tile=False,
                                               bigtiff='yes')
+
+        elif isinstance(self.mask_background, str) or isinstance(self.mask_background, np.ndarray):
+
+            return raster_tools.create_raster(self.out_image_temp,
+                                              self.o_info,
+                                              compress='none',
+                                              tile=False)
 
         else:
 
