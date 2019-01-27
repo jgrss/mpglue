@@ -6351,7 +6351,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                       block_cols):
 
         if self.relax_probabilities or self.morphology:
-            pad = int(self.plr_window_size / 2.0)
+            pad = self.plr_window_size  # int(self.plr_window_size / 2.0)
         else:
             pad = 0
 
