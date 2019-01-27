@@ -426,40 +426,34 @@ def predict_scikit_probas(rw,
 
     n_classes = len(class_list)
 
-    # Reshape and run PLR
+    probabilities = raster_tools.columns_to_nd(probabilities, n_classes, rw, cw)
+
+    if relax_probabilities:
+
+        probabilities = moving_window(probabilities,
+                                      statistic='plr',
+                                      window_size=plr_window_size,
+                                      weights=plr_matrix,
+                                      iterations=plr_iterations)
+
     if predict_probs:
 
         # Predict class conditional probabilities.
-
         if relax_probabilities:
-
-            return np.uint16(moving_window(raster_tools.columns_to_nd(probabilities, n_classes, rw, cw),
-                                           statistic='plr',
-                                           window_size=plr_window_size,
-                                           weights=plr_matrix,
-                                           iterations=plr_iterations)*10000.0)[:,
-                                                                               ipadded:ipadded+n_rows,
-                                                                               jpadded:jpadded+n_cols]
-
+            return np.uint16(probabilities*10000.0)[:, ipadded:ipadded+n_rows, jpadded:jpadded+n_cols]
         else:
-            return np.uint16(raster_tools.columns_to_nd(probabilities*10000.0, n_classes, rw, cw))
+            return np.uint16(probabilities*10000.0)
 
-    else:
-
-        probabilities_argmax = moving_window(raster_tools.columns_to_nd(probabilities, n_classes, rw, cw),
-                                             statistic='plr',
-                                             window_size=plr_window_size,
-                                             weights=plr_matrix,
-                                             iterations=plr_iterations).argmax(axis=0)
+    probabilities = probabilities.argmax(axis=0)
 
     if morphology:
-        predictions = np.zeros(probabilities_argmax.shape, dtype='uint8')
+        predictions = np.zeros(probabilities.shape, dtype='uint8')
     else:
-        predictions = np.zeros(probabilities_argmax.shape, dtype=raster_tools.STORAGE_DICT_NUMPY[d_type])
+        predictions = np.zeros(probabilities.shape, dtype=raster_tools.STORAGE_DICT_NUMPY[d_type])
 
     # Convert indices to classes.
     for class_index, real_class in enumerate(class_list):
-        predictions[probabilities_argmax == class_index] = real_class
+        predictions[probabilities == class_index] = real_class
 
     if morphology:
 
@@ -6099,7 +6093,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                           self.predict_probs,
                                                           self.d_type)
 
-                        import pdb;pdb.set_trace()
+                        logger.info(predicted.shape)
 
                         for cidx in range(0, predicted.shape[0]):
 
