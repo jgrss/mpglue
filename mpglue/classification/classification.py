@@ -5624,18 +5624,18 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                                             'rfr', 'ex-rfr', 'svr', 'svra',
                                                                             'cubist', 'dtr']:
 
-                self.o_info.storage = 'uint16'
+                self.o_info.update_info(storage='uint16')
                 self.d_type = 'float32'
 
             else:
 
                 if self.morphology:
 
-                    self.o_info.storage = 'byte'
+                    self.o_info.update_info(storage='byte')
                     self.d_type = 'byte'
 
                 else:
-                    self.o_info.storage = self.d_type
+                    self.o_info.update_info(storage=self.d_type)
 
             # Make the predictions
             self._predict()
@@ -6099,17 +6099,15 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                           self.predict_probs,
                                                           self.d_type)
 
-                        import pdb;pdb.set_trace()
+                        logger.info(np.percentile(predicted, 95))
+                        logger.info(self.o_info.storage)
 
                         for cidx in range(0, predicted.shape[0]):
 
-                            out_raster_object.get_band(cidx+1)
-
                             out_raster_object.write_array(predicted[cidx],
+                                                          i=i-iwo,
                                                           j=j-jwo,
-                                                          i=i-iwo)
-
-                            out_raster_object.close_band()
+                                                          band=cidx+1)
 
                     else:
 
@@ -6249,6 +6247,13 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         # Close the file.
         if not self.write2blocks:
+
+            if self.predict_probs:
+
+                for cidx in range(0, len(mdl.classes_)):
+
+                    out_raster_object.get_band(cidx+1)
+                    out_raster_object.close_band()
 
             out_raster_object.close_all()
             out_raster_object = None
