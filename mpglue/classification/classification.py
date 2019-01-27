@@ -418,15 +418,13 @@ def predict_scikit_probas(rw,
         d_type (str)
     """
 
-    import pdb;pdb.set_trace()
-
     # `probabilities` shaped as [samples x n classes]
     probabilities = mdl.predict_proba(features)
 
     # Get the classes.
     class_list = mdl.classes_
 
-    n_classes = probabilities.shape[1]
+    n_classes = len(class_list)
 
     # Reshape and run PLR
     if predict_probs:
@@ -6100,6 +6098,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                           self.plr_iterations,
                                                           self.predict_probs,
                                                           self.d_type)
+
+                        import pdb;pdb.set_trace()
 
                         for cidx in range(0, predicted.shape[0]):
 
