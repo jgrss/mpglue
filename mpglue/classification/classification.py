@@ -433,30 +433,6 @@ def predict_scikit_probas(rw,
 
         if relax_probabilities:
 
-            p1_ = raster_tools.columns_to_nd(probabilities, n_classes, rw, cw)
-            p2_ = moving_window(p1_,
-                                statistic='plr',
-                                window_size=plr_window_size,
-                                weights=plr_matrix,
-                                iterations=plr_iterations)
-            logger.info(p1_.shape)
-            logger.info(p2_.shape)
-            logger.info(ipadded)
-            logger.info(jpadded)
-            logger.info(n_rows)
-            logger.info(n_cols)
-
-            ax1 = plt.figure().add_subplot(121)
-            ax1.imshow(p1_[0])
-            ax2 = plt.figure().add_subplot(121)
-            ax2.imshow(p2_[0])
-            iter_ = 1
-            while True:
-                if not os.path.isfile('{:03d}.png'.format(iter_)):
-                    plt.savefig('{:03d}.png'.format(iter_))
-                    break
-                iter_ += 1
-
             return np.uint16(moving_window(raster_tools.columns_to_nd(probabilities, n_classes, rw, cw),
                                            statistic='plr',
                                            window_size=plr_window_size,
@@ -466,7 +442,7 @@ def predict_scikit_probas(rw,
                                                                       jpadded:jpadded+n_cols] * 10000.0)
 
         else:
-            return np.uint16(raster_tools.columns_to_nd(probabilities, n_classes, rw, cw) * 10000.0)
+            return np.uint16(raster_tools.columns_to_nd(probabilities*10000.0, n_classes, rw, cw))
 
     else:
 
