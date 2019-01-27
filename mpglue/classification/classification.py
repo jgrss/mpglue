@@ -3716,24 +3716,16 @@ class VotingClassifier(object):
             X (2d array): The predictive variables.
         """
 
-        w_sum = 0.0
-
         clf = self.estimators[0][1]
 
         X_probas = clf.predict_proba(X) * self.weights[0]
 
         for clf_idx in range(1, len(self.estimators)):
 
-            try:
+            clf = self.estimators[clf_idx][1]
+            X_probas += clf.predict_proba(X) * self.weights[clf_idx]
 
-                clf = self.estimators[clf_idx][1]
-                X_probas += clf.predict_proba(X) * self.weights[clf_idx]
-                w_sum += self.weights[clf_idx]
-
-            except:
-                logger.warning('  Could not predict with {}'.format(self.estimators[clf_idx][0]))
-
-        return X_probas / w_sum
+        return X_probas / self.weights.sum()
 
 
 class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples, Visualization):
