@@ -435,9 +435,7 @@ def predict_scikit_probas(rw,
 
         if relax_probabilities:
 
-            return np.uint16(moving_window(probabilities.T.reshape(n_classes,
-                                                                   rw,
-                                                                   cw),
+            return np.uint16(moving_window(raster_tools.columns_to_nd(probabilities, n_classes, rw, cw),
                                            statistic='plr',
                                            window_size=plr_window_size,
                                            weights=plr_matrix,
@@ -446,16 +444,11 @@ def predict_scikit_probas(rw,
                                                                       jpadded:jpadded+n_cols] * 10000.0)
 
         else:
-
-            return np.uint16(probabilities.T.reshape(n_classes,
-                                                     rw,
-                                                     cw) * 10000.0)
+            return np.uint16(raster_tools.columns_to_nd(probabilities, n_classes, rw, cw) * 10000.0)
 
     else:
 
-        probabilities_argmax = moving_window(probabilities.T.reshape(n_classes,
-                                                                     rw,
-                                                                     cw),
+        probabilities_argmax = moving_window(raster_tools.columns_to_nd(probabilities, n_classes, rw, cw),
                                              statistic='plr',
                                              window_size=plr_window_size,
                                              weights=plr_matrix,
@@ -5798,7 +5791,14 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             out_raster_object = self._set_output_object()
 
-            if not self.predict_probs:
+            if self.predict_probs:
+
+                for cidx in range(1, mdl.classes_+1):
+
+                    out_raster_object.get_band(cidx)
+                    out_raster_object.fill(0)
+
+            else:
 
                 out_raster_object.get_band(1)
                 out_raster_object.fill(0)
@@ -6101,11 +6101,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                           self.predict_probs,
                                                           self.d_type)
 
-                        for cl in range(0, self.n_classes):
+                        for cidx in range(0, predicted.shape[0]):
 
-                            out_raster_object.get_band(cl+1)
+                            out_raster_object.get_band(cidx+1)
 
-                            out_raster_object.write_array(predicted[cl],
+                            out_raster_object.write_array(predicted[cidx],
                                                           j=j-jwo,
                                                           i=i-iwo)
 
