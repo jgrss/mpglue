@@ -5944,7 +5944,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                          rows=rw,
                                          cols=cw,
                                          predictions=True,
-                                         d_type='float64',
+                                         d_type='float32',
                                          n_jobs=self.n_jobs_vars)
 
             n_samples = rw * cw
