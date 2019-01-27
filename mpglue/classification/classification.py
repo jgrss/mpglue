@@ -440,9 +440,9 @@ def predict_scikit_probas(rw,
 
         # Predict class conditional probabilities.
         if relax_probabilities:
-            return np.uint16(probabilities*10000.0)[:, ipadded:ipadded+n_rows, jpadded:jpadded+n_cols]
+            return probabilities[:, ipadded:ipadded+n_rows, jpadded:jpadded+n_cols]
         else:
-            return np.uint16(probabilities*10000.0)
+            return probabilities
 
     probabilities = probabilities.argmax(axis=0)
 
@@ -5614,11 +5614,11 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 self.o_info.bands = 1
 
             # OUTPUT DATA TYPE
-            if self.predict_probs or self.classifier_info['classifier'] in ['abr', 'abr-ex-dtr', 'bgr', 'bag-dtr',
-                                                                            'rfr', 'ex-rfr', 'svr', 'svra',
-                                                                            'cubist', 'dtr']:
+            if self.predict_probs or (self.classifier_info['classifier'] in ['abr', 'abr-ex-dtr', 'bgr', 'bag-dtr',
+                                                                             'rfr', 'ex-rfr', 'svr', 'svra',
+                                                                             'cubist', 'dtr']):
 
-                self.o_info.update_info(storage='uint16')
+                self.o_info.update_info(storage='float32')
                 self.d_type = 'float32'
 
             else:
@@ -6092,8 +6092,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                           self.plr_iterations,
                                                           self.predict_probs,
                                                           self.d_type)
-
-                        logger.info(predicted.shape)
 
                         for cidx in range(0, predicted.shape[0]):
 
