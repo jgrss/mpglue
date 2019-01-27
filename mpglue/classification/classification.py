@@ -418,6 +418,8 @@ def predict_scikit_probas(rw,
         d_type (str)
     """
 
+    import pdb;pdb.set_trace()
+
     # `probabilities` shaped as [samples x n classes]
     probabilities = mdl.predict_proba(features)
 
@@ -437,9 +439,9 @@ def predict_scikit_probas(rw,
                                            statistic='plr',
                                            window_size=plr_window_size,
                                            weights=plr_matrix,
-                                           iterations=plr_iterations)[:,
-                                                                      ipadded:ipadded+n_rows,
-                                                                      jpadded:jpadded+n_cols] * 10000.0)
+                                           iterations=plr_iterations)*10000.0)[:,
+                                                                               ipadded:ipadded+n_rows,
+                                                                               jpadded:jpadded+n_cols]
 
         else:
             return np.uint16(raster_tools.columns_to_nd(probabilities*10000.0, n_classes, rw, cw))
