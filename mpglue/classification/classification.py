@@ -6099,6 +6099,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                                                           self.predict_probs,
                                                           self.d_type)
 
+                        import pdb;pdb.set_trace()
+
                         for cidx in range(0, predicted.shape[0]):
 
                             logger.info(np.percentile(predicted[cidx], 95))
