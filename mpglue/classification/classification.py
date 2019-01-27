@@ -6095,8 +6095,6 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                         for cidx in range(0, predicted.shape[0]):
 
-                            logger.info(np.percentile(predicted[cidx], 95))
-
                             out_raster_object.write_array(predicted[cidx],
                                                           i=i-iwo,
                                                           j=j-jwo,
