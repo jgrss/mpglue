@@ -5793,7 +5793,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             if self.predict_probs:
 
-                for cidx in range(1, mdl.classes_+1):
+                for cidx in range(1, len(mdl.classes_)+1):
 
                     out_raster_object.get_band(cidx)
                     out_raster_object.fill(0)
