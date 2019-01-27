@@ -4097,11 +4097,9 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 # self.classifier_info, self.model = self.load(self.input_model)
                 self.classifier_info, self.model, self.sample_info_dict = joblib.load(self.input_model)
 
-                import pdb;pdb.set_trace()
-
                 self.n_feas = self.sample_info_dict['n_feas']
-                self.n_classes = self.sample_info_dict['n_classes']
-                self.classes = self.sample_info_dict['classes']
+                self.n_classes = len(self.model.classes_)
+                self.classes = self.model.classes_
                 self.scaler = self.sample_info_dict['scaler']
                 self.scaled = self.sample_info_dict['scaled']
                 self.use_xy = self.sample_info_dict['use_xy']
@@ -4109,9 +4107,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 self.feature_object = self.sample_info_dict['feature_object']
 
             except:
-
-                logger.error('  Could not load {}'.format(self.input_model))
-                raise OSError
+                logger.exception('  Could not load {}'.format(self.input_model))
 
     def _default_parameters(self):
         
