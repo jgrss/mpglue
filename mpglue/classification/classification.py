@@ -4097,6 +4097,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                 # self.classifier_info, self.model = self.load(self.input_model)
                 self.classifier_info, self.model, self.sample_info_dict = joblib.load(self.input_model)
 
+                import pdb;pdb.set_trace()
+
                 self.n_feas = self.sample_info_dict['n_feas']
                 self.n_classes = self.sample_info_dict['n_classes']
                 self.classes = self.sample_info_dict['classes']
