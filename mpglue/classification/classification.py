@@ -418,6 +418,8 @@ def predict_scikit_probas(rw,
         d_type (str)
     """
 
+    import pdb;pdb.set_trace()
+
     # `probabilities` shaped as [samples x n classes]
     probabilities = mdl.predict_proba(features)
 
