@@ -419,7 +419,7 @@ def predict_scikit_probas(rw,
     """
 
     # `probabilities` shaped as [samples x n classes]
-    probabilities = mdl.predict_proba(features)
+    probabilities = mdl.predict_proba(np.float64(features))
 
     # Get the classes.
     class_list = mdl.classes_
@@ -430,7 +430,7 @@ def predict_scikit_probas(rw,
 
     if relax_probabilities:
 
-        probabilities = moving_window(probabilities,
+        probabilities = moving_window(np.float32(probabilities),
                                       statistic='plr',
                                       window_size=plr_window_size,
                                       weights=plr_matrix,
