@@ -519,7 +519,7 @@ def get_available_models():
 
     return ['ab-dt', 'ab-ex-dt', 'ab-rf', 'ab-ex-rf', 'ab-dtr', 'ab-ex-dtr',
             'ab-rfr', 'ab-ex-rfr',
-            'bag-dt', 'bag-ex-dt', 'bag-dtr', 'blag', 'bayes', 'dt', 'dtr',
+            'bag-dt', 'bag-ex-dt', 'bag-dtr', 'blag', 'blaf', 'bayes', 'dt', 'dtr',
             'ex-dt', 'ex-dtr', 'gb', 'gbr', 'c5', 'cubist',
             'ex-rf', 'ex-rfr',
             'logistic', 'nn', 'gaussian',
@@ -546,7 +546,8 @@ class ParameterHandler(object):
                        'bag-ex-dt',
                        'bag-dtr']
 
-        self.imbalanced = ['blag']
+        self.bagged_imbalanced = ['blag']
+        self.forest_imbalanced = ['blaf']
 
         self.trees = ['dt',
                       'ex-dt']
@@ -583,12 +584,19 @@ class ParameterHandler(object):
                                  'bootstrap', 'bootstrap_features', 'oob_score', 'warm_start',
                                  'n_jobs', 'random_state', 'verbose']
 
-        elif classifier in self.imbalanced:
+        elif classifier in self.bagged_imbalanced:
 
             self.valid_params = ['base_estimator', 'n_estimators', 'max_samples', 'max_features',
                                  'bootstrap', 'bootstrap_features', 'oob_score', 'warm_start',
                                  'ratio', 'replacement',
                                  'n_jobs', 'random_state', 'verbose']
+
+        elif classifier in self.forest_imbalanced:
+
+            self.valid_params = ['n_estimators', 'criterion', 'max_depth', 'min_samples_split', 'min_samples_leaf',
+                                 'min_weight_fraction_leaf', 'max_features', 'max_leaf_nodes',
+                                 'min_impurity_decrease', 'bootstrap', 'oob_score', 'replacement',
+                                 'n_jobs', 'verbose', 'warm_start', 'class_weight']
 
         elif classifier in self.trees:
 
@@ -3581,7 +3589,9 @@ class ModelOptions(object):
                         *Scikit-learn            
         bag-ex-dt   -- Bagged Decision Trees with extremely randomized trees (classification problems)
                         *Scikit-learn
-        blag        -- Downsampled bagging (classification problems)
+        blag        -- Resampled bagging (classification problems)
+                        *Imbalanced-learn
+        blaf        -- Resampled random forest (classification problems)
                         *Imbalanced-learn
         bayes       -- Naives Bayes (classification problems)
                         *Scikit-learn
@@ -4360,6 +4370,20 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     voting_sub_model = imblearn.BalancedBaggingClassifier(**self.classifier_info_base)
 
+                elif classifier == 'blaf':
+
+                    if not IMBLEARN_INSTALLED:
+
+                        logger.error("""\
+
+                        Imbalanced learn must be installed to use the model. Install from
+
+                        pip install imbalanced-learn
+
+                        """)
+
+                    voting_sub_model = imblearn.BalancedRandomForestClassifier(**self.classifier_info_base)
+
                 elif classifier == 'tpot':
 
                     if not TPOT_INSTALLED:
@@ -4717,6 +4741,20 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     """)
 
                 self.model = imblearn.BalancedBaggingClassifier(**self.classifier_info_base)
+
+            elif self.classifier_info['classifier'] == 'blaf':
+
+                if not IMBLEARN_INSTALLED:
+
+                    logger.error("""\
+
+                    Imbalanced learn must be installed to use the model. Install from
+
+                    pip install imbalanced-learn
+
+                    """)
+
+                self.model = imblearn.BalancedRandomForestClassifier(**self.classifier_info_base)
 
             elif self.classifier_info['classifier'] == 'tpot':
 
@@ -5409,11 +5447,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
             in_stats (Optional[str]): A XML statistics file. Default is None. *Only applicable to Orfeo models.
             in_model (Optional[str]): A model file to load. Default is None. *Only applicable to Orfeo
                 and C5/Cubist models.
-            mask_background (Optional[str or 2d array]): An image or array to use as a background mask,
-                applied post-classification. Default is None.
+            mask_background (Optional[str or 2d array]): An image or array to use as a background mask. Default is None.
             background_band (int): The band from `mask_background` to use for null background value. Default is 1.
             background_value (Optional[int]): The background value in `mask_background`. Default is 0.
-            minimum_observations (Optional[int]): A minimum number of observations in ``mask_background`` to be
+            minimum_observations (Optional[int]): A minimum number of observations in `mask_background` to be
                 recoded to 0. Default is 0, or no minimum observation filter.
             observation_band (Optional[int]): The band position in `mask_background` of the `minimum_observations`
                 counts. Default is 0.
@@ -6457,16 +6494,15 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     out_rst_object.write_array(m_array, i, j)
 
-        del m_info
+        m_info = None
 
         if isinstance(self.mask_background, str):
 
             b_info.close()
-            del b_info
+            b_info = None
 
         out_rst_object.close_all()
-
-        del out_rst_object
+        out_rst_object = None
 
         os.remove(self.out_image_temp)
 
