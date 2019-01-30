@@ -108,6 +108,8 @@ try:
     from sklearn.decomposition import PCA as skPCA
     from sklearn.decomposition import IncrementalPCA
     from sklearn.gaussian_process import GaussianProcessClassifier
+    from sklearn.base import BaseEstimator, ClassifierMixin
+    from sklearn.utils.multiclass import unique_labels
 except:
 
     logger.error('Scikit-learn must be installed')
@@ -3662,7 +3664,7 @@ class ModelOptions(object):
         """
 
 
-class VotingClassifier(object):
+class VotingClassifier(BaseEstimator, ClassifierMixin):
 
     """
     A voting classifier class to use prefit models instead of re-fitting
@@ -3672,12 +3674,16 @@ class VotingClassifier(object):
         weights (Optional[list, 1d array-like): The estimator weights.
     """
 
-    def __init__(self, estimators, weights=None, class_list=None):
+    def __init__(self, estimators, weights=None, y=None):
 
         self.estimators = estimators
         self.weights = weights
-
         self.is_prefit_model = True
+        self.y_ = y
+        self.classes_ = None
+
+        if isinstance(y, np.ndarray) or isinstance(y, list):
+            self.classes_ = unique_labels(y)
 
         if isinstance(self.weights, list):
             self.weights = np.array(self.weights, dtype='float32')
@@ -3689,8 +3695,6 @@ class VotingClassifier(object):
 
             logger.error('  The length of the weights must match the length of the estimators.')
             raise ArrayShapeError
-
-        self.classes_ = class_list
 
         if isinstance(self.classes_, np.ndarray) or isinstance(self.classes_, list):
             self.n_classes_ = len(self.classes_)
