@@ -3672,9 +3672,11 @@ class VotingClassifier(BaseEstimator, ClassifierMixin):
     Args:
         estimators (list of tuples): The fitted estimators.
         weights (Optional[list, 1d array-like): The estimator weights.
+        y (1d array-like)
+        classes (1d array-like)
     """
 
-    def __init__(self, estimators, weights=None, y=None):
+    def __init__(self, estimators, weights=None, y=None, classes=None):
 
         self.estimators = estimators
         self.weights = weights
@@ -3684,6 +3686,8 @@ class VotingClassifier(BaseEstimator, ClassifierMixin):
 
         if isinstance(y, np.ndarray) or isinstance(y, list):
             self.classes_ = unique_labels(y)
+        elif isinstance(classes, np.ndarray) or isinstance(classes, list):
+            self.classes_ = classes
 
         if isinstance(self.weights, list):
             self.weights = np.array(self.weights, dtype='float32')
@@ -4620,7 +4624,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
             self.model = VotingClassifier(estimators=classifier_list,
                                           weights=vote_weights,
-                                          class_list=self.classes)
+                                          classes=self.classes)
 
             # Reset the original classifier info.
             self.classifier_info = copy(classifier_info)
