@@ -521,7 +521,7 @@ def get_available_models():
 
     return ['ab-dt', 'ab-ex-dt', 'ab-rf', 'ab-ex-rf', 'ab-dtr', 'ab-ex-dtr',
             'ab-rfr', 'ab-ex-rfr',
-            'bag-dt', 'bag-ex-dt', 'bag-dtr', 'blag', 'blaf', 'bayes', 'dt', 'dtr',
+            'bag-dt', 'bag-ex-dt', 'bag-dtr', 'blag', 'blaf', 'blab', 'bayes', 'dt', 'dtr',
             'ex-dt', 'ex-dtr', 'gb', 'gbr', 'c5', 'cubist',
             'ex-rf', 'ex-rfr',
             'logistic', 'nn', 'gaussian',
@@ -550,6 +550,7 @@ class ParameterHandler(object):
 
         self.bagged_imbalanced = ['blag']
         self.forest_imbalanced = ['blaf']
+        self.boost_imbalanced = ['blab']
 
         self.trees = ['dt',
                       'ex-dt']
@@ -599,6 +600,11 @@ class ParameterHandler(object):
                                  'min_weight_fraction_leaf', 'max_features', 'max_leaf_nodes',
                                  'min_impurity_decrease', 'bootstrap', 'oob_score', 'replacement',
                                  'n_jobs', 'verbose', 'warm_start', 'class_weight']
+
+        elif classifier in self.boost_imbalanced:
+
+            self.valid_params = ['base_estimator', 'n_estimators', 'learning_rate', 'algorithm',
+                                 'sampling_strategy', 'replacement', 'random_state']
 
         elif classifier in self.trees:
 
@@ -3595,6 +3601,8 @@ class ModelOptions(object):
                         *Imbalanced-learn
         blaf        -- Resampled random forest (classification problems)
                         *Imbalanced-learn
+        blab        -- Resampled boosting (classification problems)
+                        *Imbalanced-learn                        
         bayes       -- Naives Bayes (classification problems)
                         *Scikit-learn
         dt          -- Decision Trees based on CART algorithm (classification problems)
@@ -4150,9 +4158,10 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
         if 'classifier' not in self.classifier_info:
             self.classifier_info['classifier'] = 'rf'
 
+        # Models with base estimators
         if self.classifier_info['classifier'].startswith('ab-') or \
                 self.classifier_info['classifier'].startswith('bag-') or \
-                (self.classifier_info['classifier'] == 'blag'):
+                (self.classifier_info['classifier'] in ['blag', 'blab']):
 
             class_base = copy(self.classifier_info['classifier'])
 
@@ -4170,7 +4179,7 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
         # Create a separate instance for
         #   AdaBoost and Bagging base classifiers.
-        if class_base.startswith('ab-') or class_base.startswith('bag-') or (class_base == 'blag'):
+        if class_base.startswith('ab-') or class_base.startswith('bag-') or (class_base in ['blag', 'blab']):
 
             self.classifier_info_base = copy(self.classifier_info)
             self.classifier_info_base['classifier'] = class_base
@@ -4376,7 +4385,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                         """)
 
-                    voting_sub_model = imblearn.BalancedBaggingClassifier(**self.classifier_info_base)
+                    voting_sub_model = imblearn.BalancedBaggingClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
+                                                                          **self.classifier_info_base)
 
                 elif classifier == 'blaf':
 
@@ -4391,6 +4401,21 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                         """)
 
                     voting_sub_model = imblearn.BalancedRandomForestClassifier(**self.classifier_info_base)
+
+                elif classifier == 'blab':
+
+                    if not IMBLEARN_INSTALLED:
+
+                        logger.error("""\
+
+                        Imbalanced learn must be installed to use the model. Install from
+
+                        pip install imbalanced-learn
+
+                        """)
+
+                    voting_sub_model = imblearn.RUSBoostClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
+                                                                   **self.classifier_info_base)
 
                 elif classifier == 'tpot':
 
@@ -4748,7 +4773,8 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
 
                     """)
 
-                self.model = imblearn.BalancedBaggingClassifier(**self.classifier_info_base)
+                self.model = imblearn.BalancedBaggingClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
+                                                                **self.classifier_info_base)
 
             elif self.classifier_info['classifier'] == 'blaf':
 
@@ -4763,6 +4789,21 @@ class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples,
                     """)
 
                 self.model = imblearn.BalancedRandomForestClassifier(**self.classifier_info_base)
+
+            elif self.classifier_info['classifier'] == 'blab':
+
+                if not IMBLEARN_INSTALLED:
+
+                    logger.error("""\
+
+                    Imbalanced learn must be installed to use the model. Install from
+
+                    pip install imbalanced-learn
+
+                    """)
+
+                self.model = imblearn.RUSBoostClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
+                                                         **self.classifier_info_base)
 
             elif self.classifier_info['classifier'] == 'tpot':
 
