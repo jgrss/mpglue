@@ -3558,7 +3558,7 @@ class VotingClassifier(BaseEstimator, ClassifierMixin):
         return X_probas / self.weights.sum()
 
 
-class classification(EndMembers, ModelOptions, PickleIt, Preprocessing, Samples, Visualization):
+class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualization):
 
     """
     A class for image sampling and classification
