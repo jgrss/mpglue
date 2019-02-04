@@ -4189,8 +4189,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
                         """)
 
-                    voting_sub_model = imblearn.BalancedBaggingClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
-                                                                          **self.classifier_info_base)
+                    voting_sub_model = imblearn.BalancedBaggingClassifier(**self.classifier_info_base)
 
                 elif classifier == 'blaf':
 
@@ -4218,8 +4217,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
                         """)
 
-                    voting_sub_model = imblearn.RUSBoostClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
-                                                                   **self.classifier_info_base)
+                    voting_sub_model = imblearn.RUSBoostClassifier(**self.classifier_info_base)
 
                 elif classifier == 'tpot':
 
@@ -4577,8 +4575,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
                     """)
 
-                self.model = imblearn.BalancedBaggingClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
-                                                                **self.classifier_info_base)
+                self.model = imblearn.BalancedBaggingClassifier(**self.classifier_info_base)
 
             elif self.classifier_info['classifier'] == 'blaf':
 
@@ -4606,8 +4603,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
                     """)
 
-                self.model = imblearn.RUSBoostClassifier(base_estimator=tree.ExtraTreeClassifier(**self.classifier_info_),
-                                                         **self.classifier_info_base)
+                self.model = imblearn.RUSBoostClassifier(**self.classifier_info_base)
 
             elif self.classifier_info['classifier'] == 'tpot':
 
