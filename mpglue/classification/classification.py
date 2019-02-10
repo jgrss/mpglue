@@ -1202,7 +1202,7 @@ class Samples(object):
         self.sample_info_dict['classes'] = self.classes
         self.sample_info_dict['n_feas'] = self.n_feas
 
-        for k, v in viewitems(**kwargs):
+        for k, v in viewitems(kwargs):
             self.sample_info_dict[k] = v
 
     @property
