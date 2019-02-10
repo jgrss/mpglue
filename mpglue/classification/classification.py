@@ -1155,9 +1155,6 @@ class Samples(object):
             logger.error('  `labs_type` should be int or float')
             raise TypeError
 
-        self.classes = list(np.unique(self.labels))
-        self.n_classes = len(self.classes)
-
         if norm_struct:
             self.p_vars = np.float32(self.all_samps[:, :self.label_idx])
         else:
@@ -1195,12 +1192,37 @@ class Samples(object):
             self.scaler = None
             self.scaled = False
 
-        self.sample_info_dict['n_feas'] = self.n_feas
+        self.update_sample_info(scaler=self.scaler,
+                                scaled=self.scaled,
+                                use_xy=self.use_xy)
+
+    def update_sample_info(self, **kwargs):
+
         self.sample_info_dict['n_classes'] = self.n_classes
         self.sample_info_dict['classes'] = self.classes
-        self.sample_info_dict['scaler'] = self.scaler
-        self.sample_info_dict['scaled'] = self.scaled
-        self.sample_info_dict['use_xy'] = self.use_xy
+        self.sample_info_dict['n_feas'] = self.n_feas
+
+        for k, v in viewitems(**kwargs):
+            self.sample_info_dict[k] = v
+
+    @property
+    def n_classes(self):
+        return len(self.classes)
+
+    @property
+    def classes(self):
+        return self._classes()
+
+    def _classes(self):
+
+        if hasattr(self, 'model'):
+            return self.model.classes_
+        else:
+
+            if self.labels:
+                return list(map(int, list(np.unique(self.labels))))
+            else:
+                return list()
 
     @staticmethod
     def _stack_samples(counter,
@@ -1374,9 +1396,6 @@ class Samples(object):
         self.scaled = True
 
     def update_class_counts(self):
-
-        self.classes = list(map(int, list(np.unique(self.labels))))
-        self.n_classes = len(self.classes)
 
         self.class_counts = dict()
 
@@ -1943,8 +1962,6 @@ class Samples(object):
 
             self.labels[np.isnan(self.labels) | np.isinf(self.labels)] = 0
             self.n_samps = self.labels.size
-            self.classes = list(np.unique(self.labels))
-            self.n_classes = len(self.classes)
 
             # Check whether there are any
             #   negative class labels.
@@ -1973,15 +1990,11 @@ class Samples(object):
             for indv_class in self.classes:
                 self.class_counts[indv_class] = (self.labels == indv_class).sum()
 
-            self.sample_info_dict['n_classes'] = self.n_classes
-            self.sample_info_dict['classes'] = self.classes
-
         self.n_feas = self.p_vars.shape[3]
 
-        self.sample_info_dict['n_feas'] = self.n_feas
-        self.sample_info_dict['scaler'] = scaler
-        self.sample_info_dict['scaled'] = True
-        self.sample_info_dict['use_xy'] = False
+        self.update_sample_info(scaler=scaler,
+                                scaled=True,
+                                use_xy=False)
 
 
 class Visualization(object):
@@ -3927,8 +3940,6 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
                 self.classifier_info, self.model, self.sample_info_dict = joblib.load(self.input_model)
 
                 self.n_feas = self.sample_info_dict['n_feas']
-                self.n_classes = len(self.model.classes_)
-                self.classes = self.model.classes_
                 self.scaler = self.sample_info_dict['scaler']
                 self.scaled = self.sample_info_dict['scaled']
                 self.use_xy = self.sample_info_dict['use_xy']
