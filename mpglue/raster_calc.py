@@ -236,7 +236,7 @@ def raster_calc(output,
                                                            y=overlap_info.top,
                                                            check_position=False)[2:]
 
-                exec('marrvar_{KEY} = i_info_{KEY}.read(bands2open=band_dict["{KEY}_band"], i=i+y_off, j=j+x_off, rows=n_rows, cols=n_cols, d_type="float32")'.format(KEY=key))
+                exec('marrvar_{KEY} = info_dict["{KEY}"].read(bands2open=band_dict["{KEY}_band"], i=i+y_off, j=j+x_off, rows=n_rows, cols=n_cols, d_type="float32")'.format(KEY=key))
 
             if '&&' in equation:
 
@@ -257,9 +257,9 @@ def raster_calc(output,
 
             else:
 
-                if 'nan_to_num' in equation_:
+                if 'nan_to_num' in equation:
 
-                    equation_ = 'out_array = {}'.format(equation_)
+                    equation_ = 'out_array = {}'.format(equation)
                     exec(equation_)
 
                 else:
