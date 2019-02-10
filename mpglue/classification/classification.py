@@ -1219,7 +1219,12 @@ class Samples(object):
             return self.model.classes_
         else:
 
-            if self.labels:
+            if isinstance(self.labels, np.ndarray):
+                has_labels = True if self.labels.shape[0] > 0 else False
+            else:
+                has_labels = True if self.labels else False
+
+            if has_labels:
                 return list(map(int, list(np.unique(self.labels))))
             else:
                 return list()
