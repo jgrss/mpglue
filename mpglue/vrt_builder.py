@@ -68,7 +68,7 @@ class VRTBuilder(object):
 
         self.xml_end = '</VRTDataset>'
 
-    def get_full_extent(self, in_dict, separate, search_extension):
+    def get_full_extent(self, in_dict, separate, search_extension, use_image_min=False):
 
         """Gets extent information for all images"""
 
@@ -131,10 +131,19 @@ class VRTBuilder(object):
         # Get the minimum and maximum
         #   extent of all images.
 
-        self.left = 100000000.
-        self.right = -100000000.
-        self.top = -100000000.
-        self.bottom = 100000000.
+        if use_image_min:
+
+            self.left = -100000000.0
+            self.right = 100000000.0
+            self.top = 100000000.0
+            self.bottom = -100000000.0
+
+        else:
+
+            self.left = 100000000.0
+            self.right = -100000000.0
+            self.top = -100000000.0
+            self.bottom = 100000000.0
 
         for im, image in enumerate(image_list):
 
@@ -149,10 +158,19 @@ class VRTBuilder(object):
                     self.storage = i_info.storage
                     self.geo_transform = list(i_info.geo_transform)
 
-                self.left = min(i_info.left, self.left)
-                self.right = max(i_info.right, self.right)
-                self.top = max(i_info.top, self.top)
-                self.bottom = min(i_info.bottom, self.bottom)
+                if use_image_min:
+
+                    self.left = max(i_info.left, self.left)
+                    self.right = min(i_info.right, self.right)
+                    self.top = min(i_info.top, self.top)
+                    self.bottom = max(i_info.bottom, self.bottom)
+
+                else:
+
+                    self.left = min(i_info.left, self.left)
+                    self.right = max(i_info.right, self.right)
+                    self.top = max(i_info.top, self.top)
+                    self.bottom = min(i_info.bottom, self.bottom)
 
             i_info = None
 
@@ -474,7 +492,8 @@ def vrt_builder(in_dict,
                 overwrite=False,
                 separate=False,
                 search_extension='.tif',
-                relative_path=False):
+                relative_path=False,
+                use_image_min=False):
 
     """
     Builds a VRT file, accepting raster files with different band counts.
@@ -542,7 +561,7 @@ def vrt_builder(in_dict,
     vb.get_xml_base()
 
     # Get the image extent information.
-    vb.get_full_extent(in_dict, separate, search_extension)
+    vb.get_full_extent(in_dict, separate, search_extension, use_image_min=use_image_min)
 
     # Update the main part of the XML string.
     vb.replace_main(no_data=no_data)
