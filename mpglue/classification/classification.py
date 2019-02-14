@@ -5646,7 +5646,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
         # Load the model.
         if isinstance(self.input_model, str):
-            mdl, sample_info_dict_g = joblib.load(self.input_model)[1:]
+            __, mdl, sample_info_dict_g = joblib.load(self.input_model)
         else:
             mdl = self.model
             sample_info_dict_g = self.sample_info_dict
