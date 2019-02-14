@@ -425,7 +425,7 @@ def predict_scikit_probas(rw,
 
     # Get the classes.
     class_list = mdl.classes_
-    
+
     n_classes = len(class_list)
 
     probabilities = raster_tools.columns_to_nd(probabilities, n_classes, rw, cw)
@@ -1225,7 +1225,7 @@ class Samples(object):
                 has_labels = True if self.labels else False
 
             if has_labels:
-                return list(map(int, list(np.unique(self.labels))))
+                return unique_labels(self.labels)
             else:
                 return list()
 
