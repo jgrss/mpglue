@@ -424,7 +424,8 @@ def predict_scikit_probas(rw,
     probabilities = mdl.predict_proba(np.float64(features))
 
     # Get the classes.
-    class_list = mdl.classes_
+    # class_list = mdl.classes_
+    class_list = sample_info_dict_g['classes']
 
     n_classes = len(class_list)
 
@@ -5635,7 +5636,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
     def _predict(self):
 
         # Global variables for parallel processing.
-        global features, model_pp, predict_samps, indice_pairs, mdl
+        global features, model_pp, predict_samps, indice_pairs, mdl, sample_info_dict_g
 
         features = None
         model_pp = None
@@ -5645,9 +5646,10 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
         # Load the model.
         if isinstance(self.input_model, str):
-            mdl = joblib.load(self.input_model)[1]
+            mdl, sample_info_dict_g = joblib.load(self.input_model)[1:]
         else:
             mdl = self.model
+            sample_info_dict_g = self.sample_info_dict
 
         # Set default indexing variables.
         start_i = 0

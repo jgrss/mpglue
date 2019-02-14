@@ -3716,7 +3716,7 @@ def build_vrt(file_list,
         overwrite (Optional[bool]): Whether to overwrite an existing VRT file. Default is False.
         kwargs:
              resolution=None,
-             outputBounds=None,
+             outputBounds=None (minX, minY, maxX, maxY),
              targetAlignedPixels=None,
              separate=None,
              bandList=None,
