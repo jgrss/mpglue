@@ -5643,6 +5643,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
         predict_samps = None
         indice_pairs = None
         mdl = None
+        sample_info_dict_g = None
 
         # Load the model.
         if isinstance(self.input_model, str):
