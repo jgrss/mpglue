@@ -424,9 +424,8 @@ def predict_scikit_probas(rw,
     probabilities = mdl.predict_proba(np.float64(features))
 
     # Get the classes.
-    # class_list = mdl.classes_
-    class_list = sample_info_dict_g['classes']
-
+    class_list = mdl.classes_
+    
     n_classes = len(class_list)
 
     probabilities = raster_tools.columns_to_nd(probabilities, n_classes, rw, cw)
@@ -5089,6 +5088,8 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
                     self.calibrated = True
 
+                self.model.classes_ = unique_labels(self.labels)
+
         if isinstance(self.output_model, str):
 
             logger.info('  Saving model to file ...')
@@ -5636,21 +5637,19 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
     def _predict(self):
 
         # Global variables for parallel processing.
-        global features, model_pp, predict_samps, indice_pairs, mdl, sample_info_dict_g
+        global features, model_pp, predict_samps, indice_pairs, mdl
 
         features = None
         model_pp = None
         predict_samps = None
         indice_pairs = None
         mdl = None
-        sample_info_dict_g = None
 
         # Load the model.
         if isinstance(self.input_model, str):
-            __, mdl, sample_info_dict_g = joblib.load(self.input_model)
+            mdl = joblib.load(self.input_model)[1]
         else:
             mdl = self.model
-            sample_info_dict_g = self.sample_info_dict
 
         # Set default indexing variables.
         start_i = 0
