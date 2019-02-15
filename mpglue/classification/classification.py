@@ -5088,7 +5088,8 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
                     self.calibrated = True
 
-                self.model.classes_ = unique_labels(self.labels)
+                    if hasattr(self.model, 'estimators'):
+                        self.model.classes_ = self.model.estimators[0][1].classes_
 
         if isinstance(self.output_model, str):
 
