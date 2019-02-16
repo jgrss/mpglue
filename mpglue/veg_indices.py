@@ -116,8 +116,8 @@ class SensorInfo(object):
                      '((array02 / scale_factor) + (array01 / scale_factor))',
              'NDBAI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
                       '((array02 / scale_factor) + (array01 / scale_factor))',
-             'NBR': '((array02 / scale_factor) - (array01 / scale_factor)) / '
-                     '((array02 / scale_factor) + (array01 / scale_factor))',
+             'NBRI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
+                      '((array02 / scale_factor) + (array01 / scale_factor))',
              'NDII': '(array03 - array02 + array01) / (array03 + array02 + array01)',
              'NDVI': '((array02 / scale_factor) - (array01 / scale_factor)) / '
                      '((array02 / scale_factor) + (array01 / scale_factor))',
@@ -168,7 +168,7 @@ class SensorInfo(object):
                             'MNDWI': (-1.0, 1.0),
                             'NDSI': (-1.0, 1.0),
                             'NDBAI': (-1.0, 1.0),
-                            'NBR': (-1.0, 1.0),
+                            'NBRI': (-1.0, 1.0),
                             'NDII': (-1.0, 1.0),
                             'NDVI': (-1.0, 1.0),
                             'RENDVI': (-1.0, 1.0),
@@ -383,7 +383,7 @@ class VegIndicesEquations(SensorInfo):
                             'MSAVI': self.MSAVI,
                             'NDSI': self.NDSI,
                             'NDBAI': self.NDBAI,
-                            'NBR': self.NBR,
+                            'NBRI': self.NBR,
                             'NDVI': self.NDVI,
                             'RENDVI': self.RENDVI,
                             'ONDVI': self.ONDVI,
