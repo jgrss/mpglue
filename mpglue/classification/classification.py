@@ -333,7 +333,10 @@ def predict_scikit_probas_static(features,
     probabilities = mdl.predict_proba(features)
 
     # Get the classes.
-    class_list = mdl.classes_
+    if hasattr(mdl, 'estimators'):
+        class_list = mdl.estimators[0][1].classes_
+    else:
+        class_list = mdl.classes_
 
     n_classes = probabilities.shape[1]
 
