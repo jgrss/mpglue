@@ -332,13 +332,22 @@ def predict_scikit_probas_static(features,
     # `probabilities` shaped as [samples x n classes]
     probabilities = mdl.predict_proba(features)
 
+    n_classes = probabilities.shape[1]
+
     # Get the classes.
     if hasattr(mdl, 'estimators'):
-        class_list = mdl.estimators[0][1].classes_
+
+        if len(mdl.classes_) == n_classes:
+            class_list = mdl.classes_
+        elif len(mdl.estimators[0][1].classes_):
+            class_list = mdl.estimators[0][1].classes_
+        else:
+
+            logger.exception('Could not match the class list.')
+            raise ValueError
+
     else:
         class_list = mdl.classes_
-
-    n_classes = probabilities.shape[1]
 
     # Reshape and run PLR
     probabilities_argmax = moving_window(raster_tools.columns_to_nd(probabilities, n_classes, rw, cw),
