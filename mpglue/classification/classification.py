@@ -435,10 +435,22 @@ def predict_scikit_probas(rw,
     # `probabilities` shaped as [samples x n classes]
     probabilities = mdl.predict_proba(np.float64(features))
 
-    # Get the classes.
-    class_list = mdl.classes_
+    n_classes = probabilities.shape[1]
 
-    n_classes = len(class_list)
+    # Get the classes.
+    if hasattr(mdl, 'estimators'):
+
+        if len(mdl.classes_) == n_classes:
+            class_list = mdl.classes_
+        elif len(mdl.estimators[0][1].classes_):
+            class_list = mdl.estimators[0][1].classes_
+        else:
+
+            logger.exception('Could not match the class list.')
+            raise ValueError
+
+    else:
+        class_list = mdl.classes_
 
     probabilities = raster_tools.columns_to_nd(probabilities, n_classes, rw, cw)
 
