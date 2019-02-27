@@ -116,7 +116,7 @@ class SampleImage(object):
                  points_file,
                  image_file,
                  out_dir,
-                 class_id,
+                 class_id,SampleImage
                  accuracy=False,
                  n_jobs=0,
                  neighbors=False,

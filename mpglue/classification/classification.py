@@ -335,19 +335,19 @@ def predict_scikit_probas_static(features,
     n_classes = probabilities.shape[1]
 
     # Get the classes.
-    if hasattr(mdl, 'estimators'):
-
-        if len(mdl.classes_) == n_classes:
-            class_list = mdl.classes_
-        elif len(mdl.estimators[0][1].classes_):
-            class_list = mdl.estimators[0][1].classes_
-        else:
-
-            logger.exception('Could not match the class list.')
-            raise ValueError
-
-    else:
-        class_list = mdl.classes_
+    # if hasattr(mdl, 'estimators'):
+    #
+    #     if len(mdl.classes_) == n_classes:
+    #         class_list = mdl.classes_
+    #     # elif len(mdl.estimators[0][1].classes_):
+    #     #     class_list = mdl.estimators[0][1].classes_
+    #     else:
+    #
+    #         logger.exception('Could not match the class list.')
+    #         raise ValueError
+    #
+    # else:
+    class_list = mdl.classes_
 
     # Reshape and run PLR
     probabilities_argmax = moving_window(raster_tools.columns_to_nd(probabilities, n_classes, rw, cw),
@@ -438,19 +438,19 @@ def predict_scikit_probas(rw,
     n_classes = probabilities.shape[1]
 
     # Get the classes.
-    if hasattr(mdl, 'estimators'):
-
-        if len(mdl.classes_) == n_classes:
-            class_list = mdl.classes_
-        elif len(mdl.estimators[0][1].classes_):
-            class_list = mdl.estimators[0][1].classes_
-        else:
-
-            logger.exception('Could not match the class list.')
-            raise ValueError
-
-    else:
-        class_list = mdl.classes_
+    # if hasattr(mdl, 'estimators'):
+    #
+    #     if len(mdl.classes_) == n_classes:
+    #         class_list = mdl.classes_
+    #     elif len(mdl.estimators[0][1].classes_):
+    #         class_list = mdl.estimators[0][1].classes_
+    #     else:
+    #
+    #         logger.exception('Could not match the class list.')
+    #         raise ValueError
+    #
+    # else:
+    class_list = mdl.classes_
 
     probabilities = raster_tools.columns_to_nd(probabilities, n_classes, rw, cw)
 
@@ -4491,7 +4491,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
             self.model = VotingClassifier(estimators=classifier_list,
                                           weights=vote_weights,
-                                          classes=self.classes)
+                                          y=self.labels)
 
             # Reset the original classifier info.
             self.classifier_info = copy(classifier_info)
@@ -5112,8 +5112,8 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
                     self.calibrated = True
 
-                    if hasattr(self.model, 'estimators'):
-                        self.model.classes_ = self.model.estimators[0][1].classes_
+                    # if hasattr(self.model, 'estimators'):
+                    #     self.model.classes_ = self.model.estimators[0][1].classes_
 
         if isinstance(self.output_model, str):
 
