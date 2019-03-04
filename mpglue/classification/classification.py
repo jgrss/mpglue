@@ -330,7 +330,7 @@ def predict_scikit_probas_static(features,
     """
 
     # `probabilities` shaped as [samples x n classes]
-    probabilities = mdl.predict_proba(features)
+    probabilities = mdl.predict_proba(np.float64(features))
 
     n_classes = probabilities.shape[1]
 
@@ -5873,7 +5873,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
                                          rows=rw,
                                          cols=cw,
                                          predictions=True,
-                                         d_type='float32',
+                                         d_type='float64',
                                          n_jobs=self.n_jobs_vars)
 
             n_samples = rw * cw
