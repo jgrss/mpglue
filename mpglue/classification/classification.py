@@ -7454,6 +7454,63 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
             logger.error('  The score method {} is not supported.'.format(method))
             raise NameError
 
+    def cross_validation(self, n_splits=5, test_size=0.7, train_size=0.3, random_state=None, **kwargs):
+
+        """
+        A cross validation function to replace scikit-learn,
+        which does not handle the built-in VotingClassifier
+
+        Example:
+            >>> cl = classification()
+            >>> cl.split_samples(<args>)
+            >>> cl.construct_model(<args>)
+            >>>
+            >>> cl.cross_validation(n_splits=5, test_size=0.7, train_size=0.3)
+            >>> print(cl.cv_scores)
+        """
+
+        from sklearn.model_selection import ShuffleSplit, train_test_split
+        from sklearn.metrics import f1_score
+
+        self.cv_scores = list()
+
+        splitter = ShuffleSplit(n_splits=n_splits,
+                                test_size=test_size,
+                                train_size=train_size,
+                                random_state=random_state)
+
+        X, y = self.p_vars.copy(), self.labels.copy()
+        X_cal, y_cal = kwargs['calibrate_test'].copy(), kwargs['calibrate_labels'].copy()
+
+        for train_index, test_index in splitter.split(X):
+
+            # Set training data
+            self.p_vars = X[train_index]
+            self.labels = y[train_index]
+
+            # Set test data
+            p_vars_test = X[test_index]
+            labels_test = y[test_index]
+
+            # Set calibration samples
+            X_c, __, y_c, __ = train_test_split(X_cal,
+                                                y_cal,
+                                                test_size=0.5,
+                                                train_size=0.5)
+
+            kwargs['calibrate_test'] = X_c
+            kwargs['calibrate_labels'] = y_c
+
+            self.construct_model(**kwargs)
+
+            labels_predict = self.model.predict(p_vars_test)
+
+            score = f1_score(labels_test,
+                             labels_predict,
+                             average='weighted')
+
+            self.cv_scores.append(score)
+
     def stack_majority(self, img, output_model, out_img, classifier_info, scale_data=False, ignore_feas=[]):
 
         """
