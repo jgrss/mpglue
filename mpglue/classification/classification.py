@@ -7484,6 +7484,8 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
         X, y = self.p_vars.copy(), self.labels.copy()
 
+        import pdb;pdb.set_trace()
+
         for train_index, test_index in splitter.split(X):
 
             # Set training data
