@@ -7484,8 +7484,6 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
         X, y = self.p_vars.copy(), self.labels.copy()
 
-        import pdb;pdb.set_trace()
-
         for train_index, test_index in splitter.split(X):
 
             # Set training data
@@ -7499,11 +7497,13 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
             # Set calibration samples
             p_vars_test, X_cal, labels_test, y_cal = train_test_split(p_vars_test,
                                                                       labels_test,
-                                                                      test_size=0.3,
-                                                                      train_size=0.7)
+                                                                      test_size=0.5,
+                                                                      train_size=0.5)
 
             kwargs['calibrate_test'] = X_cal
             kwargs['calibrate_labels'] = y_cal
+
+            import pdb;pdb.set_trace()
 
             self.construct_model(**kwargs)
 
