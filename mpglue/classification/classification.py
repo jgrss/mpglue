@@ -7472,6 +7472,9 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
         from sklearn.model_selection import ShuffleSplit, train_test_split
         from sklearn.metrics import f1_score
 
+        kwargs['input_model'] = None
+        kwargs['output_model'] = None
+
         self.cv_scores = list()
 
         splitter = ShuffleSplit(n_splits=n_splits,
