@@ -3045,6 +3045,8 @@ class BlockFunc(object):
         print_statement (Optional[str]): A string to print. Default is None.
         out_attributes (Optional[list]): A list of output attribute names. Default is [].
         write_array (Optional[bool]): Whether to write the output array to file. Default is True.
+        bigtiff (Optional[str]): GDAL option passed to `create_raster`. Default is 'no'. See `create_raster`
+            for details.
         boundary_file (Optional[str]): A file to use for block intersection. Default is None.
             Skip blocks that do not intersect ``boundary_file``.
         mask_file (Optional[str]): A file to use for block masking. Default is None.
@@ -3075,6 +3077,7 @@ class BlockFunc(object):
                  print_statement=None,
                  out_attributes=None,
                  write_array=True,
+                 bigtiff='no',
                  boundary_file=None,
                  mask_file=None,
                  n_jobs=1,
@@ -3100,6 +3103,7 @@ class BlockFunc(object):
         self.print_statement = print_statement
         self.out_attributes = out_attributes
         self.write_array = write_array
+        self.bigtiff = bigtiff
         self.boundary_file = boundary_file
         self.mask_file = mask_file
         self.n_jobs = n_jobs
@@ -3236,7 +3240,10 @@ class BlockFunc(object):
     def _process_blocks(self):
 
         if self.write_array:
-            out_raster = create_raster(self.out_image, self.out_info)
+
+            out_raster = create_raster(self.out_image,
+                                       self.out_info,
+                                       bigtiff=self.bigtiff)
 
         # n_blocks = 0
         # for i in range(0, self.proc_info.rows, self.block_rows):
@@ -4807,6 +4814,7 @@ def pixel_stats(input_image,
                 block_cols=1000,
                 out_storage='float32',
                 overwrite=False,
+                bigtiff='no',
                 n_jobs=1):
 
     """
@@ -4830,6 +4838,7 @@ def pixel_stats(input_image,
         block_cols (Optional[int]): The number of columns in the block. Default is 1000.
         out_storage (Optional[str]): The output raster storage. Default is 'float32'.
         overwrite (Optional[bool]): Whether to overwrite the output image. Default is False.
+        bigtiff (Optional[str]): See `create_raster` for details. Default is 'no'.
         n_jobs (Optional[int]): The number of blocks to process in parallel. Default is 1.
 
     Examples:
@@ -4911,6 +4920,7 @@ def pixel_stats(input_image,
                        block_rows=block_rows,
                        block_cols=block_cols,
                        overwrite=overwrite,
+                       bigtiff=bigtiff,
                        **params)
 
         bp.run()
