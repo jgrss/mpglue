@@ -1524,7 +1524,7 @@ class manage_pytables(BaseHandler):
                                         node_date,
                                         attribute)
 
-    def to_file(self, out_name, path, row, sensor, date, attribute, overwrite=False, brdf=True):
+    def to_file(self, out_name, path, row, sensor, date, attribute, proj_override=None, overwrite=False, brdf=True):
 
         """
         Writes an h5 node to file
@@ -1536,6 +1536,8 @@ class manage_pytables(BaseHandler):
             sensor (str): The image satellite sensor.
             date (str): The image date (yyyy-mm-dd).
             attribute (str): The image attribute. Choices are ['bands', 'mask'].
+            proj_override (Optional[dict]): A projection dictionary to override the table information. Default is None.
+                Should contain {'left', 'top', 'right', 'bottom', 'projection'}
             overwrite (Optional[bool]): Whether to overwrite an existing file. Default is False.
             brdf (Optional[bool]): Whether to apply BRDF corection using the c-factor method. Default is True.
 
@@ -1697,6 +1699,14 @@ class manage_pytables(BaseHandler):
 
             result['bands'] = 1
             result['storage'] = 'int16'
+
+        if isinstance(proj_override, dict):
+
+            result['projection'] = proj_override['projection']
+            result['left'] = proj_override['left']
+            result['top'] = proj_override['top']
+            result['right'] = proj_override['right']
+            result['bottom'] = proj_override['bottom']
 
         logger.info('  Writing to {} ...'.format(out_name))
 
