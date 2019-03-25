@@ -16,10 +16,10 @@ import fnmatch
 import time
 import argparse
 import inspect
-import atexit
+# import atexit
 from joblib import Parallel, delayed
 import shutil
-import itertools
+# import itertools
 import platform
 import subprocess
 from collections import OrderedDict
