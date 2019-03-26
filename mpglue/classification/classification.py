@@ -410,7 +410,8 @@ def predict_scikit_probas(rw,
                           plr_window_size,
                           plr_iterations,
                           predict_probs,
-                          d_type):
+                          d_type,
+                          null_samples):
 
     """
     A function to get posterior probabilities from Scikit-learn models
@@ -430,6 +431,7 @@ def predict_scikit_probas(rw,
         plr_iterations (int)
         predict_probs (bool)
         d_type (str)
+        null_samples (tuple)
     """
 
     # `probabilities` shaped as [samples x n classes]
@@ -453,6 +455,14 @@ def predict_scikit_probas(rw,
     class_list = mdl.classes_
 
     probabilities = raster_tools.columns_to_nd(probabilities, n_classes, rw, cw)
+
+    if null_samples[0].shape[0] > 0:
+
+        for pidx in range(0, n_classes):
+
+            proba_layer = probabilities[pidx]
+            proba_layer[null_samples] = 0.0
+            probabilities[pidx] = proba_layer
 
     if relax_probabilities:
 
@@ -5919,6 +5929,9 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
             features[np.isnan(features) | np.isinf(features)] = 0.0
 
+            # Get locations of empty features
+            null_samples = np.where(features.max(axis=1).reshape(n_rows, n_cols) == 0)
+
             if 'CV' in self.classifier_info['classifier']:
 
                 if self.classifier_info['classifier'] == 'cvmlp':
@@ -6017,7 +6030,8 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
                                                           self.plr_window_size,
                                                           self.plr_iterations,
                                                           self.predict_probs,
-                                                          self.d_type)
+                                                          self.d_type,
+                                                          null_samples)
 
                         for cidx in range(0, predicted.shape[0]):
 
@@ -6042,7 +6056,8 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
                                                                             self.plr_window_size,
                                                                             self.plr_iterations,
                                                                             self.predict_probs,
-                                                                            self.d_type),
+                                                                            self.d_type,
+                                                                            null_samples),
                                                       j=j-jwo,
                                                       i=i-iwo)
 
