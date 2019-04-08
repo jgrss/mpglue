@@ -925,7 +925,8 @@ class DataChecks(object):
         if hasattr(self, 'array'):
             return np.in1d(np.array([value]), self.array)[0]
         else:
-            if isinstance(np.ndarray, array2check):
+
+            if isinstance(array2check, np.ndarray):
                 return np.in1d(np.array([value]), array2check)[0]
 
     def intersects(self, iinfo):
