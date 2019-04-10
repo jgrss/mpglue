@@ -912,22 +912,26 @@ class DataChecks(object):
         else:
             return False
 
-    def contains_value(self, value, array2check=None):
+    def contains_value(self, value, array=None):
 
         """
-        Tests whether a value is within the array (the array must be open)
+        Tests whether a value is within the array
 
         Args:
-            value (int): The value to search for.
-            array2check (Optional[ndarray])
+            value (int): The value to check.
+            array (Optional[ndarray]): An array to check. Otherwise, check self.array. Default is None.
+
+        Returns:
+            Whether the array contains `value` (bool)
         """
+
+        if not isinstance(array, np.ndarray) and not hasattr(self, 'array'):
+            logger.exception('  No array to check')
 
         if hasattr(self, 'array'):
             return np.in1d(np.array([value]), self.array)[0]
         else:
-
-            if isinstance(array2check, np.ndarray):
-                return np.in1d(np.array([value]), array2check)[0]
+            return np.in1d(np.array([value]), array)[0]
 
     def intersects(self, iinfo):
 

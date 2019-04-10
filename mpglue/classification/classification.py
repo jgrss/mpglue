@@ -5930,7 +5930,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
             features[np.isnan(features) | np.isinf(features)] = 0.0
 
             # Get locations of empty features
-            null_samples = np.where(features.max(axis=1).reshape(n_rows, n_cols) == 0)
+            null_samples = np.where(features.max(axis=1).reshape(rw, cw) == 0)
 
             if 'CV' in self.classifier_info['classifier']:
 
@@ -6565,7 +6565,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
         Examples:
             >>> # get test accuracy
             >>> cl.test_accuracy(out_acc='/out_accuracy.txt')
-            >>> print cl.emat.accuracy
+            >>> print(cl.emat.accuracy)
         """
 
         if self.classifier_info['classifier'] == 'cvmlp':
@@ -7469,7 +7469,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
             logger.error('  The score method {} is not supported.'.format(method))
             raise NameError
 
-    def cross_validation(self, n_splits=5, test_size=0.7, train_size=0.3, random_state=None, **kwargs):
+    def cross_validation(self, X, y, n_splits=5, test_size=0.7, train_size=0.3, random_state=None, **kwargs):
 
         """
         A cross validation function to replace scikit-learn,
@@ -7484,7 +7484,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
             >>> print(cl.cv_scores)
         """
 
-        from sklearn.model_selection import ShuffleSplit, train_test_split
+        from sklearn.model_selection import StratifiedShuffleSplit
         from sklearn.metrics import f1_score
 
         kwargs['input_model'] = None
@@ -7492,14 +7492,12 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
         self.cv_scores = list()
 
-        splitter = ShuffleSplit(n_splits=n_splits,
-                                test_size=test_size,
-                                train_size=train_size,
-                                random_state=random_state)
+        splitter = StratifiedShuffleSplit(n_splits=n_splits,
+                                          test_size=test_size,
+                                          train_size=train_size,
+                                          random_state=random_state)
 
-        X, y = self.p_vars.copy(), self.labels.copy()
-
-        for train_index, test_index in splitter.split(X):
+        for train_index, test_index in splitter.split(X, y):
 
             # Set training data
             self.p_vars = X[train_index]
