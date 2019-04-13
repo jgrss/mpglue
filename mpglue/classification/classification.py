@@ -3796,23 +3796,22 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
             if not os.path.isfile(self.input_model):
 
-                logger.error('  {} does not exist.'.format(self.input_model))
+                logger.exception('  {} does not exist.'.format(self.input_model))
                 raise OSError
 
         if not isinstance(self.input_model, str):
 
             # check that the model is valid
-            try:
-                __ = self.classifier_info['classifier']
-            except:
-                logger.error('  The model must be declared.')
+            if 'classifier' not in self.classifier_info:
+                
+                logger.exception('  The model must be declared.')
                 raise ValueError
 
             if not isinstance(self.classifier_info['classifier'], list):
 
                 if self.classifier_info['classifier'] not in get_available_models():
 
-                    logger.error('  {} is not a model option.'.format(self.classifier_info['classifier']))
+                    logger.exception('  {} is not a model option.'.format(self.classifier_info['classifier']))
                     raise NameError
 
         if isinstance(self.output_model, str):
