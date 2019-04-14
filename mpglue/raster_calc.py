@@ -312,10 +312,10 @@ def _examples():
     sys.exit("""\
 
     # Write out class 2 from image A
-    raster_calc.py -A /image.tif -o /output.tif -eq "np.where(A==2, 1, 0)"
+    raster_calc.py -A /image.tif -o /output.tif -eq "where(A==2, 1, 0)"
 
     # Write the intersection of images A and B as 1s
-    raster_calc.py -A /image_a.tif -B /image_b.tif -o /output.tif -eq "np.where((A==1) & (B==1), 1, 0)"
+    raster_calc.py -A /image_a.tif -B /image_b.tif -o /output.tif -eq "where((A==1) & (B==1), 1, 0)"
     
     # Convert an RGB image to grayscale
     raster-calc -A rgb.tif -B rgb.tif -C rgb.tif -A_band 1 -B_band 2 -C_band 3 -o grayscale.tif -ot float32 -eq "A*0.2989 + B*0.5870 + C*0.1140"

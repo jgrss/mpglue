@@ -490,7 +490,7 @@ def predict_scikit_probas(rw,
     # Convert indices to classes.
     for class_index, real_class in enumerate(class_list):
         predictions[probabilities == class_index] = real_class
-
+    logger.info(predictions)
     if morphology:
 
         if isinstance(do_not_morph, list):
@@ -3803,7 +3803,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
             # check that the model is valid
             if 'classifier' not in self.classifier_info:
-                
+
                 logger.exception('  The model must be declared.')
                 raise ValueError
 
