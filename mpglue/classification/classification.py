@@ -6176,6 +6176,10 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
                 self.dump(self.record_list,
                           self.record_keeping)
 
+            out_raster_object.close_all()
+            out_raster_object = None
+            break
+
         # Close the file.
         if not self.write2blocks:
 
