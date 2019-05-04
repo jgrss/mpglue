@@ -5906,6 +5906,9 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
                 if self.scaled:
                     features = self.scaler.transform(features)
 
+            if hasattr(self, 'pca'):
+                features = np.concatenate((features, self.pca.transform(features)), axis=1)
+
             if self.additional_layers:
 
                 additional_layers = self._get_additional_layers(iw, jw, rw, cw)
