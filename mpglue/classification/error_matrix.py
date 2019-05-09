@@ -32,6 +32,7 @@ except ImportError:
 # Ndimage
 try:
     from scipy.ndimage.measurements import label as lab_img
+    import scipy.stats as st
 except ImportError:
     raise ImportError('Ndimage must be installed')
 
@@ -303,45 +304,88 @@ class error_matrix(object):
 
         return np.int16(np.array(observed)), np.int16(np.array(predicted))
 
-    def sample_bias(self, class_area):
+    def sample_size(self, class_area, users_accuracy, standard_error=0.01):
+
+        """
+        Calculates the sample size given a target standard error
+
+        Args:
+            class_area (list): A list of class areas.
+            users_accuracy (list): A list of class user accuracies.
+            standard_error (Optional[float]): The target standard error.
+
+        Example:
+            # Example 5
+            >>> emat = error_matrix()
+            >>>
+            >>> class_area = [18000, 13500, 288000, 580500]
+            >>>
+            >>> # Estimates of user's accuracy
+            >>> users_accuracy = [0.7, 0.6, 0.9, 0.95]
+            >>>
+            >>> emat.sample_size(class_area, users_accuracy, standard_error=0.01)
+            >>> emat.sample_n --> 641
+        """
+
+        if not isinstance(class_area, np.ndarray):
+            class_area = np.array(class_area, dtype='float32')
+
+        if not isinstance(users_accuracy, np.ndarray):
+            users_accuracy = np.array(users_accuracy, dtype='float32')
+
+        # Class area proportions
+        class_area_prop = class_area / class_area.sum()
+
+        # Estimated user's accuracy variance
+        # Eq. 6
+        users_variance = users_accuracy * (1.0 - users_accuracy)
+
+        # Stratum standard deviation
+        users_standard_deviation = np.sqrt(users_variance)
+
+        self.sample_n = int(round(((class_area_prop * users_standard_deviation).sum() / standard_error)**2))
+
+        self.class_proportions = np.int64(self.sample_n * class_area_prop)
+
+    def sample_bias(self, class_area, conf=0.95):
 
         """
         Calculates the area adjusted sampling bias
 
         Args:
             class_area (list): A list of class areas.
+            conf (Optional[float]): The confidence level.
 
         References:
             Olofsson et al. (2013) Note that the model assessment on 30% of the withheld
                 samples was conducted post-parameter optimization (section 3.4) on the final
                 parameter set, and not on cross-validated samples. Remote Sensing of Environment 129, 122-131.
 
-        Test:
-            emat = error_matrix()
-            class_area = [22353, 1122543, 610228]
-            emat.e_matrix = np.array([[97, 0, 3],[3, 279, 18], [2, 1, 97]], dtype='float32')
-            emat.sample_bias(class_area)
-
-            print emat.stratified_estimate
-            print emat.standard_errors
+        Example:
+            >>> emat = error_matrix()
+            >>> class_area = [22353, 1122543, 610228]
+            >>> emat.e_matrix = np.array([[97, 0, 3], [3, 279, 18], [2, 1, 97]], dtype='float32')
+            >>> emat.sample_bias(class_area)
+            >>>
+            >>> # Final land change error with margin of error (95% conf.)
+            >>> emat.stratified_area_estimate +- emat.margin_of_error
         """
 
         e_matrix_float = np.float32(self.e_matrix)
 
         if not isinstance(class_area, np.ndarray):
-            self.class_area = np.array(class_area, dtype='float32')
-        else:
-            self.class_area = class_area
+            class_area = np.array(class_area, dtype='float32')
 
-        total_area = self.class_area.sum()
+        total_area = class_area.sum()
 
         # Calculate the map area weights.
-        self.area_weights = self.class_area / total_area
+        self.class_area_prop = class_area / total_area
 
         emat_row_sum = e_matrix_float.sum(axis=1)
+        emat_col_sum = e_matrix_float.sum(axis=0)
 
         # Estimate the class proportions.
-        e_matrix_pr = np.array([self.area_weights * (e_matrix_float[:, ci] / emat_row_sum)
+        e_matrix_pr = np.array([self.class_area_prop * (e_matrix_float[:, ci] / emat_row_sum)
                                 for ci in range(e_matrix_float.shape[1])], dtype='float32')
 
         # User and producer weights
@@ -350,19 +394,31 @@ class error_matrix(object):
         usr_weights = e_matrix_pr.sum(axis=1)
 
         # Equation 10 (stratified error-adjusted area estimate)
-        self.stratified_estimate = usr_weights * total_area
+        self.stratified_area_estimate = usr_weights * total_area
 
-        self.area_difference = self.stratified_estimate - self.class_area
+        self.area_difference = self.stratified_area_estimate - class_area
 
-        self.standard_errors = list()
+        self.standard_error_prop = list()
 
+        # The estimated standard error of the estimated area proportion
+        # Eq. 3
         for ci in range(e_matrix_float.shape[0]):
 
-            a = np.power(self.area_weights, 2)
+            a = self.class_area_prop**2
             b = e_matrix_float[:, ci] / emat_row_sum
             c = 1.0 - (e_matrix_float[:, ci] / emat_row_sum)
 
-            self.standard_errors.append(((a * ((b * c) / (emat_row_sum - 1.0))).sum() ** 0.5) * total_area)
+            self.standard_error_prop.append(((a * ((b * c) / (emat_row_sum - 1.0))).sum() ** 0.5))
+
+        self.standard_error_prop = np.array(self.standard_error_prop, dtype='float32')
+
+        # The standard error of the error-adjusted estimated area
+        # Eq. 4
+        self.standard_error_area = self.standard_error_prop * total_area
+
+        # Margin of error (confidence interval)
+        # Eq. 5
+        self.margin_of_error = self.standard_error_area * st.norm.interval(conf, loc=0, scale=1)[1]
 
         # Equation 14
         self.stratified_users = np.diagonal(e_matrix_pr) / prd_weights
