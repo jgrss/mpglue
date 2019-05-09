@@ -3672,7 +3672,8 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
                         fig_location=None,
                         feature_list=None,
                         append_features=False,
-                        ts_indices=None):
+                        ts_indices=None,
+                        func_applier=None):
 
         """
         Loads, trains, and saves a predictive model.
@@ -3717,6 +3718,12 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
             append_features (Optional[bool]): Whether to append time series features to the existing features.
                 Default is True.
             ts_indices (Optional[int list]): An index array for time series features. Default is None.
+            func_applier (Optional[function]): A function to apply extra features. Default is None.
+
+                E.g.,
+
+                    def func_applier(x, self):
+                        return np.concatenate((x, self.pca.transform(x)), axis=1)
 
         Examples:
             >>> # create the classifier object
@@ -3781,6 +3788,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
         self.feature_list = feature_list
         self.append_features = append_features
         self.ts_indices = ts_indices
+        self.func_applier = func_applier
 
         if isinstance(self.view_calibration, int):
 
@@ -5906,9 +5914,10 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
                 if self.scaled:
                     features = self.scaler.transform(features)
 
-            if hasattr(self, 'pca'):
-                features = np.concatenate((features, self.pca.transform(features)), axis=1)
+            if self.func_applier:
+                features = self.func_applier(features, self)
 
+            # TODO: add to `func_applier` and remove here
             if self.additional_layers:
 
                 additional_layers = self._get_additional_layers(iw, jw, rw, cw)
