@@ -314,6 +314,10 @@ class error_matrix(object):
             users_accuracy (list): A list of class user accuracies.
             standard_error (Optional[float]): The target standard error.
 
+        References:
+            Olofsson et al. (2014) Good practices for estimating area and assessing
+                accuracy of land change. Remote Sensing of Environment 148, 442-57.
+
         Example:
             # Example 5
             >>> emat = error_matrix()
@@ -357,9 +361,10 @@ class error_matrix(object):
             conf (Optional[float]): The confidence level.
 
         References:
-            Olofsson et al. (2013) Note that the model assessment on 30% of the withheld
-                samples was conducted post-parameter optimization (section 3.4) on the final
-                parameter set, and not on cross-validated samples. Remote Sensing of Environment 129, 122-131.
+            Olofsson et al. (2013) Making better use of accuracy data in land
+                change studies: Estimating accuracy and area and quantifying
+                uncertainty using stratified estimation.
+                Remote Sensing of Environment 129, 122-131.
 
         Example:
             >>> emat = error_matrix()
