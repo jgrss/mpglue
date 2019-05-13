@@ -1625,9 +1625,6 @@ class RTreeManager(object):
                             right=image_envelope['right'],
                             bottom=image_envelope['bottom'])
 
-        import pdb
-        pdb.set_trace()
-
         if rtree_installed:
             index_iter = self.rtree_index.intersection(envelope)
         else:
