@@ -1463,7 +1463,6 @@ class RTreeManager(object):
                 bdy_geometry = bdy_feature.GetGeometryRef()
                 en = bdy_geometry.GetEnvelope()
 
-
                 if rtree_installed:
                     self.rtree_index.insert(f, (en[0], en[1], en[2], en[3]))
                 else:
@@ -1625,6 +1624,9 @@ class RTreeManager(object):
                             top=image_envelope['top'],
                             right=image_envelope['right'],
                             bottom=image_envelope['bottom'])
+
+        import pdb
+        pdb.set_trace()
 
         if rtree_installed:
             index_iter = self.rtree_index.intersection(envelope)
