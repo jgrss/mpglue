@@ -1630,6 +1630,9 @@ class RTreeManager(object):
         else:
             index_iter = range(0, len(self.field_dict))
 
+        if not [n for n in index_iter]:
+            import pdb;pdb.set_trace()
+
         # Intersect the base shapefile bounding box
         #   with the UTM grids.
         for n in index_iter:
