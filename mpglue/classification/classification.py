@@ -2059,7 +2059,7 @@ class Visualization(object):
 
         ax = plt.figure().add_subplot(111)
 
-        x = range(self.p_vars.shape[1])
+        x = list(range(self.p_vars.shape[1]))
 
         colors = {1: 'black', 2: 'cyan', 3: 'yellow', 4: 'red', 5: 'orange', 6: 'green',
                   7: 'purple', 8: 'magenta', 9: '#5F4C0B', 10: '#21610B', 11: '#210B61'}
@@ -3007,8 +3007,8 @@ class Preprocessing(object):
                 weights = np.array(weights, dtype='float32')
 
         # Reset the ids in case of stacked samples.
-        df_base[id_label] = range(1, df_base.shape[0] + 1)
-        df_compare[id_label] = range(1, df_compare.shape[0] + 1)
+        df_base[id_label] = list(range(1, df_base.shape[0] + 1))
+        df_compare[id_label] = list(range(1, df_compare.shape[0] + 1))
 
         all_headers = df_base.columns.values.tolist()
 
@@ -3168,8 +3168,8 @@ class Preprocessing(object):
         base_samples = df_samples.query(base_query)
         compare_samples = df_samples.query(compare_query)
 
-        base_samples['UNQ'] = range(0, base_samples.shape[0])
-        compare_samples['UNQ'] = range(0, compare_samples.shape[0])
+        base_samples['UNQ'] = list(range(0, base_samples.shape[0]))
+        compare_samples['UNQ'] = list(range(0, compare_samples.shape[0]))
 
         # Create a RTree indexer.
         self._index_samples(base_samples,
@@ -6265,7 +6265,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
         else:
 
             if not isinstance(self.bands2open, list):
-                self.bands2open = range(1, self.i_info.bands+1)
+                self.bands2open = list(range(1, self.i_info.bands+1))
 
     def _set_output_object(self):
 
@@ -8121,7 +8121,7 @@ class classification_r(classification):
             if self.ignore_feas:
                 bands2open = sorted([bd for bd in range(1, self.i_info.bands + 1) if bd not in self.ignore_feas])
             else:
-                bands2open = range(1, self.i_info.bands + 1)
+                bands2open = list(range(1, self.i_info.bands + 1))
 
             # Output image information.
             self.o_info = self.i_info.copy()

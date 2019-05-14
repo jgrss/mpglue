@@ -1628,7 +1628,7 @@ class RTreeManager(object):
         if rtree_installed:
             index_iter = self.rtree_index.intersection(envelope)
         else:
-            index_iter = range(0, len(self.field_dict))
+            index_iter = list(range(0, len(self.field_dict)))
 
         # Intersect the base shapefile bounding box
         #   with the UTM grids.

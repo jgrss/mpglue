@@ -1000,13 +1000,13 @@ class CalibrateSensor(Conversions):
     def create_output(self):
 
         if isinstance(self.bands2process, int) and self.bands2process == -1:
-            self.bands2process = range(1, self.i_info.bands+1)
+            self.bands2process = list(range(1, self.i_info.bands+1))
         elif isinstance(self.bands2process, int) and self.bands2process > 0:
             self.bands2process = [self.bands2process]
         elif isinstance(self.bands2process, int) and self.bands2process == 0:
             raise ValueError('\nThe bands to process must be -1, int > 0, or a list of bands.\n')
 
-        self.band_range = range(1, len(self.bands2process)+1)
+        self.band_range = list(range(1, len(self.bands2process)+1))
 
         # Copy the input information.
         self.o_info = self.i_info.copy()

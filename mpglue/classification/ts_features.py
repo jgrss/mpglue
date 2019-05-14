@@ -39,7 +39,7 @@ def _five_cumulative(X, axis=1, no_data=0):
     Computes the value at the cumulative 5th percentile
     """
 
-    x_range = range(0, X.shape[1]+1)
+    x_range = list(range(0, X.shape[1]+1))
 
     # Cumulative sum
     X_ = X.cumsum(axis=axis)
@@ -59,7 +59,7 @@ def _twenty_five_cumulative(X, axis=1, no_data=0):
     Computes the value at the cumulative 25th percentile
     """
 
-    x_range = range(0, X.shape[1]+1)
+    x_range = list(range(0, X.shape[1]+1))
 
     # Cumulative sum
     X_ = X.cumsum(axis=axis)
@@ -79,7 +79,7 @@ def _fifty_cumulative(X, axis=1, no_data=0):
     Computes the value at the cumulative 50th percentile
     """
 
-    x_range = range(0, X.shape[1]+1)
+    x_range = list(range(0, X.shape[1]+1))
 
     # Cumulative sum
     X_ = X.cumsum(axis=axis)
@@ -99,7 +99,7 @@ def _seventy_five_cumulative(X, axis=1, no_data=0):
     Computes the value at the cumulative 75th percentile
     """
 
-    x_range = range(0, X.shape[1]+1)
+    x_range = list(range(0, X.shape[1]+1))
 
     # Cumulative sum
     X_ = X.cumsum(axis=axis)
@@ -119,7 +119,7 @@ def _ninety_five_cumulative(X, axis=1, no_data=0):
     Computes the value at the cumulative 95th percentile
     """
 
-    x_range = range(0, X.shape[1]+1)
+    x_range = list(range(0, X.shape[1]+1))
 
     # Cumulative sum
     X_ = X.cumsum(axis=axis)

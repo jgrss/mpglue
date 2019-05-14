@@ -724,7 +724,7 @@ class ReadWrite(object):
                     raise ValueError
 
             if bands2open == -1:
-                bands2open = range(1, self.bands+1)
+                bands2open = list(range(1, self.bands+1))
             else:
                 bands2open = [bands2open]
 
@@ -3483,7 +3483,7 @@ def _read_parallel(image, image_info, bands2open, y, x, rows2open, columns2open,
     else:
 
         if bands2open == -1:
-            bands2open = range(1, image_info.bands+1)
+            bands2open = list(range(1, image_info.bands+1))
 
     if rows2open == -1:
         rows2open = image_info.rows
@@ -3644,7 +3644,7 @@ def read(image2open=None,
             raise ValueError('\nThe requested band position cannot be greater than the image bands.\n')
 
         if bands2open == -1:
-            bands2open = range(1, i_info.bands+1)
+            bands2open = list(range(1, i_info.bands+1))
         else:
             bands2open = [bands2open]
 
@@ -5020,7 +5020,7 @@ def histogram_matching(image2adjust, reference_list, output_image, band2match=-1
     with ropen(image2adjust) as match_info:
 
         if band2match == -1:
-            bands = range(1, match_info.bands+1)
+            bands = list(range(1, match_info.bands+1))
         else:
             bands = [band2match]
 
