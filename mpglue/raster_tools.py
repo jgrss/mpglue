@@ -16,22 +16,11 @@ import fnmatch
 import time
 import argparse
 import inspect
-# import atexit
 from joblib import Parallel, delayed
 import shutil
-# import itertools
 import platform
 import subprocess
 from collections import OrderedDict
-
-# if platform.system() == 'Darwin':
-#
-#     GDAL_LIBRARY_PATH = '/usr/local/lib/libgdal.dylib'
-#     ctypes.CDLL(GDAL_LIBRARY_PATH)
-#
-#     # ctypes.CDLL('/usr/lib/libc.dylib')
-#     # from ctypes.util import find_library
-#     # ctypes.cdll.LoadLibrary(find_library('c'))
 
 from . import vector_tools
 from .helpers import random_float, overwrite_file, check_and_create_dir, _iteration_parameters
@@ -82,6 +71,12 @@ try:
     from mpl_toolkits.axes_grid1 import make_axes_locatable
 except:
     logger.warning('  Matplotlib must be installed for plotting')
+
+# Scikit-learn
+try:
+    from sklearn.preprocessing import StandardScaler
+except:
+    logger.warning('  Scikit-learn must be installed for pixel_stats z-scores.')
 
 # Scikit-image
 try:
@@ -4778,6 +4773,12 @@ def stats_func(im,
         out_array = im.std(axis=0)
     elif stat == 'sum':
         out_array = im.sum(axis=0)
+    elif stat == 'zscore':
+
+        dims, rows, cols = im.shape
+
+        scaler = StandardScaler(with_mean=True, with_std=True)
+        out_array = columns_to_nd(scaler.fit_transform(nd_to_columns(im, dims, rows, cols)), dims, rows, cols)
 
     # Filter values.
     if isinstance(set_below, int):
@@ -4808,7 +4809,7 @@ def stats_func(im,
 def pixel_stats(input_image,
                 output_image,
                 stat='mean',
-                bands2process=-1,
+                bands=-1,
                 ignore_value=None,
                 no_data_value=0,
                 set_below=None,
@@ -4829,8 +4830,8 @@ def pixel_stats(input_image,
         input_image (str): The (bands x rows x columns) input image to process.
         output_image (str): The output image.
         stat (Optional[str]): The statistic to calculate. Default is 'mean'.
-            Choices are ['min', 'max', 'mean', 'median', 'mode', 'var', 'std', 'cv', 'sum'].
-        bands2process (Optional[int or int list]): The bands to include in the statistics. Default is -1, or
+            Choices are ['min', 'max', 'mean', 'median', 'mode', 'var', 'std', 'cv', 'sum', 'zscore'].
+        bands (Optional[int or int list]): The bands to include in the statistics. Default is -1, or
             include all bands.
         ignore_value (Optional[int]): A value to ignore in the calculations. Default is None.
         no_data_value (Optional[int]): A no data value to set in ``output_image``. Default is 0.
@@ -4857,7 +4858,7 @@ def pixel_stats(input_image,
         >>> pixel_stats('/image.tif',
         >>>             '/output.tif',
         >>>             stat='mean',
-        >>>             bands2process=[1, 2, 3],
+        >>>             bands=[1, 2, 3],
         >>>             ignore_value=0,
         >>>             no_data_value=-999)
 
@@ -4865,7 +4866,7 @@ def pixel_stats(input_image,
         None, writes to ``output_image``.
     """
 
-    if stat not in ['min', 'max', 'mean', 'median', 'mode', 'var', 'std', 'cv', 'sum']:
+    if stat not in ['min', 'max', 'mean', 'median', 'mode', 'var', 'std', 'cv', 'sum', 'zscore']:
 
         logger.error('{} is not an option.'.format(stat))
         raise NameError
@@ -4892,14 +4893,14 @@ def pixel_stats(input_image,
 
         info_list = [i_info]
 
-        if isinstance(bands2process, list):
-            bands2process = [bands2process]
-        elif isinstance(bands2process, int):
+        if isinstance(bands, list):
+            bands = [bands]
+        elif isinstance(bands, int):
 
-            if bands2process == -1:
-                bands2process = [list(range(1, i_info.bands+1))]
+            if bands == -1:
+                bands = [list(range(1, i_info.bands+1))]
             else:
-                bands2process = [bands2process]
+                bands = [bands]
 
         if i_info.bands <= 1:
 
@@ -4920,7 +4921,7 @@ def pixel_stats(input_image,
                        print_statement='\nGetting pixel stats for {} ...\n'.format(input_image),
                        d_types=['float32'],
                        be_quiet=be_quiet,
-                       band_list=bands2process,
+                       band_list=bands,
                        n_jobs=n_jobs,
                        block_rows=block_rows,
                        block_cols=block_cols,
