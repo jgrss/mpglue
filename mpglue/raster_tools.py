@@ -135,6 +135,7 @@ DRIVER_DICT = {'.bin': 'ENVI',
                '.hgt': 'SRTMHGT',
                '.sid': 'MrSID',
                '.tif': 'GTiff',
+               '.tiff': 'GTiff',
                '.til': 'TIL',
                '.vrt': 'VRT'}
 
