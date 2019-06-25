@@ -246,7 +246,7 @@ class BaseHandler(SetFilter):
                     if self.image_info.bands > 1:
 
                         if cloud_band_included:
-                            bands2open = range(1, self.image_info.bands)
+                            bands2open = list(range(1, self.image_info.bands))
                         else:
                             bands2open = -1
 
@@ -479,7 +479,7 @@ class BaseHandler(SetFilter):
         # Sort on standardized Julian Days
         self.column_index = sorted(self.column_index, key=itemgetter('jdr'))
 
-        self.index_positions = range(sti, ste+1)
+        self.index_positions = list(range(sti, ste+1))
 
         self.jd_index = [el['jd'] for el in self.column_index]
         self.jdr_index = [el['jdr'] for el in self.column_index]

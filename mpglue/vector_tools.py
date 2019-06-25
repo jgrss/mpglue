@@ -18,7 +18,7 @@ import subprocess
 import ast
 import copy
 import fnmatch
-import atexit
+# import atexit
 import tarfile
 
 from .paths import get_main_path
@@ -1432,7 +1432,10 @@ class RTreeManager(object):
             self.base_shapefile_ = base_shapefile
         else:
 
-            self.utm_shp_path = os.path.join(MAIN_PATH.replace('mpglue', 'mappy'), 'utilities', 'sentinel')
+            import mappy
+
+            # self.utm_shp_path = os.path.join(MAIN_PATH.replace('mpglue', 'mappy'), 'utilities', 'sentinel')
+            self.utm_shp_path = os.path.join(os.path.dirname(os.path.realpath(mappy.__file__)), 'utilities', 'sentinel')
 
             self.base_shapefile_ = os.path.join(self.utm_shp_path, 'sentinel2_grid.shp')
 
@@ -1459,7 +1462,6 @@ class RTreeManager(object):
                 bdy_feature = bdy_info.lyr.GetFeature(f)
                 bdy_geometry = bdy_feature.GetGeometryRef()
                 en = bdy_geometry.GetEnvelope()
-
 
                 if rtree_installed:
                     self.rtree_index.insert(f, (en[0], en[1], en[2], en[3]))
@@ -1507,15 +1509,22 @@ class RTreeManager(object):
                 self.field_dict = PickleIt().load(file2pickle)
             else:
 
+                import mappy
+
                 # Load the RTree info for the MGRS global grid.
-                mgrs_info = os.path.join(MAIN_PATH.replace('mpglue', 'mappy'),
+                # mgrs_info = os.path.join(MAIN_PATH.replace('mpglue', 'mappy'),
+                #                          'utilities',
+                #                          'sentinel',
+                #                          'utm_grid_info.pickle')
+
+                mgrs_info = os.path.join(os.path.dirname(os.path.realpath(mappy.__file__)),
                                          'utilities',
                                          'sentinel',
                                          'utm_grid_info.pickle')
 
                 if not os.path.isfile(mgrs_info):
 
-                    logger.error('The MGRS global grid information file does not exist.')
+                    logger.exception('The MGRS global grid information file does not exist.')
                     raise NameError
 
                 self.field_dict = PickleIt().load(mgrs_info)
@@ -1619,7 +1628,7 @@ class RTreeManager(object):
         if rtree_installed:
             index_iter = self.rtree_index.intersection(envelope)
         else:
-            index_iter = range(0, len(self.field_dict))
+            index_iter = list(range(0, len(self.field_dict)))
 
         # Intersect the base shapefile bounding box
         #   with the UTM grids.
