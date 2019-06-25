@@ -119,6 +119,7 @@ gdal.SetCacheMax(int(2.0**30.0))
 DRIVER_DICT = {'.bin': 'ENVI',
                '.bsq': 'ENVI',
                '.dat': 'ENVI',
+               '.drr': '',
                '.ecw': 'ECW',
                '.img': 'HFA',
                '.hdf': 'HDF4',
