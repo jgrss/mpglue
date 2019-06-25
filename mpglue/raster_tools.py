@@ -21,6 +21,7 @@ import shutil
 import platform
 import subprocess
 from collections import OrderedDict
+import warnings
 
 from . import vector_tools
 from .helpers import random_float, overwrite_file, check_and_create_dir, _iteration_parameters
@@ -308,6 +309,7 @@ def columns_to_nd(array2reshape, layers, rows, columns):
 class ReadWrite(object):
 
     def read(self,
+             bands=1,
              bands2open=1,
              i=0,
              j=0,
@@ -316,6 +318,7 @@ class ReadWrite(object):
              d_type=None,
              compute_index='none',
              sensor='Landsat',
+             sort_bands=True,
              sort_bands2open=True,
              predictions=False,
              y=0.,
@@ -331,16 +334,16 @@ class ReadWrite(object):
         Reads a raster as an array
 
         Args:
-            bands2open (Optional[int or int list or dict]: Band position to open, list of bands to open, or a
+            bands (Optional[int or int list or dict]: Band position to open, list of bands to open, or a
                 dictionary of name-band pairs. Default is 1.
 
                 Examples:
-                    bands2open = 1        (open band 1)
-                    bands2open = [1,2,3]  (open first three bands)
-                    bands2open = [4,3,2]  (open bands in a specific order)
-                        *When opening bands in a specific order, be sure to set ``sort_bands2open`` as ``False``.
-                    bands2open = -1       (open all bands)
-                    bands2open = {'blue': 1, 'green': 2, 'nir': 4}  (open bands 1, 2, and 4)
+                    bands = 1        (open band 1)
+                    bands = [1,2,3]  (open first three bands)
+                    bands = [4,3,2]  (open bands in a specific order)
+                        *When opening bands in a specific order, be sure to set ``sort_bands`` as ``False``.
+                    bands = -1       (open all bands)
+                    bands = {'blue': 1, 'green': 2, 'nir': 4}  (open bands 1, 2, and 4)
 
             i (Optional[int]): Starting row position. Default is 0, or first row.
             j (Optional[int]): Starting column position. Default is 0, or first column.
@@ -351,7 +354,7 @@ class ReadWrite(object):
                 from <i_info>.
             compute_index (Optional[str]): A spectral index to compute. Default is 'none'.
             sensor (Optional[str]): The input sensor type (used with ``compute_index``). Default is 'Landsat'.
-            sort_bands2open (Optional[bool]): Whether to sort ``bands2open``. Default is True.
+            sort_bands (Optional[bool]): Whether to sort ``bands``. Default is True.
             predictions (Optional[bool]): Whether to return reshaped array for Scikit-learn formatted
                 predictions (i.e., samples x dimensions).
             y (Optional[float]): A y index coordinate (latitude, in map units). Default is 0.
@@ -379,14 +382,14 @@ class ReadWrite(object):
             >>> i_info = mp.open('image.tif')
             >>>
             >>> # Open 1 band.
-            >>> array = i_info.read(bands2open=1)
+            >>> array = i_info.read(bands=1)
             >>>
             >>> # Open multiple bands.
-            >>> array = i_info.read(bands2open=[1, 2, 3])
+            >>> array = i_info.read(bands=[1, 2, 3])
             >>> band_1 = array[0]
             >>>
             >>> # Open as a dictionary of arrays.
-            >>> bands = i_info.read(bands2open={'blue': 1, 'red': 2, 'nir': 4})
+            >>> bands = i_info.read(bands={'blue': 1, 'red': 2, 'nir': 4})
             >>> red = bands['red']
             >>>
             >>> # Index an image by pixel positions.
@@ -396,6 +399,16 @@ class ReadWrite(object):
             >>> array = i_info.read(y=1200000., x=4230000., rows=500, cols=500)
         """
 
+        if bands2open != 1:
+
+            warnings.warn('bands2open is now named bands and will be removed in 0.3.0.', DeprecationWarning)
+            bands = bands2open
+
+        if not sort_bands2open:
+
+            warnings.warn('sort_bands2open is now named sort_bands and will be removed in 0.3.0.', DeprecationWarning)
+            sort_bands = sort_bands2open
+
         self.i = i
         self.j = j
 
@@ -404,13 +417,13 @@ class ReadWrite(object):
         self.rrows = rows
         self.ccols = cols
 
-        self.sort_bands2open = sort_bands2open
+        self.sort_bands = sort_bands
 
         self.as_xarray = as_xarray
         self.xarray_dims = xarray_dims
         self.xarray_coords = xarray_coords
 
-        if isinstance(bands2open, dict):
+        if isinstance(bands, dict):
 
             if isinstance(d_type, str):
                 self.d_type = STORAGE_DICT_NUMPY[d_type]
@@ -431,7 +444,7 @@ class ReadWrite(object):
             bh.get_band_order()
 
             # Overwrite the bands to open
-            bands2open = bh.get_band_positions(bh.wavelength_lists[compute_index.upper()])
+            bands = bh.get_band_positions(bh.wavelength_lists[compute_index.upper()])
 
             self.d_type = 'float32'
 
@@ -498,8 +511,8 @@ class ReadWrite(object):
         #################
 
         # format_dict = {'byte': 'B', 'int16': 'i', 'uint16': 'I', 'float32': 'f', 'float64': 'd'}
-        # values = struct.unpack('%d%s' % ((rows * cols * len(bands2open)), format_dict[i_info.storage.lower()]),
-        #     i_info.datasource.ReadRaster(yoff=i, xoff=j, xsize=cols, ysize=rows, band_list=bands2open))
+        # values = struct.unpack('%d%s' % ((rows * cols * len(bands)), format_dict[i_info.storage.lower()]),
+        #     i_info.datasource.ReadRaster(yoff=i, xoff=j, xsize=cols, ysize=rows, band_list=bands))
 
         if hasattr(self, 'band'):
 
@@ -515,14 +528,14 @@ class ReadWrite(object):
 
         else:
 
-            # Check ``bands2open`` type.
-            bands2open = self._check_band_list(bands2open)
+            # Check ``bands`` type.
+            bands = self._check_band_list(bands)
 
             # Open the array.
-            self._open_array(bands2open)
+            self._open_array(bands)
 
             if predictions:
-                self._norm2predictions(len(bands2open))
+                self._norm2predictions(len(bands))
 
         if compute_index != 'none':
 
@@ -571,21 +584,21 @@ class ReadWrite(object):
                                   coords=self.xarray_coords,
                                   dims=self.xarray_dims)
 
-    def _open_array(self, bands2open):
+    def _open_array(self, bands):
 
         """
         Opens image bands into a ndarray.
         
         Args:
-             bands2open (int or list)
+             bands (int or list)
         """
 
         # Open the image as a dictionary of arrays.
-        if isinstance(bands2open, dict):
+        if isinstance(bands, dict):
 
             self.array = dict()
 
-            for band_name, band_position in viewitems(bands2open):
+            for band_name, band_position in viewitems(bands):
 
                 if self.hdf_file:
 
@@ -609,14 +622,14 @@ class ReadWrite(object):
                 self.array = np.asarray([self.hdf_datasources[band-1].ReadAsArray(self.j,
                                                                                   self.i,
                                                                                   self.ccols,
-                                                                                  self.rrows) for band in bands2open],
+                                                                                  self.rrows) for band in bands],
                                         dtype=self.d_type)
 
             else:
 
                 self.array = list()
 
-                for band in bands2open:
+                for band in bands:
 
                     arr = self.datasource.GetRasterBand(band).ReadAsArray(self.j,
                                                                           self.i,
@@ -634,7 +647,7 @@ class ReadWrite(object):
 
                 self.array = np.asarray(self.array, dtype=self.d_type)
 
-            self.array = self._reshape(self.array, bands2open)
+            self.array = self._reshape(self.array, bands)
 
     def _predictions2norm(self, n_bands):
 
@@ -681,59 +694,59 @@ class ReadWrite(object):
 
         return array2reshape
 
-    def _check_band_list(self, bands2open):
+    def _check_band_list(self, bands):
 
         """
         Checks whether a band list is valid.
         
         Args:
-            bands2open (dict, list, or int)
+            bands (dict, list, or int)
         """
 
-        if isinstance(bands2open, dict):
-            return bands2open
-        elif isinstance(bands2open, list):
+        if isinstance(bands, dict):
+            return bands
+        elif isinstance(bands, list):
 
-            if not bands2open:
+            if not bands:
 
                 logger.error('  A band list must be declared.\n')
                 raise LenError
 
-            if 0 in bands2open:
+            if 0 in bands:
 
                 logger.error('  A band list cannot have any zeros. GDAL indexes starting at 1.\n')
                 raise ValueError
 
             if not self.hdf_file:
 
-                if max(bands2open) > self.bands:
+                if max(bands) > self.bands:
 
                     logger.error('  The requested band position cannot be greater than the image bands.\n')
                     raise ValueError
 
-        elif isinstance(bands2open, int):
+        elif isinstance(bands, int):
 
             if not self.hdf_file:
 
-                if bands2open > self.bands:
+                if bands > self.bands:
 
                     logger.error('  The requested band position cannot be greater than the image bands.\n')
                     raise ValueError
 
-            if bands2open == -1:
-                bands2open = list(range(1, self.bands+1))
+            if bands == -1:
+                bands = list(range(1, self.bands+1))
             else:
-                bands2open = [bands2open]
+                bands = [bands]
 
         else:
 
-            logger.error('  The `bands2open` parameter must be a dict, list, or int.\n')
+            logger.error('  The `bands` parameter must be a dict, list, or int.\n')
             raise TypeError
 
-        if self.sort_bands2open and not isinstance(bands2open, dict):
-            bands2open = sorted(bands2open)
+        if self.sort_bands and not isinstance(bands, dict):
+            bands = sorted(bands)
 
-        return bands2open
+        return bands
 
     def write2raster(self,
                      out_name,
@@ -1029,7 +1042,7 @@ class DataChecks(object):
             background_value (Optional[int]): The background pixel value. Default is 255.
         """
 
-        cloud_array = self.read(bands2open=cloud_band)
+        cloud_array = self.read(bands=cloud_band)
 
         clear_pixels = (cloud_array == clear_value).sum()
 
@@ -2133,7 +2146,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
         >>> # use the <read> function
         >>> # open specific rows and columns
         >>> array = mp.read(i_info,
-        >>>                 bands2open=[-1],
+        >>>                 bands=[-1],
         >>>                 i=100, j=100,
         >>>                 rows=500, cols=500)
         >>>
@@ -2182,6 +2195,11 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
                  check_corrupted=False,
                  **kwargs):
 
+        if not open2read:
+            warnings.warn('open2read is now named read_only and will be removed in 0.3.0.', DeprecationWarning)
+
+        read_only = open2read
+
         self.file_name = os.path.normpath(file_name)
 
         passed = True
@@ -2189,7 +2207,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
         if file_name == 'create':
             self.update_info(**kwargs)
         elif file_name != 'none':
-            self.get_image_info(open2read, hdf_band, check_corrupted)
+            self.get_image_info(read_only, hdf_band, check_corrupted)
         else:
             passed = False
 
@@ -2347,7 +2365,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
 
         else:
 
-            the_hist, bin_edges = np.histogram(self.read(bands2open=band,
+            the_hist, bin_edges = np.histogram(self.read(bands=band,
                                                          i=i,
                                                          j=j,
                                                          rows=rows,
@@ -2482,11 +2500,11 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
             >>> i_info.show(show_which='ndvi')
             >>>
             >>> # Plot a single band array as greyscale
-            >>> i_info.read(bands2open=4)
+            >>> i_info.read(bands=4)
             >>> i_info.show(color_map='Greys')
             >>>
             >>> # Plot a 3-band array as RGB true color
-            >>> i_info.read(bands2open=[3, 2, 1], sort_bands2open=False)
+            >>> i_info.read(bands=[3, 2, 1], sort_bands=False)
             >>> i_info.show(band='rgb')
 
         Returns:
@@ -3303,7 +3321,7 @@ class BlockFunc(object):
                 #         print 'Block {:,d}--{:,d} of {:,d} ...'.format(n_block, n_block_, n_blocks)
                 #
                 #     n_block += 1
-                image_arrays = [self.image_infos[imi].read(bands2open=self.band_list[imi],
+                image_arrays = [self.image_infos[imi].read(bands=self.band_list[imi],
                                                            i=i+self.y_offset[imi]-y_pad_minus,
                                                            j=j+self.x_offset[imi]-x_pad_minus,
                                                            rows=n_rows+y_pad_plus,
@@ -3451,7 +3469,7 @@ class BlockFunc(object):
                             'LR': [adj_right, adj_bottom]}
 
 
-def _read_parallel(image, image_info, bands2open, y, x, rows2open, columns2open, n_jobs, d_type, predictions):
+def _read_parallel(image, image_info, bands, y, x, rows2open, columns2open, n_jobs, d_type, predictions):
 
     """
     Opens image bands into arrays using multiple processes
@@ -3459,7 +3477,7 @@ def _read_parallel(image, image_info, bands2open, y, x, rows2open, columns2open,
     Args:
         image (str): The image to open.
         image_info (instance)
-        bands2open (int or int list: Band position to open or list of bands to open.
+        bands (int or int list: Band position to open or list of bands to open.
         y (int): Starting row position.
         x (int): Starting column position.
         rows2open (int): Number of rows to extract.
@@ -3472,15 +3490,15 @@ def _read_parallel(image, image_info, bands2open, y, x, rows2open, columns2open,
         Ndarray where [rows, cols] if 1 band and [bands, rows, cols] if more than 1 band
     """
 
-    if isinstance(bands2open, list):
+    if isinstance(bands, list):
 
-        if max(bands2open) > image_info.bands:
+        if max(bands) > image_info.bands:
             raise ValueError('\nCannot open more bands than exist in the image.\n')
 
     else:
 
-        if bands2open == -1:
-            bands2open = list(range(1, image_info.bands+1))
+        if bands == -1:
+            bands = list(range(1, image_info.bands+1))
 
     if rows2open == -1:
         rows2open = image_info.rows
@@ -3496,7 +3514,7 @@ def _read_parallel(image, image_info, bands2open, y, x, rows2open, columns2open,
                                                              x,
                                                              rows2open,
                                                              columns2open)
-                                          for band2open in bands2open)
+                                          for band2open in bands)
 
     if predictions:
 
@@ -3504,25 +3522,25 @@ def _read_parallel(image, image_info, bands2open, y, x, rows2open, columns2open,
         band_arrays = [b_ if b_.shape else np.zeros((rows2open, columns2open), dtype=d_type) for b_ in band_arrays]
 
         return np.array(band_arrays,
-                        dtype=d_type).reshape(len(bands2open),
+                        dtype=d_type).reshape(len(bands),
                                               rows2open,
                                               columns2open).transpose(1, 2, 0).reshape(rows2open*columns2open,
-                                                                                       len(bands2open))
+                                                                                       len(bands))
 
     else:
-        return np.array(band_arrays, dtype=d_type).reshape(len(bands2open), rows2open, columns2open)
+        return np.array(band_arrays, dtype=d_type).reshape(len(bands), rows2open, columns2open)
 
 
 def read(image2open=None,
          i_info=None,
-         bands2open=1,
+         bands=1,
          i=0,
          j=0,
          rows=-1,
          cols=-1,
          d_type=None,
          predictions=False,
-         sort_bands2open=True,
+         sort_bands=True,
          y=0.,
          x=0.,
          n_jobs=0):
@@ -3533,11 +3551,11 @@ def read(image2open=None,
     Args:
         image2open (Optional[str]): An image to open. Default is None.
         i_info (Optional[object]): An instance of `ropen`. Default is None
-        bands2open (Optional[int list or int]: Band position to open or list of bands to open. Default is 1.
+        bands (Optional[int list or int]: Band position to open or list of bands to open. Default is 1.
             Examples:
-                bands2open = 1        (open band 1)
-                bands2open = [1,2,3]  (open first three bands)
-                bands2open = -1       (open all bands)
+                bands = 1        (open band 1)
+                bands = [1,2,3]  (open first three bands)
+                bands = -1       (open all bands)
         i (Optional[int]): Starting row position. Default is 0, or first row.
         j (Optional[int]): Starting column position. Default is 0, or first column.
         rows (Optional[int]): Number of rows to extract. Default is all rows.
@@ -3545,7 +3563,7 @@ def read(image2open=None,
         d_type (Optional[str]): Type of array to return. Default is None, or gathered from <i_info>.
             Choices are ['uint8', 'int8', 'uint16', 'uint32', 'int16', 'float32', 'float64'].
         predictions (Optional[bool]): Whether to return reshaped array for predictions.
-        sort_bands2open (Optional[bool]): Whether to sort ``bands2open``. Default is True.
+        sort_bands (Optional[bool]): Whether to sort ``bands``. Default is True.
         y (Optional[float]): A y index coordinate. Default is 0. If greater than 0, overrides `i`.
         x (Optional[float]): A x index coordinate. Default is 0. If greater than 0, overrides `j`.
         n_jobs (Optional[int]): The number of bands to open in parallel. Default is 0.
@@ -3561,10 +3579,10 @@ def read(image2open=None,
         >>>
         >>> array = mp.read('image.tif')
         >>>
-        >>> array = mp.read('image.tif', bands2open=[1, 2, 3])
+        >>> array = mp.read('image.tif', bands=[1, 2, 3])
         >>> print(a.shape)
         >>>
-        >>> array = mp.read('image.tif', bands2open={'green': 3, 'nir': 4})
+        >>> array = mp.read('image.tif', bands={'green': 3, 'nir': 4})
         >>> print(len(array))
         >>> print(array['nir'].shape)
     """
@@ -3627,26 +3645,26 @@ def read(image2open=None,
     # Number of columns
     ccols = n_rows_cols(j, ccols, i_info.cols)
 
-    if isinstance(bands2open, list):
+    if isinstance(bands, list):
 
-        if len(bands2open) == 0:
+        if len(bands) == 0:
             raise ValueError('\nA band list must be declared.\n')
 
-        if max(bands2open) > i_info.bands:
+        if max(bands) > i_info.bands:
             raise ValueError('\nThe requested band position cannot be greater than the image bands.\n')
 
-    elif isinstance(bands2open, int):
+    elif isinstance(bands, int):
 
-        if bands2open > i_info.bands:
+        if bands > i_info.bands:
             raise ValueError('\nThe requested band position cannot be greater than the image bands.\n')
 
-        if bands2open == -1:
-            bands2open = list(range(1, i_info.bands+1))
+        if bands == -1:
+            bands = list(range(1, i_info.bands+1))
         else:
-            bands2open = [bands2open]
+            bands = [bands]
 
-    if sort_bands2open:
-        bands2open = sorted(bands2open)
+    if sort_bands:
+        bands = sorted(bands)
 
     # Index the image by x, y coordinates (in map units).
     if abs(y) > 0:
@@ -3657,13 +3675,13 @@ def read(image2open=None,
 
     if (n_jobs in [0, 1]) and not predictions:
 
-        kwargs = dict(bands2open=bands2open,
+        kwargs = dict(bands=bands,
                       i=i,
                       j=j,
                       rows=rrows,
                       cols=ccols,
                       d_type=d_type,
-                      sort_bands2open=sort_bands2open,
+                      sort_bands=sort_bands,
                       y=y,
                       x=x)
 
@@ -3682,29 +3700,29 @@ def read(image2open=None,
         if n_jobs in [0, 1]:
 
             values = np.asarray([i_info.datasource.GetRasterBand(band).ReadAsArray(j, i, ccols, rrows)
-                                 for band in bands2open], dtype=d_type)
+                                 for band in bands], dtype=d_type)
 
-            # values = struct.unpack('%d%s' % ((rows * cols * len(bands2open)), format_dict[i_info.storage.lower()]),
-            #                        i_info.datasource.ReadRaster(yoff=i, xoff=j, xsize=cols, ysize=rows, band_list=bands2open))
+            # values = struct.unpack('%d%s' % ((rows * cols * len(bands)), format_dict[i_info.storage.lower()]),
+            #                        i_info.datasource.ReadRaster(yoff=i, xoff=j, xsize=cols, ysize=rows, band_list=bands))
 
             if predictions:
 
-                return values.reshape(len(bands2open), rrows, ccols).transpose(1, 2, 0).reshape(rrows*ccols,
-                                                                                                len(bands2open))
+                return values.reshape(len(bands), rrows, ccols).transpose(1, 2, 0).reshape(rrows*ccols,
+                                                                                                len(bands))
 
             else:
 
-                if len(bands2open) == 1:
+                if len(bands) == 1:
                     return values.reshape(rrows, ccols)
                 else:
-                    return values.reshape(len(bands2open), rrows, ccols)
+                    return values.reshape(len(bands), rrows, ccols)
 
             # only close the image if it was opened internally
             # if isinstance(image2open, str):
             #     i_info.close()
 
         else:
-            return _read_parallel(image2open, i_info, bands2open, i, j, rrows, ccols, n_jobs, d_type, predictions)
+            return _read_parallel(image2open, i_info, bands, i, j, rrows, ccols, n_jobs, d_type, predictions)
 
 
 def build_vrt(file_list,
@@ -5042,12 +5060,12 @@ def histogram_matching(image2adjust, reference_list, output_image, band2match=-1
             # Match each band.
             for bi, band in enumerate(bands):
 
-                match_array = match_info.read(bands2open=band)
+                match_array = match_info.read(bands=band)
 
                 for ri, reference_image in enumerate(reference_list):
 
                     with ropen(reference_image) as ref_info:
-                        ref_array = ref_info.read(bands2open=band)
+                        ref_array = ref_info.read(bands=band)
 
                     ref_info = None
 
