@@ -3,29 +3,21 @@ from distutils.core import setup
 import platform
 
 from Cython.Build import cythonize
-# from distutils.extension import Extension
 
 try:
     from Cython.Distutils import build_ext
 except:
     from distutils.command import build_ext
 
-# try:
-#     from setuptools import setup
-#     # from setuptools import Extension
-# except ImportError:
-#     from distutils.core import setup
-#     # from distutils.extension import Extension
-
 import numpy as np
 
 
-__version__ = '0.2.10dev'
+__version__ = '0.2.11dev'
 
 mappy_name = 'MpGlue'
 maintainer = 'Jordan Graesser'
-maintainer_email = 'graesser@bu.edu'
-description = 'The Glue of MapPy'
+maintainer_email = ''
+description = 'Python raster and vector I/O'
 git_url = 'http://github.com/jgrss/mpglue.git'
 
 with open('README.md') as f:
