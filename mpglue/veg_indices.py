@@ -38,10 +38,8 @@ except ImportError:
 # Numexpr
 try:
     import numexpr as ne
-    ne.set_num_threads(mpr.cpu_count())
-    numexpr_installed = True
 except:
-    numexpr_installed = False
+    pass
 
 # Carray
 # try:
