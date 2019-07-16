@@ -344,7 +344,7 @@ class ReadWrite(object):
                         *When opening bands in a specific order, be sure to set ``sort_bands`` as ``False``.
                     bands = -1       (open all bands)
                     bands = {'blue': 1, 'green': 2, 'nir': 4}  (open bands 1, 2, and 4)
-
+            bands2open: Deprecated, use `bands`.
             i (Optional[int]): Starting row position. Default is 0, or first row.
             j (Optional[int]): Starting column position. Default is 0, or first column.
             rows (Optional[int]): Number of rows to extract. Default is -1, or all rows.
@@ -2100,8 +2100,8 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
 
     Args:
         file_name (Optional[str]): Image location, name, and extension. Default is 'none'.
-        open2read (Optional[bool]): Whether to open image as 'read only' (True) or writeable (False).
-            Default is True.
+        read_only (Optional[bool]): Whether to open image as 'read only' (True) or writeable (False). Default is True.
+        open2read: Deprecated, use `read_only`.
         metadata (Optional[str]): A metadata file. Default is None.
         sensor (Optional[str]): The satellite sensor to parse with ``metadata``. Default is 'Landsat'. Choices are
             ['Landsat', 'Sentinel2']. This is only used for inplace spectral transformations. It will not
