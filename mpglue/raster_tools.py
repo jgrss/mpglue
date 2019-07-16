@@ -3590,7 +3590,7 @@ def read(file_name=None,
         >>> print(array['nir'].shape)
     """
 
-    if not image2open:
+    if image2open:
 
         warnings.warn('image2open is now named file_name and will be removed in 0.3.0.', DeprecationWarning)
         file_name = image2open
