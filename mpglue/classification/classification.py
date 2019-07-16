@@ -1738,7 +1738,7 @@ class Samples(object):
     def load4crf(self,
                  predictors,
                  labels,
-                 bands2open=None,
+                 bands=None,
                  scale_factor=1.0,
                  n_jobs=1,
                  train_x=None,
@@ -1752,7 +1752,7 @@ class Samples(object):
             predictors (list): A list of images to open or a list of arrays.
                 If an `array`, a single image should be given as `rows` x `columns`. A multi-layer image should
                 be given as `layers` x `rows` x `columns.
-            bands2open (Optional[list]): A list of bands to open, otherwise opens all bands.
+            bands (Optional[list]): A list of bands to open, otherwise opens all bands.
             labels (list): A list of images to open or a list of arrays. If an `array`, a single image should
                 be given as `rows` x `columns` and must match the length of `predictors`.
             scale_factor (Optional[float]): A scale factor for the predictors. Default is 1.0.
@@ -1819,10 +1819,10 @@ class Samples(object):
 
                     with raster_tools.ropen(pim) as i_info:
 
-                        if not isinstance(bands2open, list):
-                            bands2open = list(range(1, i_info.bands+1))
+                        if not isinstance(bands, list):
+                            bands = list(range(1, i_info.bands+1))
 
-                        data_array_ = i_info.read(bands2open=bands2open,
+                        data_array_ = i_info.read(bands=bands,
                                                   predictions=True,
                                                   **kwargs)
 
@@ -1830,7 +1830,7 @@ class Samples(object):
 
                             data_array = data_array_.copy()
 
-                            bands = len(bands2open)
+                            bands = len(bands)
 
                             if not isinstance(self.im_rows, int):
 
@@ -1889,8 +1889,8 @@ class Samples(object):
                     # Scale and reshape the predictors.
                     if n_jobs not in [0, 1]:
 
-                        self.p_vars[pri, :, :, :-1] = scaler.transform(raster_tools.read(image2open=predictor,
-                                                                                         bands2open=bands2open,
+                        self.p_vars[pri, :, :, :-1] = scaler.transform(raster_tools.read(file_name=predictor,
+                                                                                         bands=bands,
                                                                                          y=lab_y,
                                                                                          x=lab_x,
                                                                                          rows=self.im_rows,
@@ -1906,7 +1906,7 @@ class Samples(object):
 
                         with raster_tools.ropen(predictor) as i_info:
 
-                            self.p_vars[pri, :, :, :-1] = scaler.transform(i_info.read(bands2open=bands2open,
+                            self.p_vars[pri, :, :, :-1] = scaler.transform(i_info.read(bands=bands,
                                                                                        y=lab_y,
                                                                                        x=lab_x,
                                                                                        rows=self.im_rows,
@@ -2865,7 +2865,7 @@ class Visualization(object):
 
         # open the image
         with raster_tools.ropen(image) as i_info:
-            band_arrays = [zoom(i_info.read(bands2open=[bd], d_type='float32'), .5) for bd in bands2vis]
+            band_arrays = [zoom(i_info.read(bands=[bd], d_type='float32'), .5) for bd in bands2vis]
 
         rws, cls = band_arrays[0].shape[0], band_arrays[1].shape[1]
 
@@ -5312,7 +5312,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
                 output_image,
                 additional_layers=None,
                 band_check=-1,
-                bands2open=None,
+                bands=None,
                 ignore_feas=None,
                 in_stats=None,
                 in_model=None,
@@ -5350,7 +5350,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
             additional_layers (Optional[list]): A list of additional images (layers) that are not part
                 of `input_image`.
             band_check (Optional[int]): The band to check for 'no data'. Default is -1, or do not perform check. 
-            bands2open (Optional[list]): A list of bands to open, otherwise opens all bands. Default is None.
+            bands (Optional[list]): A list of bands to open, otherwise opens all bands. Default is None.
             ignore_feas (Optional[list]): A list of features (band layers) to ignore. Default is an empty list,
                 or use all features.
             in_stats (Optional[str]): A XML statistics file. Default is None. *Only applicable to Orfeo models.
@@ -5428,7 +5428,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
         self.output_image = output_image
         self.additional_layers = additional_layers
         self.ignore_feas = ignore_feas
-        self.bands2open = bands2open
+        self.bands = bands
         self.band_check = band_check
         self.row_block_size = row_block_size
         self.col_block_size = col_block_size
@@ -5586,7 +5586,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
         self.load4crf([self.input_image],
                       None,
-                      bands2open=self.bands2open,
+                      bands=self.bands,
                       scale_factor=self.scale_factor,
                       n_jobs=self.n_jobs_vars,
                       **kwargs)
@@ -5712,7 +5712,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
                                                                     jwo)
 
         # Determine which bands to open.
-        self._set_bands2open()
+        self._set_bands()
 
         # Update the output raster size.
         #
@@ -5832,7 +5832,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
                     self.i_info = raster_tools.ropen(self.input_image)
                     self.open_image = False
 
-                max_check = self.i_info.read(bands2open=self.band_check,
+                max_check = self.i_info.read(bands=self.band_check,
                                              i=i,
                                              j=j,
                                              rows=n_rows,
@@ -5857,7 +5857,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
             if 'CV' in self.classifier_info['classifier']:
 
-                if len(self.bands2open) != self.model.getVarCount():
+                if len(self.bands) != self.model.getVarCount():
 
                     logger.error('  The number of predictive layers does not match the number of model estimators.')
                     raise AssertionError
@@ -5867,7 +5867,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
                 if hasattr(self.model, 'n_features_'):
 
-                    if len(self.bands2open) != self.model.n_features_:
+                    if len(self.bands) != self.model.n_features_:
 
                         logger.error('  The number of predictive layers does not match the number of model estimators.')
                         raise AssertionError
@@ -5876,15 +5876,15 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
                     if hasattr(self.model.base_estimator, 'n_features_'):
 
-                        if len(self.bands2open) != self.model.base_estimator.n_features_:
+                        if len(self.bands) != self.model.base_estimator.n_features_:
 
                             logger.error('  The number of predictive layers does not match the number of model estimators.')
                             raise AssertionError
 
             # Get all the bands for the tile. The shape
             #   of the features is ([rows x columns] x features).
-            features = raster_tools.read(image2open=self.input_image,
-                                         bands2open=self.bands2open,
+            features = raster_tools.read(file_name=self.input_image,
+                                         bands=self.bands,
                                          i=iw,
                                          j=jw,
                                          rows=rw,
@@ -5980,7 +5980,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
                 # Load the predictor variables.
                 # predict_samps = pandas2ri.py2ri(pd.DataFrame(features))
 
-                predict_samps = ro.r.matrix(features, nrow=n_samples, ncol=len(self.bands2open))
+                predict_samps = ro.r.matrix(features, nrow=n_samples, ncol=len(self.bands))
                 predict_samps.colnames = StrVector(self.headers[:-1])
 
                 # Get chunks for parallel processing.
@@ -6256,16 +6256,16 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
         return start_i, start_j, rows, cols, iwo, jwo
 
-    def _set_bands2open(self):
+    def _set_bands(self):
 
         """Sets the list of (feature) bands to open"""
 
         if self.ignore_feas:
-            self.bands2open = sorted([bd for bd in range(1, self.i_info.bands+1) if bd not in self.ignore_feas])
+            self.bands = sorted([bd for bd in range(1, self.i_info.bands+1) if bd not in self.ignore_feas])
         else:
 
-            if not isinstance(self.bands2open, list):
-                self.bands2open = list(range(1, self.i_info.bands+1))
+            if not isinstance(self.bands, list):
+                self.bands = list(range(1, self.i_info.bands+1))
 
     def _set_output_object(self):
 
@@ -6385,7 +6385,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
                     if isinstance(self.mask_background, str):
 
                         b_array = raster_tools.read(i_info=b_info,
-                                                    bands2open=self.background_band,
+                                                    bands=self.background_band,
                                                     x=m_info.left+(j*m_info.cell.Y),
                                                     y=m_info.top-(i*m_info.cellY),
                                                     rows=n_rows,
@@ -6401,7 +6401,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
                         # Get the observation counts array.
                         observation_array = raster_tools.read(i_info=b_info,
-                                                              bands2open=self.observation_band,
+                                                              bands=self.observation_band,
                                                               i=i,
                                                               j=j,
                                                               rows=n_rows,
@@ -6496,7 +6496,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
                 if isinstance(additional_stack, np.ndarray):
 
-                    additional_stack_ = a_info.read(bands2open=-1,
+                    additional_stack_ = a_info.read(bands=-1,
                                                     i=i,
                                                     j=j,
                                                     rows=n_rows,
@@ -6508,7 +6508,7 @@ class classification(ModelOptions, PickleIt, Preprocessing, Samples, Visualizati
 
                 else:
 
-                    additional_stack = a_info.read(bands2open=-1,
+                    additional_stack = a_info.read(bands=-1,
                                                    i=i,
                                                    j=j,
                                                    rows=n_rows,
@@ -8119,9 +8119,9 @@ class classification_r(classification):
             self.i_info = raster_tools.ropen(input_image)
 
             if self.ignore_feas:
-                bands2open = sorted([bd for bd in range(1, self.i_info.bands + 1) if bd not in self.ignore_feas])
+                bands = sorted([bd for bd in range(1, self.i_info.bands + 1) if bd not in self.ignore_feas])
             else:
-                bands2open = list(range(1, self.i_info.bands + 1))
+                bands = list(range(1, self.i_info.bands + 1))
 
             # Output image information.
             self.o_info = self.i_info.copy()
@@ -8178,8 +8178,8 @@ class classification_r(classification):
 
                     n_cols = self._num_rows_cols(j, block_cols, cols)
 
-                    features = raster_tools.read(image2open=input_image,
-                                                 bands2open=bands2open,
+                    features = raster_tools.read(file_name=input_image,
+                                                 bands=bands,
                                                  i=i, j=j,
                                                  rows=n_rows, cols=n_cols,
                                                  predictions=True,

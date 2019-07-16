@@ -2188,6 +2188,7 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
 
     def __init__(self,
                  file_name='none',
+                 read_only=True,
                  open2read=True,
                  metadata=None,
                  sensor='Landsat',
@@ -2196,9 +2197,9 @@ class ropen(FileManager, LandsatParser, SentinelParser, UpdateInfo, ReadWrite):
                  **kwargs):
 
         if not open2read:
-            warnings.warn('open2read is now named read_only and will be removed in 0.3.0.', DeprecationWarning)
 
-        read_only = open2read
+            warnings.warn('open2read is now named read_only and will be removed in 0.3.0.', DeprecationWarning)
+            read_only = open2read
 
         self.file_name = os.path.normpath(file_name)
 
@@ -2838,24 +2839,24 @@ class PanSharpen(object):
                               'TILED=YES'])
 
 
-def gdal_open(image2open, band):
+def gdal_open(file_name, band):
 
     """
     A direct file open from GDAL.
     """
 
-    driver_o = gdal.Open(image2open, GA_ReadOnly)
+    driver_o = gdal.Open(file_name, GA_ReadOnly)
 
     return driver_o, driver_o.GetRasterBand(band)
 
 
-def gdal_read(image2open, band, i, j, rows, cols):
+def gdal_read(file_name, band, i, j, rows, cols):
 
     """
     A direct array read from GDAL.
     """
 
-    driver_o = gdal.Open(image2open, GA_ReadOnly)
+    driver_o = gdal.Open(file_name, GA_ReadOnly)
 
     if isinstance(band, list):
 
@@ -3531,7 +3532,8 @@ def _read_parallel(image, image_info, bands, y, x, rows2open, columns2open, n_jo
         return np.array(band_arrays, dtype=d_type).reshape(len(bands), rows2open, columns2open)
 
 
-def read(image2open=None,
+def read(file_name=None,
+         image2open=None,
          i_info=None,
          bands=1,
          i=0,
@@ -3549,7 +3551,8 @@ def read(image2open=None,
     Reads a raster as an array
 
     Args:
-        image2open (Optional[str]): An image to open. Default is None.
+        file_name (Optional[str]): An image to open. Default is None.
+        image2open (Optional[str]): An image to open. Default is None. Deprecated, use `file_name`.
         i_info (Optional[object]): An instance of `ropen`. Default is None
         bands (Optional[int list or int]: Band position to open or list of bands to open. Default is 1.
             Examples:
@@ -3587,18 +3590,23 @@ def read(image2open=None,
         >>> print(array['nir'].shape)
     """
 
-    if not isinstance(i_info, ropen) and not isinstance(image2open, str):
+    if not image2open:
 
-        logger.error('Either `i_info` or `image2open` must be declared.')
+        warnings.warn('image2open is now named file_name and will be removed in 0.3.0.', DeprecationWarning)
+        file_name = image2open
+
+    if not isinstance(i_info, ropen) and not isinstance(file_name, str):
+
+        logger.error('Either `i_info` or `file_name` must be declared.')
         raise MissingRequirement
 
-    elif isinstance(i_info, ropen) and isinstance(image2open, str):
+    elif isinstance(i_info, ropen) and isinstance(file_name, str):
 
-        logger.error('Choose either `i_info` or `image2open`, but not both.')
+        logger.error('Choose either `i_info` or `file_name`, but not both.')
         raise OverflowError
 
-    elif not isinstance(i_info, ropen) and isinstance(image2open, str):
-        i_info = ropen(image2open)
+    elif not isinstance(i_info, ropen) and isinstance(file_name, str):
+        i_info = ropen(file_name)
 
     rrows = copy.copy(rows)
     ccols = copy.copy(cols)
@@ -3718,11 +3726,11 @@ def read(image2open=None,
                     return values.reshape(len(bands), rrows, ccols)
 
             # only close the image if it was opened internally
-            # if isinstance(image2open, str):
+            # if isinstance(file_name, str):
             #     i_info.close()
 
         else:
-            return _read_parallel(image2open, i_info, bands, i, j, rrows, ccols, n_jobs, d_type, predictions)
+            return _read_parallel(file_name, i_info, bands, i, j, rrows, ccols, n_jobs, d_type, predictions)
 
 
 def build_vrt(file_list,
