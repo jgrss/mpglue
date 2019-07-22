@@ -29,7 +29,21 @@ with open('LICENSE.txt') as f:
 with open('AUTHORS.txt') as f:
     author_file = f.read()
 
-required_packages = []
+required_packages = ['future',
+                     'deprecation',
+                     'retrying',
+                     'GDAL',
+                     'numpy',
+                     'scipy',
+                     'matplotlib',
+                     'scikit-learn',
+                     'scikit-image',
+                     'pandas',
+                     'beautifulsoup4',
+                     'opencv-python',
+                     'rtree',
+                     'fiona',
+                     'numexpr']
 
 
 def get_pyx_list():
@@ -51,6 +65,10 @@ def get_package_data():
                        'stats/*.pyx']}
 
 
+def get_console_dict():
+    return {'console_scripts': ['raster-calc=mpglue.raster_calc:main']}
+
+
 def setup_package():
 
     include_dirs = [np.get_include()]
@@ -69,7 +87,8 @@ def setup_package():
                     cmdclass=dict(build_ext=build_ext),
                     download_url=git_url,
                     install_requires=required_packages,
-                    include_dirs=include_dirs)
+                    include_dirs=include_dirs,
+                    entry_points=get_console_dict())
 
     setup(**metadata)
 
