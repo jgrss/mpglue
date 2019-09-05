@@ -1667,7 +1667,10 @@ class FileManager(DataChecks, RegisterDriver, DatasourceInfo):
             # Unlink memory images
             if self.output_image.lower().endswith('.mem'):
 
-                gdal.Unlink(self.output_image)
+                try:
+                    gdal.Unlink(self.output_image)
+                except:
+                    logger.warning('  Could not unlink the in-memory array.')
 
                 try:
                     os.remove(self.output_image)

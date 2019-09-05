@@ -2067,17 +2067,17 @@ cdef DTYPE_float32_t _get_percent(DTYPE_float32_t[:, ::1] block,
     return (su / good_values) * 100.
 
 
-cdef DTYPE_float32_t[:] _get_unique(DTYPE_float32_t[:, :] block, DTYPE_intp_t window_i, DTYPE_intp_t window_j):
+cdef DTYPE_float32_t[::1] _get_unique(DTYPE_float32_t[:, ::1] block, DTYPE_intp_t window_i, DTYPE_intp_t window_j):
 
     cdef:
         Py_ssize_t ii, jj, cc
-        DTYPE_float32_t[:] unique_values = np.zeros(window_i*window_j, dtype='float32')-9999.
+        DTYPE_float32_t[::1] unique_values = np.zeros(window_i*window_j, dtype='float32') - 9999.0
         int counter = 0
         bint u_found
 
-    for ii in xrange(0, window_i):
+    for ii in range(0, window_i):
 
-        for jj in xrange(0, window_j):
+        for jj in range(0, window_j):
 
             if counter == 0:
 
@@ -2088,7 +2088,7 @@ cdef DTYPE_float32_t[:] _get_unique(DTYPE_float32_t[:, :] block, DTYPE_intp_t wi
 
                 u_found = False
 
-                for cc in xrange(0, counter):
+                for cc in range(0, counter):
 
                     if unique_values[cc] == block[ii, jj]:
                         u_found = True
@@ -2101,17 +2101,21 @@ cdef DTYPE_float32_t[:] _get_unique(DTYPE_float32_t[:, :] block, DTYPE_intp_t wi
     return unique_values[:counter]
 
 
-cdef DTYPE_float32_t _get_majority(DTYPE_float32_t[:, :] block, DTYPE_intp_t window_i, DTYPE_intp_t window_j,
-                                   DTYPE_intp_t target_value, DTYPE_intp_t ignore_value,
-                                   DTYPE_float32_t[:, :] weights, int hw):
+cdef DTYPE_float32_t _get_majority(DTYPE_float32_t[:, ::1] block,
+                                   DTYPE_intp_t window_i,
+                                   DTYPE_intp_t window_j,
+                                   DTYPE_float32_t target_value,
+                                   DTYPE_float32_t ignore_value,
+                                   DTYPE_float32_t[:, ::1] weights,
+                                   unsigned int hw):
 
     cdef:
         Py_ssize_t ii, jj, max_idx, kk
-        DTYPE_float32_t[:] unique_values = _get_unique(block, window_i, window_j)
+        DTYPE_float32_t[::1] unique_values = _get_unique(block, window_i, window_j)
         int n_unique = unique_values.shape[0]
-        DTYPE_uint8_t[:] count_list = np.zeros(n_unique, dtype='uint8')
+        DTYPE_uint8_t[::1] count_list = np.zeros(n_unique, dtype='uint8')
         Py_ssize_t samples = window_i * window_j
-        Py_ssize_t half_samples = samples / 2
+        Py_ssize_t half_samples = <int>(samples / 2.0)
         DTYPE_float32_t block_value, max_count
 
     with nogil:
