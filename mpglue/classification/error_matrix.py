@@ -318,6 +318,8 @@ class error_matrix(object):
             Olofsson et al. (2014) Good practices for estimating area and assessing
                 accuracy of land change. Remote Sensing of Environment 148, 442-57.
 
+                Section 5.1.1, page 53, Equation 13
+
         Example:
             # Example 5
             >>> emat = error_matrix()
