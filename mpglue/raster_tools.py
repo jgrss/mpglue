@@ -4092,6 +4092,7 @@ class create_raster(CreateDriver, FileManager, UpdateInfo):
                  create_tiles=0,
                  overwrite=False,
                  in_memory=False,
+                 create_options=None,
                  **kwargs):
 
         if not in_memory:
@@ -4163,6 +4164,11 @@ class create_raster(CreateDriver, FileManager, UpdateInfo):
 
         else:
             parameters = list()
+
+        if create_options:
+            parameters += create_options
+
+        parameters = list(set(parameters))
 
         if isinstance(project_epsg, int):
 
